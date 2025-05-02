@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fca="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparDadosLicitacao"
+                             process="@this"
+                             actionListener="#{proximoVencedorLicitacaoControlador.limparDadosLicitacao}"
+                             update=":Formulario:acFornecedorVencedor :Formulario:panelItens"/>
+
+            <p:remoteCommand name="limparDadosFornecedorVencedor"
+                             process="@this"
+                             actionListener="#{proximoVencedorLicitacaoControlador.limparDadosFornecedorVencedor}"
+                             update=":Formulario:panelItens"/>
+
+
+            <fc:cabecalhoPretty origem="#{proximoVencedorLicitacaoControlador.caminhoPadrao}listar/"
+                                controlador="#{proximoVencedorLicitacaoControlador}"/>
+
+            <p:panel header="Próximo Vencedor da Licitação" id="panel-geral">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Número:"/>
+                    <h:outputText
+                        value="#{proximoVencedorLicitacaoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar' : proximoVencedorLicitacaoControlador.selecionado.numero}"
+                        styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Data de Lançamento: "/>
+                    <p:calendar id="dataLancamento"
+                                value="#{proximoVencedorLicitacaoControlador.selecionado.dataLancamento}"
+                                onkeypress="mascara(this, mdata)"
+                                maxlength="16"
+                                size="15"
+                                style="text-align: right"
+                                autocomplete="off"
+                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"/>
+
+                    <fc:outputLabelObrigatorio value="Licitação: " for="acLicitacao"/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000"
+                                        id="acLicitacao"
+                                        size="70"
+                                        dropdown="true"
+                                        styleClass="mrig05"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparDadosLicitacao()}"
+                                        panelStyle="max-height: 250px; max-width: 800px"
+                                        title="Selecione uma licitação."
+                                        value="#{proximoVencedorLicitacaoControlador.selecionado.licitacao}"
+                                        completeMethod="#{proximoVencedorLicitacaoControlador.completarLicitacao}"
+                                        converter="#{licitacaoControlador.converterGenerico}"
+                                        var="lc"
+                                        itemValue="#{lc.id}"
+                                        itemLabel="#{lc}"
+                                        maxResults="50">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update="acFornecedorVencedor :Formulario:panelItens"
+                                    listener="#{proximoVencedorLicitacaoControlador.limparDadosFornecedorVencedor()}"
+                                    process="@this"/>
+                        </p:autoComplete>
+
+                        <fc:botaoInformacao id="bt-info-liciacao"
+                                            styleClassBotao="icone-30"
+                                            resumo="Filtra licitações com pregão homologado."/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Vencedor Atual: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="acFornecedorVencedor"
+                                    size="70"
+                                    dropdown="true"
+                                    onkeyup="if(keyUpCampoVazio(this)){limparDadosFornecedorVencedor()}"
+                                    panelStyle="max-height: 250px; max-width: 800px"
+                                    title="Selecione o vencedor atual."
+                                    value="#{proximoVencedorLicitacaoControlador.selecionado.vencedorAtual}"
+                                    completeMethod="#{proximoVencedorLicitacaoControlador.completarVencedorAtual}"
+                                    converter="#{propostaFornecedorControlador.converterGenerico}"
+                                    disabled="#{proximoVencedorLicitacaoControlador.selecionado.licitacao eq null}"
+                                    var="vencAtual"
+                                    itemValue="#{vencAtual.id}"
+                                    itemLabel="#{vencAtual}"
+                                    maxResults="50">
+                        <p:ajax event="itemSelect"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                update=":Formulario:panelItens"
+                                process="@this"
+                                listener="#{proximoVencedorLicitacaoControlador.criarItens()}"/>
+                    </p:autoComplete>
+                </h:panelGrid>
+
+                <br/>
+                <p:outputPanel id="panelItens">
+                    <p:dataTable paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{proximoVencedorLicitacaoControlador.itens}"
+                                 rows="10"
+                                 rowKey="#{itemVenc.id}"
+                                 id="tabela-itens"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Itens Vencidos do Fornecedor Atual&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="itemVenc">
+                        <p:column headerText="Nº Lote"
+                                  style="width: 5%; text-align: left;">
+                            <h:outputText value="#{itemVenc.itemPregao.numeroLote}"/>
+                        </p:column>
+                        <p:column headerText="Nº Item"
+                                  style="width: 5%; text-align: left;">
+                            <h:outputText value="#{itemVenc.itemPregao.numeroItem}"/>
+                        </p:column>
+                        <p:column headerText="Descrição"
+                                  style="text-align: left;">
+                            <h:outputText value="#{itemVenc.itemPregao.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Status"
+                                  style="text-align: left;">
+                            <h:outputText value="#{itemVenc.itemPregao.tipoStatusItemPregao.descricao}"
+                                          id="statusLanceVenc"/>
+                        </p:column>
+                        <p:column headerText="Lance Atual (R$)"
+                                  rendered="#{!proximoVencedorLicitacaoControlador.isMaiorDesconto()}"
+                                  style="text-align: right;">
+                            <h:outputText value="#{itemVenc.valorLanceAtual}">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Desconto Atual (%)"
+                                  rendered="#{proximoVencedorLicitacaoControlador.isMaiorDesconto()}"
+                                  style="text-align: right;">
+                            <h:outputText value="#{itemVenc.valorLanceAtual}">
+                                <f:convertNumber pattern="#,##0.000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Próximo Vencedor"
+                                  style="text-align: left">
+                            <p:dataTable var="pv"
+                                         id="tabela-pv"
+                                         style="overflow: scroll; max-height: 100px"
+                                         rowStyleClass="#{proximoVencedorLicitacaoControlador.selecionado.vencedorAtual eq pv.propostaFornecedor ? 'fundo-amarelo-padrao' : ''}"
+                                         value="#{itemVenc.proximosVencedores}">
+                                <p:column>
+                                    <div style="display: flex; flex-direction: row">
+                                        <div style="width: 95%">
+                                            #{pv}
+                                        </div>
+                                        <div style="width: 5%">
+                                            <p:selectBooleanCheckbox
+                                                rendered="#{proximoVencedorLicitacaoControlador.selecionado.vencedorAtual ne pv.propostaFornecedor}"
+                                                value="#{pv.selecionado}" title="Selecionar">
+                                                <p:ajax event="valueChange"
+                                                        process="@this"
+                                                        update="@this :Formulario:tabela-itens:tabela-pv :Formulario:tabela-itens:novoValorLance :Formulario:tabela-itens:classificacao"
+                                                        onstart="aguarde.show()"
+                                                        oncomplete="aguarde.hide()"
+                                                        listener="#{proximoVencedorLicitacaoControlador.selecionarProximoVencedor(itemVenc, pv)}"/>
+                                            </p:selectBooleanCheckbox>
+                                        </div>
+                                    </div>
+                                </p:column>
+                            </p:dataTable>
+                        </p:column>
+                        <p:column headerText="Classificação Doc."
+                                  style="text-align: center;">
+                            <h:outputText
+                                id="classificacao"
+                                value="#{itemVenc.licitacaoFornecedor.tipoClassificacaoFornecedor.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Próximo Lance (R$)" style="text-align: right"
+                                  rendered="#{!proximoVencedorLicitacaoControlador.isMaiorDesconto()}">
+                            <p:inputText value="#{itemVenc.valorProximoLance}"
+                                         onkeydown="mascara(this, mvalor)"
+                                         disabled="#{!itemVenc.hasPropostaNoLance() or pv.selecionado eq null}"
+                                         id="novoValorLance"
+                                         size="12"
+                                         onfocus="this.select()"
+                                         styleClass="alinhamentoDireita">
+                                <f:convertNumber pattern="###,##0.00"/>
+                                <p:ajax event="blur"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        process="@this"
+                                        update="@this"
+                                        listener="#{proximoVencedorLicitacaoControlador.validarProximoLanceVencedor(itemVenc)}"/>
+                            </p:inputText>
+                        </p:column>
+                        <p:column headerText="Próximo Desconto (%)" style="text-align: right"
+                                  rendered="#{proximoVencedorLicitacaoControlador.isMaiorDesconto()}">
+                            <p:inputText styleClass="alinhamentoDireita"
+                                         id="novoDescontoLance"
+                                         disabled="#{!itemVenc.hasPropostaNoLance() or pv.selecionado eq null}"
+                                         size="12"
+                                         value="#{itemVenc.valorProximoLance}"
+                                         onfocus="this.select()"
+                                         onkeydown="mascaraMonetariaDinamica(this, 3, 3)"
+                                         maxlength="8">
+                                <f:convertNumber pattern="#,##0.000"/>
+                                <p:ajax event="blur"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        process="@this"
+                                        update=":Formulario:tabela-itens"
+                                        listener="#{proximoVencedorLicitacaoControlador.validarProximoLanceVencedor(itemVenc)}"/>
+                            </p:inputText>
+                        </p:column>
+                        <p:column headerText="Valor por Item"
+                                  rendered="#{proximoVencedorLicitacaoControlador.isApuracaoPorLote() and itemVenc.hasValorProximoLance()}"
+                                  style="width: 150px;" styleClass="centralizado">
+                            <p:commandButton
+                                onclick="aguarde.show()"
+                                title="Clique aqui para informar o valor por item."
+                                actionListener="#{proximoVencedorLicitacaoControlador.criarItensPregaoLote(itemVenc)}"
+                                update=":FormularioValorPorItem"
+                                oncomplete="aguarde.hide(); valorPorItem.show()"
+                                icon="ui-icon-categorias"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{proximoVencedorLicitacaoControlador}"/>
+        </h:form>
+
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  resizable="false"
+                  widgetVar="dlgAlerta"
+                  closable="false">
+            <h:form id="formAlerta">
+                <table class="table-bordered" style="width: 100%">
+                    <tr>
+                        <td>
+                            <div class="alert alert-block" style="font-size: 13px; padding: 5px">
+                                <div class="ui-messages-warn-icon mrig10"/>
+                                Ao confimar o sistema realizará as seguinte alterações
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div style="font-size: 13px; padding: 5px" class="mlef20">
+                                <i class="fa fa-check" style="color: darkred"></i>
+                                O 'Próximo Vencedor' selecionado, será o novo fornecedor de cada item.
+                            </div>
+                            <div style="font-size: 13px; padding: 5px" class="mlef20">
+                                <i class="fa fa-check" style="color: darkred"></i>
+                                O sistema gerará automaticamente a adjudicação e homologação para o fornecedor/itens.
+                            </div>
+                            <div style="font-size: 13px; padding: 5px" class="mlef20">
+                                <i class="fa fa-check" style="color: darkred"></i>
+                                Caso o fornecedor não esteja habilitado referente a documentação, o sistema habilitará este fornecedor.
+                            </div>
+                            <div style="font-size: 13px; padding: 5px" class="mlef20">
+                                <i class="fa fa-check" style="color: darkred"></i>
+                                O pregão não será alterado, cada item possui uma lista de vencedores, mantendo sempre um como vencedor atual.
+                            </div>
+                            <div style="font-size: 13px; padding: 5px" class="mlef20">
+                                <i class="fa fa-check" style="color: darkred"></i>
+                                Somente fornecedores habiltados na documentação poderão contratar o item alterado
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <br/>
+                <p:scrollPanel
+                    mode="natrive"
+                    style="max-height: 250px"
+                    rendered="#{proximoVencedorLicitacaoControlador.hasFornecedoresNaoHabilitadosDocumentacao()}">
+                    <div class="alert alert-info" style="padding: 4px" align="center">
+                        Fornecedores não habilitados na documentação
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        value="#{proximoVencedorLicitacaoControlador.fornecedoresNaoHabilitadosDocumentacao}"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        var="forn">
+                        <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{forn}"/>
+                        </p:column>
+                        <p:column headerText="Classificação" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{forn.tipoClassificacaoFornecedor.descricao}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:scrollPanel>
+
+                <div class="centralizado mtop10">
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     title="Clique para confirmar."
+                                     process="@this"
+                                     styleClass="padrao prioritario mrig05"
+                                     actionListener="#{proximoVencedorLicitacaoControlador.salvarGerandoProcesso}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide()"/>
+
+                    <p:commandButton icon="ui-icon-close"
+                                     value="Cancelar"
+                                     title="Clique para fechar."
+                                     process="@this"
+                                     styleClass="padrao"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgAlerta.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important; "
+                  draggable="false"
+                  resizable="false"
+                  closable="true"
+                  width="1050"
+                  height="450"
+                  widgetVar="valorPorItem">
+            <h:form id="FormularioValorPorItem">
+                <legend class="legenda mbot05">Valor por Item</legend>
+                <h:panelGrid columns="2">
+                    <h:outputText value="Lote: "/>
+                    <h:outputText
+                        value="#{proximoVencedorLicitacaoControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Fornecedor Vencedor: "/>
+                    <h:outputText
+                        value="#{proximoVencedorLicitacaoControlador.itemPregaoSelecionado.itemPregaoLanceVencedor.lancePregao.fornecedorDoLanceVencedor}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Valor do Lote: "/>
+                    <h:outputText
+                        value="#{proximoVencedorLicitacaoControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.valor}"
+                        styleClass="negrito">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+
+                    <h:outputText value="Valor Negociado: "/>
+                    <h:outputText
+                        value="#{proximoVencedorLicitacaoControlador.itemPregaoSelecionado.itemPregaoLanceVencedor.valor}"
+                        styleClass="negrito">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+
+                    <h:outputText value="Percentual da Diferença do Lote: "/>
+                    <h:panelGroup>
+                        <h:outputText value="#{proximoVencedorLicitacaoControlador.percentualDiferencaLote}"
+                                      styleClass="negrito"
+                                      title="Percentual = (((Valor do Lote - Valor Negociado)) / Valor do Lote)*100">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <h:outputText value="%" styleClass="negrito"/>
+
+                        <p:commandButton value="Aplicar aos Itens"
+                                         icon="ui-icon-check"
+                                         actionListener="#{proximoVencedorLicitacaoControlador.aplicarPercentualParaItens()}"
+                                         process="@this"
+                                         title="Valor Unitário = Valor Unitário - ((Valor Unitário * Percentual Diferença do Lote) / 100)"
+                                         update=":FormularioValorPorItem:tableItensLote"
+                                         styleClass="padrao mlef05 botao-transparente"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"/>
+
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <p:dataTable
+                    paginator="true"
+                    id="tableItensLote"
+                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                    style="overflow: scroll; max-height: 400px; width: auto"
+                    rowIndexVar="rowIx"
+                    styleClass="mtop05"
+                    emptyMessage="Não foram localizados registros para serem apresentados"
+                    value="#{proximoVencedorLicitacaoControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.itensPregaoLoteItemProcesso}"
+                    rows="10"
+                    paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                    rowsPerPageTemplate="10,25,50,100"
+                    var="itemPregaoLote">
+                    <p:column headerText="Nº Item" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{itemPregaoLote.itemProcessoDeCompra.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{itemPregaoLote.itemProcessoDeCompra.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Especif." styleClass="alinhamentoCentralizado">
+                        <fca:especificacao-objeto-compra
+                            especificacao="#{itemPregaoLote.itemProcessoDeCompra.descricaoComplementar}"/>
+                    </p:column>
+                    <p:column headerText="Qtde" styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraQuantidade}"
+                            value="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Valor Unit. (R$)" styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"
+                            value="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.preco}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText
+                            value="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.precoTotal}">
+                            <f:convertNumber pattern="##,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText
+                                value="#{proximoVencedorLicitacaoControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.valor}">
+                                <f:convertNumber pattern="R$ ##,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Preço Unit. (R$)" styleClass="">
+                        <fc:input-mascara-unidade-medida
+                            value="#{itemPregaoLote.valor}"
+                            size="15"
+                            update=":FormularioValorPorItem:tableItensLote"
+                            tipoMascara="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"/>
+                    </p:column>
+                    <p:column headerText="Preço Total (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText
+                            value="#{itemPregaoLote.precoTotalItem}"
+                            id="precototal"
+                            size="15" styleClass="alinhamentoDireita">
+                            <f:convertNumber pattern="##,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText id="precoTotalLote"
+                                          value="#{proximoVencedorLicitacaoControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.precoTotalLote}">
+                                <f:convertNumber pattern="##,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Justificativa">
+                        <p:inputTextarea value="#{itemPregaoLote.justificativa}" maxlength="255" autoResize="false"
+                                         scrollHeight="3">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:inputTextarea>
+                    </p:column>
+                </p:dataTable>
+
+                <div class="centralizado mtop10 mbot10">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     actionListener="#{proximoVencedorLicitacaoControlador.confirmarDistribuicaoItensPorLote()}"
+                                     styleClass="padrao prioritario mtop10"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                    />
+                    <p:commandButton value="Fechar"
+                                     oncomplete="aguarde.hide()"
+                                     onstart="aguarde.show()"
+                                     onclick="valorPorItem.hide()"
+                                     icon="ui-icon-close"
+                                     styleClass="padrao mlef05 mtop10"
+                                     process="@this" update="@this"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,323 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:composite="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:f="http://java.sun.com/jsf/core">
+
+<!-- INTERFACE -->
+<composite:interface name="inputText">
+    <composite:attribute name="mostrarLabelAutoComplete" default="true"/>
+    <composite:attribute name="cadastro" required="true"/>
+    <composite:attribute name="id" required="true"/>
+    <composite:attribute name="size" default="50"/>
+    <composite:attribute name="disabled" default="false"/>
+    <composite:attribute name="executaAoAtualizar" method-signature="void execute()"/>
+</composite:interface>
+
+<!-- IMPLEMENTATION -->
+<composite:implementation>
+
+<h:panelGrid columns="5" id="panelGridPrincipal" cellspacing="0" cellpadding="0">
+    <c:if test="#{cc.attrs.mostrarLabelAutoComplete == true}">
+        <h:outputText value="Cadastro Econômico: " styleClass="azulnegrito"/>
+    </c:if>
+    <p:autoComplete queryDelay="1000"
+            value="#{cc.attrs.cadastro}"
+            completeMethod="#{componentePesquisaCadastroEconomicoControlador.completaCadastroEconomicoJdbc}"
+            var="cadastroEInicial"
+            id="cadastroEInicial"
+            disabled="#{cc.attrs.disabled}"
+            itemLabel="#{cadastroEInicial.inscricaoCadastral} #{cadastroEInicial.pessoa.nome} #{cadastroEInicial.pessoa.cpf_Cnpj}"
+            itemValue="#{cadastroEInicial.id}"
+            size="#{cc.attrs.size}"
+            converter="#{componentePesquisaCadastroEconomicoControlador.converterCadastroEconomico}"
+            title="Informe ou selecione o C.M.C.">
+        <p:ajax event="itemSelect" listener="#{componentePesquisaCadastroEconomicoControlador.selecionaCadastro}"/>
+        <c:if test="#{!empty cc.getValueExpression('executaAoAtualizar')}">
+            <p:ajax event="itemSelect" update="@form" process="@this" listener="#{cc.attrs.executaAoAtualizar}"/>
+        </c:if>
+        <c:if test="#{empty cc.getValueExpression('executaAoAtualizar')}">
+            <p:ajax event="itemSelect" update="@form"/>
+        </c:if>
+    </p:autoComplete>
+    <p:remoteCommand name="remoteCommandPesquisaCadastroEconomio"
+                     process="@form"
+                     actionListener="#{componentePesquisaCadastroEconomicoControlador.novo(cc.attrs.id, cc.attrs.cadastro)}"/>
+    <p:commandButton icon="ui-icon-search" id="botaoPesquisaCadastroEconomico"
+                     onclick="remoteCommandPesquisaCadastroEconomio()"
+                     oncomplete="dialogPesquisaCadastroEconomico.show()"
+                     title="Clique para pesquisar os cadastros econômicos"
+                     styleClass="vinteLarguraVinteAltura mlef03"
+                     actionListener="#{componentePesquisaCadastroEconomicoControlador.setIdForm}"/>
+    <p:commandButton icon="ui-icon-info" id="botaoDestalhesCadastroEconomico"
+                     onclick="dlgdetalhes.show()"
+                     actionListener="#{componentePesquisaCadastroEconomicoControlador.setaCadastroEconomico(cc.attrs.cadastro)}"
+                     update="detalhes"
+                     disabled="#{cc.attrs.cadastro == null or cc.attrs.cadastro.id == null}"
+                     title="Clique para visualizar os detalhes do cadastro selecionado"
+                     styleClass="vinteLarguraVinteAltura mlef03"/>
+
+</h:panelGrid>
+<p:dialog widgetVar="pesquisando" header="Pesquisando ...."
+          draggable="false" closable="false" resizable="true">
+    <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+</p:dialog>
+<p:dialog widgetVar="recuperando" header="Recuperando Cadastro Imobiliário...."
+          draggable="false" closable="false" resizable="true">
+    <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+</p:dialog>
+<p:dialog widgetVar="dialogPesquisaCadastroEconomico"
+          header="Pesquisa de Cadastro Econômico"
+          width="900" resizable="false" closable="false"
+          height="550"
+        >
+    <p:panel header="Filtros">
+        <h:panelGrid columns="4" id="panelGridFiltros">
+            <h:outputText value="Situação Cadastral: "/>
+            <h:selectOneMenu
+                    value="#{componentePesquisaCadastroEconomicoControlador.situacaoCadastral}"
+                    id="situacaoCadastral">
+                <f:selectItems value="#{componentePesquisaCadastroEconomicoControlador.situacaoCadastrais}"/>
+            </h:selectOneMenu>
+            <h:inputHidden/>
+            <h:inputHidden/>
+
+            <h:outputText value="Pessoa/Sócio: "/>
+            <p:inputText value="#{componentePesquisaCadastroEconomicoControlador.filtroPessoa}" size="50"/>
+            <h:selectOneMenu value="#{componentePesquisaCadastroEconomicoControlador.filtroTipoCpfCnpj}">
+                <f:selectItem itemLabel="CPF" itemValue="#{true}"/>
+                <f:selectItem itemLabel="CNPJ" itemValue="#{false}"/>
+                <p:ajax listener="#{componentePesquisaCadastroEconomicoControlador.montaMascaraCpfCnpj}"
+                        event="change"/>
+            </h:selectOneMenu>
+
+            <p:inputMask mask="#{componentePesquisaCadastroEconomicoControlador.mascara}"
+                         value="#{componentePesquisaCadastroEconomicoControlador.filtroCpfCnpj}" id="cpfCnpj"/>
+            <h:outputText value="Nome Fantasia: "/>
+            <p:inputText value="#{componentePesquisaCadastroEconomicoControlador.filtroNomeFantasia}"/>
+            <h:outputText value="Endereço: "/>
+            <p:inputText value="#{componentePesquisaCadastroEconomicoControlador.filtroEndereco}"/>
+            <h:outputText value="C.M.C.: "/>
+            <p:inputText value="#{componentePesquisaCadastroEconomicoControlador.filtroCI}"/>
+            <h:outputText value="Processo: "/>
+            <p:inputText value="#{componentePesquisaCadastroEconomicoControlador.filtroProcesso}"/>
+
+
+            <h:outputText value="Classificacao da Atividade: "/>
+            <h:selectOneMenu title="Selecione a Classificação da Atividade"
+                             value="#{componentePesquisaCadastroEconomicoControlador.filtroClassificacaoAtividade}"
+                             id="filtroclassificacao">
+                <f:selectItems value="#{componentePesquisaCadastroEconomicoControlador.classificacaoAtividade}"/>
+            </h:selectOneMenu>
+
+            <h:outputText value="CNAE: "/>
+            <p:inputText value="#{componentePesquisaCadastroEconomicoControlador.filtroCnae}"/>
+        </h:panelGrid>
+    </p:panel>
+    <br/>
+    <p:panel>
+        <div style="text-align: center;">
+            <h:panelGrid columns="3" id="panelGridBotoes">
+                <p:commandButton value="Filtrar"
+                                 actionListener="#{componentePesquisaCadastroEconomicoControlador.filtrar()}"
+                                 onstart="pesquisando.show()"
+                                 oncomplete="pesquisando.hide()"
+                                 icon="ui-icon-search"
+                                 id="botaoFiltrar"
+                                 update="tabela"
+                                 title="Clique para filtrar os cadastros imobiliários"
+                                 styleClass="icone_branco botao_azul"/>
+
+                <p:commandButton value="Nova Consulta"
+                                 id="novaConsulta"
+                                 styleClass="icone_branco botao_verde"
+                                 icon="ui-icon-document"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 title="Clique para realizar uma nova consulta"
+                                 actionListener="#{componentePesquisaCadastroEconomicoControlador.limparCampos()}"/>
+
+                <p:commandButton value="Voltar" onclick="dialogPesquisaCadastroEconomico.hide()"
+                                 styleClass="icone_vermelho"
+                                 icon="ui-icon-close"
+                                 onstart="recuperando.show()"
+                                 oncomplete="recuperando.hide()"
+                                 title="Clique para fechar a janela"
+                                 update="@form"
+                                 process="@this"
+
+                        >
+                    <f:setPropertyActionListener target="#{cc.attrs.cadastro}"
+                                                 value="#{componentePesquisaCadastroEconomicoControlador.cadastroEconomicoSelecionado}"/>
+                </p:commandButton>
+            </h:panelGrid>
+        </div>
+    </p:panel>
+    <br/>
+    <br/>
+    <p:dataTable id="tabela" var="objeto" value="#{componentePesquisaCadastroEconomicoControlador.lista}"
+                 widgetVar="tabela"
+                 emptyMessage="Nenhum cadastro encontrada para os filtros selecionados!"
+            >
+        <f:facet name="header">
+            <p:outputPanel>
+                <div class="ui-paginator ui-paginator-top ui-widget-header">
+                    <p:outputPanel
+                            rendered="#{componentePesquisaCadastroEconomicoControlador.lista.size() > componentePesquisaCadastroEconomicoControlador.maximoRegistrosTabela}">
+                        <div class="ui-messages-info ui-corner-all textomedio" style="font-size: x-small !important;">
+                            <div class="ui-messages-info-icon margem-direita-cinco-pixels"/>
+                            <h:outputText value="Atenção! " styleClass="ui-messages-info-summary"/>
+                            <h:outputText
+                                    value="Existem registros omitidos. Utilize o campo de busca para filtrar os resultados."
+                                    styleClass="ui-messages-info-detail"/>
+                        </div>
+                    </p:outputPanel>
+                    <p:commandButton id="botaoAnterior" style="height: 25px;" icon="ui-icon-seek-prev" ajax="false"
+                                     disabled="#{!componentePesquisaCadastroEconomicoControlador.temAnterior}"
+                                     action="#{componentePesquisaCadastroEconomicoControlador.anteriores}"/>
+                    <p:spacer width="2"/>
+                    <p:commandButton id="botaoProximo" style="height: 25px;" icon="ui-icon-seek-next" ajax="false"
+                                     disabled="#{!componentePesquisaCadastroEconomicoControlador.temMaisResultados}"
+                                     action="#{componentePesquisaCadastroEconomicoControlador.proximos}"/>
+                    <p:spacer width="2"/>
+                    <h:selectOneMenu value="#{componentePesquisaCadastroEconomicoControlador.maximoRegistrosTabela}">
+                        <f:selectItem itemLabel="10" itemValue="10"/>
+                        <f:selectItem itemLabel="25" itemValue="25"/>
+                        <f:selectItem itemLabel="50" itemValue="50"/>
+                        <f:selectItem itemLabel="100" itemValue="100"/>
+                        <f:selectItem itemLabel="500" itemValue="500"/>
+                        <p:ajax event="change" update="tabela"/>
+                    </h:selectOneMenu>
+                </div>
+            </p:outputPanel>
+        </f:facet>
+        <p:column headerText="Selecionar" style="width: 10%; text-align: center;">
+            <p:commandButton styleClass="vinteLarguraVinteAltura botao_verde icone_branco"
+                             icon="ui-icon-check"
+                             id="deselecionar"
+                             title="Clique para deselecionar o cadastro"
+                             rendered="#{componentePesquisaCadastroEconomicoControlador.cadastroEconomicoSelecionado eq objeto}"
+                             update="tabela"
+                             actionListener="#{componentePesquisaCadastroEconomicoControlador.setaCadastroNull()}"/>
+            <p:commandButton styleClass="vinteLarguraVinteAltura  botao_vermelho icone_branco"
+                             icon="ui-icon-closethick"
+                             onstart="aguarde.show()"
+                             update="tabela"
+                             id="selecionar"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para selecionar o cadastro"
+                             actionListener="#{componentePesquisaCadastroEconomicoControlador.selecionarCadastros(objeto)}"
+                             rendered="#{componentePesquisaCadastroEconomicoControlador.cadastroEconomicoSelecionado ne objeto}"
+                    />
+        </p:column>
+        <p:column headerText="C.M.C." filterBy="#{objeto.inscricaoCadastral}" sortBy="#{objeto.inscricaoCadastral}">
+            <h:outputText value="#{objeto.inscricaoCadastral}"/>
+        </p:column>
+        <p:column headerText="CPF/CNPJ" filterBy="#{objeto.pessoa.cpf_Cnpj}" sortBy="#{objeto.pessoa.cpf_Cnpj}">
+            <h:outputText value="#{objeto.pessoa.cpf_Cnpj}"/>
+        </p:column>
+        <p:column headerText="Nome/Razão Social" filterBy="#{objeto.pessoa.nome}" sortBy="#{objeto.pessoa.nome}">
+            <h:outputText value="#{objeto.pessoa.nome}"/>
+        </p:column>
+    </p:dataTable>
+</p:dialog>
+<p:dialog widgetVar="dlgdetalhes"
+          id="dialogDetalhes"
+          showHeader="false"
+          header="Detalhes do Cadastro Econômico"
+          width="900" resizable="false">
+    <p:panel id="detalhes">
+        <h:panelGrid style="width: 100%">
+            <h:outputText value="CADASTRO ECONÔMICO" styleClass="azulnegrito"/>
+            <p:separator/>
+            <h:panelGrid columns="2">
+                <h:outputText value="C.M.C.: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.inscricaoCadastral}"/>
+                <h:outputText value="Nome/Razão Social: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.pessoa.nome}"/>
+                <h:outputText value="CPF/CNPJ: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.pessoa.cpf_Cnpj}"/>
+            </h:panelGrid>
+        </h:panelGrid>
+        <br/>
+        <p:panel header="Dados da Pessoa" id="panelDadosPessoa">
+            <h:panelGrid columns="2">
+                <h:outputText value="Pessoa: "/>
+                <h:outputText style="font-weight: bolder"
+                              value="#{cc.attrs.cadastro.pessoa.nome}"/>
+                <h:outputLabel value="Tipo de Pessoa: "/>
+                <h:outputText style="font-weight: bolder"
+                              value="#{componentePesquisaCadastroEconomicoControlador.fisica eq true ? 'Fisica': 'Juridica' }"/>
+                <h:outputLabel value="CPF/CNPJ: "/>
+                <h:outputText style="font-weight: bolder"
+                              value="#{cc.attrs.cadastro.pessoa.cpf_Cnpj}"/>
+                <h:outputLabel value="Nome Reduzido"
+                               rendered="#{componentePesquisaCadastroEconomicoControlador.fisica eq false}"/>
+                <h:outputText style="font-weight: bolder"
+                              value="#{componentePesquisaCadastroEconomicoControlador.pessoa.nomeReduzido}"
+                              rendered="#{componentePesquisaCadastroEconomicoControlador.fisica eq false}"/>
+                <h:outputLabel value="Nome Fantasia"
+                               rendered="#{componentePesquisaCadastroEconomicoControlador.fisica eq false}"/>
+                <h:outputText style="font-weight: bolder"
+                              value="#{componentePesquisaCadastroEconomicoControlador.pessoa.nomeFantasia}"
+                              rendered="#{componentePesquisaCadastroEconomicoControlador.fisica eq false}"/>
+                <h:outputLabel value="Inscrição Estadual"
+                               rendered="#{componentePesquisaCadastroEconomicoControlador.fisica eq false}"/>
+                <h:outputText style="font-weight: bolder"
+                              value="#{componentePesquisaCadastroEconomicoControlador.pessoa.inscricaoEstadual}"
+                              rendered="#{componentePesquisaCadastroEconomicoControlador.fisica eq false}"/>
+                <h:outputLabel value="E-Mail"/>
+                <h:outputText style="font-weight: bolder"
+                              value="#{componentePesquisaCadastroEconomicoControlador.pessoa.email}"/>
+            </h:panelGrid>
+            <br/>
+            <p:dataTable var="endereco" emptyMessage="Nenhum registro encontrado!" id="tabelaEndereco"
+                         value="#{componentePesquisaCadastroEconomicoControlador.pessoa.enderecos}">
+                <f:facet name="header">
+                    Endereços
+                </f:facet>
+                <p:column headerText="CEP">
+                    #{endereco.cep}
+                </p:column>
+                <p:column headerText="Tipo">
+                    #{endereco.tipoEndereco}
+                </p:column>
+                <p:column headerText="Logradouro">
+                    #{endereco.logradouro}
+                </p:column>
+                <p:column headerText="Número">
+                    #{endereco.numero}
+                </p:column>
+                <p:column headerText="Complemento">
+                    #{endereco.complemento}
+                </p:column>
+                <p:column headerText="Bairro">
+                    #{endereco.bairro}
+                </p:column>
+            </p:dataTable>
+            <br/>
+            <p:dataTable var="telefone"
+                         emptyMessage="Nenhum registro encontrado"
+                         id="tabelaTelefones"
+                         value="#{componentePesquisaCadastroEconomicoControlador.pessoa.telefones}">
+                <f:facet name="header">
+                    Telefone da Pessoa
+                </f:facet>
+                <p:column headerText="Tipo">
+                    #{telefone.tipoFone}
+                </p:column>
+                <p:column headerText="Telefone">
+                    #{telefone.telefone}
+                </p:column>
+            </p:dataTable>
+        </p:panel>
+    </p:panel>
+    <p:commandButton value="Sair" icon="ui-icon-close" styleClass="icone_vermelho"
+                     actionListener="#{componentePesquisaCadastroEconomicoControlador.escondeDetalhes}"/>
+</p:dialog>
+</composite:implementation>
+</html>

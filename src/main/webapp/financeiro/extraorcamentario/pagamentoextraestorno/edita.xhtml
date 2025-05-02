@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="renderizaDespesaextra"
+                             process="@this"
+                             update=":Formulario:painelPagamentoExtra :Formulario:eventoContabil :Formulario:compHis :Formulario:valor">
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra}"/>
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{pagamentoExtraEstornoControlador.selecionado.eventoContabil}"/>
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{pagamentoExtraEstornoControlador.selecionado.historico}"/>
+
+                <f:setPropertyActionListener value="#{0}"
+                                             target="#{pagamentoExtraEstornoControlador.selecionado.valor}"/>
+            </p:remoteCommand>
+
+            <fc:cabecalhoPretty controlador="#{pagamentoExtraEstornoControlador}"
+                                origem="#{pagamentoExtraEstornoControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Estorno de Despesa Extraorçamentária">
+                <h:panelGrid columns="2" cellpadding="2">
+                    <h:outputText value="Número: " style="margin-right: 95px"/>
+                    <p:inputText readonly="true"
+                                 title="Número gerado automaticamente pelo sistema ao salvar"
+                                 size="21"
+                                 disabled="#{pagamentoExtraEstornoControlador.verificaEdicao}"
+                                 value="#{pagamentoExtraEstornoControlador.selecionado.numero}"
+                                 id="numero">
+                        <p:watermark for="numero" value="Gerado automaticamente"/>
+                    </p:inputText>
+
+                    <h:outputText value="Data: "/>
+                    <p:calendar title="Informe a data de estorno" id="dataEstorno"
+                                disabled="true"
+                                size="21"
+                                value="#{pagamentoExtraEstornoControlador.selecionado.dataEstorno}"
+                                validator="#{pagamentoExtraEstornoControlador.validaDataPagamentoExtraEstorno}"
+                                locale="pt_BR"
+                                pattern="dd/MM/yyyy" navigator="true">
+                        <p:ajax event="dateSelect"/>
+                    </p:calendar>
+
+                    <h:outputText value="Data de Conciliação:"/>
+                    <co:data-conciliacao
+                        dataConciliacao="#{pagamentoExtraEstornoControlador.selecionado.dataConciliacao}"/>
+
+                    <h:outputText value="Unidade Organizacional:"/>
+                    <fc:codigo-descricao-hierarquia tipoHierarquia="ORCAMENTARIA"
+                                                    dataMovimento="#{pagamentoExtraEstornoControlador.selecionado.dataEstorno}"
+                                                    unidadeOrganizacional="#{pagamentoExtraEstornoControlador.selecionado.unidadeOrganizacional}"/>
+
+                    <h:outputText value="Evento Contábil: "/>
+                    <p:outputPanel id="eventoContabil">
+                        <h:outputText styleClass="negrito"
+                                      value="#{pagamentoExtraEstornoControlador.selecionado.eventoContabil}"
+                                      rendered="#{pagamentoExtraEstornoControlador.selecionado.eventoContabil.id ne null}"/>
+
+                        <h:outputText styleClass="negrito" value="Nenhum Evento Encontrado"
+                                      rendered="#{pagamentoExtraEstornoControlador.selecionado.eventoContabil.id eq null}"/>
+                    </p:outputPanel>
+
+                    <fc:outputLabelObrigatorio value="Despesa Extraorçamentária: "/>
+                    <h:panelGrid columns="2">
+                        <p:autoComplete queryDelay="1000" id="despesaExtra"
+                                        value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra}"
+                                        completeMethod="#{pagamentoExtraEstornoControlador.completaPagamentoExtra}"
+                                        converter="#{pagamentoExtraControlador.converterGenerico}"
+                                        disabled="#{pagamentoExtraEstornoControlador.verificaEdicao}"
+                                        var="pag" size="70"
+                                        style="margin-left: -4px"
+                                        onkeyup="if(keyUpCampoVazio(this)){renderizaDespesaextra();}"
+                                        itemValue="#{pag.id}" itemLabel="#{pag}">
+                            <p:ajax event="itemSelect"
+                                    process="@this"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide();setaFoco('Formulario:compHis')"
+                                    update=":Formulario:painelPagamentoExtra :Formulario:eventoContabil :Formulario:compHis :Formulario:valor"
+                                    listener="#{pagamentoExtraEstornoControlador.carregarListaReceitasExtraDoPagamento()}"/>
+                        </p:autoComplete>
+
+                        <p:commandButton id="btDespesa"
+                                         title="Clique para selecionar uma despesa extraorçamentária."
+                                         styleClass="mlef03"
+                                         disabled="#{pagamentoExtraEstornoControlador.verificaEdicao}"
+                                         onstart="aguarde.show()"
+                                         onsuccess="aguarde.hide()"
+                                         update=":Formulario_dialog"
+                                         oncomplete="dialog.show()"
+                                         icon="ui-icon-search"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+
+                <p:panel id="painelPagamentoExtra"
+                         styleClass="mtop05 semBorda"
+                         visible="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.id ne null}">
+
+                    <co:titulo-panel titulo="Depesa Extraorçamentária"
+                                     actionListener="#{utilBeanContabil.redirecionarParaPagamentoExtra(pagamentoExtraEstornoControlador.selecionado.pagamentoExtra)}"
+                                     navegavel="true"/>
+
+                    <h:panelGrid columns="2">
+
+                        <h:outputText value="Número: " style="margin-right: 90px"/>
+                        <h:outputText value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.numero}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Previsto Para: "/>
+                        <h:outputText
+                            value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.previstoPara}"
+                            styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText value="Data do Pagamento: "/>
+                        <h:outputText value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.dataPagto}"
+                                      styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText value="Data de Conciliação: "/>
+                        <co:data-conciliacao
+                            dataConciliacao="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.dataConciliacao}"/>
+
+                        <h:outputText value="Situação: "/>
+                        <h:outputText
+                            value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.status.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Conta Bancária: "/>
+                        <h:outputText value="#{pagamentoExtraEstornoControlador.contaBancaria}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Conta Financeira: "/>
+                        <h:outputText
+                            value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.subConta.toStringAutoCompleteContaFinanceira()}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Fonte de Recursos: "/>
+                        <h:outputText
+                            value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.fonteDeRecursos}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Conta Extraorçamentaria: "/>
+                        <h:outputText
+                            value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.contaExtraorcamentaria}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Pessoa: "/>
+                        <h:outputText value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.fornecedor}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Classe: "/>
+                        <h:outputText
+                            value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.classeCredor}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Histórico: "/>
+                        <h:outputText
+                            value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.complementoHistorico}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Valor :"/>
+                        <h:outputText value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoExtra.valor}"
+                                      styleClass="negrito">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+
+                        <h:outputText value="Saldo: "/>
+                        <h:outputText title="Saldo da Despesa Extraorçamentária."
+                                      value="#{pagamentoExtraEstornoControlador.saldoPagamentoExtra}"
+                                      id="saldo"
+                                      styleClass="negrito">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+                    </h:panelGrid>
+
+                    <p:dataTable id="tableRecExtraEstornada"
+                                 value="#{pagamentoExtraEstornoControlador.selecionado.pagamentoEstornoRecExtras}"
+                                 rendered="#{!empty pagamentoExtraEstornoControlador.selecionado.pagamentoEstornoRecExtras}"
+                                 var="re"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 styleClass="mtop05"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>RECEITAS EXTRAORÇAMENTÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{re.receitaExtra.numero}"/>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{re.receitaExtra.dataReceita}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Nº do Pagamento" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{re.receitaExtra.retencaoPgto.pagamento.numeroPagamento}"/>
+                        </p:column>
+                        <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{re.receitaExtra.contaExtraorcamentaria}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{re.receitaExtra.subConta}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" style="text-align: right">
+                            <h:outputText value="#{re.receitaExtra.valor}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor Estornado (R$)" style="text-align: right">
+                            <h:outputText value="#{re.receitaExtra.valorEstornado}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor Final (R$)" style="text-align: right">
+                            <h:outputText
+                                value="#{pagamentoExtraEstornoControlador.valorFinalReceitaExtra(re.receitaExtra)}"
+                                styleClass="negrito">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+
+
+                    <p:dataTable id="tableRecExtra"
+                                 value="#{pagamentoExtraEstornoControlador.listaReceitasExtraDoPagamento}"
+                                 var="re"
+                                 rendered="#{pagamentoExtraEstornoControlador.selecionado.id eq null}"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 styleClass="mtop05"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>RECEITAS EXTRAORÇAMENTÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column style="width: 5%" headerText="Selecionar" styleClass="alinhamentoCentralizado">
+                            <p:commandButton icon="#{pagamentoExtraEstornoControlador.iconeTableReceitas(re)}"
+                                             update=":Formulario:tableRecExtra :Formulario:valor"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 20px; height: 20px"
+                                             title="#{pagamentoExtraEstornoControlador.titleTableReceitas(re)}"
+                                             styleClass="#{pagamentoExtraEstornoControlador.iconeCorTableReceitas(re)}"
+                                             actionListener="#{pagamentoExtraEstornoControlador.atualizaListaReceitasSelecionadas(re)}"/>
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:commandLink title="Clique para visualizar esta receita extraorçamentária."
+                                           target="_blank"
+                                           styleClass="thumbnail"
+                                           actionListener="#{utilBeanContabil.redirecionarParaReceitaExtra(re)}">
+                                <h:outputText value="#{re.numero}"/>
+                            </h:commandLink>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{re.dataReceita}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Pagamento" styleClass="alinhamentoDireita">
+                            <h:commandLink title="Clique para visualizar este pagamento."
+                                           target="_blank"
+                                           styleClass="thumbnail"
+                                           actionListener="#{utilBeanContabil.redirecionarParaPagamento(re.retencaoPgto.pagamento)}">
+                                <h:outputText value="#{re.retencaoPgto.pagamento.numeroPagamento}"/>
+                            </h:commandLink>
+                        </p:column>
+                        <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{re.contaExtraorcamentaria}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{re.subConta}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" style="text-align: right">
+                            <h:outputText value="#{re.valor}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor Estornado (R$)" style="text-align: right">
+                            <h:outputText value="#{re.valorEstornado}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor Final (R$)" style="text-align: right">
+                            <h:outputText value="#{pagamentoExtraEstornoControlador.valorFinalReceitaExtra(re)}"
+                                          styleClass="negrito">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                    <hr class="mbot03 mtop05"/>
+                </p:panel>
+
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Histórico: "/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea id="compHis"
+                                         title="Informe o Histórico"
+                                         value="#{pagamentoExtraEstornoControlador.selecionado.historico}"
+                                         cols="70"
+                                         rows="4"
+                                         maxlength="3000"
+                                         style="margin-left: -4px"
+                                         autoResize="true" counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter"/>
+                        <h:outputText id="counter"/>
+                    </h:panelGrid>
+
+                    <h:outputText value="Valor: " style="margin-right: 120px"/>
+                    <h:outputText value="#{pagamentoExtraEstornoControlador.selecionado.valor}"
+                                  id="valor" styleClass="negrito">
+                        <f:convertNumber type="currency"/>
+                    </h:outputText>
+                </h:panelGrid>
+            </p:panel>
+
+            <h:panelGrid columns="4" cellspacing="0" cellpadding="0 " styleClass="mtop10">
+                <fc:rodapePretty controlador="#{pagamentoExtraEstornoControlador}"/>
+
+                <fc:botaoTargetBlank label="Imprimir Nota"
+                                     actionListener="#{pagamentoExtraEstornoControlador.gerarNotaOrcamentaria(false)}"
+                                     rendered="#{pagamentoExtraEstornoControlador.selecionado.id ne null}"
+                                     imprimeNoDialog="true" update="@this"
+                                     styleClass="mtop10"
+                                     style="height: 30px"
+                                     icon="ui-icon-print"
+                                     title="Clique para gerar a nota de estorno de despesa extraorçamentária."/>
+
+                <p:commandButton value="Download Nota"
+                                 title="Clique para fazer o download da nota de estorno de despesa extraorçamentária."
+                                 ajax="false"
+                                 icon="ui-icon-arrowthick-1-s"
+                                 rendered="#{pagamentoExtraEstornoControlador.selecionado.id ne null}"
+                                 styleClass="mtop10 mrig05">
+                    <p:fileDownload value="#{pagamentoExtraEstornoControlador.gerarNotaOrcamentaria(true)}"/>
+                </p:commandButton>
+            </h:panelGrid>
+
+        </h:form>
+        <p:dialog widgetVar="dialog"
+                  modal="true"
+                  style="position: fixed !important;"
+                  position="center"
+                  closable="true"
+                  resizable="false"
+                  width="900"
+                  height="500">
+            <h:form id="Formulario_dialog">
+                <p:panel id="panelDialog">
+                    <fc:pesquisaGenerico id="lista"
+                                         caminhoAtual="edita"
+                                         caminhoControlador="#{pagamentoExtraEstornoControlador.caminho}"
+                                         nomeDaClasse="PagamentoExtra"
+                                         iconmSelecionar="check-icon.png"
+                                         pretty="true"
+                                         dialog="true"
+                                         novo="#{pagamentoExtraEstornoControlador.novo()}"
+                                         selecionar="#{pagamentoExtraEstornoControlador.selecionarDespesaExtra}"
+                                         mostrarHistorico="false"
+                                         mostrarBotaoImprimirRelatorioUnicoRegistro="false"
+                                         mostrarBotaoEditarConfiguracaoRelatorio="false"
+                                         mostrarBotaoImprimirRelatorioTabela="false"
+                                         mostrarBotaoConsultasPersonalizadas="false"
+                                         mostrarBotaoNovo="false"
+                                         pesquisaNoEnter="false"
+                                         updateSelecionarTabela=":Formulario:painelPagamentoExtra :Formulario:eventoContabil :Formulario:valor"
+                                         meuControlador="#{despesaExtraPesquisaGenerica}"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogImprimirNota"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formImprimirNotaEmpenho">
+                <center>
+                    <p:panel id="panelImprimirNota" header="Nota de Estorno de Despesa Extra"
+                             styleClass="mtop05 mbot05">
+
+                        <br/>
+                        <h:outputText value="Deseja Imprimir a Nota de Estorno da Despesa Extra?"/>
+
+
+                        <h:panelGrid columns="2" styleClass="mtop20">
+                            <h:commandLink
+                                actionListener="#{pagamentoExtraEstornoControlador.gerarNotaOrcamentaria(false)}"
+                                target="_blank"
+                                style="height: 30px;">
+                                <p:commandButton id="botaoNota"
+                                                 value="SIM"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 title="Clique para imprimir a nota de estorno de despesa extraorçamentária."
+                                                 onclick="efetivaPagamento();"
+                                                 icon="ui-icon-check"
+                                                 styleClass="padrao mrig05"
+                                                 ajax="false">
+                                </p:commandButton>
+
+                            </h:commandLink>
+                            <p:commandButton value="NÃO"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique cancelar a impressão da nota de estorno de despesa extraorçamentária."
+                                             icon="ui-icon-cancel"
+                                             styleClass="padrao"
+                                             process="@this"
+                                             actionListener="#{pagamentoExtraEstornoControlador.redireciona()}"/>
+
+                            <p:remoteCommand name="efetivaPagamento"
+                                             actionListener="#{pagamentoExtraEstornoControlador.redireciona()}"/>
+                        </h:panelGrid>
+                    </p:panel>
+                </center>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

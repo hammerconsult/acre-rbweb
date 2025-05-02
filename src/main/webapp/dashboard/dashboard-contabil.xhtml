@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario" style="background-color: #eaeaea!important;">
+
+            <p:panel>
+                <h:panelGrid columns="2">
+                    <img src="/img/graph.jpg" width="40" height="40" alt="imagem de um gráfico"/>
+
+                    <co:titulo-panel titulo="Dashboard do Contábil"/>
+
+                </h:panelGrid>
+
+
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio for="mes" value="Mês:"/>
+                    <h:panelGrid columns="2">
+                        <p:inputText title="Informe o Mês da folha de pagamento."
+                                     size="4"
+                                     id="mes"/>
+
+                        <h:outputText value="Este campo é utilizado na geração dos gráficos de Destinação de recursos"
+                                      styleClass="azulnegrito"/>
+                    </h:panelGrid>
+
+
+                    <fc:outputLabelObrigatorio for="ano" value="Ano:"/>
+                    <p:inputMask title="Digite o ano."
+                                 mask="9999"
+                                 size="4"
+                                 id="ano" maxlength="70"/>
+                </h:panelGrid>
+
+                <p:commandButton value="Buscar Informações"
+                                 icon="ui-icon-search"
+                                 styleClass="icone_azul"
+                                 update="@none"
+                                 process="@none"
+                                 id="btnBuscar"
+                                 style=" height: 32px;"
+                                 onclick="pesquisar();"/>
+
+                <p:commandButton value="Limpar"
+                                 icon="ui-icon-clear"
+                                 styleClass="icone_azul"
+                                 update="@none"
+                                 process="@none"
+                                 id="btnLimpar"
+                                 style=" height: 32px;"
+                                 onclick="limpar();"/>
+
+            </p:panel>
+
+            <table style="width: 100%!important;" id="tabela">
+                <tr style="width: 100%!important;">
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                    <td style="width: 70%!important;vertical-align: top!important;">
+                        <p:panel style="text-align: center!important;" styleClass="mtop10">
+                            <co:titulo-panel titulo="Arrecadação Mensal"/>
+                            <canvas id="chartArrecadacaoMensal"></canvas>
+                        </p:panel>
+                    </td>
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                </tr>
+                <tr style="width: 100%!important;">
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                    <td style="width: 70%!important;vertical-align: top!important;">
+                        <p:panel style="text-align: center!important;" styleClass="mtop10">
+                            <co:titulo-panel titulo="Despesa Mensal"/>
+                            <canvas id="chartExecucaoOrcamentaria"></canvas>
+                        </p:panel>
+                    </td>
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                </tr>
+
+                <tr style="width: 100%!important;">
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                    <td style="width: 70%!important;vertical-align: top!important;">
+                        <p:panel style="text-align: center!important;" styleClass="mtop10">
+                            <co:titulo-panel titulo="Diárias a Comprovar"/>
+                            <canvas id="chartDiarias"></canvas>
+                        </p:panel>
+                    </td>
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                </tr>
+            </table>
+            <table style="width: 100%!important;" id="tabela2">
+                <tr style="width: 100%!important;">
+                    <td style="width: 5%!important;vertical-align: top!important;">
+
+                    </td>
+                    <td style="width: 40%!important;vertical-align: top!important;">
+                        <p:panel style="text-align: center!important;" styleClass="mtop10">
+                            <co:titulo-panel titulo="Destinação de Recurso do exercício anterior"/>
+                            <canvas id="chartDestinacaoAnterior"></canvas>
+                        </p:panel>
+                    </td>
+                    <td style="width: 10%!important;vertical-align: top!important;">
+
+                    </td>
+                    <td style="width: 40%!important;vertical-align: top!important;">
+                        <p:panel style="text-align: center!important;" styleClass="mtop10">
+                            <co:titulo-panel titulo="Destinação de Recurso"/>
+                            <canvas id="chartDestinacao"></canvas>
+                        </p:panel>
+                    </td>
+                    <td style="width: 5%!important;vertical-align: top!important;">
+
+                    </td>
+                </tr>
+            </table>
+        </h:form>
+
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/chart_js/dist/Chart.js"></script>
+
+        <script type="text/javascript">
+            var charArrecadacao = null;
+            var charExecucao = null;
+            var charDiaria = null;
+            var charDestinacao = null;
+            var charDestinacaoAnterior = null;
+
+            var tipo = "bar";
+
+            window.onload = function () {
+                var d = new Date();
+                var mes = d.getMonth();
+                var ano = d.getFullYear();
+                getElement('Formulario:ano').value = ano;
+                getElement('Formulario:mes').value = mes + 1;
+
+                jQuery('#Formulario\\:btnLimpar').addClass('ui-state-disabled');
+
+
+            }
+
+            function isNull(arg) {
+                if (arg == null == 'null' || arg == null || arg == 'undefined' || arg == '') {
+                    return true;
+                }
+                return false;
+            }
+
+            function limpar() {
+                try {
+                    if (this.charArrecadacao != null) {
+                        this.charArrecadacao.destroy();
+                    }
+
+                    if (this.charExecucao != null) {
+                        this.charExecucao.destroy();
+                    }
+
+                    if (this.charDestinacao != null) {
+                        this.charDestinacao.destroy();
+                    }
+
+                    if (this.charDestinacaoAnterior != null) {
+                        this.charDestinacaoAnterior.destroy();
+                    }
+
+                    if (this.charDiaria != null) {
+                        this.charDiaria.destroy();
+                    }
+                } catch (exception_var_1) {
+                    console.log(exception_var_1)
+                }
+                jQuery('#Formulario\\:btnBuscar').removeClass('ui-state-disabled');
+                jQuery('#Formulario\\:btnLimpar').addClass('ui-state-disabled');
+            }
+
+            function pesquisar() {
+
+                var ano = getElement('Formulario:ano').value;
+                var mes = getElement('Formulario:mes').value;
+                var validou = true;
+
+                if (isNull(ano)) {
+                    alert('O Campo ano é obrigatório.');
+                    validou = false;
+                }
+
+                if (isNull(mes)) {
+                    alert('O Campo mês é obrigatório.');
+                    validou = false;
+                }
+
+
+                if (validou) {
+                    realizarBusca(ano, mes);
+                }
+            }
+
+            function realizarBusca(ano, mes) {
+                aguarde.show();
+
+                jQuery('#Formulario\\:btnBuscar').addClass('ui-state-disabled');
+                jQuery('#Formulario\\:btnLimpar').removeClass('ui-state-disabled');
+
+                var chartArrecadacaoMensal = document.getElementById("chartArrecadacaoMensal");
+                if (chartArrecadacaoMensal != null) {
+                    chartArrecadacaoMensal = chartArrecadacaoMensal.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-contabil/receita-realizada?ano=' + ano + '&amp;tipo=' + tipo,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetorno(chartArrecadacaoMensal, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+                var chartExecucaoOrcamentaria = document.getElementById("chartExecucaoOrcamentaria");
+                if (chartExecucaoOrcamentaria != null) {
+                    chartExecucaoOrcamentaria = chartExecucaoOrcamentaria.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-contabil/execucao-orcamentaria?ano=' + ano + '&amp;tipo=' + tipo,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoExecucacao(chartExecucaoOrcamentaria, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+                var chartDestinacaoAnterior = document.getElementById("chartDestinacaoAnterior");
+                if (chartDestinacaoAnterior != null) {
+                    chartDestinacaoAnterior = chartDestinacaoAnterior.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-contabil/destinacao-recurso?ano=' + (ano - 1) + '&amp;mes=' + mes,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoDestinacaoAnterior(chartDestinacaoAnterior, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+
+                var chartDestinacao = document.getElementById("chartDestinacao");
+                if (chartDestinacao != null) {
+                    chartDestinacao = chartDestinacao.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-contabil/destinacao-recurso?ano=' + ano + '&amp;mes=' + mes,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoDestinacao(chartDestinacao, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+
+                var chartDiarias = document.getElementById("chartDiarias");
+                if (chartDiarias != null) {
+                    chartDiarias = chartDiarias.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-contabil/diaria?ano=' + ano + '&amp;tipo=' + tipo,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoDiaria(chartDiarias, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+            }
+
+            function tratarRetornoDestinacaoAnterior(chartDestinacaoAnterior, retorno) {
+                this.charDestinacaoAnterior = new Chart(chartDestinacaoAnterior, retorno);
+
+
+                retorno.options.tooltips = {
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorRSDashboard(retorno.data.datasets[0].data[t.index]);
+                        }
+
+                    }
+                };
+
+                retorno.options.scales = {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorRSDashboard(value);
+                            }
+                        }
+                    }]
+                };
+            }
+
+            function tratarRetornoDestinacao(chartDestinacao, retorno) {
+                this.charDestinacao = new Chart(chartDestinacao, retorno);
+
+
+                retorno.options.tooltips = {
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorRSDashboard(retorno.data.datasets[0].data[t.index]);
+                        }
+
+                    }
+                };
+
+                retorno.options.scales = {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorRSDashboard(value);
+                            }
+                        }
+                    }]
+                };
+            }
+
+            function tratarRetornoDiaria(chartDiarias, retorno) {
+                this.charDiaria = new Chart(chartDiarias, retorno);
+
+                if (this.tipo == 'bar' || this.tipo == 'line') {
+
+                    retorno.options.tooltips = {
+                        callbacks: {
+                            label: function (t, d) {
+                                return formatarValorInteiroDashboard(t.yLabel);
+                            }
+                        }
+                    };
+
+                    retorno.options.scales = {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                callback: function (value, index, values) {
+                                    return formatarValorInteiroDashboard(value);
+                                }
+                            }
+                        }]
+                    };
+                }
+            }
+
+            function tratarRetornoExecucacao(chartExecucaoOrcamentaria, retorno) {
+                this.charExecucao = new Chart(chartExecucaoOrcamentaria, retorno);
+
+                if (this.tipo == 'bar' || this.tipo == 'line') {
+
+                    retorno.options.tooltips = {
+                        callbacks: {
+                            label: function (t, d) {
+                                return formatarValorRSDashboard(t.yLabel);
+                            }
+                        }
+                    };
+
+                    retorno.options.scales = {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                callback: function (value, index, values) {
+                                    return formatarValorRSDashboard(value);
+                                }
+                            }
+                        }]
+                    };
+                }
+
+                aguarde.hide();
+            }
+
+            function tratarRetorno(chartArrecadacaoMensal, retorno) {
+                this.charArrecadacao = new Chart(chartArrecadacaoMensal, retorno);
+
+                if (this.tipo == 'bar' || this.tipo == 'line') {
+
+                    retorno.options.tooltips = {
+                        callbacks: {
+                            label: function (t, d) {
+                                return formatarValorRSDashboard(t.yLabel);
+                            }
+                        }
+                    };
+
+                    retorno.options.scales = {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                callback: function (value, index, values) {
+                                    return formatarValorRSDashboard(value);
+                                }
+                            }
+                        }]
+                    };
+                }
+
+            }
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

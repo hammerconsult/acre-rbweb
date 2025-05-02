@@ -1,0 +1,802 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+
+            function desabilitarCampoArquivo(campoOrigem, idCampoDestino) {
+                var split = campoOrigem.id.toString().split(':');
+                var idOrigem = split[split.length - 1];
+
+                if (campoOrigem.value.toString().trim().length == 0 || campoOrigem.value == '' || campoOrigem.value == 'undefined') {
+                    var idPanel = campoOrigem.id.replace(idOrigem, idCampoDestino);
+                    var panel = document.getElementById(idPanel);
+                    panel.disabled = true;
+                    atribuirNullTipoDocumento();
+                }
+            }
+
+        </script>
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty origem="#{cotacaoControlador.caminhoPadrao}novo/"
+                                controlador="#{cotacaoControlador}"/>
+
+            <p:panel header="Cotação" id="panel-geral">
+                <p:tabView id="tab-view-geral" styleClass="mtop05">
+                    <p:ajax event="tabChange"
+                            process="@this"
+                            listener="#{cotacaoControlador.onTabChange}"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"/>
+
+                    <p:tab title="Dados Gerais">
+                        <p:outputPanel id="panel-dados-gerais">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Situação: "/>
+                                <h:outputText value="#{cotacaoControlador.selecionado.situacao.descricao}"
+                                              styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Número:"/>
+                                <h:outputText value="#{cotacaoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar.' :
+                                                        cotacaoControlador.selecionado.numero}"
+                                              styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Exercício: "/>
+                                <p:inputMask id="itemExer"
+                                             mask="9999"
+                                             size="10"
+                                             converter="#{exercicioControlador.converterExercicio}"
+                                             value="#{cotacaoControlador.selecionado.exercicio}"
+                                             disabled="#{cotacaoControlador.hasSolicitacao}"
+                                             title="Informe o exercício.">
+                                    <p:ajax event="blur"
+                                            process="@this"
+                                            update="@this"/>
+                                </p:inputMask>
+
+                                <fc:outputLabelObrigatorio value="Data da Cotação/Planilha Orçamentária: "/>
+                                <p:calendar id="data-cotacao"
+                                            title="Digite a data da cotação/planilha orçamentária."
+                                            onkeypress="mascara(this,mdata)"
+                                            value="#{cotacaoControlador.selecionado.dataCotacao}"
+                                            disabled="#{cotacaoControlador.hasSolicitacao}"
+                                            autocomplete="off"
+                                            locale="pt_BR" navigator="true"
+                                            pattern="dd/MM/yyyy"
+                                            showOn="button"
+                                            maxlength="10"
+                                            size="12">
+                                    <p:ajax event="dateSelect"
+                                            process="@this"
+                                            update="@none"/>
+                                    <p:ajax event="change"
+                                            process="@this"
+                                            update="@none"/>
+                                </p:calendar>
+
+                                <fc:outputLabelObrigatorio value="Validade da Cotação/Planilha Orçamentária:"/>
+                                <p:calendar id="data-validade"
+                                            title="Digite a validade da cotação/planilha orçamentária."
+                                            onkeypress="mascara(this,mdata)"
+                                            value="#{cotacaoControlador.selecionado.validadeCotacao}"
+                                            disabled="#{cotacaoControlador.hasSolicitacao}"
+                                            autocomplete="off"
+                                            locale="pt_BR" navigator="true"
+                                            pattern="dd/MM/yyyy"
+                                            maxlength="10"
+                                            showOn="button"
+                                            size="12"/>
+
+                                <fc:outputLabelObrigatorio value="Formulário: "/>
+                                <h:panelGrid columns="3" style="margin-left: -3px">
+                                    <p:autoComplete id="formulario-cotacao"
+                                                    queryDelay="1000"
+                                                    title="Digite o formulário"
+                                                    value="#{cotacaoControlador.selecionado.formularioCotacao}"
+                                                    completeMethod="#{formularioCotacaoControlador.buscarFormularioCotacaoPorAnoOrNumeroOndeUsuarioEhGestorLicitacao}"
+                                                    converter="#{formularioCotacaoControlador.converterGenerico}"
+                                                    var="form"
+                                                    disabled="#{cotacaoControlador.hasSolicitacao}"
+                                                    dropdown="true"
+                                                    panelStyle="max-width: 800px;max-height: 250px"
+                                                    itemLabel="#{form}"
+                                                    itemValue="#{form.id}"
+                                                    maxResults="30"
+                                                    size="70">
+                                        <p:ajax event="itemSelect"
+                                                listener="#{cotacaoControlador.carregarLotesEItensDaCotacao()}"
+                                                process="@this :Formulario:tab-view-geral:panel-dados-gerais"
+                                                update=":Formulario:panel-geral"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide()"/>
+                                    </p:autoComplete>
+
+                                    <p:commandButton icon="ui-icon-clipboard"
+                                                     id="btnVisualizarCampos"
+                                                     disabled="#{cotacaoControlador.selecionado.formularioCotacao eq null}"
+                                                     update="opVisualizarCampos"
+                                                     process="@this"
+                                                     title="Clique para visualizar mais Informações."
+                                                     oncomplete="wopVisualizarCampos.show()"/>
+                                    <p:outputPanel id="compCampos" styleClass="mlef05">
+                                        <p:overlayPanel id="opVisualizarCampos"
+                                                        for="btnVisualizarCampos"
+                                                        widgetVar="wopVisualizarCampos"
+                                                        showEffect="fade"
+                                                        showEvent="@none">
+                                            <p:panel>
+                                                <f:facet name="header">
+                                                    <h:outputText
+                                                        value="Informações do Formulário #{cotacaoControlador.selecionado.formularioCotacao}"/>
+                                                </f:facet>
+                                                <h:panelGrid columns="2"
+                                                             width="100%"
+                                                             columnClasses="none, negrito"
+                                                             rowClasses="none, linha-selecionada">
+                                                    <h:outputText value="Tipo de Solicitação: "/>
+
+                                                    <h:outputText
+                                                        value="#{cotacaoControlador.selecionado.formularioCotacao.tipoSolicitacao.descricao}"/>
+                                                    <h:outputText value="Objeto: "/>
+                                                    <p:inputTextarea rows="5" cols="60"
+                                                                     value="#{cotacaoControlador.selecionado.formularioCotacao.objeto}"
+                                                                     readonly="true"
+                                                                     autoResize="false"/>
+                                                </h:panelGrid>
+                                            </p:panel>
+                                        </p:overlayPanel>
+                                    </p:outputPanel>
+                                </h:panelGrid>
+
+                                <fc:outputLabelObrigatorio value="Unidade Administrativa: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="unidade"
+                                                title="Informe a unidade administrativa."
+                                                value="#{cotacaoControlador.hierarquiaOrganizacional}"
+                                                completeMethod="#{hierarquiaOrganizacionalControlador.buscarHierarquiaOrganizacionalAdministrativaOndeUsuarioLogadoEhGestorDeLicitacao}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                var="ho"
+                                                itemLabel="#{ho}"
+                                                disabled="#{cotacaoControlador.operacaoEditar}"
+                                                itemValue="#{ho.id}"
+                                                forceSelection="true"
+                                                maxResults="10"
+                                                size="70">
+                                    <p:ajax event="itemSelect" process="@this"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio value="Descrição:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea title="Digite a descrição."
+                                                     value="#{cotacaoControlador.selecionado.descricao}"
+                                                     disabled="#{cotacaoControlador.hasSolicitacao}"
+                                                     id="descricao"
+                                                     cols="67"
+                                                     rows="4"
+                                                     maxlength="255"
+                                                     autoResize="true"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-descricao"/>
+                                    <h:outputText id="counter-descricao"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+
+
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Lote / Item">
+                        <p:outputPanel id="panel-lote-item">
+                            <ad:input-lote-item-formulario
+                                updateGridDadosGerais=":Formulario:tab-view-geral:panel-dados-gerais"
+                                lotes="#{cotacaoControlador.lotesVO}"
+                                selecionado="#{cotacaoControlador.selecionado}"
+                                tipoProcesso="#{cotacaoControlador.selecionado.tipoAnexo}"
+                                disabled="#{!cotacaoControlador.podeAdicionarNovoLote() or cotacaoControlador.hasSolicitacao}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Fornecedores"
+                           id="tab-fornecedor"
+                           rendered="#{cotacaoControlador.renderizarAbaFornecedores()}">
+                        <p:outputPanel id="panel-fornecedor">
+                            <p:commandButton value="Novo Fornecedor"
+                                             styleClass="padrao"
+                                             icon="ui-icon-circle-plus"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado eq null}"
+                                             disabled="#{cotacaoControlador.hasSolicitacao}"
+                                             actionListener="#{cotacaoControlador.novoFornecedor()}"
+                                             process="@this"
+                                             update=":Formulario:tab-view-geral:panel-fornecedor"/>
+
+                            <p:panel header="Novo Fornecedor"
+                                     id="panel-novo-fornecedor"
+                                     rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado ne null}"
+                                     styleClass="mtop05 mbot05">
+
+                                <h:panelGrid columns="2" styleClass="mbot05">
+
+                                    <fc:outputLabelObrigatorio value="Origem da cotação: "/>
+                                    <h:panelGroup>
+                                        <h:selectOneMenu
+                                            id="origemCotacao"
+                                            value="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao}">
+                                            <f:selectItems
+                                                value="#{cotacaoControlador.listarOrigensCotacao()}"/>
+                                            <p:ajax event="change" update=":Formulario:tab-view-geral:panel-fornecedor"
+                                                    process="@this"/>
+                                        </h:selectOneMenu>
+
+                                        <co:botao_informacao descricao="
+                                              &lt;b>&bull;Banco de Preço - RBWEB: &lt;/b>
+                                              &lt;br/&gt;
+                                              Utilizado para quando a pesquisa de preço é feita em um processo de compra já registrado no sistema RBWEB
+                                              &lt;br/&gt; &bull;
+                                              Exemplo: Camara Municipal, Fundo Municipal, Autarquias Municipais, Fundações Municipais, Secretárias Municipais e etc.
+                                              &lt;br/&gt; &bull;
+                                              &lt;b>Banco de Preço - Externo: &lt;/b>
+                                              &lt;br/&gt;
+                                              Utilizado para quando a pesquisa de preço é feita em um processo de compra de uma unidade externa, ou seja, uma unidade(Federal, Estadual ou Municipal) que não pertence ao orçamento dessa municipalidade, ou até mesmo uma tabela base
+                                              &lt;br/&gt; &bull;
+                                              Exemplo: Ministérios, Secretárias de estado, Prefeituras, SINAPI, BPS, COMPRAS.GOV, BDI,  etc."
+                                                             styleClass="botao-transparente icone-16"/>
+                                    </h:panelGroup>
+
+                                    <fc:outputLabelObrigatorio value="Fornecedor:"
+                                                               rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao.isOrigemFornecedor()}"/>
+                                    <h:panelGroup
+                                        rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao.isOrigemFornecedor()}">
+                                        <p:autoComplete id="fornecedor-cotacao"
+                                                        queryDelay="1000"
+                                                        title="Informe o(s) fornecedor(es) da cotação."
+                                                        value="#{cotacaoControlador.fornecedorCotacaoSelecionado.fornecedor}"
+                                                        completeMethod="#{cotacaoControlador.completaPessoa}"
+                                                        converter="#{pessoaContabilControlador.converterGenerico}"
+                                                        forceSelection="true"
+                                                        var="fo"
+                                                        itemLabel="#{fo}"
+                                                        itemValue="#{fo.id}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px; max-width: 800px"
+                                                        size="70">
+                                            <p:ajax event="itemSelect"
+                                                    process="@this" update="@this"
+                                                    onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                        </p:autoComplete>
+
+                                        <fc:novoParente label="PF"
+                                                        styleClass="mrig05"
+                                                        title="Cadastrar uma Nova Pessoa Física"
+                                                        selecionado="#{cotacaoControlador.selecionado}"
+                                                        destino="/tributario/configuracoes/pessoa/novapessoafisica/"
+                                                        origem="#{cotacaoControlador.urlAtual}"/>
+
+                                        <fc:novoParente label="PJ"
+                                                        title="Cadastrar uma Nova Pessoa Jurídica"
+                                                        selecionado="#{cotacaoControlador.selecionado}"
+                                                        destino="/tributario/configuracoes/pessoa/novapessoajuridica/"
+                                                        origem="#{cotacaoControlador.urlAtual}"/>
+
+                                    </h:panelGroup>
+
+                                    <fc:outputLabelObrigatorio value="Contrato:"
+                                                               rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao.isOrigemBancoPrecoREWEB()}"/>
+                                    <h:panelGroup
+                                        rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao.isOrigemBancoPrecoREWEB()}"
+                                        id="gridFornecedor">
+                                        <p:autoComplete id="contrato-cotacao"
+                                                        queryDelay="1000"
+                                                        title="Informe um contrato."
+                                                        value="#{cotacaoControlador.fornecedorCotacaoSelecionado.contrato}"
+                                                        completeMethod="#{cotacaoControlador.completaContrato}"
+                                                        converter="#{contratoAdmControlador.converterGenerico}"
+                                                        forceSelection="true"
+                                                        var="co"
+                                                        itemLabel="#{co}"
+                                                        itemValue="#{co.id}"
+                                                        maxResults="70"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px; max-width: 800px"
+                                                        size="70">
+                                            <p:ajax event="itemSelect"
+                                                    process="@this :Formulario:tab-view-geral:gridFornecedor"
+                                                    update="@this"
+                                                    onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                        </p:autoComplete>
+                                        <p:spacer width="5"/>
+                                        <p:commandButton id="btnbuscaavancadacontrato"
+                                                         icon="ui-icon-search"
+                                                         title="Clique para fazer uma busca avançada por contrato."
+                                                         onclick="aguarde.show();"
+                                                         oncomplete="dialogPesquisaContrato.show(); aguarde.hide();"
+                                                         process="@this"
+                                                         update=":formContrato"
+                                                         actionListener="#{cotacaoControlador.buscarContratoCotacao}"/>
+                                    </h:panelGroup>
+
+                                    <fc:outputLabelObrigatorio value="Unidade Externa:"
+                                                               rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao.isOrigemBancoExterno()}"/>
+                                    <h:panelGroup
+                                        rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao.isOrigemBancoExterno()}">
+                                        <p:autoComplete id="unidadeExterna"
+                                                        queryDelay="1000"
+                                                        title="Informe uma unidade externa."
+                                                        value="#{cotacaoControlador.fornecedorCotacaoSelecionado.unidadeExterna}"
+                                                        completeMethod="#{cotacaoControlador.completaUnidadeExterna}"
+                                                        converter="#{unidadeExternaControlador.converterGenerico}"
+                                                        forceSelection="true"
+                                                        var="ue"
+                                                        itemLabel="#{ue}"
+                                                        itemValue="#{ue.id}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px; max-width: 800px"
+                                                        size="70">
+                                            <p:ajax event="itemSelect"
+                                                    process="@this" update="@this"
+                                                    onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                        </p:autoComplete>
+                                    </h:panelGroup>
+
+                                    <h:outputLabel value="Observação:"/>
+                                    <h:panelGroup>
+                                        <h:panelGrid columns="2">
+                                            <p:inputTextarea id="observacao"
+                                                             title="Digite uma observacao"
+                                                             value="#{cotacaoControlador.fornecedorCotacaoSelecionado.observacao}"
+                                                             cols="70"
+                                                             rows="6"
+                                                             maxlength="255"
+                                                             autoResize="false"
+                                                             counterTemplate="{0} Caracteres Restantes."
+                                                             counter="counter-observacao"/>
+                                            <h:outputText id="counter-observacao"
+                                                          style="color: #497692"
+                                                          styleClass="mlef05"/>
+                                        </h:panelGrid>
+                                    </h:panelGroup>
+                                </h:panelGrid>
+
+                                <p:commandButton id="btnConfirmarFornecedor"
+                                                 value="Confirmar"
+                                                 styleClass="prioritario mtop10 mrig05"
+                                                 icon="ui-icon-check"
+                                                 title="Clique aqui para adicionar o fornecedor."
+                                                 actionListener="#{cotacaoControlador.confirmarFornecedor()}"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 update=":Formulario:tab-view-geral:panel-fornecedor"/>
+
+                                <p:commandButton id="btnCancelarFornecedor"
+                                                 value="Cancelar"
+                                                 styleClass="padrao mtop10"
+                                                 icon="ui-icon-cancel"
+                                                 title="Clique aqui para cancelar."
+                                                 actionListener="#{cotacaoControlador.cancelarFornecedor()}"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 update=":Formulario:tab-view-geral:panel-fornecedor"/>
+
+                            </p:panel>
+
+                            <p:dataTable
+                                paginator="true"
+                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                rowIndexVar="rowIx"
+                                styleClass="mtop05"
+                                emptyMessage="Não foram localizados registros para serem apresentados"
+                                rows="10"
+                                paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>FORNECEDORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                id="tabela-fornecedores"
+                                value="#{cotacaoControlador.fornecedores}"
+                                var="forn">
+
+                                <p:column headerText="Ações"
+                                          styleClass="alinhamentoCentralizado"
+                                          style="width: 60px">
+                                    <p:commandButton id="btnRemoverFornecedor"
+                                                     icon="ui-icon-trash"
+                                                     title="Clique para remover esse registro."
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{cotacaoControlador.removerFornecedor(forn)}"
+                                                     disabled="#{cotacaoControlador.hasSolicitacao}"
+                                                     process="@this"
+                                                     update=":Formulario:tab-view-geral:panel-fornecedor"/>
+                                </p:column>
+                                <p:column headerText="Lançar Preço"
+                                          styleClass="alinhamentoCentralizado"
+                                          style="width: 80px">
+                                    <p:commandButton id="btnSelecionarFornecedor"
+                                                     icon="ui-icon-note"
+                                                     title="Clique para selecionar este fornecedor."
+                                                     onclick="aguarde.show();"
+                                                     oncomplete="dialogLancamento.show(); aguarde.hide();"
+                                                     actionListener="#{cotacaoControlador.selecionarFornecedor(forn)}"
+                                                     disabled="#{cotacaoControlador.hasSolicitacao}"
+                                                     process="@this"
+                                                     update=":formulario-lancamento"/>
+                                </p:column>
+                                <p:column headerText="Origem da cotacao"
+                                          styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{forn.origemCotacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Fornecedor"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText rendered="#{forn.origemCotacao.origemFornecedor}"
+                                                  value="#{forn.fornecedor.nomeCpfCnpj}"/>
+                                    <h:outputText rendered="#{forn.origemCotacao.origemBancoPrecoREWEB}"
+                                                  value="#{forn.contrato.getNumeroContratoAno()}  #{forn.contrato.numeroAnoTermo}  #{forn.fornecedor.nomeCpfCnpj}"/>
+                                    <h:outputText rendered="#{forn.origemCotacao.origemBancoExterno}"
+                                                  value="#{forn.fornecedor.nomeCpfCnpj} #{forn.unidadeExterna.esferaGoverno}"/>
+                                </p:column>
+                                <p:column headerText="Observação"
+                                          styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{forn.observacao}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Histórico do Processo" titleStyle="background: #d9edf7" id="tab-historico"
+                           rendered="#{cotacaoControlador.operacaoEditar}">
+                        <fa:historico-processo-licitatorio
+                            filtroProcesso="#{cotacaoControlador.filtroHistoricoProcesso}"/>
+                    </p:tab>
+
+                    <p:tab id="tabAnexo" title="Anexo">
+                        <fc:detentorDocumentoLicitacao selecionado="#{cotacaoControlador.selecionado}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{cotacaoControlador}"/>
+
+        </h:form>
+
+
+        <p:dialog header="Valor do Item"
+                  modal="true"
+                  dynamic="true"
+                  width="700"
+                  max-height="400"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dialogValor"
+                  closable="true">
+            <h:form id="formulario-valor">
+                <p:outputPanel id="panel-valor">
+
+                    <h:outputText value="Item Selecionado: "/>
+                    <h:outputText value="#{cotacaoControlador.itemCotacaoSelecionado}"
+                                  styleClass="azulnegrito"
+                                  style="font-size: 13px;"/>
+
+                    <hr/>
+                    <p:dataTable id="tabela-valor"
+                                 paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionado' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{cotacaoControlador.itemCotacaoSelecionado.valoresCotacao}"
+                                 var="valor"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;spanclass='titulo-tabela mrig10'>VALORES &lt;/span> {FirstPageLink}   {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})">
+
+                        <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{valor.fornecedor.nomeCpfCnpj}"/>
+                        </p:column>
+                        <p:column headerText="Marca" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{valor.marca}"/>
+                        </p:column>
+                        <p:column headerText="Quantidade" styleClass="alinhamentoDireita" style="width: 100px">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{valor.itemCotacao.unidadeMedida.mascaraQuantidade}"
+                                value="#{valor.itemCotacao.quantidade}"/>
+                        </p:column>
+                        <p:column headerText="Preço (R$)" styleClass="alinhamentoDireita" style="width: 100px">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{valor.itemCotacao.unidadeMedida.mascaraValorUnitario}"
+                                value="#{valor.preco}"/>
+                        </p:column>
+                        <p:column headerText="Total (R$)" styleClass="alinhamentoDireita" style="width: 100px">
+                            <h:outputText id="preco_total_item"
+                                          value="#{valor.total}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogPesquisaContrato"
+                  modal="true"
+                  position="center"
+                  height="480"
+                  width="1200"
+                  header="Pesquisa de Contrato"
+                  dynamic="true"
+                  resizable="false">
+
+            <h:form id="formContrato">
+                <div style="text-align: center" class="mtop05">
+                    <p:dataTable paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{cotacaoControlador.contratos}"
+                                 selection="#{cotacaoControlador.contratoSelecionado}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Contratos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="con"
+                                 filteredValue="#{cotacaoControlador.contratosFiltrados}"
+                                 rowKey="#{con.contrato.numeroContrato}">
+                        <p:column selectionMode="single" style="width:35px;"/>
+                        <p:column>
+                            <p:rowToggler/>
+                        </p:column>
+                        <p:column headerText="Número Contrato"
+                                  filterBy="#{con.contrato.numeroContrato}"
+                                  filterMatchMode="contains"
+                                  filterStyle="width: 100%; text-align: left !important;"
+                                  style="text-align: center;">
+                            <h:outputText value="#{con.contrato.numeroContrato}"/>
+                        </p:column>
+                        <p:column headerText="Número/Ano Termo"
+                                  filterBy="#{con.contrato.numeroAnoTermo}"
+                                  filterMatchMode="contains"
+                                  filterStyle="width: 100%; text-align: left !important;"
+                                  style="text-align: center;">
+                            <h:outputText value="#{con.contrato.numeroAnoTermo}"/>
+                        </p:column>
+                        <p:column headerText="Fornecedor"
+                                  filterBy="#{con.contrato.contratado}"
+                                  filterMatchMode="contains"
+                                  filterStyle="width: 100%; text-align: left !important;"
+                                  style="text-align: center;">
+                            <h:outputText value="#{con.contrato.contratado}"/>
+                        </p:column>
+                        <p:column headerText="Objeto"
+                                  filterBy="#{con.contrato.objeto}"
+                                  filterMatchMode="contains"
+                                  filterStyle="width: 90%; text-align: left !important;"
+                                  style="text-align: center;">
+                            <h:outputText value="#{con.contrato.objeto}"/>
+                        </p:column>
+                        <p:rowExpansion>
+                            <p:dataTable paginator="true"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{con.objetosCompra}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Itens do Contrato&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="itencont">
+                                <p:column headerText="Objeto de Compra" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itencont.objetoCompra}"/>
+                                </p:column>
+                                <p:column headerText="Preço (R$) " styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{itencont.preco}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:rowExpansion>
+                    </p:dataTable>
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     process=":formContrato"
+                                     update=":Formulario:tab-view-geral:panel-fornecedor"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{cotacaoControlador.confirmarContrato()}"
+                                     style="height: 30px"
+                                     styleClass="mtop10 padrao prioritario"/>
+
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     style="height: 30px"
+                                     styleClass="mtop10 padrao mlef05"
+                                     actionListener="#{cotacaoControlador.cancelarContrato()}"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Lançamento de Preço"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  width="1200"
+                  height="450"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dialogLancamento"
+                  closable="false">
+
+            <h:form id="formulario-lancamento">
+                <h:outputText value="Fornecedor Selecionado: " style="font-size: 13px;"/>
+                <h:outputText value="#{cotacaoControlador.fornecedorCotacaoSelecionado}"
+                              styleClass="azulnegrito"
+                              style="font-size: 13px;"/>
+                <hr/>
+
+                <p:dataTable paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             style="overflow: scroll; max-height: 430px; width: auto; "
+                             emptyMessage="Não foram encontrados Itens nesta licitação."
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>LANÇAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             id="tabela-lancamento"
+                             value="#{cotacaoControlador.getValoresCotacaoDoFornecedor(cotacaoControlador.fornecedorCotacaoSelecionado)}"
+                             var="valorCotacao">
+
+                    <p:column headerText="Lote" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{valorCotacao.itemCotacao.loteCotacao.numero}"/>
+                    </p:column>
+                    <p:column headerText="Item" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{valorCotacao.itemCotacao.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{valorCotacao.itemCotacao.objetoCompra.descricao}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Grupo Objeto Compra" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{valorCotacao.itemCotacao.objetoCompra.grupoObjetoCompra}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Tipo Cotação" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{valorCotacao.itemCotacao.objetoCompra.grupoObjetoCompra.tipoCotacao.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Marca" styleClass="alinhamentoEsquerda" style="width: 100px">
+                        <p:inputText value="#{valorCotacao.marca}"
+                                     maxlength="70"
+                                     style="text-align: center">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:inputText>
+                    </p:column>
+                    <p:column headerText="Qtde" styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{valorCotacao.itemCotacao.unidadeMedida.mascaraQuantidade}"
+                            value="#{valorCotacao.itemCotacao.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Preço Sugerido (R$)"
+                              styleClass="alinhamentoCentralizado"
+                              rendered="#{cotacaoControlador.fornecedorCotacaoSelecionado.origemCotacao.origemBancoPrecoREWEB}">
+                        <fc:output-mascara-unidade-medida value="#{valorCotacao.itemCotacao.valorUnitario}"
+                                                          tipoMascara="#{valorCotacao.itemCotacao.unidadeMedida.mascaraValorUnitario}"/>
+                    </p:column>
+                    <p:column headerText="Preço (R$)" styleClass="alinhamentoCentralizado" style="width: 70px">
+                        <fc:input-mascara-unidade-medida
+                            tipoMascara="#{valorCotacao.mascaraValorUnitario}"
+                            value="#{valorCotacao.preco}"
+                            update=":formulario-lancamento:tabela-lancamento:preco-total"
+                            process="@this :formulario-lancamento:tabela-lancamento"
+                        />
+                    </p:column>
+                    <p:column headerText="Total (R$)" styleClass="alinhamentoDireita">
+                        <p:outputPanel id="preco-total">
+                            <h:outputText
+                                value="#{valorCotacao.total}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:outputPanel>
+                    </p:column>
+                </p:dataTable>
+
+                <div class="alinhamentoCentralizado mtop05 mbot05">
+                    <p:commandButton value="Confirmar"
+                                     styleClass="prioritario mtop05"
+                                     icon="ui-icon-check"
+                                     title="Clique para confirmar."
+                                     actionListener="#{cotacaoControlador.confirmarCotacaoDoFornecedor()}"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                                     process="@this"
+                                     update=":Formulario:tab-view-geral:panel-lote-item"/>
+
+                    <p:commandButton value="Cancelar"
+                                     styleClass="padrao mlef10 mtop05"
+                                     icon="ui-icon-cancel"
+                                     title="Clique para cancelar."
+                                     actionListener="#{cotacaoControlador.cancelarCotacaoDoFornecedor()}"
+                                     onclick="if (!confirm('Tem certeza que deseja cancelar este lançamento?')) {return false; } else {aguarde.show();}"
+                                     oncomplete="dialogLancamento.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  width="500"
+                  resizable="false"
+                  widgetVar="dlgSalvar"
+                  closable="false">
+
+            <h:form id="form-dlg-salvar">
+                <div class="alert alert-danger" align="center">
+                    <strong>Atenção! </strong>Ao editar uma cotação/planilha orçamentária já concluída a situação irá retornar para em elaboração, deseja continuar?
+                </div>
+
+                <div class="mtop10" align="center">
+                    <p:commandButton value="Confirmar"
+                                     styleClass="prioritario mtop05"
+                                     icon="ui-icon-check"
+                                     title="Clique para confirmar."
+                                     actionListener="#{cotacaoControlador.salvarCotacao()}"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                                     process="@this"
+                                     update=":Formulario:tab-view-geral:panel-lote-item"/>
+
+                    <p:commandButton value="Cancelar"
+                                     styleClass="padrao mlef10 mtop05"
+                                     icon="ui-icon-cancel"
+                                     title="Clique para cancelar."
+                                     onclick="aguarde.show()"
+                                     oncomplete="dlgSalvar.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dlgPesquisaObjComp"
+                  modal="true"
+                  position="center"
+                  dynamic="true"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  height="480"
+                  width="1100"
+                  closable="true">
+            <p:outputPanel id="panelDglPsquisaObj">
+                <fc:consultaEntidade id="pesquisa-obj-consumo"
+                                     chave="#{cotacaoControlador.selecionado.formularioCotacao.tipoSolicitacao.isCompraServico() ? 'OBJETO_COMPRA_COMPRASERVICO' : 'OBJETO_COMPRA_OBRA'}"
+                                     renderedBotaoExportarDados="false"
+                                     outrosBotoesTabela="/administrativo/licitacao/formulariocotacao/botao-selecionar-obj-compra.xhtml"/>
+            </p:outputPanel>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

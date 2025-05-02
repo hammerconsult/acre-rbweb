@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui">
+
+<h:form id="Formulario">
+    <script type="text/javascript">
+        var timer;
+        function iniciaPesquisa() {
+
+            $('#retornoPesquisa').css('display', 'none');
+            $('#alertaAntesPesquisa').css('display', 'none');
+            timer = setInterval(function () {
+                enquantoPesquisa();
+            }, 1000);
+        }
+
+        function terminaPesquisaSemRegistros() {
+            encerraTimer();
+            novaPesquisa();
+            nenhumRegistro.show();
+        }
+
+        function terminaPesquisaComRegistros() {
+            atualizaNumeroItens();
+            encerraTimer();
+            $('#retornoPesquisa').css('display', 'block');
+        }
+
+        function encerraTimer() {
+            aguarde.hide();
+            clearInterval(timer);
+        }
+
+        function novaPesquisa() {
+            $('#retornoPesquisa').css('display', 'none');
+            $('#alertaAntesPesquisa').css('display', 'block');
+        }
+
+
+        function comecaGerar() {
+            novaPesquisa();
+            $('#alertaAntesPesquisa').css('display', 'none');
+            timer = setInterval(function () {
+                enquantoGera();
+            }, 1000);
+        }
+
+        $(document).ready(function () {
+            novaPesquisa();
+        });
+
+
+    </script>
+    <p:remoteCommand name="enquantoPesquisa"
+                     actionListener="#{certidaoDividaAtivaControlador.executarJavaScriptAposConcluirPesquisa}"
+                     update="painelParaUpadate"/>
+    <p:remoteCommand name="enquantoGera" actionListener="#{certidaoDividaAtivaControlador.enquantoGera}"
+                     update="painelParaUpadate"/>
+    <p:panel header="Geração de CDA - Certidão de Dívida Ativa">
+        <h:panelGrid columns="2">
+            <fc:outputLabelObrigatorio value="Exercício: "/>
+            <h:panelGrid columns="6" cellspacing="0" cellpadding="0">
+                <p:inputMask id="exercicioInicial" value="#{certidaoDividaAtivaControlador.exercicioInicial}"
+                             mask="9999">
+                    <p:ajax update=":Formulario:exercicioFinal" event="keyup"
+                            listener="#{certidaoDividaAtivaControlador.copiaExercicio}"/>
+                </p:inputMask>
+                &nbsp;
+                &nbsp;
+                <h:outputText value="Até:"/>
+                &nbsp;
+                <p:inputMask id="exercicioFinal" value="#{certidaoDividaAtivaControlador.exercicioFinal}"
+                             mask="9999"/>
+            </h:panelGrid>
+
+            <fc:outputLabelObrigatorio value="Tipo de Cadastro: "/>
+            <h:selectOneMenu id="tipoCadastro" value="#{certidaoDividaAtivaControlador.tipoCadastroTributario}">
+                <f:selectItems value="#{certidaoDividaAtivaControlador.tiposDeCadastroTributario}"/>
+                <p:ajax update=":Formulario:pnlTipoCadastro divida" event="change"/>
+            </h:selectOneMenu>
+
+            <fc:outputLabelObrigatorio value="Dívida: "/>
+            <h:panelGroup id="panelDivida">
+                <table class="table">
+                    <ui:repeat value="#{certidaoDividaAtivaControlador.dividasSelecionadas}"
+                               var="divida">
+                        <tr>
+                            <td>
+                                <h:outputText value="#{divida.descricao}" styleClass="negrito"/>
+                            </td>
+                            <td>
+                                <p:commandButton icon="ui-icon-trash"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{certidaoDividaAtivaControlador.removerDivida(divida)}"
+                                                 update="@form"/>
+                            </td>
+                        </tr>
+                    </ui:repeat>
+                    <tr>
+                        <td>
+                            <h:selectOneMenu value="#{certidaoDividaAtivaControlador.divida}"
+                                             id="divida"
+                                             style="max-width: 400px"
+                                             converter="#{consultaDebitoControlador.converterDivida}">
+                                <f:selectItem itemValue="#{null}" itemLabel=" "/>
+                                <f:selectItems value="#{certidaoDividaAtivaControlador.dividasTipoCadastro}"/>
+                            </h:selectOneMenu>
+                        </td>
+                        <td>
+                            <p:commandButton icon="ui-icon-arrowthickstop-1-s"
+                                             styleClass="prioritario"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{certidaoDividaAtivaControlador.adicionarDivida(true)}"
+                                             update="@form"/>
+                        </td>
+                    </tr>
+                </table>
+            </h:panelGroup>
+        </h:panelGrid>
+        <p:message for="tipoCadastro" showDetail="true"/>
+        <p:panel id="pnlTipoCadastro" style="border: none">
+            <p:panel style="border: none"
+                     rendered="#{certidaoDividaAtivaControlador.tipoCadastroTributario eq 'PESSOA'}">
+                <fc:autocompletePessoa id="contribuinte"
+                                       value="#{certidaoDividaAtivaControlador.pessoa}"
+                                       label="Contribuinte: "
+                                       habilitaBotaoNovaPF="false"
+                                       habilitaBotaoNovaPJ="false"
+                                       watermark="TODOS"
+                                       caminhoAtual="/geracao-de-certidao-de-divida-ativa/"/>
+            </p:panel>
+            <h:panelGrid columns="4"
+                         rendered="#{certidaoDividaAtivaControlador.tipoCadastroTributario ne 'PESSOA' and certidaoDividaAtivaControlador.tipoCadastroTributario ne null}">
+                <h:outputText value="Cadastro Inicial: "/>
+                <p:inputText value="#{certidaoDividaAtivaControlador.cadastroInicial}"
+                             size="40"
+                             maxlength="18"
+                             title="Informe o Cadastro">
+                    <p:ajax event="keyup" update=":Formulario:cadFinal"
+                            listener="#{certidaoDividaAtivaControlador.copiarCadastroInicialParaCadastroFinal()}"/>
+                </p:inputText>
+                <h:outputText value="Cadastro Final: "
+                              rendered="#{certidaoDividaAtivaControlador.tipoCadastroTributario ne 'PESSOA'}"/>
+                <p:inputText id="cadFinal"
+                             value="#{certidaoDividaAtivaControlador.cadastroFinal}"
+                             size="40"
+                             maxlength="18"
+                             title="Informe o Cadastro">
+                </p:inputText>
+            </h:panelGrid>
+        </p:panel>
+        <p:separator/>
+        <h:panelGrid columns="3">
+            <p:commandButton value="Pesquisar"
+                             id="pesquisar"
+                             update="@form"
+                             icon="ui-icon-search"
+                             onclick="aguarde.show(); iniciaPesquisa()"
+                             actionListener="#{certidaoDividaAtivaControlador.pesquisar()}"
+                             styleClass="operacao prioritario"/>
+
+            <p:commandButton value="Nova Pesquisa"
+                             id="novaPesquisa"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide(); novaPesquisa();"
+                             update="@form"
+                             icon="ui-icon-document"
+                             actionListener="#{certidaoDividaAtivaControlador.novo()}"
+                             styleClass="operacao"/>
+
+            <fc:botaoTargetBlank actionListener="#{certidaoDividaAtivaControlador.imprimirPessoasInconsistentes()}"
+                                 label="Relação de Pessoas Inconsistêntes"
+                                 icon="ui-icon-print"
+                                 id="pessoasInconsistentes2"/>
+        </h:panelGrid>
+        <br/>
+
+        <div class="alert alert-info" id="agrupadores"
+             style="display: #{certidaoDividaAtivaControlador.agrupadoresCadastrados.size() gt 0 ? 'block' : 'none'}">
+            <div class="negrito">Atenção!</div>
+            Existem agrupares de CDA configurados para a(s) divida(s) selecinada(s). <br/>
+            Automaticamente as certidões serão geradas agrupando as dívidas:
+            <ui:repeat value="#{certidaoDividaAtivaControlador.agrupadoresCadastrados}" var="agrupador">
+                <ui:repeat value="#{agrupador.dividas}" var="divida" varStatus="index">
+                    #{index.index > 1 and index.index lt agrupador.dividas.size() -1 ? ',' : ''}
+                    #{divida}
+                </ui:repeat>
+            </ui:repeat>
+        </div>
+        <p:remoteCommand name="atualizaNumeroItens" update="numeroDeItens"/>
+        <p:remoteCommand name="atualizaFormFinaliza" update=":formFinaliza" oncomplete="finaliza.show();"/>
+
+        <p:panel id="painelParaUpadate" style="border: 0 !important;">
+            <p:outputPanel rendered="#{certidaoDividaAtivaControlador.gerando}" styleClass="centralizado">
+                <div class="centralizado" style="width: 100%">
+                    <h:outputText value="#{certidaoDividaAtivaControlador.porcentagemDoCalculo}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                    %
+                </div>
+                <div class="progress">
+                    <div class="bar"
+                         style="width: #{certidaoDividaAtivaControlador.porcentagemDoCalculo}%;"></div>
+                </div>
+            </p:outputPanel>
+        </p:panel>
+        <p:outputPanel>
+            <div class="alert alert-success" id="retornoPesquisa" style="display: none">
+                <h:panelGrid columns="2" style="width: 100%;" id="numeroDeItens"
+                             columnClasses="alinhamentoEsquerda, alinhamentoDireita">
+                    <div style="width: 70%">
+                        <strong>Pronto para gerar!</strong> <br/>
+                        Foram encontrados
+                        <strong>#{certidaoDividaAtivaControlador.itensInscricaoDividaAtivas.size()}</strong> débitos que se enquadram nos filtros, prossiga para gerar as certidões
+                    </div>
+                    <p:commandButton rendered="false"
+                                     styleClass="operacao"
+                                     icon="ui-icon-search"
+                                     update=":painelTodosCadastros"
+                                     oncomplete="verTodos.show()"
+                                     value="Ver Cadastros"/>
+
+                    <p:commandButton
+                        styleClass="operacao sucess"
+                        icon="ui-icon-check"
+                        actionListener="#{certidaoDividaAtivaControlador.gerarCertidao()}"
+                        oncomplete="comecaGerar()"
+                        value="Continuar"/>
+                </h:panelGrid>
+            </div>
+            <br/>
+
+            <div class="alert" id="alertaAntesPesquisa">
+                <strong>Atenção!</strong> Essa consulta trará apenas débitos que ainda não tem certidão, para uma reemissão navegue para a página de
+                <p:commandLink title="Reemissão e consulta da certidão de dívida ativa."
+                               value="Reemissão e Consulta" styleClass="operacao"
+                               actionListener="#{certidaoDividaAtivaControlador.redirecionarParaConsultaAndReemissao()}"/>
+            </div>
+        </p:outputPanel>
+    </p:panel>
+
+
+</h:form>
+<p:dialog modal="true" widgetVar="finaliza" style="max-width: 800px !important">
+    <h:form id="formFinaliza">
+        <p:outputPanel
+            rendered="#{certidaoDividaAtivaControlador.itensInscricaoDividaAtivas.size() gt certidaoDividaAtivaControlador.naoGerados}">
+            <div class="alert alert-success">
+                <h:panelGrid columns="2" style="width: 100%;"
+                             columnClasses="alinhamentoEsquerda, alinhamentoDireita">
+                    <div style="width: 90%">
+                        <strong>Pronto!</strong><br/>
+                        <strong>Certidões Geradas</strong>, Os débitos inscritos em D.A. que foram enquadrados nos filtros tem certidão.
+                    </div>
+
+                    <p:commandButton
+                        styleClass="operacao sucess"
+                        icon="ui-icon-check"
+                        onclick="finaliza.hide()"
+                        value="Continuar"/>
+                </h:panelGrid>
+            </div>
+        </p:outputPanel>
+        <p:outputPanel rendered="#{certidaoDividaAtivaControlador.naoGerados gt 0}">
+            <div class="alert alert-error">
+                <h:panelGrid columns="2" style="width: 100%;"
+                             columnClasses="alinhamentoEsquerda, alinhamentoDireita">
+                    <div style="width: 90%">
+                        <strong>Atenção!</strong><br/>
+                        <strong>#{certidaoDividaAtivaControlador.naoGerados} Certidões </strong> não foram geradas, as pessoas dessas certidões estão com o CPF ou CNPJ inválidos, emita a relação de pessoas inconsistentes para conferir.
+                    </div>
+
+                    <fc:botaoTargetBlank
+                        actionListener="#{certidaoDividaAtivaControlador.imprimirRelatorioPessoasInconsistentesDividaAtiva()}"
+                        label="Relação de Pessoas Inconsistêntes"
+                        icon="ui-icon-print"
+                        id="dlgPessoasInconsistentes"/>
+                </h:panelGrid>
+            </div>
+        </p:outputPanel>
+    </h:form>
+</p:dialog>
+<p:dialog modal="true" widgetVar="nenhumRegistro" style="max-width: 800px !important" closable="false">
+    <h:form>
+        <div class="alert alert-warn">
+            <h:panelGrid columns="2" style="width: 100%;"
+                         columnClasses="alinhamentoEsquerda, alinhamentoDireita">
+                <div style="width: 90%">
+                    <strong>Atenção!</strong><br/>
+                    <strong>Nenhum débito</strong> inscrito em Dívida Ativa foi encontrado para os filtros informados, verifique.
+                </div>
+                <p:commandButton
+                    styleClass="operacao warn"
+                    icon="ui-icon-cancel"
+                    onclick="nenhumRegistro.hide()"
+                    value="Voltar"/>
+            </h:panelGrid>
+        </div>
+    </h:form>
+</p:dialog>
+<p:dialog modal="true" widgetVar="verTodos"
+          position="center"
+          style="max-width: 800px !important"
+          closable="true">
+    <p:panel style="max-height: 500px; overflow: auto" id="painelTodosCadastros">
+        <table class="table">
+            <ui:repeat
+                value="#{certidaoDividaAtivaControlador.itensInscricaoDividaAtivas}"
+                var="item">
+                <tr>
+                    <td>
+                        #{item.processoCalculo.exercicio.ano}
+                    </td>
+                    <td>
+                        #{item.cadastro.numeroCadastro}
+                    </td>
+                    <td>
+                        #{item.pessoa.nomeCpfCnpj}
+                    </td>
+                </tr>
+            </ui:repeat>
+        </table>
+    </p:panel>
+</p:dialog>
+
+</html>

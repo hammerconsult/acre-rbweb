@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            window.onload = function () {
+                buscarBensAoEditar();
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerAcompanhaSalvar;
+
+            function acompanharSalvar() {
+                timerAcompanhaSalvar = setInterval(
+                    function () {
+                        rcAtualizaCompFutures();
+                    }, 1000);
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                aguarde.show();
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+
+            <fc:cabecalhoPretty controlador="#{loteReavaliacaoBemControlador}"
+                                origem="#{loteReavaliacaoBemControlador.caminhoPadrao}listar/"/>
+
+            <p:remoteCommand
+                id="btnBuscarItens"
+                name="buscarBensAoEditar"
+                actionListener="#{loteReavaliacaoBemControlador.buscarBensAoEditar()}"/>
+
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{loteReavaliacaoBemControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                actionListener="#{loteReavaliacaoBemControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{loteReavaliacaoBemControlador.consultarFutureSalvar()}"
+                name="rcAtualizaCompFutures"/>
+
+            <p:panel header="Solicitação de Reavaliação de Bens Móveis" id="painelPrincipal">
+                <p:tabView id="tabViewPrincipal" styleClass="mtop05">
+
+                    <p:tab title="Dados da Reavaliação">
+                        <p:outputPanel id="outPanelDadosReavaliacao">
+                            <h:panelGrid columns="2" cellpadding="1">
+                                <h:outputText for="codigo" value="Código: "/>
+                                <h:outputText id="codigo"
+                                              value="#{loteReavaliacaoBemControlador.selecionado.codigo ne null ? loteReavaliacaoBemControlador.selecionado.codigo : 'Gerado automaticamente ao concluir'}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText for="data" value="Data:"/>
+                                <h:outputText id="data"
+                                              title="Data gerada pelo sistema."
+                                              value="#{loteReavaliacaoBemControlador.selecionado.dataHoraCriacao}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputText for="situacao" value="Situação:"/>
+                                <h:outputText id="situacao"
+                                              title="Situação gerada pelo sistema."
+                                              value="#{loteReavaliacaoBemControlador.selecionado.situacaoReavaliacaoBem.descricao}"
+                                              styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Tipo de Reavaliação do Bem: "/>
+                                <h:selectOneMenu value="#{loteReavaliacaoBemControlador.selecionado.tipoOperacaoBem}"
+                                                 id="tipoReavaliacao"
+                                                 disabled="#{loteReavaliacaoBemControlador.hasBensSelecinados()}">
+                                    <f:selectItems value="#{loteReavaliacaoBemControlador.tipoOperacaoBens}"/>
+                                    <p:ajax process="@this"
+                                            event="change"
+                                            update="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="descricao" value="Descrição:"/>
+                                <h:panelGrid columns="3" cellpadding="0" cellspacing="0">
+                                    <p:inputTextarea title="Digite a descrição da solicitação de Reavaliação de bem."
+                                                     value="#{loteReavaliacaoBemControlador.selecionado.descricao}"
+                                                     maxlength="255"
+                                                     id="descricao"
+                                                     rows="3"
+                                                     cols="67"
+                                                     autoResize="true"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-descricao"/>
+                                    <h:outputText id="counter-descricao"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+
+                                <fc:outputLabelObrigatorio value="Unidade Administrativa: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="acUnidadeOrganizacionalOrigem"
+                                                size="70"
+                                                title="Informe a Unidade Administrativa."
+                                                value="#{loteReavaliacaoBemControlador.selecionado.hierarquiaOrganizacional}"
+                                                completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalAdministrativaOndeUsuarioLogadoEhGestorPatrimonio}"
+                                                var="undOrg"
+                                                process="@this"
+                                                maxResults="10"
+                                                itemLabel="#{undOrg}"
+                                                itemValue="#{undOrg.id}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                    <p:ajax process="@this"
+                                            event="itemSelect"
+                                            update="responsavelOrigem :Formulario:tabViewPrincipal:outPutPesquisa :Formulario:tabViewPrincipal:outputPanelAnexo"
+                                            listener="#{loteReavaliacaoBemControlador.definirUnidadeFiltroPesquisa}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                </p:autoComplete>
+
+                                <h:outputText for="responsavelOrigem"
+                                              value="Responsável pela Unidade: "/>
+                                <h:outputText id="responsavelOrigem"
+                                              styleClass="negrito"
+                                              value="#{loteReavaliacaoBemControlador.selecionado.responsavel}"/>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Pesquisar Bens">
+                        <p:outputPanel id="outPutPesquisa">
+                            <h:panelGrid columns="2" id="gridPesquisa">
+                                <h:outputText value="Unidade Administrativa:"/>
+                                <h:outputText id="ipUnidadeOrganizacionalOrigem"
+                                              styleClass="negrito"
+                                              value="#{loteReavaliacaoBemControlador.filtroPesquisaBem.hierarquiaAdministrativa}"/>
+
+                                <h:outputLabel value="Unidade Orçamentária:" for="orcamentariaAll"/>
+                                <h:selectOneMenu
+                                    title="Filtra por undiade organizacional."
+                                    value="#{loteReavaliacaoBemControlador.filtroPesquisaBem.hierarquiaOrcamentaria}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    id="orcamentariaAll">
+                                    <p:ajax event="valueChange"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                    <f:selectItems
+                                        value="#{loteReavaliacaoBemControlador.retornarHierarquiaOrcamentaria()}"/>
+                                </h:selectOneMenu>
+
+                                <h:outputText value="Grupo Patrimonial:"/>
+                                <p:autoComplete queryDelay="1000" widgetVar="grupo"
+                                                id="grupoBem"
+                                                size="70"
+                                                title="Digite a descrição."
+                                                value="#{loteReavaliacaoBemControlador.filtroPesquisaBem.grupoBem}"
+                                                completeMethod="#{grupoBemControlador.completaGrupoBem}"
+                                                var="grupo"
+                                                process="@this"
+                                                maxResults="10"
+                                                itemLabel="#{grupo}"
+                                                itemValue="#{grupo.id}"
+                                                forceSelection="true"
+                                                converter="#{grupoBemControlador.converterGenerico}"/>
+
+                                <h:outputText value="Bem:"/>
+                                <ad:auto-complete-bens bem="#{loteReavaliacaoBemControlador.filtroPesquisaBem.bem}"
+                                                       visualizarCampos="true"
+                                                       id="acBem"
+                                                       estadoDoBemDiferenteDe="BAIXADO"
+                                                       tipoBem="MOVEIS"
+                                                       unidadeOrganizacional="#{loteReavaliacaoBemControlador.selecionado.unidadeOrigem}"/>
+
+                            </h:panelGrid>
+
+                            <p:commandButton value="Pesquisar"
+                                             title="Clique para pesquisar"
+                                             icon="ui-icon-search"
+                                             actionListener="#{loteReavaliacaoBemControlador.pesquisarBens()}"
+                                             process=":Formulario:tabViewPrincipal:outPutPesquisa :Formulario:tabViewPrincipal:outPanelDadosReavaliacao"
+                                             styleClass="prioritario mrig05 pesquisar mtop10"
+                                             style="width: 120px"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide()"
+                                             update="tabelaBens outPanelDadosReavaliacao :Formulario:tabViewPrincipal:outputPanelAnexo"/>
+
+                            <p:dataTable id="tabelaBens"
+                                         value="#{loteReavaliacaoBemControlador.bensDisponiveis}"
+                                         var="bem"
+                                         styleClass="mtop03"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rows="10"
+                                         rowsPerPageTemplate="10, 50,100,200,300"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         paginator="true"
+                                         emptyMessage="Nenhum bem encontrado.">
+                                <p:column style="width:16px">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column style="width: 5%; text-align: center;">
+                                    <f:facet name="header">
+                                        <p:commandButton icon="ui-icon-check"
+                                                         styleClass="vinteLarguraVinteAltura"
+                                                         onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         process="@this"
+                                                         update="tabelaBens :Formulario:tabViewPrincipal:outPanelDadosReavaliacao"
+                                                         rendered="#{!loteReavaliacaoBemControlador.mostrarBotaoSelecionarTodos()}"
+                                                         actionListener="#{loteReavaliacaoBemControlador.desmarcarTodos()}"/>
+                                        <p:commandButton
+                                            styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                            value=""
+                                            process="@this"
+                                            update="tabelaBens :Formulario:tabViewPrincipal:outPanelDadosReavaliacao"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"
+                                            rendered="#{loteReavaliacaoBemControlador.mostrarBotaoSelecionarTodos()}"
+                                            actionListener="#{loteReavaliacaoBemControlador.selecionarTodos()}"/>
+                                    </f:facet>
+
+                                    <p:commandButton icon="ui-icon-check"
+                                                     styleClass="vinteLarguraVinteAltura"
+                                                     process="@this"
+                                                     id="btnDesmarcar"
+                                                     update="tabelaBens :Formulario:tabViewPrincipal:outPanelDadosReavaliacao"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     rendered="#{loteReavaliacaoBemControlador.itemSelecionado(bem)}"
+                                                     actionListener="#{loteReavaliacaoBemControlador.desmarcarItem(bem, rowIx)}"/>
+
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                     value=""
+                                                     id="btnSelecionar"
+                                                     process="@this"
+                                                     update="tabelaBens :Formulario:tabViewPrincipal:outPanelDadosReavaliacao"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide()"
+                                                     rendered="#{!loteReavaliacaoBemControlador.itemSelecionado(bem)}"
+                                                     actionListener="#{loteReavaliacaoBemControlador.selecionarItem(bem, rowIx)}"/>
+                                </p:column>
+
+                                <p:column headerText="Registro Patrimonial" style="width: 5%; text-align: left">
+                                    <h:outputText value="#{bem.identificacao}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" style="width: 25%; text-align: left">
+                                    <h:outputText value="#{bem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial" style="width: 20%; text-align: left">
+                                    <h:outputText value="#{bem.ultimoEstado.grupoBem}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária" style="width: 20%; text-align: left">
+                                    <h:outputText value="#{bem.ultimoEstado.detentoraOrcamentaria}"/>
+                                </p:column>
+                                <p:column headerText="Valor do Bem (R$)" style="width: 10%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.valorOriginal}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Ajustes (R$)" style="width: 5%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.ultimoEstado.valorDosAjustes}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Valor Líquido (R$)" style="width: 5%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.ultimoEstado.valorLiquido}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Valor Reavaliação (R$)" style="width: 10%"
+                                          styleClass="alinhamentoDireita">
+                                    <p:inputText value="#{bem.valorAjuste}"
+                                                 maxlength="15"
+                                                 styleClass="alinhamentoDireita"
+                                                 disabled="#{!loteReavaliacaoBemControlador.itemSelecionado(bem)}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                        <p:ajax
+                                            update="@this tabelaBens :Formulario:tabViewPrincipal:outputPanelAnexo"
+                                            event="blur"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{loteReavaliacaoBemControlador.calcularValorFinalReavaliacao(bem)}"/>
+                                    </p:inputText>
+                                </p:column>
+                                <p:column headerText="Valor Final (R$)"
+                                          style="width: 5%; text-align: right">
+                                    <h:outputText
+                                        value="#{bem.valorAjustadoBem}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:columnGroup id="total" type="footer">
+                                    <p:row>
+                                        <p:column styleClass="azulnegrito" colspan="6" style="text-align:right"
+                                                  footerText="Total Geral do(s) Bem(ns) Selecionado(s):"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalOriginal)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalAjuste)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalLiquido)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalReavaliacao)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalFinal)}"/>
+                                    </p:row>
+                                </p:columnGroup>
+
+                                <p:rowExpansion>
+                                    <ad:detalhes-estado-bem estadoBem="#{bem.ultimoEstado}"/>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Inconsistências">
+                        <p:outputPanel id="outputPanelInconsistencias">
+                            <ad:inconsistencias-pesquisa-bens
+                                inconsistencias="#{loteReavaliacaoBemControlador.assistente.mensagens}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos" id="anexos">
+                        <p:outputPanel id="outputPanelAnexo">
+                            <fc:filesUploadWP selecionado="#{loteReavaliacaoBemControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+
+
+                <ad:alerta-pesquisa-com-inconsistencias
+                    render="#{loteReavaliacaoBemControlador.assistente.hasInconsistencias()}"/>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             onstart="aguarde.show()"
+                             disabled="#{loteReavaliacaoBemControlador.assistente.bloquearAcoesTela}"
+                             title="Clique para salvar a reavaliação de bens."
+                             actionListener="#{loteReavaliacaoBemControlador.salvar()}"
+                             styleClass="mtop10 prioritario operacao"/>
+
+
+            <p:commandButton value="Concluir Solicitação de Reavaliação"
+                             icon="ui-icon-check"
+                             onstart="aguarde.show()"
+                             disabled="#{loteReavaliacaoBemControlador.assistente.bloquearAcoesTela}"
+                             title="Clique para concluir a reavaliação de bens."
+                             rendered="#{loteReavaliacaoBemControlador.mostrarBotaoConcluir()}"
+                             actionListener="#{loteReavaliacaoBemControlador.concluirReavalicao()}"
+                             styleClass="mtop10 mlef05 prioritario operacao"/>
+
+            <p:commandButton value="Cancelar"
+                             icon="ui-icon-cancel"
+                             title="Clique para cancelar a reavaliação de bens."
+                             actionListener="#{loteReavaliacaoBemControlador.cancelar()}"
+                             styleClass="mtop10 mlef05 operacao"/>
+        </h:form>
+
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Reavaliação de Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{loteReavaliacaoBemControlador.assistente.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{loteReavaliacaoBemControlador.assistente.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{loteReavaliacaoBemControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{loteReavaliacaoBemControlador.assistente.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{loteReavaliacaoBemControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{loteReavaliacaoBemControlador.assistente.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{loteReavaliacaoBemControlador.assistente.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Consultando Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/> <br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

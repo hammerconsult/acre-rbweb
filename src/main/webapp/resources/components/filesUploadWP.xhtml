@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="selecionado" required="true"/>
+    <cc:attribute name="isTelaEditar" default="true"/>
+    <cc:attribute name="mostrarDescricao" default="false"/>
+    <cc:attribute name="podeEditarDescricao" default="false"/>
+    <cc:attribute name="anexoNovaAba" default="false"/>
+    <cc:attribute name="disabled" default="false"/>
+    <cc:attribute name="auto" default="false"/>
+    <cc:attribute name="sizeLimit" default="15728640" type="java.lang.String"/>
+    <cc:attribute name="allowTypes" default="/(\\.|\\/)(gif|jpe?g|png|pdf|doc|docx|xls|xlsx|txt|GIF|JPE?G|PNG|PDF|DOC|DOCX|XLS|XLSX|TXT)$/" required="false"
+                  type="java.lang.String"/>
+    <cc:attribute name="invalidFileMessage"
+                  default="Somente arquivos com as extensões .gif, .jpeg, .png, .pdf, .doc, .docx, .xls, .xlsx, .txt são permitidas"
+                  required="false" type="java.lang.String"/>
+</cc:interface>
+
+<!-- IMPLEMENTATION -->
+<cc:implementation>
+    <p:panel id="anexos" styleClass="semBorda">
+        <f:event type="preRenderComponent"
+                 listener="#{assistenteDetentorArquivoControlador.novo(cc.attrs.selecionado)}"/>
+        <p:fileUpload multiple="true"
+                      rendered="#{cc.attrs.isTelaEditar}"
+                      cancelLabel="Cancelar"
+                      invalidSizeMessage="Arquivo maior que 10 MB."
+                      label="Selecione..."
+                      id="botaoUpload"
+                      onstart="aguarde.show()"
+                      oncomplete="aguarde.hide()"
+                      uploadLabel="Adicionar Todos"
+                      auto="#{cc.attrs.auto}"
+                      sizeLimit="#{cc.attrs.sizeLimit}"
+                      invalidFileMessage="#{cc.attrs.invalidFileMessage}"
+                      update="tabelaItem"
+                      allowTypes="#{cc.attrs.allowTypes}"
+                      fileUploadListener="#{assistenteDetentorArquivoControlador.uploadArquivo}"
+                      disabled="#{cc.attrs.disabled}"/>
+
+
+        <p:dataTable paginator="true"
+                     id="tabelaItem"
+                     value="#{cc.attrs.selecionado.detentorArquivoComposicao.arquivosComposicao}"
+                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                     rowIndexVar="rowIx"
+                     styleClass="mtop10"
+                     emptyMessage="Não foram localizados registros para serem apresentados"
+                     rows="10"
+                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ANEXOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                     rowsPerPageTemplate="10,25,50,100"
+                     var="arquivoComposicao">
+            <p:column rendered="#{cc.attrs.mostrarDescricao and !cc.attrs.podeEditarDescricao}" headerText="Descrição"
+                      styleClass="alinhamentoCentralizado" style="width: 10%">
+                <h:outputText value="#{arquivoComposicao.arquivo.descricao}"/>
+            </p:column>
+            <p:column rendered="#{arquivoComposicao.arquivo.id eq null}"
+                      headerText="Download"
+                      style="width: 5%"
+                      styleClass="alinhamentoCentralizado">
+                <p:commandButton id="downloadLink"
+                                 ajax="false"
+                                 icon="ui-icon-circle-arrow-s"
+                                 process="@form"
+                                 update="@this"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();">
+                    <p:fileDownload
+                        value="#{assistenteDetentorArquivoControlador.getStream(arquivoComposicao)}"/>
+                </p:commandButton>
+            </p:column>
+            <p:column rendered="#{arquivoComposicao.arquivo.id ne null}" headerText="Download"
+                      styleClass="alinhamentoCentralizado">
+                <p:outputPanel rendered="#{cc.attrs.anexoNovaAba}">
+                    <a title="Download"
+                       target="_blank"
+                       download="#{arquivoComposicao.arquivo.nome}"
+                       href="${facesContext.externalContext.requestContextPath}/arquivos/#{arquivoComposicao.arquivo.nome}?id=#{arquivoComposicao.arquivo.id}">#{arquivoComposicao.arquivo.nome}</a>
+                </p:outputPanel>
+                <p:outputPanel rendered="#{!cc.attrs.anexoNovaAba}">
+                    <a title="Download"
+                       download="#{arquivoComposicao.arquivo.nome}"
+                       href="${facesContext.externalContext.requestContextPath}/arquivos/#{arquivoComposicao.arquivo.nome}?id=#{arquivoComposicao.arquivo.id}">#{arquivoComposicao.arquivo.nome}</a>
+                </p:outputPanel>
+            </p:column>
+            <p:column headerText="Remover" style="width: 5%; text-align: center"
+                      rendered="#{cc.attrs.isTelaEditar}">
+                <p:commandButton icon="ui-icon-trash"
+                                 actionListener="#{assistenteDetentorArquivoControlador.removerArquivo(arquivoComposicao)}"
+                                 update="tabelaItem"
+                                 process="@this"
+                                 onclick="if(!confirm('Tem certeza que deseja remover este arquivo')) {return false;} else {aguarde.show();}"
+                                 oncomplete="aguarde.hide()"
+                                 disabled="#{cc.attrs.disabled}"/>
+            </p:column>
+            <p:column rendered="#{cc.attrs.mostrarDescricao and cc.attrs.podeEditarDescricao}" headerText="Descrição"
+                      styleClass="alinhamentoCentralizado" style="width: 10%">
+                <p:inputText rendered="#{cc.attrs.podeEditarDescricao}" value="#{arquivoComposicao.arquivo.descricao}"/>
+            </p:column>
+            <p:column headerText="Data do Upload" styleClass="alinhamentoCentralizado" style="width: 10%">
+                <h:outputText value="#{arquivoComposicao.dataUpload}">
+                    <f:convertDateTime pattern="dd/MM/yy 'às' HH:mm"/>
+                </h:outputText>
+            </p:column>
+            <p:column headerText="Usuário" styleClass="alinhamentoCentralizado" style="width: 10%">
+                <h:outputText value="#{arquivoComposicao.usuario}"/>
+            </p:column>
+            <p:column rendered="#{cc.attrs.isTelaEditar}" headerText="Arquivo"
+                      styleClass="alinhamentoEsquerda">
+                <h:outputText value="#{arquivoComposicao.arquivo.nome}"
+                              title="Disponível em #{arquivoComposicao.arquivo.local}"/>
+            </p:column>
+        </p:dataTable>
+    </p:panel>
+</cc:implementation>
+</html>

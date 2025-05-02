@@ -1,0 +1,740 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="application/javascript">
+            var timer;
+
+            function iniciarHomologacao() {
+                openDialog(dlgHomologacao);
+                timer = setInterval(function () {
+                    rcAcompanharHomologacao();
+                }, 1000);
+            }
+
+            function pararTimer() {
+                clearInterval(timer);
+            }
+        </script>
+
+        <style type="text/css">
+            .lineSeparator {
+                white-space: pre;
+            }
+        </style>
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="rcAcompanharHomologacao"
+                             actionListener="#{solicitacaoItbiOnlineControlador.acompanharHomologacao()}"
+                             process="@this" update=":formHomologacao"/>
+            <fc:cabecalhoPretty auditavel="#{true}" controlador="${solicitacaoItbiOnlineControlador}"
+                                origem="${solicitacaoItbiOnlineControlador.caminhoPadrao}listar/"/>
+            <p:panel id="panel" header="Detalhes da Solicitação de ITBI">
+                <h:panelGrid columns="5" styleClass="width50">
+                    <h:outputText value="Exercício"/>
+                    <h:outputText value="Código"/>
+                    <h:outputText value="Data de Lançamento"/>
+                    <h:outputText value="Situação"/>
+                    <h:outputText value="Usuário"/>
+
+                    <p:inputMask mask="9999" value="${solicitacaoItbiOnlineControlador.selecionado.exercicio}"
+                                 styleClass="negrito campo-bloqueado mtop05" readonly="true"
+                                 size="6" converter="${exercicioControlador.converterExercicio}"/>
+                    <p:inputText
+                        value="${solicitacaoItbiOnlineControlador.operacaoNovo ? 'Gerado automaticamente ao salvar' :solicitacaoItbiOnlineControlador.selecionado.codigo}"
+                        size="${solicitacaoItbiOnlineControlador.operacaoNovo ? '28' : '12'}"
+                        readonly="true" styleClass="negrito campo-bloqueado mtop05"/>
+                    <p:inputText value="${solicitacaoItbiOnlineControlador.selecionado.dataLancamento}" size="12"
+                                 readonly="true" styleClass="negrito campo-bloqueado mtop05">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </p:inputText>
+                    <p:inputText value="${solicitacaoItbiOnlineControlador.selecionado.situacao.descricao}" size="20"
+                                 readonly="true" styleClass="negrito campo-bloqueado mtop05"/>
+                    <p:inputText value="${solicitacaoItbiOnlineControlador.nomeUsuarioCriacaoSolicitacao()}" size="20"
+                                 readonly="true" styleClass="negrito campo-bloqueado mtop05"/>
+                </h:panelGrid>
+
+                <p:tabView id="tabDadosItbi">
+                    <p:tab title="Dados do ITBI">
+                        <h:panelGrid columns="2" styleClass="mtop10" id="gripPrincipal">
+                            <h:outputText value="Solicitação feita por procurador?"/>
+                            <h:outputText
+                                value="${solicitacaoItbiOnlineControlador.selecionado.procurador ? 'Sim' : 'Não'}"
+                                styleClass="negrito"/>
+
+                            <h:outputText value="Tipo de ITBI: "/>
+                            <h:outputText value="${solicitacaoItbiOnlineControlador.selecionado.tipoITBI.descricao}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Data Designação: "/>
+                            <h:outputText value="${solicitacaoItbiOnlineControlador.selecionado.dataDesignacao}"
+                                          styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:mm"/>
+                            </h:outputText>
+
+                            <h:outputText value="Auditor Fiscal: "/>
+                            <h:outputText value="${solicitacaoItbiOnlineControlador.selecionado.auditorFiscal}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText
+                                value="Cadastro ${solicitacaoItbiOnlineControlador.isItbiImobiliario() ? 'Imobiliário: ' : 'Rural: '}"/>
+                            <h:outputText value="${solicitacaoItbiOnlineControlador.selecionado.cadastro}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Observação: "/>
+                            <p:inputTextarea id="observacao" title="Informe a observação"
+                                             value="#{solicitacaoItbiOnlineControlador.selecionado.observacao}"
+                                             cols="70" maxlength="3000" readonly="true" styleClass="negrito"
+                                             autoResize="true" counterTemplate="{0} Caracteres Restantes."/>
+                        </h:panelGrid>
+                    </p:tab>
+                    <p:tab title="Anexos">
+                        <p:dataTable
+                            emptyMessage="Nenhum anexo informado"
+                            value="#{solicitacaoItbiOnlineControlador.selecionado.documentos}"
+                            var="solicitacaoDocumento">
+                            <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                                #{solicitacaoDocumento.descricao}
+                            </p:column>
+                            <p:column headerText="Ações" styleClass="width50 centralizado">
+                                <p:commandLink id="downloadLinkArquivo"
+                                               rendered="#{solicitacaoDocumento.documento ne null}"
+                                               ajax="false"
+                                               icon="ui-icon-circle-arrow-s"
+                                               process="@form"
+                                               styleClass="mrig05"
+                                               update="@this"
+                                               value="#{solicitacaoDocumento.documento.nome}"
+                                               onstart="aguarde.show()"
+                                               oncomplete="aguarde.hide()">
+                                    <p:fileDownload
+                                        value="#{assistenteDetentorArquivoControlador.baixarAnexo(solicitacaoDocumento.documento)}"/>
+                                </p:commandLink>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="Tramites">
+                        <ui:include src="tramites.xhtml"/>
+                    </p:tab>
+                </p:tabView>
+
+                <h:panelGroup id="groupInfoCadastros">
+                    <p:fieldset rendered="#{solicitacaoItbiOnlineControlador.selecionado.cadastro ne null}"
+                                legend="Dados do Cadastro #{solicitacaoItbiOnlineControlador.selecionado.tipoITBI eq null or
+                       solicitacaoItbiOnlineControlador.isItbiImobiliario()  ? 'Imobiliário' : 'Rural'}"
+                                styleClass="mtop20">
+
+                        <table style="width: 100%">
+                            <tr>
+                                <td style="width: 50%">
+                                    <c:forEach items="#{solicitacaoItbiOnlineControlador.buscarProprietarios()}"
+                                               var="prop" varStatus="index">
+                                        <h:panelGrid columns="3">
+                                            <p:commandLink onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                                           style="vertical-align: top"
+                                                           actionListener="#{solicitacaoItbiOnlineControlador.mostrarInfoCadastros()}"
+                                                           title="Detalhes do Cadastro Imobiliário"
+                                                           update="Formulario:groupDadosCadastro"
+                                                           rendered="#{index.index eq 0}"
+                                                           process="@this">
+                                                <i class="ui-icon ui-icon-circle-triangle-e"/>
+                                            </p:commandLink>
+                                            <h:outputText value="Proprietário: "
+                                                          styleClass="#{index.index gt 0 ? 'mlef20' : ''}"/>
+                                            <h:outputText value="#{prop.nomeRazaoSocial} (#{prop.cpfCnpj})"/>
+                                        </h:panelGrid>
+                                    </c:forEach>
+
+                                    <h:panelGroup id="groupDadosCadastro">
+                                        <h:panelGrid columns="2"
+                                                     rendered="#{solicitacaoItbiOnlineControlador.canMostrarInfoCadastros}"
+                                                     styleClass="mlef20">
+                                            <c:forEach items="#{solicitacaoItbiOnlineControlador.dadosCadastro()}"
+                                                       var="entry">
+                                                <h:outputText value="#{entry.key}"/>
+                                                <h:outputText
+                                                    value="#{entry.value}"
+                                                    styleClass="negrito"/>
+                                            </c:forEach>
+                                        </h:panelGrid>
+                                    </h:panelGroup>
+                                </td>
+
+                                <td style="width: 50%; vertical-align: top">
+                                    <p:commandButton value="Imprimir BCI"
+                                                     rendered="#{solicitacaoItbiOnlineControlador.selecionado.imobiliario}"
+                                                     onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                                     process="@this" update="@this"
+                                                     actionListener="#{relatorioCadastroImobiliarioControlador.gerarRelatorioImobiliario(solicitacaoItbiOnlineControlador.selecionado.idCadastro)}"
+                                                     icon="ui-icon-print" styleClass="operacao"
+                                                     style="float: right"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </p:fieldset>
+                </h:panelGroup>
+
+                <p:scrollPanel mode="native" styleClass="mtop20">
+                    <p:dataTable id="tabelaCalculos" styleClass="mtop10"
+                                 rendered="${solicitacaoItbiOnlineControlador.selecionado.cadastro ne null}"
+                                 emptyMessage="Nenhum transmitente encontrado"
+                                 var="calculo" paginator="true" rows="10"
+                                 value="${solicitacaoItbiOnlineControlador.selecionado.calculos}"
+                                 rowKey="${calculo.id}"
+                                 rowStyleClass="${empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>TRANSMISSÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 rowIndexVar="rowlx"
+                                 rowsPerPageTemplate="10,25,50,100">
+                        <p:column style="width: 1%;"
+                                  headerText="Itens">
+                            <p:rowToggler id="itensDoCalculo"/>
+                        </p:column>
+                        <p:column headerText="Ações" style="width: 10%; text-align: center">
+                            <h:panelGrid columns="2">
+                                <p:commandButton icon="ui-icon-search" styleClass="icone-30"
+                                                 title="Pressione este botão para visualizar o registro"
+                                                 actionListener="${solicitacaoItbiOnlineControlador.visualizarCalculo(calculo)}"
+                                                 process="@this" onstart="aguarde.show();" oncomplete="aguarde.hide();"
+                                                 update="@this">
+                                </p:commandButton>
+                            </h:panelGrid>
+                        </p:column>
+                        <p:column headerText="Transferência">
+                            <h:outputText value="${calculo.ordemCalculo}"/>
+                        </p:column>
+                        <p:column headerText="Isento/Imune">
+                            <h:outputText value="#{calculo.tipoIsencaoITBI ne null ? 'Sim' : 'Não'}"/>
+                        </p:column>
+                        <p:column headerText="Parcelas">
+                            <h:outputText value="${calculo.quantidadeParcelas}"/>
+                        </p:column>
+                        <p:column headerText="Transmitentes">
+                            <h:outputText
+                                value="${solicitacaoItbiOnlineControlador.montarNomesTransmitentes(calculo)}"/>
+                        </p:column>
+                        <p:column headerText="Percentual">
+                            <h:outputText styleClass="lineSeparator"
+                                          value="${solicitacaoItbiOnlineControlador.montarPercentuaisTransmitentes(calculo)}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Adquirentes" style="width: 10%;">
+                            <h:outputText styleClass="lineSeparator"
+                                          value="${solicitacaoItbiOnlineControlador.montarNomesAdquirentes(calculo)}"/>
+                        </p:column>
+                        <p:column headerText="Percentual">
+                            <h:outputText styleClass="lineSeparator"
+                                          value="${solicitacaoItbiOnlineControlador.montarPercentuaisAdquirentes(calculo)}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Tipo Base de Cálculo">
+                            <h:outputText value="${calculo.tipoBaseCalculoITBI.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor Base de Cálculo">
+                            <h:outputText value="${calculo.baseCalculo}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Percentual Base de Cálculo">
+                            <h:outputText value="${calculo.percentual}%">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Total Base de Cálculo">
+                            <h:outputText value="${calculo.totalBaseCalculo}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor do ITBI">
+                            <h:outputText value="${calculo.valorCalculado}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:rowExpansion>
+                            <p:panel style="border: none" styleClass="mtop05 mbot05">
+                                <p:dataTable emptyMessage="Nenhum registro encontrado"
+                                             style="text-align: center;"
+                                             id="tabelaItemCalculo"
+                                             value="${calculo.itensCalculo}" var="itemCalculo">
+                                    <f:facet name="header">
+                                        <h:outputText value="Tipo(s) de Negociação"/>
+                                    </f:facet>
+                                    <p:column headerText="Tipo de Negociação" styleClass="alinhamentoEsquerda"
+                                              style="vertical-align: top;">
+                                        <h:outputText value="${itemCalculo.tipoNegociacao.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Percentual" styleClass="alinhamentoEsquerda"
+                                              style="vertical-align: top;">
+                                        <h:outputText value="${itemCalculo.percentual}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Informado" styleClass="alinhamentoEsquerda"
+                                              style="vertical-align: top;">
+                                        <h:outputText value="${itemCalculo.valorInformado}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Alíquota" styleClass="alinhamentoEsquerda"
+                                              style="vertical-align: top;">
+                                        <h:outputText value="${itemCalculo.tipoNegociacao.aliquota}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:panel>
+                        </p:rowExpansion>
+                    </p:dataTable>
+                </p:scrollPanel>
+            </p:panel>
+
+            <p:commandButton icon="ui-icon-pencil"
+                             styleClass="operacao mtop10 mrig03"
+                             value="Editar"
+                             style="height: 30px;"
+                             onstart="aguarde.show()"
+                             rendered="#{solicitacaoItbiOnlineControlador.selecionado.emAnalise}"
+                             oncomplete="aguarde.hide()"
+                             actionListener="${solicitacaoItbiOnlineControlador.redirecionarParaEditar}"
+                             title="Clique para editar a solicitação"
+                             update="@this" process="@this"/>
+
+            <p:commandButton icon="ui-icon-check"
+                             styleClass="operacao mtop10 mrig03"
+                             value="Aprovar"
+                             style="height: 30px;"
+                             onclick="if (!confirm('Tem certeza que deseja aprovar essa solicitação de ITBI?')) {return false; } else {aguarde.show()}"
+                             rendered="#{solicitacaoItbiOnlineControlador.selecionado.emAnalise}"
+                             oncomplete="aguarde.hide()"
+                             actionListener="${solicitacaoItbiOnlineControlador.aprovarSolicitacao()}"
+                             title="Clique para aprovar a solicitação"
+                             update="@this" process="@this"/>
+
+            <p:commandButton icon="ui-icon-cancel"
+                             styleClass="operacao mtop10 mrig03"
+                             value="Rejeitar"
+                             style="height: 30px;"
+                             onstart="aguarde.show()"
+                             rendered="#{solicitacaoItbiOnlineControlador.selecionado.emAnalise}"
+                             oncomplete="aguarde.hide(); dlgRejeicao.show()"
+                             actionListener="${solicitacaoItbiOnlineControlador.iniciarRejeicaoSolicitacao()}"
+                             title="Clique para rejeitar a solicitação"
+                             process="@this" update=":formularioRejeicao"/>
+
+            <p:commandButton icon="ui-icon-disk"
+                             styleClass="operacao mtop10 mrig03"
+                             value="Designar"
+                             style="height: 30px;"
+                             onstart="aguarde.show()"
+                             rendered="#{solicitacaoItbiOnlineControlador.selecionado.aprovada}"
+                             oncomplete="aguarde.hide(); dlgDesignacao.show()"
+                             actionListener="${solicitacaoItbiOnlineControlador.iniciarDesignacaoSolicitacao()}"
+                             title="Clique para designar a solicitação"
+                             process="@this" update=":formularioDesignacao"/>
+
+            <p:commandButton icon="ui-icon-disk"
+                             styleClass="operacao mtop10 mrig03"
+                             value="Avaliar"
+                             style="height: 30px;"
+                             onstart="aguarde.show()"
+                             rendered="#{solicitacaoItbiOnlineControlador.podeAvaliar()}"
+                             oncomplete="aguarde.hide(); dlgAvaliacao.show()"
+                             actionListener="${solicitacaoItbiOnlineControlador.iniciarAvaliacaoSolicitacao()}"
+                             title="Clique para avaliar a solicitação"
+                             process="@this" update=":formularioAvaliacao"/>
+
+            <p:commandButton icon="ui-icon-check"
+                             styleClass="operacao mtop10 mrig03"
+                             value="Homologar"
+                             style="height: 30px;"
+                             onstart="aguarde.show()"
+                             rendered="#{solicitacaoItbiOnlineControlador.podeHomologar()}"
+                             oncomplete="aguarde.hide();"
+                             actionListener="${solicitacaoItbiOnlineControlador.homologarSolicitacao()}"
+                             title="Clique para homologar a solicitação"
+                             process="@this" update=":formularioAvaliacao"/>
+
+            <p:commandButton icon="ui-icon-check"
+                             styleClass="operacao mtop10 mrig03"
+                             value="Cálculo de I.T.B.I"
+                             style="height: 30px;"
+                             onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                             rendered="#{solicitacaoItbiOnlineControlador.selecionado.homologada}"
+                             actionListener="${solicitacaoItbiOnlineControlador.verCalculoITBI()}"
+                             title="Clique para visualizar o cálculo de I.T.B.I da solicitação"/>
+
+            <p:commandButton value="Cancelar"
+                             style="height: 30px;"
+                             styleClass="operacao mtop10"
+                             icon="ui-icon-cancel"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar e retornar a página anterior"
+                             actionListener="#{solicitacaoItbiOnlineControlador.cancelar()}"
+                             immediate="true"/>
+
+        </h:form>
+
+
+        <p:dialog header="Ver Transmissão" modal="true" dynamic="true" showEffect="fade"
+                  width="850"
+                  hideEffect="fade" position="center" style="max-height: 70%; max-width: 70%; overflow: auto"
+                  draggable="false" resizable="false" widgetVar="wTransmissaoVer"
+                  closable="false">
+
+            <h:form id="formTransmissaoVer">
+                <p:scrollPanel mode="native" style="border: none">
+                    <h:panelGrid columns="2">
+                        <h:outputText
+                            value="Cadastro ${solicitacaoItbiOnlineControlador.isItbiImobiliario() ? 'Imobiliário: ' : 'Rural: '}"/>
+                        <h:outputText value="${solicitacaoItbiOnlineControlador.selecionado.inscricao}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Valor Venal do Imóvel: "/>
+                        <h:outputText value="${solicitacaoItbiOnlineControlador.dadosCadastroITBI.valorVenal}"
+                                      styleClass="negrito">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <p:separator/>
+                        <p:separator/>
+                        <h:outputText value="Isento/Imune: "/>
+                        <h:outputText styleClass="negrito"
+                                      value="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.isentoSub ? 'Sim' : 'Não'}"/>
+                        <h:outputText value="Tipo de Isenção:"
+                                      rendered="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.isentoSub}"/>
+                        <h:outputText styleClass="negrito"
+                                      value="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.tipoIsencaoITBI.nome}"
+                                      rendered="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.isentoSub}"/>
+
+
+                    </h:panelGrid>
+
+                    <p:fieldset legend="Transmitentes(s)" id="fieldsetTransmitentes"
+                                styleClass="mtop20">
+
+                        <p:dataTable id="tabelaTransmitentes" styleClass="mtop10"
+                                     rendered="${solicitacaoItbiOnlineControlador.selecionado.cadastro ne null}"
+                                     emptyMessage="Nenhum adquirente encontrado"
+                                     var="transmitente" paginator="true" rows="10"
+                                     value="${solicitacaoItbiOnlineControlador.calculoITBIOnline.transmitentesCalculo}"
+                                     rowKey="${transmitente.id}"
+                                     rowStyleClass="${empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Adquirente(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowIndexVar="rowlx"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Transmitente" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="${transmitente.transmitente}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:fieldset>
+
+                    <p:fieldset legend="Adquirente(s)" id="fieldsetAdquirentes"
+                                styleClass="mtop20">
+
+                        <p:dataTable id="tabelaAdquirentes" styleClass="mtop10"
+                                     rendered="${solicitacaoItbiOnlineControlador.selecionado.cadastro ne null}"
+                                     emptyMessage="Nenhum adquirente encontrado"
+                                     var="adquirente" paginator="true" rows="10"
+                                     value="${solicitacaoItbiOnlineControlador.calculoITBIOnline.adquirentesCalculo}"
+                                     rowKey="${adquirente.id}"
+                                     rowStyleClass="${empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Adquirente(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowIndexVar="rowlx"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Adquirente" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="${adquirente.adquirente}"/>
+                            </p:column>
+                            <p:column headerText="Percentual" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="${adquirente.percentual}%">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:fieldset>
+
+                    <p:fieldset legend="Valores" id="fieldsetValores"
+                                styleClass="mtop20">
+
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Tipo da Base de Cálculo: "/>
+                            <h:outputText
+                                value="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.tipoBaseCalculoITBI.descricao}"
+                                styleClass="negrito"/>
+
+                            <h:outputText value="Percentual de Reajuste sobre o Valor Venal do Imóvel (%):"
+                                          rendered="#{solicitacaoItbiOnlineControlador.canMostrarPercentualDeReajuste()}"/>
+                            <h:outputText value="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.valorReajuste}"
+                                          styleClass="negrito"
+                                          rendered="#{solicitacaoItbiOnlineControlador.canMostrarPercentualDeReajuste()}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+
+                            <h:outputText value="Valor da Base de Cálculo (R$):"/>
+                            <h:outputText value="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.baseCalculo}"
+                                          styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+
+                            <h:outputText value="Percentual da Base de Cálculo (%):"/>
+                            <h:outputText value="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.percentual}"
+                                          styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+
+                            <h:outputText value="Total da Base de Cálculo (R$):"/>
+                            <h:outputText value="#{solicitacaoItbiOnlineControlador.calculoITBIOnline.totalBaseCalculo}"
+                                          styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </h:panelGrid>
+
+                        <p:fieldset legend="Negociações" id="fieldsetNegociacoes"
+                                    styleClass="mtop20">
+                            <p:dataTable id="tabelaNegociacoes" styleClass="mtop10"
+                                         emptyMessage="Nenhuma Negociação encontrada"
+                                         var="itemCalc" paginator="true" rows="10"
+                                         value="${solicitacaoItbiOnlineControlador.calculoITBIOnline.itensCalculo}"
+                                         rowKey="${itemCalc.id}"
+                                         rowStyleClass="${empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Negociações&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         rowIndexVar="rowlx"
+                                         rowsPerPageTemplate="10,25,50,100">
+                                <p:column headerText="Tipo de Negociação">
+                                    <h:outputText value="${itemCalc.tipoNegociacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Alíquota (%)">
+                                    <h:outputText value="${itemCalc.tipoNegociacao.aliquota}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Percentual">
+                                    <h:outputText value="${itemCalc.percentual}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor Informado (R$)">
+                                    <h:outputText value="${itemCalc.valorInformado}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor Calculado (R$)">
+                                    <h:outputText value="${itemCalc.valorCalculado}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:fieldset>
+                    </p:fieldset>
+                </p:scrollPanel>
+                <p:commandButton value="Fechar" update="@this" process="@this"
+                                 icon="ui-icon-circle-close"
+                                 styleClass="operacao mtop10"
+                                 onclick="wTransmissaoVer.hide()"/>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Rejeição de Solicitação de ITBI Online"
+                  modal="true"
+                  dynamic="true"
+                  showEffect="fade"
+                  width="700"
+                  hideEffect="fade" position="center"
+                  style="max-height: 70%; max-width: 70%; overflow: auto"
+                  draggable="false" resizable="false"
+                  widgetVar="dlgRejeicao"
+                  closable="false">
+            <h:form id="formularioRejeicao">
+                <h:panelGrid>
+                    <fc:outputLabelObrigatorio value="Motivo da Rejeição:"/>
+                    <p:inputTextarea title="Digite o motivo da rejeição"
+                                     value="#{solicitacaoItbiOnlineControlador.observacao}"
+                                     id="motivo" rows="5" cols="80"/>
+                </h:panelGrid>
+
+                <p:commandButton value="Salvar"
+                                 styleClass="prioritario operacao mtop10 mrig03"
+                                 icon="ui-icon-disk"
+                                 onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                 actionListener="#{solicitacaoItbiOnlineControlador.rejeitarSolicitacao()}"/>
+
+                <p:commandButton value="Cancelar"
+                                 styleClass="operacao mtop10 mrig03"
+                                 icon="ui-icon-cancel"
+                                 onclick="dlgRejeicao.hide()"/>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Designação da Solicitação de ITBI Online"
+                  modal="true"
+                  dynamic="true"
+                  showEffect="fade"
+                  width="700"
+                  hideEffect="fade" position="center"
+                  style="max-height: 70%; max-width: 70%; overflow: auto"
+                  draggable="false" resizable="false"
+                  widgetVar="dlgDesignacao"
+                  closable="false">
+            <h:form id="formularioDesignacao">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Auditor Fiscal:"/>
+                    <p:autoComplete queryDelay="1000"
+                                    title="Informe o Auditor Fiscal para designar a solicitação de ITBI."
+                                    value="#{solicitacaoItbiOnlineControlador.auditorFiscal}"
+                                    completeMethod="#{usuarioSistemaControlador.completarUsuarioSistemaFiscalTributario}"
+                                    var="usuario"
+                                    size="50"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px;max-width: 800px;"
+                                    process="@this"
+                                    maxResults="50"
+                                    itemLabel="#{usuario}"
+                                    itemValue="#{usuario.id}"
+                                    converter="#{usuarioSistemaControlador.converterGenerico}">
+                        <p:ajax event="itemSelect"
+                                process="@this"
+                                update="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </p:autoComplete>
+                </h:panelGrid>
+
+                <p:commandButton value="Salvar"
+                                 styleClass="prioritario operacao mtop10 mrig03"
+                                 icon="ui-icon-disk"
+                                 onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                 actionListener="#{solicitacaoItbiOnlineControlador.designarSolicitacao()}"/>
+
+                <p:commandButton value="Cancelar"
+                                 styleClass="operacao mtop10 mrig03"
+                                 icon="ui-icon-cancel"
+                                 onclick="dlgDesignacao.hide()"/>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Avaliação da Solicitação de ITBI Online"
+                  modal="true"
+                  dynamic="true"
+                  showEffect="fade"
+                  width="700"
+                  hideEffect="fade" position="center"
+                  style="max-height: 70%; max-width: 70%; overflow: auto"
+                  draggable="false" resizable="false"
+                  widgetVar="dlgAvaliacao"
+                  closable="false">
+            <h:form id="formularioAvaliacao">
+                <p>Os dados da solicitação de ITBI estão corretos?</p>
+                <h:selectOneRadio value="#{solicitacaoItbiOnlineControlador.dadosCorretos}">
+                    <f:selectItem itemValue="#{true}" itemLabel="Sim"/>
+                    <f:selectItem itemValue="#{false}" itemLabel="Não"/>
+                    <p:ajax event="valueChange"
+                            process="@form" update="@form"
+                            listener="#{solicitacaoItbiOnlineControlador.mudouDadosCorretos()}"/>
+                </h:selectOneRadio>
+                <br/>
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Planilha de Avaliação:"
+                                               obrigatorio="#{!solicitacaoItbiOnlineControlador.dadosCorretos}"/>
+                    <p:outputPanel>
+                        <p:fileUpload multiple="false"
+                                      rendered="#{solicitacaoItbiOnlineControlador.planilhaAvaliacao eq null}"
+                                      cancelLabel="Cancelar"
+                                      sizeExceedMessage="Arquivo Maior que 15 MB."
+                                      label="Selecione..."
+                                      uploadLabel="Upload Arquivo"
+                                      sizeLimit="10485760"
+                                      dragDropSupport="true"
+                                      invalidFileMessage="Formato de arquivo inválido. Permitido apenas (xlsx,xls,xlsm)."
+                                      style="width: 500px"
+                                      process="@form"
+                                      auto="true"
+                                      fileUploadListener="#{solicitacaoItbiOnlineControlador.handlePlanilhaAvaliacao}"
+                                      id="iBotaoUploadClassificacoes"
+                                      allowTypes="/(\.|\/)(xlsx|xls|xlsm)$/"
+                                      update="@form"/>
+
+                        <p:outputPanel id="panelPlanilha"
+                                       rendered="#{solicitacaoItbiOnlineControlador.planilhaAvaliacao ne null}">
+                            <div class="alert alert-info">
+                                <p:commandButton icon="ui-icon-trash"
+                                                 update="@form"
+                                                 process="@form"
+                                                 styleClass="mrig05"
+                                                 actionListener="#{solicitacaoItbiOnlineControlador.removerPlanilhaAvaliacao()}"
+                                                 onclick="if(!confirm('Tem certeza que deseja remover este arquivo')) {return false;} else {aguarde.show();}"
+                                                 oncomplete="aguarde.hide()"/>
+
+                                <p:commandButton id="downloadLink"
+                                                 ajax="false"
+                                                 icon="ui-icon-circle-arrow-s"
+                                                 process="@form"
+                                                 styleClass="mrig05"
+                                                 update="@this"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()">
+                                    <p:fileDownload
+                                        value="#{assistenteDetentorArquivoControlador.baixarAnexo(solicitacaoItbiOnlineControlador.planilhaAvaliacao)}"/>
+                                </p:commandButton>
+
+                                <h:outputText value="Arquivo: " styleClass="mlef10"/>
+                                <h:outputText
+                                    value="#{solicitacaoItbiOnlineControlador.planilhaAvaliacao.nome}"
+                                    styleClass="negrito"/>
+                            </div>
+                        </p:outputPanel>
+                    </p:outputPanel>
+
+                    <fc:outputLabelObrigatorio value="Valor Avaliado:"
+                                               obrigatorio="#{!solicitacaoItbiOnlineControlador.dadosCorretos}"/>
+                    <fc:inputValorMonetario value="#{solicitacaoItbiOnlineControlador.valorAvaliado}"
+                                            disabled="#{solicitacaoItbiOnlineControlador.dadosCorretos}"/>
+
+                    <h:outputText value="Quantidade de parcelas:"
+                                  rendered="#{!solicitacaoItbiOnlineControlador.selecionado.calculoIsento()}"/>
+                    <h:outputText value="#{solicitacaoItbiOnlineControlador.selecionado.quantidadeParcelaCalculo()}"
+                                  styleClass="negrito"
+                                  rendered="#{!solicitacaoItbiOnlineControlador.selecionado.calculoIsento()}"/>
+
+                    <fc:outputLabelObrigatorio value="Parecer:"
+                                               obrigatorio="#{!solicitacaoItbiOnlineControlador.dadosCorretos}"/>
+                    <p:inputTextarea title="Digite o parecer da avaliação"
+                                     value="#{solicitacaoItbiOnlineControlador.observacao}"
+                                     id="parecer" rows="5" cols="60"/>
+                </h:panelGrid>
+
+                <p:commandButton value="Salvar"
+                                 styleClass="prioritario operacao mtop10 mrig03"
+                                 icon="ui-icon-disk"
+                                 onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                 actionListener="#{solicitacaoItbiOnlineControlador.salvarAvaliarSolicitacao()}"/>
+
+                <p:commandButton value="Cancelar"
+                                 styleClass="operacao mtop10 mrig03"
+                                 icon="ui-icon-cancel"
+                                 onclick="dlgAvaliacao.hide()"/>
+            </h:form>
+        </p:dialog>
+
+        <div id="dlgHomologacao" class="modal hide fade">
+            <h:form id="formHomologacao">
+                <div class="modal-body mtop20">
+                    <fc:acompanhamentoBarraProgresso
+                        assistenteBarraProgresso="#{solicitacaoItbiOnlineControlador.assistente}"/>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

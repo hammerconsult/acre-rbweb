@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{participanteIRPControlador}"
+                                origem="#{participanteIRPControlador.caminhoPadrao}listar/"/>
+
+            <p:panel id="outputPrincipal" header="Particpante de Intenção de Registro de Preço - IRP">
+
+                <p:tabView id="tabGeral" styleClass="mtop05">
+                    <p:tab title="Dados Gerais">
+
+                        <h:panelGrid columns="2" id="gridGeral">
+                            <h:outputText value="Número:"/>
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{participanteIRPControlador.selecionado.numero eq null ? 'Gerado automaticamente ao salvar' : participanteIRPControlador.selecionado.numero}"/>
+
+                            <h:outputText value="Data de Interesse: "/>
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{participanteIRPControlador.selecionado.dataInteresse}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+
+                            <h:outputText value="Responsável: "/>
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{participanteIRPControlador.selecionado.participante.pessoaFisica.nome}"/>
+
+                            <h:outputText value="Situação: "/>
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{participanteIRPControlador.selecionado.situacao.descricao}"/>
+
+                            <fc:outputLabelObrigatorio value="Intenção de Registro Preço:"/>
+                            <p:autoComplete queryDelay="1000"
+                                            title="Informe uma intenção de reigstro de preço."
+                                            value="#{participanteIRPControlador.selecionado.intencaoRegistroDePreco}"
+                                            completeMethod="#{participanteIRPControlador.completarIRP}"
+                                            disabled="#{participanteIRPControlador.selecionado.participanteAprovado}"
+                                            converter="#{intencaoRegistroPrecoControlador.converterGenerico}"
+                                            var="irp"
+                                            itemLabel="#{irp}"
+                                            itemValue="#{irp.id}"
+                                            dropdown="true"
+                                            panelStyle="max-height: 250px; max-width: 800px"
+                                            maxResults="50"
+                                            size="70">
+                                <p:ajax event="itemSelect"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        listener="#{participanteIRPControlador.recupearItensIRP}"
+                                        update=":Formulario"
+                                        process="@this"/>
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Unidade Participante: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="unidade-part"
+                                            completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalAdministrativa}"
+                                            converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                            disabled="#{participanteIRPControlador.selecionado.participanteAprovado}"
+                                            var="hoAdm"
+                                            size="70"
+                                            maxResults="30"
+                                            dropdown="true"
+                                            panelStyle="max-height: 250px; max-width: 800px"
+                                            itemValue="#{hoAdm.id}"
+                                            itemLabel="#{hoAdm}"
+                                            value="#{participanteIRPControlador.selecionado.hierarquiaOrganizacional}">
+                                <p:ajax event="itemSelect"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        listener="#{participanteIRPControlador.listenerUnidadeParticipante()}"
+                                        update=":Formulario:tabGeral:unidade-part"
+                                        process="@this"/>
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio for="interesse" value="Interesse: "/>
+                            <h:panelGrid columns="2"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea id="interesse"
+                                                 title="Digite a interesse do registro de preços."
+                                                 value="#{participanteIRPControlador.selecionado.interesse}"
+                                                 disabled="#{participanteIRPControlador.selecionado.participanteAprovado}"
+                                                 maxlength="253"
+                                                 minQueryLength="100"
+                                                 autoResize="false"
+                                                 rows="4"
+                                                 cols="70"
+                                                 scrollHeight="50"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-descricao"
+                                                 style="text-transform: uppercase"/>
+                                <h:outputText id="counter-descricao"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+                        <p:outputPanel id="panelItens">
+                            <p:dataTable paginator="true"
+                                         id="tabela-itens"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{participanteIRPControlador.itensIRPDisponieis}"
+                                         rows="10"
+                                         styleClass="mtop02"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Itens da Intenção de Registro de Preço&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="itemIRP">
+
+                                <p:column styleClass="alinhamentoCentralizado">
+                                    <f:facet name="header">
+                                        <p:commandButton icon="ui-icon-none"
+                                                         styleClass="icone-20"
+                                                         disabled="#{participanteIRPControlador.selecionado.participanteAprovado}"
+                                                         rendered="#{!participanteIRPControlador.todosItensSelecionados}"
+                                                         actionListener="#{participanteIRPControlador.setTodosItensSelecionados(true)}"
+                                                         process="@this tabela-itens"
+                                                         onfocus="this.select()"
+                                                         update="tabela-itens"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                        />
+
+                                        <p:commandButton icon="ui-icon-check"
+                                                         styleClass="icone-20"
+                                                         disabled="#{participanteIRPControlador.selecionado.participanteAprovado}"
+                                                         rendered="#{participanteIRPControlador.todosItensSelecionados}"
+                                                         actionListener="#{participanteIRPControlador.setTodosItensSelecionados(false)}"
+                                                         process="@this tabela-itens"
+                                                         onfocus="this.select()"
+                                                         update="tabela-itens"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                        />
+                                    </f:facet>
+
+                                    <p:outputPanel id="panel-botoes">
+                                        <p:commandButton icon="ui-icon-none"
+                                                         styleClass="icone-20"
+                                                         disabled="#{participanteIRPControlador.selecionado.participanteAprovado}"
+                                                         rendered="#{!itemIRP.selecionado}"
+                                                         actionListener="#{participanteIRPControlador.setItemSelecionado(itemIRP,true)}"
+                                                         process="@this tabela-itens"
+                                                         update="panel-botoes quantidade valor"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                        />
+
+                                        <p:commandButton icon="ui-icon-check"
+                                                         styleClass="icone-20"
+                                                         disabled="#{participanteIRPControlador.selecionado.participanteAprovado}"
+                                                         rendered="#{itemIRP.selecionado}"
+                                                         actionListener="#{participanteIRPControlador.setItemSelecionado(itemIRP,false)}"
+                                                         process="@this tabela-itens"
+                                                         update="panel-botoes quantidade valor"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                        />
+                                    </p:outputPanel>
+                                </p:column>
+                                <p:column headerText="Lote" styleClass="alinhamentoEsquerda" style="min-width: 80px">
+                                    <h:outputText
+                                        value="#{itemIRP.itemIntencaoRegistroPreco.loteIntencaoRegistroPreco}"/>
+                                </p:column>
+                                <p:column headerText="Número" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemIRP.itemIntencaoRegistroPreco.numero}"/>
+                                </p:column>
+                                <p:column headerText="Objeto de Compra" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemIRP.itemIntencaoRegistroPreco.objetoCompra}"/>
+                                </p:column>
+                                <p:column headerText="Especif." styleClass="alinhamentoEsquerda">
+                                    <ad:especificacao-objeto-compra
+                                        styleClass="icone-25"
+                                        especificacao="#{itemIRP.itemIntencaoRegistroPreco.descricaoComplementar}"/>
+                                </p:column>
+                                <p:column
+                                    headerText="Grupo"
+                                    style="text-align: left; width: 50px; ">
+                                    <h:outputText
+                                        value="#{itemIRP.itemIntencaoRegistroPreco.objetoCompra.grupoContaDespesa.grupo}"/>
+                                </p:column>
+                                <p:column
+                                    headerText="Conta" styleClass="alinhamentoEsquerda">
+                                    <ad:conta-desdobrada-por-grupo
+                                        styleClass="default"
+                                        grupoContaDespesa="#{itemIRP.itemIntencaoRegistroPreco.objetoCompra.grupoContaDespesa}"/>
+                                </p:column>
+                                <p:column headerText="Unid. Med." styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemIRP.itemIntencaoRegistroPreco.unidadeMedida}"/>
+                                </p:column>
+                                <p:column headerText="Controle" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemIRP.itemIntencaoRegistroPreco.tipoControle.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Quantidade" styleClass="alinhamentoDireita">
+                                    <p:outputPanel id="quantidade">
+                                        <fc:input-mascara-unidade-medida
+                                            size="15"
+                                            tipoMascara="#{itemIRP.itemIntencaoRegistroPreco.unidadeMedida.mascaraQuantidade}"
+                                            disabled="#{participanteIRPControlador.selecionado.participanteAprovado
+                                                    or !itemIRP.isTipoControlePorQuantidade() or !itemIRP.selecionado}"
+                                            value="#{itemIRP.quantidade}"/>
+                                    </p:outputPanel>
+                                </p:column>
+                                <p:column headerText="Valor" styleClass="alinhamentoDireita">
+                                    <p:outputPanel id="valor">
+                                        <p:inputText title="Digite o valor"
+                                                     disabled="#{participanteIRPControlador.selecionado.participanteAprovado
+                                                                 or !itemIRP.isTipoControlePorValor() or !itemIRP.selecionado}"
+                                                     value="#{itemIRP.valor}"
+                                                     size="15"
+                                                     onkeypress="mascara(this, mvalor)"
+                                                     styleClass="alinhamentoDireita">
+                                            <p:ajax event="blur" update="@this" process="@this"/>
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </p:inputText>
+                                    </p:outputPanel>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Unidade Participante"
+                           rendered="false">
+                        <p:outputPanel id="panelUnidades">
+                            <p:commandButton icon="ui-icon-plus"
+                                             value="Novo"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar este registro."
+                                             process="@this"
+                                             disabled="true"
+                                             update=":Formulario:tabGeral:panelUnidades"
+                                             styleClass="padrao"
+                                             rendered="#{participanteIRPControlador.unidadeParticipante eq null}"
+                                             actionListener="#{participanteIRPControlador.novaUnidade()}"/>
+
+                            <h:panelGrid columns="2"
+                                         rendered="#{participanteIRPControlador.unidadeParticipante ne null}">
+                                <fc:outputLabelObrigatorio value="Unidade Participante: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalAdministrativa}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                var="hoPart"
+                                                size="70"
+                                                maxResults="30"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 800px"
+                                                itemValue="#{hoPart.id}"
+                                                itemLabel="#{hoPart}"
+                                                value="#{participanteIRPControlador.unidadeParticipante.hierarquiaParticipante}">
+                                    <p:ajax event="itemSelect"
+                                            update="@none"
+                                            process="@this"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio value="Início de Vigência:"/>
+                                <p:calendar title="Informe o início de vigência"
+                                            value="#{participanteIRPControlador.unidadeParticipante.inicioVigencia}"
+                                            onkeypress="mascara(this, mdata)"
+                                            id="inicioVigenciaUnidade"
+                                            locale="pt_BR"
+                                            size="15"
+                                            navigator="true"
+                                            showOn="button"
+                                            pattern="dd/MM/yyyy"/>
+
+                                <h:outputText value="Fim de Vigência:"/>
+                                <p:calendar title="Informe o fim de vigência"
+                                            value="#{participanteIRPControlador.unidadeParticipante.fimVigencia}"
+                                            onkeypress="mascara(this, mdata)"
+                                            id="fimVigenciaUnidade"
+                                            locale="pt_BR"
+                                            size="15"
+                                            navigator="true"
+                                            showOn="button"
+                                            pattern="dd/MM/yyyy"/>
+                            </h:panelGrid>
+
+                            <p:commandButton icon="ui-icon-check"
+                                             value="Adicionar"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar este registro."
+                                             process=":Formulario:tabGeral:panelUnidades @this"
+                                             update=":Formulario:tabGeral:panelUnidades :Formulario:outputPrincipal"
+                                             styleClass="mtop10 padrao"
+                                             rendered="#{participanteIRPControlador.unidadeParticipante ne null}"
+                                             actionListener="#{participanteIRPControlador.adicionarUnidade}"/>
+
+                            <p:commandButton icon="ui-icon-cancel"
+                                             value="Cancelar"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para cancelar esta operação."
+                                             process="@this"
+                                             update=":Formulario:tabGeral:panelUnidades"
+                                             styleClass="mtop10 padrao mlef05"
+                                             rendered="#{participanteIRPControlador.unidadeParticipante ne null}"
+                                             actionListener="#{participanteIRPControlador.cancelarUnidade()}"/>
+
+                            <p:dataTable paginator="true"
+                                         id="tabela-unidades"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop03"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{participanteIRPControlador.selecionado.unidades}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Unidades&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="unid">
+                                <p:column headerText="Ações" style="text-align: center; width: 8%;">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     update=":Formulario:tabGeral:panelUnidades"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para editar este registro."
+                                                     process="@this"
+                                                     styleClass="mrig05"
+                                                     disabled="true"
+                                                     actionListener="#{participanteIRPControlador.editarUnidade(unid)}"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     update="tabela-unidades :Formulario:outputPrincipal"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para remover este registro."
+                                                     process="@this"
+                                                     disabled="true"
+                                                     actionListener="#{participanteIRPControlador.removerUnidade(unid)}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Participante" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{unid.hierarquiaParticipante}"/>
+                                </p:column>
+                                <p:column headerText="Início de Vigência" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{unid.inicioVigencia}">
+                                        <f:convertDateTime type="date"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Fim de Vigência" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{unid.fimVigencia}">
+                                        <f:convertDateTime type="date"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                            <div class="alert alert-danger" style="font-size: 13px" align="center">
+                                <strong>Atenção! </strong> A vigência da unidade participante não faz parte da vigência da intenção de registro de preço.
+                                <br/>
+                                Essa funcionalidade foi desenvolvida para uma possível reforma administrativa, onde tenha a necessidade de alterar a unidade que está no processo de irp vigente.
+                            </div>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty id="rodape-edita" controlador="#{participanteIRPControlador}"/>
+        </h:form>
+
+    </ui:define>
+</ui:composition>
+</html>

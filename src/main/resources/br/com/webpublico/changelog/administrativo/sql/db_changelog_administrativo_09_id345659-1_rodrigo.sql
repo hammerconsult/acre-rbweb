@@ -1,0 +1,5 @@
+delete from OBJETOCOMPRAESPECIFICACAO
+where TEXTO is null;
+
+delete from OBJETOCOMPRAESPECIFICACAO_AUD
+where TEXTO is null;

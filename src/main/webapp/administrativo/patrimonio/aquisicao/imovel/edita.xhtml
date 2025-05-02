@@ -1,0 +1,689 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:adm="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:f="http://java.sun.com/jsf/core">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            function acompanharSalvar() {
+                var timer;
+                timer = setInterval(function () {
+                    rcAtualizaCompFutures();
+                    var future = getElement('Formulario:future-salvar');
+                    if (future.value == 'true') {
+                        rcAtualizaCompFutures();
+                        clearInterval(timer);
+                    }
+                }, 1000);
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                finalizarPesquisa();
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{efetivacaoAquisicaoControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                onstart="aguarde.show()"
+                oncomplete="aguarde.hide()"
+                actionListener="#{efetivacaoAquisicaoControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                process=":Formulario:futures :FormularioSalvar"
+                update=":Formulario:futures :FormularioSalvar"
+                name="rcAtualizaCompFutures"/>
+
+
+            <p:outputPanel id="futures">
+                <h:inputHidden id="future-salvar"
+                               value="#{efetivacaoAquisicaoControlador.futureSalvarConcluida}"/>
+            </p:outputPanel>
+
+            <p:remoteCommand name="limparDadosSolicitacao"
+                             process="@this"
+                             update=":Formulario:tabViewPrincipal:panelSolicitacao"
+                             actionListener="#{efetivacaoAquisicaoControlador.limparDadosSolicitacao}"/>
+
+            <fc:cabecalhoPretty controlador="#{efetivacaoAquisicaoControlador}"
+                                origem="#{efetivacaoAquisicaoControlador.caminhoPadrao}listar"/>
+
+            <p:panel header="Efetivação de Aquisição de Bens Imóveis">
+                <p:tabView dynamic="true" id="tabViewPrincipal" styleClass="mtop05">
+                    <p:tab title="Dados da Aquisição ">
+
+                        <p:outputPanel id="panelPrincipal">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Situação:"/>
+                                <h:outputLabel value="#{efetivacaoAquisicaoControlador.selecionado.situacao.descricao}"
+                                               styleClass="negrito"
+                                               id="situacao"/>
+
+                                <h:outputLabel value="Número:"/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar' : efetivacaoAquisicaoControlador.selecionado.numero}"
+                                    styleClass="negrito"
+                                    id="numero"/>
+
+                                <h:outputLabel value="Data:"/>
+                                <h:outputLabel value="#{efetivacaoAquisicaoControlador.selecionado.dataDeAquisicao}"
+                                               styleClass="negrito">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputLabel>
+
+                                <h:outputLabel value="Usuário:"/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.usuario.pessoaFisica.nome}"
+                                    styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Solicitação de Aquisição:"/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="solicitacao"
+                                                title="Informe a solicitação de aquisição de bens."
+                                                value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao}"
+                                                completeMethod="#{efetivacaoAquisicaoControlador.completarSolicitacaoAquisicao}"
+                                                var="sol"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 700px"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosSolicitacao()}"
+                                                itemLabel="#{sol}"
+                                                itemValue="#{sol.id}"
+                                                size="70"
+                                                converter="#{solicitacaoAquisicaoControlador.converterGenerico}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            listener="#{efetivacaoAquisicaoControlador.buscarDadosSolicitacaoAquisicao()}"
+                                            oncomplete="aguarde.hide()"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio value="Avaliar Solicitação: "/>
+                                <h:selectOneMenu
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.situacaoSolicitacao}">
+                                    <f:selectItems
+                                        value="#{efetivacaoAquisicaoControlador.situacoesParaEfetivacao}"/>
+                                    <p:ajax event="valueChange"
+                                            process="@this"
+                                            update="panelPrincipal"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio value="Motivo:"
+                                                           rendered="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoRecusada}"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="motivo"
+                                                     value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.motivo}"
+                                                     rendered="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoRecusada}"
+                                                     cols="70"
+                                                     rows="4"
+                                                     counter="counterMotivo"
+                                                     maxlength="255"
+                                                     counterTemplate="{0} Caracteres Restantes"
+                                                     style="text-transform: uppercase"/>
+                                    <h:outputText id="counterMotivo" styleClass="azul mlef05"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Dados da Solicitação">
+                        <p:outputPanel id="panelSolicitacao">
+                            <p:outputPanel
+                                rendered="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao eq null}">
+                                <div class="alert alert-info" align="center" style="font-size: 12px">
+                                    Para visualizar os dados da solicitação de aquisição, selecione a mesma na aba 'Dados da Aquisição'.
+                                </div>
+                            </p:outputPanel>
+
+                            <h:panelGrid columns="2"
+                                         rendered="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao ne null}">
+                                <h:outputLabel value="Situação:"/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.situacao.descricao}"
+                                    styleClass="negrito"
+                                    id="situacaoSolicitacao"/>
+
+                                <h:outputLabel value="Número:"/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.numero}"
+                                    styleClass="negrito"/>
+
+                                <h:outputLabel value="Data:"/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.dataSolicitacao}"
+                                    styleClass="negrito">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputLabel>
+
+                                <h:outputLabel value="Usuário:"/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.usuario.pessoaFisica.nome}"
+                                    styleClass="negrito" size="80"/>
+
+                                <h:outputLabel value="Requisição:"/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.requisicaoDeCompra}"
+                                    styleClass="negrito"/>
+
+                                <h:outputLabel for="descricao" value="Descrição da Requisição:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="descricao"
+                                                     value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.requisicaoDeCompra.descricao}"
+                                                     readonly="true"
+                                                     cols="70"
+                                                     scrollHeight="50"
+                                                     styleClass="negrito"
+                                                     style="text-transform: uppercase"/>
+                                </h:panelGrid>
+
+                                <h:outputLabel for="logalDeEntrega" value="Local da Entrega:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="logalDeEntrega"
+                                                     value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.requisicaoDeCompra.localEntrega}"
+                                                     readonly="true"
+                                                     cols="70"
+                                                     scrollHeight="50"
+                                                     styleClass="negrito"
+                                                     style="text-transform: uppercase"/>
+                                </h:panelGrid>
+
+                                <h:outputLabel value="Contrato: "/>
+                                <h:outputLabel
+                                    value="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.requisicaoDeCompra.contrato}"
+                                    readonly="true"
+                                    styleClass="negrito"/>
+
+                                <h:outputLabel value="Execução do Contrato:"/>
+                                <adm:requisicao-compra-execucao
+                                    idRequisicao="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao.requisicaoDeCompra.id}"/>
+                            </h:panelGrid>
+
+
+                            <p:tabView id="tabViewSolicitacao" styleClass="mtop10"
+                                       rendered="#{efetivacaoAquisicaoControlador.selecionado.solicitacaoAquisicao ne null}">
+                                <p:tab title="Documento Fiscal" id="tabDadosDocumento">
+                                    <p:dataTable paginator="true"
+                                                 id="tabela-documentos"
+                                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                 rowIndexVar="rowIx"
+                                                 styleClass="mtop05"
+                                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                                 value="#{efetivacaoAquisicaoControlador.documentosFiscais}"
+                                                 rows="10"
+                                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Documentos Fiscais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                 rowsPerPageTemplate="10,25,50,100"
+                                                 var="detentor">
+                                        <p:column headerText="Visualizar"
+                                                  style="width:1%; text-align: center">
+                                            <p:commandButton icon="ui-icon-search"
+                                                             process="@this"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             onclick="dialogInfoItensDocumento.show()"
+                                                             update=":formVerItens"
+                                                             title="Visualizar os itens do documento fiscal."
+                                                             actionListener="#{efetivacaoAquisicaoControlador.visualizarItemDocumentoFiscal(detentor)}"
+                                                             styleClass="mlef02"/>
+                                        </p:column>
+                                        <p:column headerText="Data do Documento"
+                                                  style="width:10%; text-align: center">
+                                            <h:outputText
+                                                value="#{detentor.doctoFiscalLiquidacao.dataDocto}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Número" style="width:10%; text-align: left">
+                                            <h:outputText value="#{detentor.doctoFiscalLiquidacao.numero}"/>
+                                        </p:column>
+                                        <p:column headerText="Série" style="width:10%; text-align: left">
+                                            <h:outputText value="#{detentor.doctoFiscalLiquidacao.serie}"/>
+                                        </p:column>
+                                        <p:column headerText="UF" style="width:2%; text-align: left">
+                                            <h:outputText value="#{detentor.doctoFiscalLiquidacao.uf}"/>
+                                        </p:column>
+                                        <p:column headerText="Tipo do Documento"
+                                                  style="width:10%; text-align: left">
+                                            <h:outputText
+                                                value="#{detentor.doctoFiscalLiquidacao.tipoDocumentoFiscal.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor Total (R$)"
+                                                  style="width:10%; text-align: right">
+                                            <h:outputText value="#{detentor.doctoFiscalLiquidacao.total}"
+                                                          converter="moneyConverter"/>
+
+                                            <f:facet name="footer">
+                                                <h:outputText
+                                                    styleClass="negrito"
+                                                    value="#{efetivacaoAquisicaoControlador.selecionado.calcularValorTotalDosDocumentosFiscais()}"
+                                                    converter="moneyConverter"/>
+                                            </f:facet>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:tab>
+
+                                <p:tab title="Itens da Solicitação">
+                                    <p:dataTable paginator="true"
+                                                 id="itensSolicitacao"
+                                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                 rowIndexVar="rowIx"
+                                                 styleClass="mtop05"
+                                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                                 value="#{efetivacaoAquisicaoControlador.itensSolicitacaoAquisicao}"
+                                                 rows="10"
+                                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Itens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                 rowsPerPageTemplate="10,25,50,100"
+                                                 var="itemSol">
+                                        <p:column headerText="Descrição" style="text-align: left;">
+                                            <h:outputText
+                                                value="#{itemSol.descricaoDoBem}"/>
+                                        </p:column>
+                                        <p:column headerText="Grupo Patrimonial" style="text-align: left;">
+                                            <h:outputText
+                                                value="#{itemSol.estadoResultante.grupoBem}"/>
+                                        </p:column>
+                                        <p:column headerText="Unidade Administrativa"
+                                                  style="text-align: left;">
+                                            <fc:codigo-descricao-hierarquia
+                                                dataMovimento="#{efetivacaoAquisicaoControlador.selecionado.dataDeAquisicao}"
+                                                unidadeOrganizacional="#{itemSol.estadoResultante.detentoraAdministrativa}"
+                                                styleClass="default"
+                                                tipoHierarquia="ADMINISTRATIVA"/>
+                                        </p:column>
+                                        <p:column headerText="Unidade Orçamentária"
+                                                  style="text-align: left;">
+                                            <fc:codigo-descricao-hierarquia
+                                                dataMovimento="#{efetivacaoAquisicaoControlador.selecionado.dataDeAquisicao}"
+                                                unidadeOrganizacional="#{itemSol.estadoResultante.detentoraOrcamentaria}"
+                                                styleClass="default"
+                                                tipoHierarquia="ORCAMENTARIA"/>
+                                        </p:column>
+                                        <p:column headerText="Situação" style="text-align: left;">
+                                            <h:outputText
+                                                value="#{itemSol.situacaoEventoBem.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor do Lançamento (R$)" style="text-align: right;">
+                                            <h:outputText
+                                                value="#{itemSol.itemRequisicaoCompra.valorUnitario}"
+                                                converter="moneyConverter"/>
+
+                                            <f:facet name="footer">
+                                                <div align="right">
+                                                    <h:outputText
+                                                        styleClass="negrito"
+                                                        value="#{efetivacaoAquisicaoControlador.valorTotalItensSolicitacao}"
+                                                        converter="moneyConverter"/>
+                                                </div>
+                                            </f:facet>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:tab>
+                            </p:tabView>
+
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <p:outputPanel id="panel-anexo">
+                            <fc:filesUploadWP selecionado="#{efetivacaoAquisicaoControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                <p:commandButton value="Concluir Efetivação"
+                                 oncomplete="aguarde.hide()"
+                                 icon="ui-icon-check"
+                                 styleClass="mrig05 mtop10 prioritario operacao"
+                                 update="@form"
+                                 onclick="if (!confirm('Tem certeza que deseja concluir a aquisição de bens?')) {return false; } else {aguarde.show();}"
+                                 actionListener="#{efetivacaoAquisicaoControlador.salvar()}"/>
+
+                <fc:rodapePretty controlador="#{efetivacaoAquisicaoControlador}"
+                                 ocultarSalvar="true"/>
+            </h:panelGrid>
+        </h:form>
+
+        <p:dialog header="Itens do Documento"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  width="1000"
+                  closable="false"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dialogInfoItensDocumento">
+            <h:form id="formVerItens">
+                <p:dataTable paginator="true"
+                             id="tabela-itens_info"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             style="overflow: scroll; max-height: 600px;width: auto"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{efetivacaoAquisicaoControlador.documentoFiscal.documentoFiscal.listaItemDoctoFiscalLiquidacao}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Itens do Documento Fiscal&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="itemDocto">
+
+                    <p:column headerText="Qtde Documento" style="text-align: center;">
+                        <h:outputText value="#{itemDocto.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Qtde Total" style="text-align: center;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Produto Licitado" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.itemContrato.itemAdequado.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Produto Entregue"
+                              style="text-align: left;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.produtoEntregue}"/>
+                    </p:column>
+                    <p:column headerText="Marca" style="text-align: left;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.itemContrato.itemAdequado.marca}"/>
+                    </p:column>
+                    <p:column headerText="Modelo" style="text-align: left;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.itemContrato.itemAdequado.modelo}"/>
+                    </p:column>
+                    <p:column headerText="Unid." style="text-align: center;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.itemContrato.itemAdequado.unidadeMedida}"/>
+                    </p:column>
+                    <p:column headerText="Tipo Objeto de Compra"
+                              style="text-align: center;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.objetoCompra.tipoObjetoCompra.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Grupo Patrimonial"
+                              style="text-align: center;">
+                        <h:outputText
+                            value="#{bemControlador.getDescricaoGrupoPatrimonialPorGrupoObjetoCompra(itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.objetoCompra.grupoObjetoCompra)}"/>
+                    </p:column>
+                    <p:column headerText="Segurado" style="text-align: center">
+                        <p:commandButton icon="ui-icon-search"
+                                         title="visualizar a seguradora do item."
+                                         onclick="aguarde.show();"
+                                         process="@this"
+                                         update=":formSeguradora"
+                                         oncomplete="aguarde.hide();"
+                                         actionListener="#{efetivacaoAquisicaoControlador.visualizarSeguradoraNoDialog(itemDocto.itemDoctoItemAquisicao)}"/>
+                    </p:column>
+                    <p:column headerText="Garantia" style="text-align: center">
+                        <p:commandButton icon="ui-icon-search"
+                                         title="visualizar a garantia do item."
+                                         process="@this"
+                                         update=":formGarantia"
+                                         onclick="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         actionListener="#{efetivacaoAquisicaoControlador.visualizarGarantiaNoDialog(itemDocto.itemDoctoItemAquisicao)}"/>
+
+                        <f:facet name="footer">
+                            <h:outputText value="Valor Total Itens " styleClass="negrito"/>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Valor Unitário (R$)"
+                              style="text-align: right;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoItemAquisicao.itemRequisicaoDeCompra.valorUnitario}"
+                            converter="moneyConverter"/>
+
+                        <f:facet name="footer">
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{efetivacaoAquisicaoControlador.valorTotalItensDocumentoFiscal()}"
+                                converter="moneyConverter"/>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+
+                <div align="center">
+                    <p:commandButton icon="ui-icon-close"
+                                     value="Fechar"
+                                     onclick="aguarde.show();"
+                                     process="@this"
+                                     update="@none"
+                                     oncomplete="aguarde.hide(); dialogInfoItensDocumento.hide();"
+                                     styleClass="padrao mtop10"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Seguradora do Item"
+                  modal="true"
+                  dynamic="true"
+                  closable="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dglSeguradora">
+            <h:form id="formSeguradora">
+                <adm:seguradora
+                    rendered="#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.seguradora ne null}"
+                    seguradora="#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.seguradora}"
+                    caminhoAtual="#{efetivacaoAquisicaoControlador.caminhoPadrao}"
+                    somenteVisualizar="true"
+                />
+
+                <p:outputPanel
+                    rendered="#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.seguradora eq null}">
+                    <div align="center" class="alert alert-success mtop05" style="font-size: 13px">
+                        O Item
+                        <strong>#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.itemRequisicaoDeCompra.numero}</strong> não possui uma seguradora.
+                    </div>
+                </p:outputPanel>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     onclick="aguarde.show();"
+                                     process="@this"
+                                     update="@none"
+                                     oncomplete="aguarde.hide(); dglSeguradora.hide();"
+                                     styleClass="padrao mtop10"/>
+
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Garantia do Item"
+                  modal="true"
+                  closable="false"
+                  dynamic="true"
+                  position="center"
+                  width="800"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dglGarantia">
+            <h:form id="formGarantia">
+
+                <p:outputPanel
+                    rendered="#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.garantia ne null}">
+                    <legend class="legenda">Detalhes da Garantia</legend>
+
+                    <h:panelGrid columns="2">
+                        <h:outputLabel value="Descrição: "/>
+                        <h:panelGroup>
+                            <h:panelGrid columns="2">
+                                <p:inputTextarea title="Digite a descrição da garantia."
+                                                 value="#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.garantia.descricao}"
+                                                 cols="67"
+                                                 rows="4"
+                                                 styleClass="negrito"
+                                                 readonly="true"
+                                                 maxlength="3000"
+                                                 autoResize="false"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-descricao-garantiaVer"/>
+                                <h:outputText id="counter-descricao-garantiaVer"
+                                              style="color: #497692"
+                                              styleClass="negrito"/>
+                            </h:panelGrid>
+                        </h:panelGroup>
+
+                        <h:outputLabel value="Data de Vencimento: "/>
+                        <h:outputText
+                            value="#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.garantia.dataVencimento}"
+                            converter="javax.faces.DateTime"
+                            styleClass="negrito"/>
+                    </h:panelGrid>
+                </p:outputPanel>
+
+                <p:outputPanel
+                    rendered="#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.garantia eq null}">
+                    <div align="center" class="alert alert-success mtop05" style="font-size: 13px">
+                        O item
+                        <strong>#{efetivacaoAquisicaoControlador.itemDoctoItemAquisicao.itemRequisicaoDeCompra.numero}</strong> não possui uma garantia.
+                    </div>
+                </p:outputPanel>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     title="clique para cancelar a adições dessa garantia ao item."
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide(); dglGarantia.hide();"
+                                     process="@this"
+                                     styleClass="padrao mtop10 mrig05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Concluíndo Efetivação de Aquisição de Bens Imóveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{efetivacaoAquisicaoControlador.assistenteBarraProgresso.descricaoProcesso}"/>
+                    <br/>
+                    <div style="#{efetivacaoAquisicaoControlador.assistenteBarraProgresso.total == 0
+                                and !efetivacaoAquisicaoControlador.futureSalvarConcluida ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{efetivacaoAquisicaoControlador.assistenteBarraProgresso.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{efetivacaoAquisicaoControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="#{!efetivacaoAquisicaoControlador.futureSalvarConcluida ? 'display: block' : 'display: none'}">
+                            <div class="bar"
+                                 style="width: #{efetivacaoAquisicaoControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="#{!efetivacaoAquisicaoControlador.futureSalvarConcluida ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="Tempo Decorrido #{efetivacaoAquisicaoControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{efetivacaoAquisicaoControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                    </div>
+                    <div align="center"
+                         style="#{efetivacaoAquisicaoControlador.futureSalvarConcluida ? 'display: block' : 'display: none'}">
+                        <div class="alert alert-success">
+                            <Strong>Operação Realizada!</Strong> Efetivação de Aquisição de Bens Imóveis foi concluída com sucesso.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="text-align: center">
+                    <div class="centralizado ">
+                        <p:commandButton value="Continuar"
+                                         icon="ui-icon-check"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         disabled="#{!efetivacaoAquisicaoControlador.futureSalvarConcluida}"
+                                         actionListener="#{efetivacaoAquisicaoControlador.finalizarProcesssoSalvar()}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Bucando Dados da Solicitação de Aquisição</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"/>
+                        <br/><br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+    </ui:define>
+</ui:composition>
+</html>

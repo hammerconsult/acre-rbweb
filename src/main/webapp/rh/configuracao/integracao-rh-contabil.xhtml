@@ -1,0 +1,804 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function iniciarAssistente() {
+                dlgassistente.show();
+                timer = setInterval(function () {
+                    verificarProgresso();
+                }, 1000);
+            }
+
+            function finalizarAssistente() {
+                clearInterval(timer);
+                dlgassistente.hide();
+                buscarConfiguracoes();
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand name="verificarProgresso"
+                             process="@this" update=":pnassistente"
+                             actionListener="#{configuracaoIntegracaoRHContabilControlador.verificarProgresso}"/>
+            <p:remoteCommand name="buscarConfiguracoes"
+                             actionListener="#{configuracaoIntegracaoRHContabilControlador.buscarConfiguracoes()}"
+                             process="@this :Formulario:fontedeevento" update=":Formulario"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide(); fontedeevento.clearFilters()"/>
+            <p:panel header="Configuração Integração RH - Contábil">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Mês: "/>
+                    <fc:selectOneMenu id="mes" title="Informe um mês"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.meses}"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.mes}"
+                                      update=":Formulario:fontedeevento"
+                                      executarMetodo="#{configuracaoIntegracaoRHContabilControlador.limparFonteEvento()}"/>
+
+                    <h:outputLabel value="Exercício: "/>
+                    <co:inputExercicio id="exercicio"
+                                       exercicio="#{configuracaoIntegracaoRHContabilControlador.exercicio}"/>
+
+                    <h:outputLabel rendered="#{configuracaoIntegracaoRHContabilControlador.inicioVigencia ne null}"
+                                   value="Início da vigência: "/>
+
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.inicioVigencia}"
+                                   styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputLabel>
+
+                    <h:outputLabel rendered="#{configuracaoIntegracaoRHContabilControlador.finalVigencia ne null}"
+                                   value="Fim da vigência: "/>
+
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.finalVigencia}"
+                                   styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputLabel>
+
+                    <h:outputLabel value="Apenas Eventos Cadastrados: "/>
+                    <p:selectBooleanCheckbox value="#{configuracaoIntegracaoRHContabilControlador.apenasEventosCadastrados}">
+                        <p:ajax event="change" process="@this"/>
+                    </p:selectBooleanCheckbox>
+
+                    <h:outputLabel value="Recurso FP: "/>
+                    <p:autoComplete id="idRecursoFP"
+                                    multiple="true"
+                                    queryDelay="1000"
+                                    styleClass="auto-complete-multiple"
+                                    panelStyleClass="auto-complete-multiple-panel-style-class"
+                                    forceSelection="false"
+                                    scrollHeight="250"
+                                    value="#{configuracaoIntegracaoRHContabilControlador.filtroRecursos}"
+                                    title="Informe o código ou descrição."
+                                    completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarRecursosFPs}"
+                                    converter="#{recursoFPControlador.converterGenerico}"
+                                    onclick="this.select();"
+                                    var="rfp"
+                                    itemLabel="#{rfp.toStringAutoComplete()}"
+                                    itemValue="#{rfp.id}">
+                        <p:ajax event="itemSelect" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                process="@this" update="idEventoFP"
+                                listener="#{configuracaoIntegracaoRHContabilControlador.limparFiltroEventos()}"/>
+
+                        <p:ajax event="itemUnselect" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                process="@this" update="idEventoFP"
+                                listener="#{configuracaoIntegracaoRHContabilControlador.limparFiltroEventos()}"/>
+                    </p:autoComplete>
+
+                    <h:outputLabel value="Evento FP: "/>
+                    <p:autoComplete id="idEventoFP"
+                                    multiple="true"
+                                    queryDelay="1000"
+                                    styleClass="auto-complete-multiple"
+                                    panelStyleClass="auto-complete-multiple-panel-style-class"
+                                    forceSelection="false"
+                                    scrollHeight="250"
+                                    value="#{configuracaoIntegracaoRHContabilControlador.filtroEventos}"
+                                    title="Informe o código ou descrição."
+                                    completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarEventos}"
+                                    converter="#{eventoFPControlador.converterGenerico}"
+                                    onclick="this.select();"
+                                    var="efp"
+                                    itemLabel="#{efp.toStringAutoComplete()}"
+                                    itemValue="#{efp.id}">
+                        <p:ajax event="itemSelect" onstart="aguarde.show()" oncomplete="aguarde.hide()" process="@this"/>
+                        <p:ajax event="itemUnselect" onstart="aguarde.show()" oncomplete="aguarde.hide()" process="@this"/>
+                    </p:autoComplete>
+                </h:panelGrid>
+
+                <div class="mtop10">
+                    <p:commandButton icon="ui-icon-search"
+                                     value="Buscar Configurações"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.buscarConfiguracoes()}"
+                                     styleClass="mrig05 prioritario"
+                                     process="@this :Formulario:fontedeevento"
+                                     update=":Formulario"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide(); fontedeevento.clearFilters()"/>
+                    <p:commandButton icon="ui-icon-clear"
+                                     value="Limpar Filtros"
+                                     styleClass="mrig05"
+                                     process="@this"
+                                     update=":Formulario"
+                                     onclick="fontedeevento.clearFilters()"/>
+                    <p:commandButton icon="ui-icon-pencil"
+                                     value="Configurar em Lote"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.preencherDadosParaConfiguracaoLote()}"
+                                     styleClass="mrig05"
+                                     process="@this"
+                                     update=":formedicaolote"
+                                     onclick="aguarde.show()" oncomplete="dlgedicaolote.show(); aguarde.hide()"/>
+                    <p:commandButton icon="ui-icon-pencil"
+                                     value="Copiar Configuração"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.preencherDadosParaCopia()}"
+                                     styleClass="mrig05"
+                                     process="@this"
+                                     update=":formcopia"
+                                     onclick="aguarde.show()" oncomplete="dlgcopia.show(); aguarde.hide()"/>
+                    <p:commandButton icon="ui-icon-print"
+                                     value="Relatório de Inconsistências"
+                                     styleClass="mrig05"
+                                     process="@this"
+                                     update=":Formulario :dlgrelatorioid"
+                                     onclick="aguarde.show()" oncomplete="dlgrelatorio.show(); aguarde.hide()"/>
+                    <p:commandButton icon="ui-icon-print"
+                                     value="Relação de Empenhos"
+                                     styleClass="mrig05"
+                                     process="@this"
+                                     update=":Formulario :dlgrelatorioempenhoid"
+                                     onclick="aguarde.show()" oncomplete="dlgrelatorioempenho.show(); aguarde.hide()"/>
+                </div>
+                <p:panel styleClass="mtop10">
+                    <p:dataTable id="fontedeevento" widgetVar="fontedeevento" style="font-size: 8px!important;"
+                                 tableStyle="table-layout: fixed !important;word-wrap: break-word !important;"
+                                 rendered="#{configuracaoIntegracaoRHContabilControlador.configuracoes ne null}"
+                                 value="#{configuracaoIntegracaoRHContabilControlador.configuracoes}"
+                                 filteredValue="#{configuracaoIntegracaoRHContabilControlador.configuracoesFilter}"
+                                 var="obj"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true" rowIndexVar="rowIx" styleClass="mtop10" rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>EVENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100,5000">
+                        <p:column headerText="Ações" styleClass="alinhamentoCentralizado" style="width: 20px">
+                            <p:commandButton icon="ui-icon-pencil"
+                                             actionListener="#{configuracaoIntegracaoRHContabilControlador.editarEvento(obj)}"
+                                             styleClass="mrig05"
+                                             process="@this"
+                                             update=":dlgeventoid"
+                                             title="Configurar"
+                                             onclick="aguarde.show()"
+                                             oncomplete="dlgevento.show(); aguarde.hide()"/>
+                            <p:commandButton icon="ui-icon-clear"
+                                             actionListener="#{configuracaoIntegracaoRHContabilControlador.removerEvento(obj)}"
+                                             styleClass="mrig05"
+                                             title="Limpar configuração"
+                                             process="@this"
+                                             update="fontedeevento"
+                                             onclick="if (!confirm('Deseja excluir este registro?'))return false;"
+                                             onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                        </p:column>
+                        <p:column headerText="Recurso"
+                                  sortBy="#{obj.recursoFP}"
+                                  filterBy="#{obj.recursoFP}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important">
+                            <h:outputText value="#{obj.recursoFP.codigo}" title="#{obj.recursoFP}"/>
+                        </p:column>
+                        <p:column headerText="Evento"
+                                  sortBy="#{obj.eventoFP}"
+                                  filterBy="#{obj.eventoFP.codigo}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 35px;font-size:8px!important">
+                            <h:outputText value="#{obj.eventoFP.codigo}" title="#{obj.eventoFP}"/>
+                        </p:column>
+                        <p:column headerText="Tipo"
+                                  sortBy="#{obj.tipoContabilizacao}"
+                                  filterBy="#{obj.tipoContabilizacao.name()}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 20px;font-size:8px!important">
+                            <h:outputText
+                                value="#{obj.tipoContabilizacao ne null ? obj.tipoContabilizacao.name().substring(0,3) : ''}"/>
+                        </p:column>
+                        <p:column headerText="Cód. Reduzido"
+                                  sortBy="#{obj.despesaORC.codigoReduzido}"
+                                  filterBy="#{obj.despesaORC.codigoAdaptado}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important">
+                            <h:outputText value="#{obj.despesaORC.codigoAdaptado}"
+                                          title="#{obj.despesaORC.exercicio.ano}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Rec."
+                                  sortBy="#{obj.fonteDeRecursos}"
+                                  filterBy="#{obj.fonteDeRecursos.codigo}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important">
+                            <h:outputText value="#{obj.fonteDeRecursos.codigo}"
+                                          title="#{obj.fonteDeRecursos.exercicio.ano}"/>
+                        </p:column>
+                        <p:column headerText="Desdobramento"
+                                  sortBy="#{obj.desdobramento}"
+                                  filterBy="#{obj.desdobramento.codigo}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important">
+                            <h:outputText value="#{obj.desdobramento.codigo}"
+                                          title="#{obj.desdobramento.exercicio.ano}"/>
+                        </p:column>
+                        <p:column headerText="Conta Finan."
+                                  sortBy="#{obj.subConta}"
+                                  filterBy="#{obj.subConta.codigo}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important;">
+                            <h:outputText value="#{obj.subConta.codigo}" title="#{obj.subConta}"/>
+                        </p:column>
+                        <p:column headerText="Fornecedor"
+                                  sortBy="#{obj.fornecedor}"
+                                  filterBy="#{obj.fornecedor.nome}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important;">
+                            <h:outputText value="#{obj.fornecedor.nome}" title="#{obj.fornecedor}"/>
+                        </p:column>
+                        <p:column headerText="Conta Extra Orç."
+                                  sortBy="#{obj.contaExtraorcamentaria}"
+                                  filterBy="#{obj.contaExtraorcamentaria.codigo}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important;">
+                            <h:outputText value="#{obj.contaExtraorcamentaria.codigo}"
+                                          title="#{obj.contaExtraorcamentaria}"/>
+                        </p:column>
+                        <p:column headerText="Credor" sortBy="#{obj.credor}"
+                                  filterBy="#{obj.credor.nome}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 35px;font-size:8px!important">
+                            <h:outputText value="#{obj.credor.nome}" title="#{obj.credor}"/>
+                        </p:column>
+                        <p:column headerText="Tipo Contrib."
+                                  sortBy="#{obj.tipoContribuicao}"
+                                  filterBy="#{obj.tipoContribuicao.codigo}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important">
+                            <h:outputText value="#{obj.tipoContribuicao.codigo}"
+                                          title="#{obj.tipoContribuicao.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Operação"
+                                  sortBy="#{obj.operacaoFormula}"
+                                  filterBy="#{obj.operacaoFormula.descricao}"
+                                  filterMatchMode="contains"
+                                  styleClass="centralizado"
+                                  filterStyle="text-align: center; width: 40px;font-size:8px!important">
+                            <h:outputText value="#{obj.operacaoFormula.descricao}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+            </p:panel>
+        </h:form>
+        <p:dialog id="dlgeventoid" widgetVar="dlgevento" position="center" modal="true" closable="false"
+                  resizable="true" draggable="true" dynamic="true"
+                  header="Cadastro de Evento de Integração">
+            <h:form id="formDialog">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="RecursoFP: "/>
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.selecionado.recursoFP}"
+                                   styleClass="negrito"/>
+
+                    <h:outputLabel value="EventoFP: "/>
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.selecionado.eventoFP}"
+                                   styleClass="negrito"/>
+
+                    <h:outputLabel value="Hierarquia orçamentária: "/>
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.selecionado.orcamentaria}"
+                                   styleClass="negrito"/>
+
+                    <h:outputLabel value="Hierarquia administrativa: "/>
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.selecionado.administrativa}"
+                                   styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Contabilização:"/>
+                    <fc:selectOneMenu id="tipocontabilizacao" title="Informe o tipo de contabilização"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.selecionado.tipoContabilizacao}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposContabilizacao}"
+                                      executarMetodo="#{configuracaoIntegracaoRHContabilControlador.clonarCampos()}"
+                                      update=":formDialog"/>
+
+                    <fc:outputLabelObrigatorio value="Código Reduzido:"
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('codigoreduzido')}"/>
+
+                    <co:consultar-despesa-orcamentaria-na-tela
+                        id="codigoreduzido"
+                        rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('codigoreduzido')}"
+                        value="#{configuracaoIntegracaoRHContabilControlador.selecionado.despesaORC}"
+                        mostrarArvoreExpandida="true"
+                        unidadeOrcamentaria="#{configuracaoIntegracaoRHContabilControlador.selecionado.orcamentaria.subordinada}"
+                        unidadeAdministrativa="#{configuracaoIntegracaoRHContabilControlador.selecionado.administrativa.subordinada}"
+                        styleElementoDespesa="margin-right: 65px"
+                        recuperarSomenteUnidadeLogada="false"
+                        update=":formDialog"/>
+
+                    <fc:outputLabelObrigatorio value="Fonte de Despesa Orçamentaria: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"/>
+                    <fc:autoComplete id="fontedespesaorc"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"
+                                     converter="#{recursoFPControlador.converterFonteDespesaORC}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.fonteDespesaORC}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarFontesDespesaORC}"
+                                     process="@this" update=":formDialog"
+                                     itemSelect="#{configuracaoIntegracaoRHContabilControlador.preencherPorFonteDespesa()}"/>
+
+                    <fc:outputLabelObrigatorio value="Conta de Destinação: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao')}"/>
+                    <fc:autoComplete id="contadestinacao"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao')}"
+                                     converter="#{recursoFPControlador.converterConta}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.contaDeDestinacao}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarContasDeDestinacao}"
+                                     process="@this" update=":formDialog"
+                                     itemSelect="#{configuracaoIntegracaoRHContabilControlador.preencherPorContaDestinacao()}"/>
+
+                    <h:outputLabel value="Fonte de Recursos: "
+                                   rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao') or configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"/>
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.selecionado.fonteDeRecursos}"
+                                   rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao') or configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"
+                                   styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Desdobramento: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('desdobramento')}"/>
+                    <fc:autoComplete id="desdobramento"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('desdobramento')}"
+                                     converter="#{recursoFPControlador.converterContaDespesaDesdobrada}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.desdobramento}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarDesdobramentos}"/>
+
+                    <fc:outputLabelObrigatorio value="Conta Financeira: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('subconta')}"/>
+                    <fc:autocompleteSubConta id="subConta"
+                                             unidadeOrganizacional="#{configuracaoIntegracaoRHContabilControlador.selecionado.orcamentaria.subordinada}"
+                                             rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('subconta')}"
+                                             controlador="#{configuracaoIntegracaoRHContabilControlador}"
+                                             subContaSelecionada="#{configuracaoIntegracaoRHContabilControlador.selecionado.subConta}"/>
+
+                    <fc:outputLabelObrigatorio value="Fornecedor: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fornecedor')}"/>
+                    <fc:novoAutocompletePessoa id="fornecedor" caminhoAtual="/configuracao/integracao-rh-contabil/"
+                                               mostraBotoes="false"
+                                               situacoesPossiveis="#{configuracaoIntegracaoRHContabilControlador.situacoesDisponiveis}"
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fornecedor')}"
+                                               value="#{configuracaoIntegracaoRHContabilControlador.selecionado.fornecedor}"/>
+
+                    <fc:outputLabelObrigatorio value="Conta Extra Orçamentaria: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contaextra')}"/>
+                    <fc:autoComplete id="contaextra"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contaextra')}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.contaExtraorcamentaria}"
+                                     converter="#{recursoFPControlador.converterContaExtraorcamentaria}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarContaExtraorcamentaria}"/>
+
+                    <fc:outputLabelObrigatorio value="Credor: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('credor')}"/>
+                    <fc:novoAutocompletePessoa id="credor" caminhoAtual="/configuracao/integracao-rh-contabil/"
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('credor')}"
+                                               situacoesPossiveis="#{configuracaoIntegracaoRHContabilControlador.situacoesDisponiveis}"
+                                               value="#{configuracaoIntegracaoRHContabilControlador.selecionado.credor}"/>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Contribuição: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('tipocontribuicao')}"/>
+                    <fc:selectOneMenu id="tipocontribuicao" title="informe o tipo de contribuição"
+                                      rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('tipocontribuicao')}"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.selecionado.tipoContribuicao}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposContribuicao}"/>
+
+                    <fc:outputLabelObrigatorio value="Operação: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('operacao')}"/>
+                    <fc:selectOneMenu id="operacao" title="informe a operação"
+                                      rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('operacao')}"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.selecionado.operacaoFormula}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.operacoesFormula}"/>
+                </h:panelGrid>
+                <div class="mtop10">
+                    <p:commandButton value="Salvar"
+                                     icon="ui-icon-disk"
+                                     process=":formDialog"
+                                     styleClass="mrig05 prioritario"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.salvarEvento()}"
+                                     onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     update=":dlgeventoid" process="@this"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.cancelarEvento()}"
+                                     onstart="aguarde.show();" oncomplete="dlgevento.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog id="dlgcopiaid" widgetVar="dlgcopia" position="center" modal="true" closable="false"
+                  resizable="false" draggable="true" dynamic="true"
+                  header="Cópia de Configuração">
+            <h:form id="formcopia">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Competência Origem: "/>
+                    <h:panelGroup>
+                        <fc:selectOneMenu id="mesorigem" title="Informe um mês"
+                                          itens="#{configuracaoIntegracaoRHContabilControlador.meses}"
+                                          value="#{configuracaoIntegracaoRHContabilControlador.mesOrigem}"/>
+                        <h:outputText value="/" styleClass="mlef05 mrig05"/>
+                        <co:inputExercicio id="exercicioorigem"
+                                           exercicio="#{configuracaoIntegracaoRHContabilControlador.exercicioOrigem}"/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Competência Destino: "/>
+                    <h:panelGroup>
+                        <fc:selectOneMenu id="mesdestino" title="Informe um mês"
+                                          itens="#{configuracaoIntegracaoRHContabilControlador.meses}"
+                                          value="#{configuracaoIntegracaoRHContabilControlador.mesDestino}"/>
+                        <h:outputText value="/" styleClass="mlef05 mrig05"/>
+                        <co:inputExercicio id="exerciciodestino"
+                                           exercicio="#{configuracaoIntegracaoRHContabilControlador.exercicioDestino}"/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Cópia: "/>
+                    <fc:selectOneMenu id="tipocopia" title="Informe o tipo de cópia"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposCopia}"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.tipoCopia}"/>
+                </h:panelGrid>
+                <div class="mtop10">
+                    <p:commandButton value="Copiar"
+                                     icon="ui-icon-disk" styleClass="prioritario"
+                                     update="@this" process="@this"
+                                     title="Clique para Copiar as Configurações"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.copiarConfiguracao()}"
+                                     onstart="aguarde.show();" oncomplete="dlgcopia.hide(); aguarde.hide();"/>
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     update=":dlgcopiaid" process="@this"
+                                     onstart="aguarde.show();" oncomplete="dlgcopia.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dlgedicaoloteid" widgetVar="dlgedicaolote" position="center" modal="true" closable="false"
+                  resizable="false" draggable="true" dynamic="true"
+                  header="Filtro de Configuração em Lote">
+            <h:form id="formedicaolote">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="RecursoFP: "/>
+                    <fc:autoComplete id="recursofp"
+                                     converter="#{recursoFPControlador.converterGenerico}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.recursoFP}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarRecursosFP}"
+                                     itemSelect="#{configuracaoIntegracaoRHContabilControlador.buscarEventosFPporRecursoFP()}"
+                                     process="@this" update=":formedicaolote"/>
+
+                    <h:outputText value="Tipo de Contabilização: "/>
+                    <fc:selectOneMenu id="tipocontabilizacao" title="Informe o tipo de contabilização"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposContabilizacao}"
+                                      executarMetodo="#{configuracaoIntegracaoRHContabilControlador.buscarEventosFPporRecursoFP()}"
+                                      update=":formedicaolote"/>
+
+                    <h:outputText value="EventosFP: "/>
+                    <p:dataTable id="eventosfp"
+                                 value="#{configuracaoIntegracaoRHContabilControlador.eventosFP}"
+                                 selection="#{configuracaoIntegracaoRHContabilControlador.eventosFPSelecionados}"
+                                 var="obj" rowKey="#{obj.id}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true" rowIndexVar="rowIx" styleClass="mtop10" rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})">
+                        <p:column selectionMode="multiple" style="text-align: center;width: 5%"/>
+                        <p:column headerText="Código" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{obj.codigo}"/>
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{obj.descricao}"/>
+                        </p:column>
+                    </p:dataTable>
+                </h:panelGrid>
+                <div class="mtop10">
+                    <p:commandButton value="Configurar"
+                                     icon="ui-icon-pencil" styleClass="prioritario"
+                                     update=":formDialogEvento" process=":formedicaolote"
+                                     title="Clique para Configurar os Eventos selecionados"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.atualizarCampos()}"
+                                     onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel" styleClass="mlef05"
+                                     update=":dlgedicaoloteid" process="@this"
+                                     onstart="aguarde.show();" oncomplete="dlgedicaolote.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dlgeventosid" widgetVar="dlgeventos" position="center" modal="true" closable="false"
+                  resizable="false" draggable="true" dynamic="true"
+                  header="Edição de Configuração em Lote">
+            <h:form id="formDialogEvento">
+                <h:panelGrid columns="3">
+                    <h:panelGroup>
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editTipoContabilizacao}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparTipoContabilizacao}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Tipo de Contabilização:"/>
+                    <fc:selectOneMenu id="tipocontabilizacao" title="Informe o tipo de contabilização"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.selecionado.tipoContabilizacao}"
+                                      disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editTipoContabilizacao}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposContabilizacao}"
+                                      executarMetodo="#{configuracaoIntegracaoRHContabilControlador.clonarCampos()}"
+                                      update=":formDialogEvento"/>
+
+                    <h:panelGroup
+                        rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('codigoreduzido')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editDespesaOrc}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparDespesaOrc}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Código Reduzido:"
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('codigoreduzido')}"/>
+                    <co:consultar-despesa-orcamentaria id="codigoreduzido"
+                                                       rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('codigoreduzido')}"
+                                                       value="#{configuracaoIntegracaoRHContabilControlador.selecionado.despesaORC}"
+                                                       update=":formDialogEvento"
+                                                       permiteFiltrarTodasUnidades="true"/>
+                    <h:panelGroup
+                        rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"/>
+                    <fc:outputLabelObrigatorio value="Fonte de Despesa Orçamentaria: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"/>
+                    <fc:autoComplete id="fontedespesaorc"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"
+                                     disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editDespesaOrc}"
+                                     converter="#{recursoFPControlador.converterFonteDespesaORC}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.fonteDespesaORC}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarFontesDespesaORC}"
+                                     process="@this" update=":formDialogEvento"
+                                     itemSelect="#{configuracaoIntegracaoRHContabilControlador.preencherPorFonteDespesa()}"/>
+
+                    <h:panelGroup
+                        rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editContaDeDestinacao}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparContaDeDestinacao}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Conta de Destinação: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao')}"/>
+                    <fc:autoComplete id="contadestinacao"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao')}"
+                                     disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editContaDeDestinacao}"
+                                     converter="#{recursoFPControlador.converterConta}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.contaDeDestinacao}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarContasDeDestinacao}"
+                                     process="@this" update=":formDialogEvento"
+                                     itemSelect="#{configuracaoIntegracaoRHContabilControlador.preencherPorContaDestinacao()}"/>
+
+                    <h:panelGroup
+                        rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao') or configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"/>
+                    <h:outputLabel value="Fonte de Recursos: "
+                                   rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao') or configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"/>
+                    <h:outputLabel value="#{configuracaoIntegracaoRHContabilControlador.selecionado.fonteDeRecursos}"
+                                   rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contadestinacao') or configuracaoIntegracaoRHContabilControlador.renderCampo('fontedespesaorc')}"
+                                   styleClass="negrito"/>
+
+                    <h:panelGroup
+                        rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('desdobramento')}"/>
+                    <fc:outputLabelObrigatorio value="Desdobramento: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('desdobramento')}"/>
+                    <fc:autoComplete id="desdobramento"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('desdobramento')}"
+                                     disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editDespesaOrc}"
+                                     converter="#{recursoFPControlador.converterContaDespesaDesdobrada}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.desdobramento}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarDesdobramentos}"/>
+
+                    <h:panelGroup rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('subconta')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editSubConta}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparSubConta}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Conta Financeira: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('subconta')}"/>
+                    <fc:autocompleteSubConta id="subConta"
+                                             rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('subconta')}"
+                                             disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editSubConta}"
+                                             controlador="#{configuracaoIntegracaoRHContabilControlador}"
+                                             subContaSelecionada="#{configuracaoIntegracaoRHContabilControlador.selecionado.subConta}"/>
+
+                    <h:panelGroup rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fornecedor')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editFornecedor}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparFornecedor}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Fornecedor: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fornecedor')}"/>
+                    <fc:novoAutocompletePessoa id="fornecedor" caminhoAtual="/configuracao/integracao-rh-contabil/"
+                                               mostraBotoes="false"
+                                               situacoesPossiveis="#{configuracaoIntegracaoRHContabilControlador.situacoesDisponiveis}"
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('fornecedor')}"
+                                               disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editFornecedor}"
+                                               value="#{configuracaoIntegracaoRHContabilControlador.selecionado.fornecedor}"/>
+
+                    <h:panelGroup rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contaextra')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editContaExtraorcamentaria}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparContaExtraorcamentaria}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Conta Extra Orçamentaria: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contaextra')}"/>
+                    <fc:autoComplete id="contaextra"
+                                     rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('contaextra')}"
+                                     disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editContaExtraorcamentaria}"
+                                     value="#{configuracaoIntegracaoRHContabilControlador.selecionado.contaExtraorcamentaria}"
+                                     converter="#{recursoFPControlador.converterContaExtraorcamentaria}"
+                                     completeMethod="#{configuracaoIntegracaoRHContabilControlador.completarContaExtraorcamentaria}"/>
+
+                    <h:panelGroup rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('credor')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editCredor}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparCredor}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Credor: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('credor')}"/>
+                    <fc:novoAutocompletePessoa id="credor" caminhoAtual="/configuracao/integracao-rh-contabil/"
+                                               situacoesPossiveis="#{configuracaoIntegracaoRHContabilControlador.situacoesDisponiveis}"
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('credor')}"
+                                               disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editCredor}"
+                                               value="#{configuracaoIntegracaoRHContabilControlador.selecionado.credor}"/>
+
+                    <h:panelGroup
+                        rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('tipocontribuicao')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editTipoContribuicao}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparTipoContribuicao}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Tipo de Contribuição: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('tipocontribuicao')}"/>
+                    <fc:selectOneMenu id="tipocontribuicao" title="informe o tipo de contribuição"
+                                      rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('tipocontribuicao')}"
+                                      disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editTipoContribuicao}"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.selecionado.tipoContribuicao}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposContribuicao}"/>
+
+                    <h:panelGroup rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('operacao')}">
+                        <fc:selectBooleanCheckbox
+                            value="#{configuracaoIntegracaoRHContabilControlador.selecionado.editOperacaoFormula}"
+                            rendered="#{configuracaoIntegracaoRHContabilControlador.tipoContabilizacao ne null}"
+                            listener="#{configuracaoIntegracaoRHContabilControlador.limparOperacaoFormula}"
+                            process="@this" update=":formDialogEvento"/>
+                    </h:panelGroup>
+                    <fc:outputLabelObrigatorio value="Operação: "
+                                               rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('operacao')}"/>
+                    <fc:selectOneMenu id="operacao" title="informe a operação"
+                                      rendered="#{configuracaoIntegracaoRHContabilControlador.renderCampo('operacao')}"
+                                      disabled="#{!configuracaoIntegracaoRHContabilControlador.selecionado.editOperacaoFormula}"
+                                      value="#{configuracaoIntegracaoRHContabilControlador.selecionado.operacaoFormula}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.operacoesFormula}"/>
+
+                </h:panelGrid>
+                <div class="mtop10">
+                    <p:commandButton value="Salvar"
+                                     icon="ui-icon-disk"
+                                     process=":formDialogEvento"
+                                     styleClass="mrig05 prioritario"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.salvarEventos()}"
+                                     onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     update=":dlgeventosid" process="@this"
+                                     actionListener="#{configuracaoIntegracaoRHContabilControlador.cancelarEvento()}"
+                                     onstart="aguarde.show();" oncomplete="dlgeventos.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dlgassistente"
+                  closable="false" resizable="false" modal="true" position="center" dynamic="true" draggable="false"
+                  header="Acompanhamento do processo" width="800">
+            <p:outputPanel id="pnassistente">
+                <div style="text-align: center; color: slategrey; padding-top: 10px;">
+                    <h:outputText
+                        value="#{configuracaoIntegracaoRHContabilControlador.assistente.porcentagemDoCalculo}"
+                        style="font-size: 14px;">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                    <h:outputText value="%"/>
+                    <p:progressBar id="barra" styleClass="mtop05 mbot10"
+                                   value="#{configuracaoIntegracaoRHContabilControlador.assistente.porcentagemDoCalculo}">
+                    </p:progressBar>
+                    <div class="centralizado" id="tipoProcesso">
+                        <strong>#{configuracaoIntegracaoRHContabilControlador.assistente.descricaoProcesso}</strong><br/>
+                    </div>
+                    <h:outputText
+                        value="#{configuracaoIntegracaoRHContabilControlador.assistente.calculados} de #{configuracaoIntegracaoRHContabilControlador.assistente.total}"/>
+                    <br/>
+                    <h:outputText
+                        value="Tempo Decorrido #{configuracaoIntegracaoRHContabilControlador.assistente.tempoDecorrido}"/>
+                    <br/>
+                    <h:outputText
+                        value="Tempo Estimado #{configuracaoIntegracaoRHContabilControlador.assistente.tempoEstimado}"/>
+                </div>
+            </p:outputPanel>
+        </p:dialog>
+
+        <p:dialog id="dlgrelatorioid" widgetVar="dlgrelatorio" position="center" modal="true" closable="false"
+                  resizable="false" draggable="true" dynamic="true"
+                  header="Relatório de Inconsistências da Integração RH x Contabilidade">
+            <h:form id="formRelatorio">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Tipo de Folha: "/>
+                    <fc:selectOneMenu value="#{configuracaoIntegracaoRHContabilControlador.tipoFolhaDePagamento}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposFolhaDePagamento}"
+                                      title="Informe o tipo da folha de pagamento" id="tipofolha"/>
+                </h:panelGrid>
+                <div style="text-align: center">
+                    <fc:rodapeRelatorio
+                        actionListenerBotaoGerar="#{configuracaoIntegracaoRHContabilControlador.gerarRelatorioInconcistencia('PDF')}"
+                        actionListenerLimparCampos="#{configuracaoIntegracaoRHContabilControlador.cancelarDialog('dlgrelatorio')}"
+                        nomeBotaoLimpar="Cancelar"
+                        titleBotaoGeral="Clique para Gerar o Relatório Inconsistências"
+                        mostrarBotoesExportar="false"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dlgrelatorioempenhoid" widgetVar="dlgrelatorioempenho" position="center" modal="true"
+                  closable="false"
+                  resizable="false" draggable="true" dynamic="true"
+                  header="Relatório de Resumo de Empenho">
+            <h:form id="formRelatorioEmp">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Tipo de Folha: "/>
+                    <fc:selectOneMenu value="#{configuracaoIntegracaoRHContabilControlador.tipoFolhaDePagamento}"
+                                      itens="#{configuracaoIntegracaoRHContabilControlador.tiposFolhaDePagamento}"
+                                      title="Informe o tipo da folha de pagamento" id="tipofolha"/>
+                </h:panelGrid>
+                <div style="text-align: center">
+                    <fc:rodapeRelatorio
+                        actionListenerBotaoGerar="#{configuracaoIntegracaoRHContabilControlador.gerarRelatorioRelacaoEmpenho('PDF')}"
+                        actionListenerLimparCampos="#{configuracaoIntegracaoRHContabilControlador.cancelarDialog('dlgrelatorioempenho')}"
+                        nomeBotaoLimpar="Cancelar"
+                        titleBotaoGeral="Clique para Gerar o Relatório Resumo de Empenho"
+                        mostrarBotoesExportar="false"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

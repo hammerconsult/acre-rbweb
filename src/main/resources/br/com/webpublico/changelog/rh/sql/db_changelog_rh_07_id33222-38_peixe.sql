@@ -1,0 +1,9 @@
+update basefp set tipoBaseFP ='PREVIDENCIA_PROPRIA' where codigo in('1001') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='PREVIDENCIA_PROPRIA_13' where codigo in('1202') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='BASE_IRRF_MENSAL' where codigo in('1003') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='BASE_IRRF_13' where codigo in('1203') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='BASE_IRRF_13' where codigo in('1203') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='BASE_PREVIDENCIA_GERAL_MENSAL' where codigo in('1002') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='BASE_PREVIDENCIA_GERAL_MENSAL' where codigo in('1018') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='BASE_PREVIDENCIA_GERAL_13' where codigo in('1023') and tipoBaseFP is null;
+update basefp set tipoBaseFP ='BASE_PREVIDENCIA_GERAL_13' where codigo in('1201') and tipoBaseFP is null;

@@ -1,0 +1,12 @@
+update classecredorpessoa set classecredor_id = 8809528 where classecredor_id = 184988744;
+update empenho set classecredor_id = 8809528 where classecredor_id = 184988744;
+update LANCAMENTORECEITAORC set classecredor_id = 8809528 where classecredor_id = 184988744;
+create table OCCCLASSEPESSOA_delete as select id from OCCCLASSEPESSOA where CLASSEPESSOA_ID = 184988744;
+delete from occclassepessoa where id in(select id from OCCCLASSEPESSOA_delete);
+delete from ORIGEMCONTACONTABIL where id in(select id from OCCCLASSEPESSOA_delete);
+update RETENCAOPGTO set classecredor_id = 8809528 where classecredor_id = 184988744;
+update RECEITAEXTRA set classecredor_id = 8809528 where classecredor_id = 184988744;
+update PAGAMENTOEXTRA set classecredor_id = 8809528 where classecredor_id = 184988744;
+update RECEITAEXTFECHAMENTOEXERC set classecredor_id = 8809528 where classecredor_id = 184988744;
+delete from CLASSECREDOR where id = 184988744;
+drop table OCCCLASSEPESSOA_delete;

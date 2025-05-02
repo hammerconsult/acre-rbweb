@@ -1,0 +1,631 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{classificacaoConcursoControlador}"
+                                origem="#{classificacaoConcursoControlador.caminhoPadrao}novo/"/>
+            <p:panel header="Classificação">
+                <h:panelGrid columns="2" id="grid-filtros">
+                    <fc:outputLabelObrigatorio value="Concurso:"/>
+                    <h:panelGroup>
+                        <h:outputText value="#{classificacaoConcursoControlador.concursoSelecionado}"
+                                      rendered="#{!classificacaoConcursoControlador.isOperacaoNovo()}"/>
+
+                        <h:selectOneMenu title="Selecione concurso para fazer as avaliações"
+                                         styleClass="mrig05"
+                                         style="min-width: 400px;"
+                                         rendered="#{classificacaoConcursoControlador.isOperacaoNovo()}"
+                                         converter="#{classificacaoConcursoControlador.converterConcurso}"
+                                         value="#{classificacaoConcursoControlador.concursoSelecionado}">
+                            <f:selectItems value="#{classificacaoConcursoControlador.concursos}"/>
+                            <p:ajax event="valueChange"
+                                    onstart="aguardeMensagemUsuario.show()"
+                                    oncomplete="aguardeMensagemUsuario.hide()"
+                                    listener="#{classificacaoConcursoControlador.limparCargo()}"
+                                    process="@this"
+                                    update="select-one-cargo panel-botoes-acoes tabela-classificados">
+                            </p:ajax>
+                        </h:selectOneMenu>
+
+                        <p:commandButton process="@none"
+                                         id="bt-ver-concurso"
+                                         icon="ui-icon-lupa"
+                                         styleClass="icone-20 mrig05"
+                                         disabled="#{classificacaoConcursoControlador.concursoSelecionado eq null}"
+                                         update="@none"
+                                         onclick="window.open('#{request.contextPath}/concurso/ver/#{classificacaoConcursoControlador.concursoSelecionado.id}/','_blank');"/>
+
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         id="bt-informacao"
+                                         rendered="#{classificacaoConcursoControlador.isOperacaoNovo()}"
+                                         styleClass="icone-20 mrig05"
+                                         icon="ui-icon-info"/>
+
+                        <p:overlayPanel for="bt-informacao"
+                                        style="border : solid black 1px;"
+                                        styleClass="semSombra"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout">
+                            <h:outputText value="Listando somente os concursos que já possuem fases cadastradas."
+                                          escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Cargo:"/>
+                    <h:outputText value="#{classificacaoConcursoControlador.selecionado.cargo}"
+                                  styleClass="mrig05 azulnegrito"
+                                  rendered="#{!classificacaoConcursoControlador.isOperacaoNovo()}"/>
+                    <h:selectOneMenu title="Selecione o cargo deste concurso"
+                                     id="select-one-cargo"
+                                     styleClass="mrig05"
+                                     style="min-width: 400px;"
+                                     rendered="#{classificacaoConcursoControlador.isOperacaoNovo()}"
+                                     converter="#{classificacaoConcursoControlador.converterCargoConcurso}"
+                                     value="#{classificacaoConcursoControlador.selecionado.cargo}">
+                        <f:selectItems value="#{classificacaoConcursoControlador.cargos}"/>
+                        <p:ajax event="valueChange"
+                                process="@this"
+                                onstart="aguardeMensagemUsuario.show()"
+                                oncomplete="aguardeMensagemUsuario.hide()"
+                                update="panel-botoes-acoes tabela-classificados">
+                        </p:ajax>
+                    </h:selectOneMenu>
+                </h:panelGrid>
+
+                <p:separator styleClass="mtop05 mbot05"/>
+
+                <p:outputPanel id="panel-botoes-acoes">
+                    <p:commandButton
+                        value="#{classificacaoConcursoControlador.selecionado.cargo.classificacaoConcurso eq null ? 'Gerar' : 'Recuperar'} Classificação"
+                        id="bt-recuperar-classificacao"
+                        process="@this :Formulario:grid-filtros"
+                        disabled="#{classificacaoConcursoControlador.selecionado.cargo eq null}"
+                        styleClass="mrig05"
+                        rendered="#{classificacaoConcursoControlador.selecionado eq null and (classificacaoConcursoControlador.isOperacaoNovo() or classificacaoConcursoControlador.isOperacaoEditar())}"
+                        update="@this tabela-classificados panel-botoes-acoes"
+                        onclick="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                        icon="ui-icon-atualizar"
+                        actionListener="#{classificacaoConcursoControlador.buscarClassificacaoJaExistente}"/>
+
+                    <p:commandButton
+                        value="#{classificacaoConcursoControlador.selecionado.cargo.classificacaoConcurso eq null ? 'Gerar' : 'Atualizar'} Classificação"
+                        id="bt-gerar-classificacao"
+                        process="@this :Formulario:grid-filtros"
+                        styleClass="mrig05"
+                        rendered="#{classificacaoConcursoControlador.selecionado ne null and (classificacaoConcursoControlador.isOperacaoNovo() or classificacaoConcursoControlador.isOperacaoEditar())}"
+                        update="@this tabela-classificados panel-botoes-acoes"
+                        onclick="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                        icon="ui-icon-atualizar"
+                        actionListener="#{classificacaoConcursoControlador.gerarOrAtualizarClassificacao}"/>
+
+                    <p:commandButton
+                        value="Importar Classificação"
+                        id="bt-importar"
+                        process="@this :Formulario:grid-filtros"
+                        disabled="#{classificacaoConcursoControlador.selecionado.cargo eq null}"
+                        styleClass="mrig05"
+                        rendered="#{classificacaoConcursoControlador.isOperacaoNovo() or classificacaoConcursoControlador.isOperacaoEditar()}"
+                        update="@this tabela-classificados panel-botoes-acoes"
+                        onclick="aguarde.show()"
+                        oncomplete="dialogImportacao.show(); aguarde.hide()"
+                        icon="ui-icon-folder-open"/>
+
+                    <fc:botaoTargetBlank actionListener="#{classificacaoConcursoControlador.imprimirLogErros()}"
+                                         label="Exportar Log"
+                                         styleClass="mrig05"
+                                         title="Clique para exportar o log em PDF."
+                                         rendered="#{!empty classificacaoConcursoControlador.barraProgressoAssistente.mensagensComErro}"
+                                         disabled="#{classificacaoConcursoControlador.barraProgressoAssistente.calculando}"/>
+
+                    <p:commandButton
+                        value="Visualizar Criterios de Desempate"
+                        id="bt-visualizar-criterios-desempate"
+                        rendered="#{classificacaoConcursoControlador.selecionado.inscricoes ne null and !classificacaoConcursoControlador.selecionado.inscricoes.isEmpty()}"
+                        process="@this"
+                        update=":form-dialog-criterios-desempate"
+                        onclick="aguarde.show()"
+                        oncomplete="dialogCriteriosDesempate.show(); aguarde.hide()"
+                        icon="ui-icon-gear"/>
+                    <p:commandButton
+                        value="Criar Pessoas Com Perfil RH"
+                        title="Criar pessoas com o perfil RH, baseado com os dados da Inscrição do Concurso."
+                        id="bt-atualizar-pessoa"
+                        rendered="#{classificacaoConcursoControlador.selecionado.inscricoes ne null and !classificacaoConcursoControlador.selecionado.inscricoes.isEmpty()}"
+                        process="@this"
+                        onclick="aguarde.show()"
+                        actionListener="#{classificacaoConcursoControlador.atualizarDadosPessoais}"
+                        oncomplete="dialogPessoasNaoAtualizadas.show(); aguarde.hide()"
+                        icon="ui-icon-transferthick-e-w"/>
+                </p:outputPanel>
+
+                <p:dataTable paginator="true"
+                             id="tabela-classificados"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{classificacaoConcursoControlador.selecionado.inscricoes}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>CLASSIFICAÇÃO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="classificacaoInscricao">
+
+                    <p:column headerText="Posição" styleClass="alinhamentoCentralizado negrito"
+                              style="width: 30px!important">
+                        <h:outputText value="#{classificacaoInscricao.posicaoComIndicadorOrdinal}"
+                                      style="font-size: 13px;"/>
+                    </p:column>
+
+                    <p:column headerText="Candidato" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{classificacaoInscricao.inscricaoConcurso}"/>
+                    </p:column>
+
+                    <p:column headerText="Deficiente físico" styleClass="alinhamentoCentralizado" style="width: 50px;">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.deficienteFisico)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.deficienteFisico)}"/>
+                    </p:column>
+
+                    <c:forEach items="#{classificacaoConcursoControlador.buscarProvasAvaliadasDoConcursoAndCargo()}"
+                               var="prova">
+                        <p:column headerText="#{prova}"
+                                  styleClass="alinhamentoCentralizado">
+                            <h:outputText
+                                value="#{classificacaoConcursoControlador.buscarNotaParaApresentacao(classificacaoInscricao.inscricaoConcurso, prova)}"
+                                escape="false"/>
+                        </p:column>
+                    </c:forEach>
+
+                    <p:column headerText="Média" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{classificacaoInscricao.mediaAsString}"/>
+                    </p:column>
+
+                    <p:column headerText="Status" styleClass="alinhamentoCentralizado">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.recuperarStatusParaApresentacao(classificacaoInscricao)}"
+                            styleClass="mrig05"
+                            escape="false"/>
+
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         style="float: right"
+                                         id="bt-informacao-status-classificacao"
+                                         styleClass="icone-20"
+                                         icon="ui-icon-info"/>
+
+                        <p:tooltip for="bt-informacao-status-classificacao"
+                                   styleClass="mlef05"
+                                   style="border : solid black 1px;">
+                            <h:outputText
+                                rendered="#{classificacaoInscricao.observacoes ne null and !classificacaoInscricao.observacoes.trim().isEmpty()}"
+                                escape="false"
+                                value="#{classificacaoInscricao.observacoes}"/>
+                            <h:outputText
+                                rendered="#{classificacaoInscricao.observacoes eq null or classificacaoInscricao.observacoes.trim().isEmpty()}"
+                                value="** Sem Observações **"/>
+                        </p:tooltip>
+
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+
+
+            <p:commandButton value="Salvar"
+                             id="cbSalvar"
+                             styleClass="mtop10 mrig05 prioritario"
+                             style="height: 30px;"
+                             icon="ui-icon-disk"
+                             title="Clique para salvar o registro"
+                             rendered="#{classificacaoConcursoControlador.isOperacaoNovo() or classificacaoConcursoControlador.isOperacaoEditar()}"
+                             process="@form"
+                             actionListener="#{classificacaoConcursoControlador.salvar()}"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+            />
+
+            <p:button value="Editar"
+                      id="btEditar"
+                      styleClass="mtop10 mrig05 prioritario"
+                      style="height: 30px;"
+                      icon="ui-icon-pencil"
+                      title="Clique para editar este registro."
+                      rendered="#{classificacaoConcursoControlador.isOperacaoVer()}"
+                      href="../../editar/#{classificacaoConcursoControlador.urlKeyValue}"
+                      disabled="#{!autorizacao.isPodeEditar(request)}"/>
+
+            <p:commandButton value="Cancelar"
+                             id="cbCancelar"
+                             style="height: 30px;"
+                             styleClass="mtop10"
+                             icon="ui-icon-cancel"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar e retornar a página anterior"
+                             actionListener="#{classificacaoConcursoControlador.cancelar()}"
+                             immediate="true"
+            />
+        </h:form>
+
+        <p:dialog widgetVar="dialogCriteriosDesempate"
+                  header="Visualização de Provas"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  closable="false">
+            <h:form id="form-dialog-criterios-desempate">
+                <h:panelGrid columns="2" columnClasses="verticalAlignTop,verticalAlignTop">
+                    <h:panelGroup>
+                        <h:outputText value="Critérios de Desempate do Concurso (em ordem)"
+                                      style="font-size: 13px; margin-top: 15px;"
+                                      styleClass="azulnegrito"/>
+
+                        <h:panelGrid columns="2">
+                            <c:forEach items="#{classificacaoConcursoControlador.concursoSelecionado.desempates}"
+                                       varStatus="status"
+                                       var="desempate">
+                                <h:outputText value="#{desempate.ordemComIndicadorOrdinal} - "/>
+                                <h:outputText value="#{desempate.criterioDesempate.descricao}"/>
+                            </c:forEach>
+                        </h:panelGrid>
+                    </h:panelGroup>
+
+                    <h:panelGroup styleClass="mlef50">
+                        <h:outputText value="Vagas"
+                                      style="font-size: 13px; margin-top: 15px;"
+                                      styleClass="azulnegrito"/>
+
+                        <h:panelGrid columns="2" styleClass="mlef50">
+                            <h:outputText value="Vagas Disponíveis:"/>
+                            <h:outputText
+                                value="#{classificacaoConcursoControlador.selecionado.cargo.vagasDisponiveis}"/>
+
+                            <h:outputText value="Vagas Especiais:"/>
+                            <h:outputText value="#{classificacaoConcursoControlador.selecionado.cargo.vagasEspeciais}"/>
+
+                            <h:outputText value="Vagas Totais:"/>
+                            <h:outputText value="#{classificacaoConcursoControlador.selecionado.cargo.vagasTotais}"/>
+                        </h:panelGrid>
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <p:separator styleClass="mtop05"/>
+
+                <p:dataTable paginator="true"
+                             id="tabela-criterios-desempate"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{classificacaoConcursoControlador.selecionado.inscricoes}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>INFORMAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="classificacaoInscricao">
+
+                    <p:column headerText="Posição" styleClass="alinhamentoCentralizado negrito"
+                              style="width: 30px!important">
+                        <h:outputText value="#{classificacaoInscricao.posicaoComIndicadorOrdinal}"
+                                      style="font-size: 13px;"/>
+                    </p:column>
+
+                    <p:column headerText="Candidato" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{classificacaoInscricao.inscricaoConcurso}"/>
+                    </p:column>
+
+                    <p:column headerText="Deficiente físico" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.deficienteFisico)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.deficienteFisico)}"/>
+                    </p:column>
+
+                    <p:column headerText="Jurado?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('JURADO')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.jurado)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.jurado)}"/>
+                    </p:column>
+
+                    <p:column headerText="Mesario?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('MESARIO')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.mesario)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.mesario)}"/>
+                    </p:column>
+
+                    <p:column headerText="Doador?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('DOADOR')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.doador)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.doador)}"/>
+                    </p:column>
+
+                    <p:column headerText="Cargo Público?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('CARGO_PUBLICO')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.cargoPublico)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.cargoPublico)}"/>
+                    </p:column>
+
+                    <p:column headerText="Data Nascimento" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{classificacaoInscricao.inscricaoConcurso.dataNascimento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.recuperarIdadePorExtenso(classificacaoInscricao)}"
+                            styleClass="mlef10"/>
+                    </p:column>
+
+                    <p:column headerText="Média" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{classificacaoInscricao.mediaAsString}"/>
+                    </p:column>
+
+                    <p:column headerText="Status" styleClass="alinhamentoCentralizado">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.recuperarStatusParaApresentacao(classificacaoInscricao)}"
+                            styleClass="mrig05"
+                            escape="false"/>
+
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         style="float: right"
+                                         id="bt-informacao-criterio-desempate"
+                                         styleClass="icone-20"
+                                         icon="ui-icon-info"/>
+
+                        <p:tooltip for="bt-informacao-criterio-desempate"
+                                   styleClass="mlef05"
+                                   style="border : solid black 1px;">
+                            <h:outputText
+                                rendered="#{classificacaoInscricao.observacoes ne null and !classificacaoInscricao.observacoes.trim().isEmpty()}"
+                                escape="false"
+                                value="#{classificacaoInscricao.observacoes}"/>
+                            <h:outputText
+                                rendered="#{classificacaoInscricao.observacoes eq null or classificacaoInscricao.observacoes.trim().isEmpty()}"
+                                value="** Sem Observações **"/>
+                        </p:tooltip>
+
+                    </p:column>
+                </p:dataTable>
+
+                <div class="alinhamentoCentralizado mtop05">
+                    <p:commandButton value="Ok"
+                                     icon="ui-icon-check"
+                                     styleClass="prioritario operacao mrig05"
+                                     process="@none"
+                                     immediate="true"
+                                     update="@none"
+                                     onclick="aguarde.show();"
+                                     oncomplete="dialogCriteriosDesempate.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+        <p:dialog widgetVar="dialogPessoasNaoAtualizadas"
+                  header="Visualização de Provas"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  closable="false">
+            <h:form id="form-dialog-pessoas_rejeitadas">
+                <p:separator styleClass="mtop05"/>
+
+                <p:dataTable paginator="true"
+                             id="tabela-pessoas-rejeitadas"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{classificacaoConcursoControlador.inscricoesNaoAtualizadas}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>PESSOAS JÁ EXISTENTES E NÃO ATUALIZADAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="classificacaoInscricao">
+
+                    <p:column headerText="Posição" styleClass="alinhamentoCentralizado negrito"
+                              style="width: 30px!important">
+                        <h:outputText value="#{classificacaoInscricao.posicao}"
+                                      style="font-size: 13px;"/>
+                    </p:column>
+
+                    <p:column headerText="Candidato" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{classificacaoInscricao.inscricaoConcurso}"/>
+                    </p:column>
+
+                    <p:column headerText="Deficiente físico" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.deficienteFisico)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.deficienteFisico)}"/>
+                    </p:column>
+
+                    <p:column headerText="Jurado?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('JURADO')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.jurado)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.jurado)}"/>
+                    </p:column>
+
+                    <p:column headerText="Mesario?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('MESARIO')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.mesario)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.mesario)}"/>
+                    </p:column>
+
+                    <p:column headerText="Doador?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('DOADOR')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.doador)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.doador)}"/>
+                    </p:column>
+
+                    <p:column headerText="Cargo Público?"
+                              styleClass="alinhamentoEsquerda"
+                              rendered="#{classificacaoConcursoControlador.concursoSelecionado.existeDesempateDoTipo('CARGO_PUBLICO')}">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.converterBooleanParaSimOuNao(classificacaoInscricao.inscricaoConcurso.cargoPublico)}"
+                            styleClass="#{classificacaoConcursoControlador.recuperarCorDoTexto(classificacaoInscricao.inscricaoConcurso.cargoPublico)}"/>
+                    </p:column>
+
+                    <p:column headerText="Data Nascimento" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{classificacaoInscricao.inscricaoConcurso.dataNascimento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.recuperarIdadePorExtenso(classificacaoInscricao)}"
+                            styleClass="mlef10"/>
+                    </p:column>
+
+                    <p:column headerText="Média" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{classificacaoInscricao.mediaAsString}"/>
+                    </p:column>
+
+                    <p:column headerText="Status" styleClass="alinhamentoCentralizado">
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.recuperarStatusParaApresentacao(classificacaoInscricao)}"
+                            styleClass="mrig05"
+                            escape="false"/>
+
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         style="float: right"
+                                         id="bt-informacao-pessoa"
+                                         styleClass="icone-20"
+                                         icon="ui-icon-info"/>
+
+                        <p:tooltip for="bt-informacao-pessoa"
+                                   styleClass="mlef05"
+                                   style="border : solid black 1px;">
+                            <h:outputText
+                                rendered="#{classificacaoInscricao.observacoes ne null and !classificacaoInscricao.observacoes.trim().isEmpty()}"
+                                escape="false"
+                                value="#{classificacaoInscricao.observacoes}"/>
+                            <h:outputText
+                                rendered="#{classificacaoInscricao.observacoes eq null or classificacaoInscricao.observacoes.trim().isEmpty()}"
+                                value="** Sem Observações **"/>
+                        </p:tooltip>
+
+                    </p:column>
+                </p:dataTable>
+
+                <div class="alinhamentoCentralizado mtop05">
+                    <p:commandButton value="Ok"
+                                     icon="ui-icon-check"
+                                     styleClass="prioritario operacao mrig05"
+                                     process="@none"
+                                     immediate="true"
+                                     update="@none"
+                                     onclick="aguarde.show();"
+                                     oncomplete="dialogPessoasNaoAtualizadas.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogImportacao"
+                  header="Importação de Classificação"
+                  modal="true"
+                  position="center"
+                  style="position: fixed !important;width: 500px"
+                  resizable="false"
+                  closable="true">
+            <h:form id="form-dialog-importacao">
+                <p:outputPanel>
+                    Ordem dos campos para importação.
+                    <p:separator/>
+                    <p:dataList value="#{classificacaoConcursoControlador.campoImportacoes}" var="campo">
+                        #{campo.descricao}
+                    </p:dataList>
+
+                </p:outputPanel>
+                <p:outputPanel id="arquivoClassificacoes">
+                    <p:fileUpload multiple="false"
+                                  cancelLabel="Cancelar"
+                                  sizeExceedMessage="Arquivo Maior que 15 MB."
+                                  label="Selecione..."
+                                  uploadLabel="Upload Arquivo"
+                                  sizeLimit="10485760"
+                                  dragDropSupport="true"
+                                  invalidFileMessage="Formato de arquivo inválido."
+                                  style="width: 500px"
+                                  process="@this"
+                                  auto="true"
+                                  oncomplete="dialogImportacao.hide(); pollClassificacao.start(); dialogBarraProgresso.show();"
+                                  id="iBotaoUploadClassificacoes"
+                                  allowTypes="/(\.|\/)(xlsx|xls)$/"
+                                  update=":barraProgresso"
+                                  fileUploadListener="#{classificacaoConcursoControlador.importar}"/>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+        <p:dialog widgetVar="dialogBarraProgresso"
+                  modal="true"
+                  position="center"
+                  style="width: 800px"
+                  resizable="false"
+                  closable="false">
+            <h:form id="barraProgresso">
+
+                <p:poll interval="1"
+                        process="@this"
+                        autoStart="false"
+                        widgetVar="pollClassificacao"
+                        listener="#{classificacaoConcursoControlador.consultarProcesso}"
+                        update="painelAtualizacoes"/>
+
+                <p:outputPanel id="painelAtualizacoes">
+                    <div style="text-align: center; color: slategrey; padding-top: 10px; width: 500px">
+                        <h:outputText value="Aguarde..."/>
+                        <br/>
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.barraProgressoAssistente.porcentagemDoCalculo}"
+                            style="font-size: 14px;">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <h:outputText value="%"/>
+
+                        <p:progressBar id="barra"
+                                       styleClass="mtop05 mbot10"
+                                       value="#{classificacaoConcursoControlador.barraProgressoAssistente.porcentagemDoCalculo}">
+                        </p:progressBar>
+
+                        <h:outputText
+                            value="#{classificacaoConcursoControlador.barraProgressoAssistente.processados} de #{classificacaoConcursoControlador.barraProgressoAssistente.total}"/>
+
+                        <br/>
+                        <h:outputText
+                            value="Tempo Decorrido #{classificacaoConcursoControlador.barraProgressoAssistente.tempoDecorrido}"/>
+                    </div>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+        <fc:aguarde widgetVar="aguardeMensagemUsuario"
+                    texto="Por favor aguarde, recuperando as informações"/>
+    </ui:define>
+</ui:composition>
+</html>

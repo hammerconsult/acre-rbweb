@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty id="cpCabecalhoPretty" origem="#{inventarioEstoqueControlador.caminhoPadrao}listar/"
+                                controlador="#{inventarioEstoqueControlador}"/>
+
+            <p:panel header="Cadastro de Inventário de Estoque">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio for="localEstoque" value="Local de Estoque:"/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000"
+                                        id="localEstoque"
+                                        value="#{inventarioEstoqueControlador.selecionado.localEstoque}"
+                                        completeMethod="#{localEstoqueControlador.completarLocalEstoqueUsuarioGestorDeMaterial}"
+                                        var="localEstoque"
+                                        size="70"
+                                        dropdown="true"
+                                        panelStyle="max-height: 230px;max-width: 750px"
+                                        maxResults="50"
+                                        itemLabel="#{localEstoque.toStringAutoComplete()}"
+                                        itemValue="#{localEstoque.id}"
+                                        styleClass="mrig05"
+                                        converter="#{localEstoqueControlador.converterGenerico}">
+                            <p:ajax event="itemSelect"
+                                    update=":Formulario:painelMateriaisAdicionais"
+                                    process="@this"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{inventarioEstoqueControlador.confirmarAlteracaoTipoInventario()}"/>
+                        </p:autoComplete>
+
+                        <p:watermark value="Locais de Estoque onde o usuário logado é gestor" for="localEstoque"/>
+
+                        <fc:novoParente
+                            destino="#{localEstoqueControlador.caminhoPadrao}editar/#{inventarioEstoqueControlador.selecionado.localEstoque.id}/"
+                            origem="#{inventarioEstoqueControlador.caminhoOrigem}"
+                            selecionado="#{inventarioEstoqueControlador.selecionado}"
+                            rendered="#{inventarioEstoqueControlador.selecionado.localEstoque ne null}"
+                            icon="ui-icon-pencil"/>&nbsp;
+
+                        <fc:novoParente selecionado="#{inventarioEstoqueControlador.selecionado}"
+                                        destino="#{localEstoqueControlador.caminhoDestinoNovoCadastro}"
+                                        origem="#{inventarioEstoqueControlador.caminhoOrigem}"/>
+                    </h:panelGroup>
+
+                    <h:outputLabel value="Usuário Sistema:"/>
+                    <h:outputText value="#{inventarioEstoqueControlador.selecionado.usuarioSistema.pessoaFisica.nome}"
+                                  styleClass="negrito"
+                                  title="O usuário do sistema é recuperado automáticamente pelo sistema."
+                                  id="usuarioSistema"/>
+
+                    <h:outputLabel value="Situação:"/>
+                    <h:outputText value="#{inventarioEstoqueControlador.selecionado.situacaoInventario.descricao}"
+                                  styleClass="negrito"
+                                  id="situacao"/>
+
+                    <fc:outputLabelObrigatorio for="iniciadoEm" value="Iniciado em:"/>
+                    <p:calendar
+                        title="A data de inicialização do inventário é preenchida automáticamente pelo sistema quando o processo é iniciado."
+                        value="#{inventarioEstoqueControlador.selecionado.iniciadoEm}"
+                        id="iniciadoEm" pattern="dd/MM/yyyy HH:mm:ss" navigator="true" locale="pt_BR"/>
+
+                    <fc:outputLabelObrigatorio for="tipoInventario" value="Tipo de Inventário:"/>
+                    <h:selectOneRadio id="tipoInventario"
+                                      value="#{inventarioEstoqueControlador.selecionado.tipoInventario}"
+                                      valueChangeListener="#{inventarioEstoqueControlador.alterouTipoInventario}">
+                        <f:selectItems value="#{inventarioEstoqueControlador.tiposInventario}"/>
+                        <f:ajax render="@this"/>
+                    </h:selectOneRadio>
+                </h:panelGrid>
+
+                <p:separator/>
+                <p:outputPanel id="painelMateriaisAdicionais">
+                    <h:panelGroup rendered="#{inventarioEstoqueControlador.selecionado.isInventarioAmostragem()}">
+                        <p:commandButton icon="ui-icon-circle-plus"
+                                         id="novoMaterial"
+                                         rendered="#{inventarioEstoqueControlador.itemInventarioEstoqueSelecionado eq null}"
+                                         value="Novo Material Para Inventário"
+                                         title="Clique para adicionar materiais para inventariar."
+                                         update="painelMateriaisAdicionais"
+                                         styleClass="margem-direita-cinco-pixels"
+                                         actionListener="#{inventarioEstoqueControlador.novoItemInventarioEstoque}"/>
+                    </h:panelGroup>
+
+                    <h:panelGrid rendered="#{inventarioEstoqueControlador.selecionado.isInventarioGeral()}"
+                                 columns="2">
+                        <p:commandButton icon="ui-icon-circle-plus"
+                                         id="listaMateriais"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         value="Recuperar Materiais em Estoque"
+                                         title="Clique para adicionar materiais para inventariar."
+                                         update="painelMateriaisAdicionais"
+                                         styleClass="margem-direita-cinco-pixels"
+                                         actionListener="#{inventarioEstoqueControlador.recuperarMateriaisEmEstoque}"/>
+
+                        <div class="alert alert-info" style="padding: 6px">
+                            <strong>Atenção!</strong> Ao clicar no botão, os sistema criará automaticamente o vínculo entre todos os materiais do local de estoque recuperados e o inventário que está sendo criado.
+                        </div>
+                    </h:panelGrid>
+
+                    <p:panel styleClass="margem-superior-dez-pixels"
+                             header="Materiais para Inventário"
+                             rendered="#{inventarioEstoqueControlador.itemInventarioEstoqueSelecionado ne null}">
+
+                        <h:panelGrid columns="4">
+                            <fc:outputLabelObrigatorio value="Material:" for="material"/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="material"
+                                            value="#{inventarioEstoqueControlador.itemInventarioEstoqueSelecionado.material}"
+                                            completeMethod="#{inventarioEstoqueControlador.completarMaterial}"
+                                            maxResults="100"
+                                            var="mat"
+                                            size="70"
+                                            dropdown="true"
+                                            panelStyle="max-height: 230px; max-width: 750px"
+                                            title="#{mat.descricaoComplementar}"
+                                            itemLabel="#{mat.toStringAutoComplete()}"
+                                            itemValue="#{mat.id}"
+                                            converter="#{materialControlador.converterGenerico}">
+                            </p:autoComplete>
+
+                            <p:watermark value="Filtra por local de estoque e quantidade maior que zero(0)"
+                                         for="material"/>
+                        </h:panelGrid>
+
+                        <p:commandButton icon="ui-icon-check"
+                                         value="Adicionar"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para adicionar o material ao inventário."
+                                         styleClass="mtop10 mrig05 padrao"
+                                         actionListener="#{inventarioEstoqueControlador.adicionarMaterial()}"
+                                         process="painelMateriaisAdicionais"
+                                         update="painelMateriaisAdicionais"/>
+
+                        <p:commandButton icon="ui-icon-cancel"
+                                         value="Cancelar"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para cancelar esta operação."
+                                         styleClass="mtop10 padrao"
+                                         update="painelMateriaisAdicionais"
+                                         process="@this"
+                                         actionListener="#{inventarioEstoqueControlador.cancelaritemInventarioEstoque()}"/>
+                    </p:panel>
+
+                    <p:dataTable id="tabelaItensInventario"
+                                 value="#{inventarioEstoqueControlador.selecionado.itensInventarioEstoque}"
+                                 var="itemInventarioEstoque"
+                                 styleClass="mtop03"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Materiais deste Inventário&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Remover" style="width: 5%!important; text-align: center;">
+                            <p:commandButton icon="ui-icon-trash"
+                                             oncomplete="aguarde.hide()"
+                                             process="@this"
+                                             update=":Formulario:painelMateriaisAdicionais :Formulario:tipoInventario"
+                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false;}; aguarde.show()"
+                                             actionListener="#{inventarioEstoqueControlador.removerMaterialListaInvetariados(itemInventarioEstoque)}"
+                                             title="Clique para remover este material da lista de materiais para inventário."/>
+                        </p:column>
+                        <p:column headerText="Lotes" style="width: 60px!important" styleClass="alinhamentoEsquerda">
+                            <f:facet name="header">
+                                <h:outputText value="Lotes"/>
+                                <co:botao_informacao
+                                    descricao="Somente os materiais que requerem controle de lote estarão com o botão disponível para visualização."
+                                    styleClass="botao-transparente"/>
+                            </f:facet>
+                            <p:commandButton icon="ui-icon-search"
+                                             disabled="#{!itemInventarioEstoque.material.controleDeLote}"
+                                             oncomplete="dialogLotes.show()"
+                                             actionListener="#{inventarioEstoqueControlador.setItemInventarioEstoqueSelecionado(itemInventarioEstoque)}"
+                                             update=":FormularioDialogLotes"
+                                             title="Clique para visualizar os lotes deste material."/>
+                        </p:column>
+                        <p:column headerText="Material" filterBy="#{itemInventarioEstoque.material.descricao}"
+                                  style="text-align: left;"
+                                  filterMatchMode="contains"
+                                  filterStyle="min-width : 250px!important; text-align: left;">
+                            <h:outputText title="#{itemInventarioEstoque.material.descricaoComplementar}"
+                                          value="#{itemInventarioEstoque.material}"/>
+                        </p:column>
+                        <p:column headerText="Objeto de Compra" styleClass="alinhamentoEsquerda">
+                            <h:outputText
+                                title="Grupo Objeto de Compra: #{itemInventarioEstoque.material.objetoCompra.grupoObjetoCompra.descricao}"
+                                value="#{itemInventarioEstoque.material.objetoCompra.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Grupo Material" styleClass="alinhamentoEsquerda">
+                            <h:outputText title="#{itemInventarioEstoque.material.grupo}"
+                                          value="#{itemInventarioEstoque.material.grupo}"/>
+                        </p:column>
+                        <p:column headerText="Unidade de Medida" styleClass="alinhamentoEsquerda">
+                            <h:outputText title="#{itemInventarioEstoque.material.unidadeMedida}"
+                                          value="#{itemInventarioEstoque.material.unidadeMedida}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty id="rpRodapePretty"
+                             desabilitaSalvar="#{!inventarioEstoqueControlador.selecionado.isInventarioAberto()}"
+                             controlador="#{inventarioEstoqueControlador}"/>
+        </h:form>
+
+        <p:dialog showHeader="false"
+                  modal="true"
+                  widgetVar="dialogLotes"
+                  resizable="false"
+                  closable="false"
+                  position="center"
+                  dynamic="true"
+                  width="800"
+                  draggable="false">
+            <h:form id="FormularioDialogLotes">
+                <h:outputText value="LOTES DO MATERIAL: " styleClass="mtop05 azul" style="font-size: 12px"/>
+                <h:outputText
+                    value="#{inventarioEstoqueControlador.itemInventarioEstoqueSelecionado.material.descricao}"
+                    style="font-size: 12px"
+                    styleClass="azulnegrito"/>
+
+                <p:dataTable
+                    value="#{inventarioEstoqueControlador.itemInventarioEstoqueSelecionado.lotesItemInventario}"
+                    var="lote"
+                    style="overflow: scroll; max-height: 400px; width: auto"
+                    styleClass="mtop02"
+                    emptyMessage="Não foram localizados registros para serem apresentados">
+                    <p:column headerText="Lote" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{lote.loteMaterial}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" style="width: 90px; text-align: center;">
+                        <h:outputText value="#{lote.quantidadeEsperada}"/>
+                    </p:column>
+                </p:dataTable>
+
+                <div align="center" style="width: 100%" class="margem-superior-dez-pixels">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-close"
+                                     onstart="aguarde.show()"
+                                     title="Clique para fechar a janela."
+                                     styleClass="padrao mtop05"
+                                     actionListener="#{inventarioEstoqueControlador.cancelaritemInventarioEstoque()}"
+                                     oncomplete="aguarde.hide();dialogLotes.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog
+            position="center"
+            closable="false"
+            header="Mudança no Tipo do Inventário"
+            modal="true"
+            resizable="false"
+            widgetVar="dialogAlteracaoTipoInventario">
+
+            <h:form id="FormularioDialog">
+                <div style="text-align: center;">
+                    <div class="alert alert-block mtop05" style="font-size: 12px">
+                        <Strong>Atenção!</Strong> Tem certeza que deseja alterar o tipo do inventário? As alterações realizadas até o momento serão perdidas.
+                    </div>
+
+                    <hr/>
+                    <p:commandButton id="sim" value="Sim"
+                                     icon="ui-icon-check"
+                                     styleClass="padrao"
+                                     update=":Formulario:painelMateriaisAdicionais"
+                                     process="@this"
+                                     onstart="aguarde.show()"
+                                     actionListener="#{inventarioEstoqueControlador.confirmarAlteracaoTipoInventario()}"
+                                     oncomplete="aguarde.hide();dialogAlteracaoTipoInventario.hide()"/>
+
+                    <p:commandButton id="nao"
+                                     value="Não"
+                                     icon="ui-icon-closethick"
+                                     styleClass="padrao mlef05"
+                                     update=":Formulario:tipoInventario"
+                                     process="@this"
+                                     actionListener="#{inventarioEstoqueControlador.cancelarAlteracaoTipoInventario()}"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dialogAlteracaoTipoInventario.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

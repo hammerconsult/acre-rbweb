@@ -1,0 +1,1 @@
+UPDATE itemparcelavalordivida set valor = valorbruto;

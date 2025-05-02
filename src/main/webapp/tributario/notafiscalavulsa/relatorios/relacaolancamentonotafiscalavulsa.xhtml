@@ -1,0 +1,541 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fct="http://java.sun.com/jsf/composite/components/tributario"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define id="define_" name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function acompanhaConsulta() {
+                var timer;
+                console.log('acompanhando consulta');
+                timer = setInterval(function () {
+                    var futureDados = getElement('Formulario:future-dados-concluida');
+                    rcAtualizaCompFutures();
+                    if (futureDados.value == 'true') {
+                        clearInterval(timer);
+
+                        rcIniciaCalculoDosValores();
+                    }
+                }, 1000);
+            }
+
+
+            function acompanhaCalculo() {
+                var timer;
+                console.log('acompanhando atualizacao de valores');
+                timer = setInterval(function () {
+                    var futureDadosCalculados = getElement('Formulario:future-dados-relatorio-calculados-concluida');
+                    rcAtualizaCompFutures();
+                    if (futureDadosCalculados.value == 'true') {
+                        clearInterval(timer);
+                        rcIniciaGeracaoPdf();
+                    }
+                }, 1000);
+            }
+
+            function acompanhaGeracaoPdf() {
+                var timer;
+                console.log('acompanhando geração do pdf');
+                timer = setInterval(function () {
+                    var futureBytes = getElement('Formulario:future-bytes-concluida');
+                    rcAtualizaCompFutures();
+                    if (futureBytes.value == 'true') {
+                        clearInterval(timer);
+                        aguarde.hide();
+                        rcIncluirRelatorioNoSingleton();
+                        dlgDownload.show();
+                    }
+                }, 1000);
+            }
+
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand process="@this"
+                             update=":Formulario:futures"
+                             name="rcAtualizaCompFutures"/>
+            <p:remoteCommand actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.iniciarCalculoDosValores()}"
+                             process="@this" update="@none" name="rcIniciaCalculoDosValores"/>
+            <p:remoteCommand
+                actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.criarAssistenteAndIniciarGeracaoPdf()}"
+                process="@this" update="@none" name="rcIniciaGeracaoPdf"/>
+            <p:remoteCommand
+                actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.incluirRelatorioNoSingleton()}"
+                process="@this" update="@none" name="rcIncluirRelatorioNoSingleton"/>
+            <p:remoteCommand name="rcAtualizaTabelaRelatorio"
+                             update=":Formulario:tb-view-relacao-lancamento:opn-ultimos-relatorios-gerados"/>
+
+            <p:panel header="Relação de Lançamento de Nota Fiscal Avulsa">
+                <p:tabView id="tb-view-relacao-lancamento" onTabChange="rcAtualizaTabelaRelatorio()">
+                    <p:tab title="Filtros">
+                        <p:outputPanel id="opn-filtros">
+                            <h:panelGrid columns="2">
+                                <fc:outputLabelObrigatorio value="Exercício: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:inputMask
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.exercicioDividaInicial}"
+                                        mask="9999" size="10"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:inputMask
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.exercicioDividaFinal}"
+                                        mask="9999" size="10"/>
+                                </h:panelGrid>
+                                <h:outputLabel value="Número Nota Fiscal: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:inputText
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.numeroNotaFiscalInicial}"
+                                        size="30"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:inputText
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.numeroNotaFiscalFinal}"
+                                        size="30"/>
+                                </h:panelGrid>
+                                <h:outputLabel value="Emissão da Nota: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataEmissaoNotaInicial}"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataEmissaoNotaFinal}"/>
+                                </h:panelGrid>
+                                <h:outputLabel value="Data de Lançamento: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataLancamentoInicial}"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataLancamentoFinal}"/>
+                                </h:panelGrid>
+                                <h:outputLabel value="Data de Pagamento: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataPagamentoInicial}"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataPagamentoFinal}"/>
+                                </h:panelGrid>
+                                <h:outputLabel value="Data de Movimento: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataMovimentoInicial}"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataMovimentoFinal}"/>
+                                </h:panelGrid>
+                                <h:outputLabel value="Data de Vencimento: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataVencimentoInicial}"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataVencimentoFinal}"/>
+                                </h:panelGrid>
+                                <h:outputLabel value="Data de Pagamento: "/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataPagamentoInicial}"/>
+                                    <h:outputLabel value="Final"/>
+                                    <p:calendar onkeypress="mascara(this, Data)"
+                                                maxlength="10"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                                size="10"
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.dataPagamentoFinal}"/>
+                                </h:panelGrid>
+                                <h:outputText value="Total da Nota Fiscal:"/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:inputText
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.totalNotaInicial}"
+                                        title="Digite o valor total inicial da nota fiscal"
+                                        onkeydown="mascaraPonto(this);">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </p:inputText>
+                                    <h:outputLabel value="Final"/>
+                                    <p:inputText
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.totalNotaFinal}"
+                                        title="Digite o valor total final da nota fiscal"
+                                        onkeydown="mascaraPonto(this);">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </p:inputText>
+                                </h:panelGrid>
+                                <h:outputText value="Total de ISSQN:"/>
+                                <h:panelGrid columns="4">
+                                    <h:outputLabel value="Inicial"/>
+                                    <p:inputText
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.totalIssInicial}"
+                                        title="Digite o valor total inicial de issqn"
+                                        onkeydown="mascaraPonto(this);">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </p:inputText>
+                                    <h:outputLabel value="Final"/>
+                                    <p:inputText
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.totalIssFinal}"
+                                        title="Digite o valor total final de issqn"
+                                        onkeydown="mascaraPonto(this);">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </p:inputText>
+                                </h:panelGrid>
+                            </h:panelGrid>
+
+                            <p:fieldset legend="Tomador">
+                                <h:panelGrid columns="2">
+                                    <h:outputText value="Tipo de Cadastro: "/>
+                                    <p:selectOneMenu
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioTomador}">
+                                        <f:selectItems
+                                            value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tiposCadastro()}"/>
+                                        <p:ajax event="change"
+                                                process=":Formulario:tb-view-relacao-lancamento:opn-filtros"
+                                                update=":Formulario:tb-view-relacao-lancamento:opn-filtros"
+                                                listener="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.processaSelecaoTipoCadastroTomador()}"
+                                                onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                                    </p:selectOneMenu>
+
+                                    <h:outputText value="C.M.C: "
+                                                  rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioTomador.name() eq 'ECONOMICO'}"/>
+                                    <fct:intervaloInscricaoCadastral inscricaoCadastralInicial="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.cmcInicialTomador}"
+                                                                     inscricaoCadastralFinal="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.cmcFinalTomador}"
+                                                                     tipoCadastroTributario="ECONOMICO"
+                                                                     rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioTomador.name() eq 'ECONOMICO'}"/>
+
+                                    <h:outputText value="Selecione o Tomador: "
+                                                  rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioTomador.name() eq 'PESSOA'}"/>
+                                    <fc:autocompletePessoa caminhoAtual=""
+                                                           value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tomador}"
+                                                           rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioTomador.name() eq 'PESSOA'}"
+                                                           id="ac-tomador" labelObrigatorio="false"
+                                                           habilitaBotaoNovaPF="false"
+                                                           habilitaBotaoNovaPJ="false"
+                                                           habilitaBotaoLupa="false"
+                                                           tamanhoAutoComplete="100"
+                                                           executaAoAtualizar="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.addTomador()}"
+                                                           cellspacing="0"/>
+                                    <br/>
+                                    <p:outputPanel id="pn-tomadores"
+                                                   rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioTomador.name() eq 'PESSOA'}">
+                                        <table class="table">
+                                            <ui:repeat
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tomadores}"
+                                                var="tomador">
+                                                <tr>
+                                                    <td>
+                                                        <h:outputText value="#{tomador}"
+                                                                      styleClass="negrito"/>
+                                                    </td>
+                                                    <td style="width: 8px;">
+                                                        <p:commandButton icon="ui-icon-trash"
+                                                                         actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.delTomador(tomador)}"
+                                                                         update=":Formulario:tb-view-relacao-lancamento:pn-tomadores"
+                                                                         process=":Formulario:tb-view-relacao-lancamento:pn-tomadores"
+                                                                         onclick="aguarde.show()"
+                                                                         oncomplete="aguarde.hide()"/>
+                                                    </td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </table>
+                                    </p:outputPanel>
+                                </h:panelGrid>
+                            </p:fieldset>
+                            <br/>
+                            <p:fieldset legend="Prestador">
+                                <h:panelGrid columns="2">
+                                    <h:outputText value="Tipo de Cadastro: "/>
+                                    <p:selectOneMenu
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioPrestador}">
+                                        <f:selectItems
+                                            value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tiposCadastro()}"/>
+                                        <p:ajax event="change"
+                                                process=":Formulario:tb-view-relacao-lancamento:opn-filtros"
+                                                update=":Formulario:tb-view-relacao-lancamento:opn-filtros"
+                                                listener="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.processaSelecaoTipoCadastroPrestador()}"
+                                                onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                                    </p:selectOneMenu>
+
+                                    <h:outputText value="CMC: "
+                                                  rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioPrestador.name() eq 'ECONOMICO'}"/>
+                                    <fct:intervaloInscricaoCadastral inscricaoCadastralInicial="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.cmcInicialPrestador}"
+                                                                     inscricaoCadastralFinal="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.cmcFinalPrestador}"
+                                                                     tipoCadastroTributario="ECONOMICO"
+                                                                     rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioPrestador.name() eq 'ECONOMICO'}"/>
+
+                                    <h:outputText value="Selecione o Prestador: "
+                                                  rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioPrestador.name() eq 'PESSOA'}"/>
+                                    <fc:autocompletePessoa caminhoAtual=""
+                                                           value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.prestador}"
+                                                           rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioPrestador.name() eq 'PESSOA'}"
+                                                           id="ac-prestador" labelObrigatorio="false"
+                                                           habilitaBotaoNovaPF="false"
+                                                           habilitaBotaoNovaPJ="false"
+                                                           habilitaBotaoLupa="false"
+                                                           tamanhoAutoComplete="100"
+                                                           executaAoAtualizar="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.addPrestador()}"
+                                                           cellspacing="0"/>
+                                    <br/>
+                                    <p:outputPanel id="pn-prestadores"
+                                                   rendered="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoCadastroTributarioPrestador.name() eq 'PESSOA'}">
+                                        <table class="table">
+                                            <ui:repeat
+                                                value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.prestadores}"
+                                                var="prestador">
+                                                <tr>
+                                                    <td>
+                                                        <h:outputText value="#{prestador}"
+                                                                      styleClass="negrito"/>
+                                                    </td>
+                                                    <td style="width: 8px;">
+                                                        <p:commandButton icon="ui-icon-trash"
+                                                                         actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.delPrestador(prestador)}"
+                                                                         update=":Formulario:tb-view-relacao-lancamento:pn-prestadores"
+                                                                         process=":Formulario:tb-view-relacao-lancamento:pn-prestadores"
+                                                                         onclick="aguarde.show()"
+                                                                         oncomplete="aguarde.hide()"/>
+                                                    </td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </table>
+                                    </p:outputPanel>
+                                </h:panelGrid>
+                            </p:fieldset>
+                            <br/>
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Situação da Nota: "/>
+                                <p:selectOneMenu
+                                    value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.situacaoNota}">
+                                    <f:selectItems
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.situacoesNota()}"/>
+                                </p:selectOneMenu>
+                                <h:outputText value="Situação(ões) de Pagamento:"/>
+                                <p:panel style="max-height: 200px; overflow-x: auto; border: 0 !important;"
+                                         styleClass="padding-zero">
+                                    <p:dataTable
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.todasAsSituacoes}"
+                                        var="situacao"
+                                        selection="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.situacoes}"
+                                        rowKey="#{situacao}">
+                                        <p:column selectionMode="multiple" style="width:2%;"/>
+                                        <p:column headerText="Situações">
+                                            <h:outputText value="#{situacao.descricao}"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:panel>
+                                <h:outputLabel value="Usuário de Emissão da Nota: "/>
+                                <p:autoComplete
+                                    value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.usuarioNota}"
+                                    completeMethod="#{usuarioSistemaControlador.completaUsuarioSistema}"
+                                    converter="#{usuarioSistemaControlador.converterGenerico}"
+                                    var="usuario"
+                                    itemValue="#{usuario.id}"
+                                    itemLabel="#{usuario}" size="60"
+                                    maxResults="10"/>
+                                <h:outputLabel value="Usuário de Emissão do DAM: "/>
+                                <p:autoComplete
+                                    value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.usuarioDAM}"
+                                    completeMethod="#{usuarioSistemaControlador.completaUsuarioSistema}"
+                                    converter="#{usuarioSistemaControlador.converterGenerico}"
+                                    var="usuario"
+                                    itemValue="#{usuario.id}"
+                                    itemLabel="#{usuario}" size="60"
+                                    maxResults="10"/>
+                                <h:outputText value="Tipo de Relatório: "/>
+                                <p:selectOneMenu
+                                    value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tipoRelatorio}">
+                                    <f:selectItems
+                                        value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.tiposRelatorio()}"/>
+                                </p:selectOneMenu>
+                                <h:outputText value="Totalizador de Lançamento: "/>
+                                <p:selectBooleanCheckbox
+                                    value="#{relacaoLancamentoNotaFiscalAvulsaControlador.filtroLancamento.somenteTotalizador}"/>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Últimos Relatórios Gerados">
+                        <p:outputPanel id="opn-ultimos-relatorios-gerados">
+                            <p:commandButton value="Limpar Relatórios Gerados"
+                                             title="Click aqui para limpar os últimos relatórios que foram gerados."
+                                             styleClass="operacao"
+                                             icon="ui-icon-clear"
+                                             actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.limparRelatoriosEmMemoria()}"
+                                             onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                             process="opn-ultimos-relatorios-gerados"
+                                             update="opn-ultimos-relatorios-gerados"/>
+                            <p:dataTable paginator="true"
+                                         id="tabela-relatorios-gerados"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{relacaoLancamentoNotaFiscalAvulsaControlador.buscarRelatoriosEmMemoria()}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>RELATÓRIOS GERADOS&lt;/span> {FirstPageLink}
+                                         {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="relatorio">
+                                <p:column headerText="Gerado em">
+                                    <h:outputText value="#{relatorio.geradoEm}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy HH:mm"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Finalizado em">
+                                    <h:outputText value="#{relatorio.finalizadoEm}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy HH:mm"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Usuario que gerou">
+                                    <h:outputText
+                                        value="#{relatorio.usuarioSistema.pessoaFisica ne null ? relatorio.usuarioSistema.pessoaFisica.nome : relatorio.usuarioSistema.login}"/>
+                                </p:column>
+                                <p:column headerText="Filtros utilizados">
+                                    <h:outputText value="#{relatorio.filtros}"/>
+                                </p:column>
+                                <p:column headerText="Relatório" style="text-align: center; ">
+                                    <p:commandButton value="Gerar Relatório"
+                                                     title="Houve algum erro na geração do relatório. Click aqui para gerar novamente"
+                                                     icon="ui-icon-print"
+                                                     styleClass="operacao"
+                                                     rendered="#{relatorio.dados eq null}"
+                                                     actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.iniciaGeracaoPdfFalhado(relatorio.assistenteRelacaoLancamentoTributario, relatorio.filtros, relatorio.criadoEm)}"
+                                                     onclick="aguarde.show()"/>
+                                    <fc:botaoTargetBlank label="Baixar"
+                                                         rendered="#{relatorio.dados ne null}"
+                                                         actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.baixarPDF(relatorio.dados)}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+            <br/>
+
+            <p:commandButton value="Gerar Relatório"
+                             icon="ui-icon-print"
+                             styleClass="operacao prioritario"
+                             actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.iniciarConsulta()}"
+                             onclick="aguarde.show()"/>
+            <p:button value="Limpar Dados"
+                      styleClass="operacao mlef05"
+                      icon="ui-icon-clear"
+                      href="/tributario/nota-fiscal-avulsa/relacao-lancamento-nota-fiscal-avulsa/"/>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <p:outputPanel id="futures">
+                <h:inputHidden id="future-dados-concluida"
+                               value="#{relacaoLancamentoNotaFiscalAvulsaControlador.futureDadosRelatorioConcluida}"/>
+                <h:inputHidden id="future-bytes-concluida"
+                               value="#{relacaoLancamentoNotaFiscalAvulsaControlador.futureBytesRelatorioConcluida}"/>
+                <h:inputHidden id="future-dados-relatorio-calculados-concluida"
+                               value="#{relacaoLancamentoNotaFiscalAvulsaControlador.futuresDadosRelatorioCalculadosConcluidas}"/>
+            </p:outputPanel>
+        </h:form>
+        <p:dialog
+            id="dlg-download"
+            widgetVar="dlgDownload"
+            header="Download de Relatório"
+            modal="true"
+            dynamic="true"
+            position="center"
+            style="position: fixed !important;"
+            resizable="false"
+            closable="false">
+            <h:form id="form-download">
+                <div class="alert alert-info centralizado">
+                    O relatório foi gerado com sucesso!
+                </div>
+
+                <p:separator/>
+
+                <div style="text-align: center; ">
+                    <fc:botaoTargetBlank id="buttonImprimir"
+                                         label="Baixar"
+                                         actionListener="#{relacaoLancamentoNotaFiscalAvulsaControlador.baixarPDF(relacaoLancamentoNotaFiscalAvulsaControlador.futureBytesRelatorio.get())}"/>
+
+                    <p:commandButton value="Fechar"
+                                     styleClass="operacao"
+                                     icon="ui-icon-close"
+                                     onclick="dlgDownload.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

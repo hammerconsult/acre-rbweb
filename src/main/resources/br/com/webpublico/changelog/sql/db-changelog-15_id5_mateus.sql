@@ -1,0 +1,1 @@
+update configitemdemonstrelatorio cfg set cfg.ESPACO = 0 where cfg.espaco is null

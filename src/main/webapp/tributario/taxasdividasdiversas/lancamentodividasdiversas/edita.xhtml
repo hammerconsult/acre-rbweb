@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:c="http://java.sun.com/jsp/jstl/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:panel header="Lançamento de Dívida Diversa">
+                <p:panel style="border: 0; text-align: right;">
+                    <h:outputText value="Situação -> "/>
+                    <h:outputText value="#{calculoDividaDiversaControlador.selecionado.situacao.descricao}"
+                                  style="text-transform: uppercase" styleClass="azulnegrito"/>
+                </p:panel>
+                <h:panelGrid columns="2">
+                    <h:outputText value="Exercício: "/>
+                    <p:inputText id="exercicio"
+                                 value="#{calculoDividaDiversaControlador.selecionado.exercicio}"
+                                 readonly="true"
+                                 title="O exercício não pode ser alterado"/>
+
+                    <h:outputText value="Exercício do Débito: "
+                                  rendered="#{calculoDividaDiversaControlador.hasPermissaoParaLancarDividaDiversaExercicioAnterior()}"/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="exercicioDoDebito"
+                                    value="#{calculoDividaDiversaControlador.selecionado.exercicioDoDebito}"
+                                    completeMethod="#{calculoDividaDiversaControlador.completarExerciciosDoDebito}"
+                                    rendered="#{calculoDividaDiversaControlador.hasPermissaoParaLancarDividaDiversaExercicioAnterior()}"
+                                    var="e"
+                                    itemLabel="#{e.ano}"
+                                    itemValue="#{e.id}"
+                                    converter="#{calculoDividaDiversaControlador.converterExercicio}"
+                                    maxResults="10"
+                                    forceSelection="true"/>
+
+                    <h:outputText value="Número: "/>
+                    <p:inputText id="numero" value="#{calculoDividaDiversaControlador.selecionado.numeroLancamento}"
+                                 title="O número é gerado automaticamente ao salvar, e não pode ser alterado"
+                                 readonly="true"/>
+                    <h:outputText value="Data de Lançamento: "/>
+                    <p:calendar value="#{calculoDividaDiversaControlador.selecionado.dataLancamento}"
+                                pattern="dd/MM/yyyy" id="dataLanc"
+                                onkeyup="mascara(this, mdata)" maxlength="10" showOn="button" size="10">
+                        <p:ajax event="blur" process="@this"/>
+                    </p:calendar>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Dívida Diversa: "/>
+                    <p:autoComplete queryDelay="1000" id="tipoDividaDiversa"
+                                    title="Selecione o Tipo de Dívida Diversa desejado"
+                                    value="#{calculoDividaDiversaControlador.selecionado.tipoDividaDiversa}"
+                                    completeMethod="#{calculoDividaDiversaControlador.completaTipoDividaDiversa}"
+                                    var="tpDivDiv"
+                                    size="70"
+                                    maxResults="10"
+                                    itemLabel="#{tpDivDiv.descricao}"
+                                    itemValue="#{tpDivDiv.id}"
+                                    converter="#{calculoDividaDiversaControlador.converterTipoDividaDiversa}"
+                                    disabled="#{calculoDividaDiversaControlador.desabilitaTipoDividaDiversa() || !calculoDividaDiversaControlador.podeEditar()}">
+                        <p:ajax event="itemSelect" process="@this" update=":Formulario:panelTributos"
+                                listener="#{calculoDividaDiversaControlador.limparItemCalculo()}"/>
+                        <p:ajax event="change" process="@this" update=":Formulario:panelTributos"
+                                listener="#{calculoDividaDiversaControlador.limparItemCalculo()}"/>
+                    </p:autoComplete>
+                    <h:outputText value="Número do Processo de Protocolo: "/>
+                    <p:inputText id="numeroProcesso"
+                                 value="#{calculoDividaDiversaControlador.selecionado.numeroProcessoProtocolo}"
+                                 disabled="#{!calculoDividaDiversaControlador.podeEditar()}">
+                        <p:ajax process="@this" event="blur"/>
+                    </p:inputText>
+                    <h:outputText value="Ano do Processo de Protocolo: "/>
+                    <p:inputText id="anoProcesso"
+                                 value="#{calculoDividaDiversaControlador.selecionado.anoProcessoProtocolo}"
+                                 maxlength="4"
+                                 disabled="#{!calculoDividaDiversaControlador.podeEditar()}">
+                        <p:ajax process="@this" event="blur"/>
+                    </p:inputText>
+                    <br/><br/>
+                </h:panelGrid>
+            </p:panel>
+            <br/>
+            <p:panel id="pnCadastro" header="Cadastro">
+                <p:panel id="cadastros" style="border: none">
+                    <fc:outputLabelObrigatorio value="Tipo de Cadastro: "/>
+                    <h:selectOneMenu id="tipoCadastroTributario"
+                                     value="#{calculoDividaDiversaControlador.selecionado.tipoCadastroTributario}"
+                                     title="Informe o Tipo de Cadastro"
+                                     disabled="#{!calculoDividaDiversaControlador.podeEditar()}">
+                        <f:selectItems value="#{calculoDividaDiversaControlador.tiposCadastroTributario}"/>
+                        <p:ajax event="change" update="Formulario:pnCadastro"
+                                listener="#{calculoDividaDiversaControlador.zeraCadastro()}"/>
+                    </h:selectOneMenu>
+                    <br/><br/>
+                    <h:panelGrid columns="4"
+                                 rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario != null}">
+                        <h:outputText value="Cadastro: "
+                                      rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario != 'ECONOMICO'}"/>
+
+
+                        <p:panel id="pnCadastroImobiliario" style="border: none"
+                                 rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'IMOBILIARIO'}">
+                            <h:panelGrid columns="3">
+                                <p:autoComplete queryDelay="1000"
+                                                value="#{calculoDividaDiversaControlador.selecionado.cadastro}"
+                                                completeMethod="#{componentePesquisaCadastroImobiliarioControlador.completaCadastroImobiliarioAtivosJDBC}"
+                                                var="bci"
+                                                id="cadastroImobiliario"
+                                                size="70"
+                                                forceSelection="true"
+                                                scrollHeight="150"
+                                                itemLabel="#{bci.inscricaoCadastral}"
+                                                itemValue="#{bci.id}"
+                                                converter="#{componentePesquisaCadastroImobiliarioControlador.converterCadastroImobiliario}">
+                                    <p:ajax event="itemSelect" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                            process="@this" update="@this"/>
+                                </p:autoComplete>
+                            </h:panelGrid>
+                        </p:panel>
+
+                        <p:panel id="pnCadastroEconomico" style="border: none"
+                                 rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'ECONOMICO'}">
+                            <h:panelGrid columns="3" styleClass="verticalAlignTop">
+                                <h:panelGrid columns="1" style="height: 30px; vertical-align: middle !important;">
+                                    <fc:outputLabelObrigatorio value="Cadastro Econômico:"/>
+                                </h:panelGrid>
+                                <fc:novoAutocompleteCadastroEconomico
+                                    value="#{calculoDividaDiversaControlador.selecionado.cadastro}" id="cad"
+                                    caminhoAtual="#{calculoDividaDiversaControlador.urlAtual}"
+                                    mostraBotaoNovo="false"
+                                    mostraBotaoEdita="false"
+                                    permiteAlterarSituacoes="false"
+                                    mostraSituacoes="false"
+                                    situacoesPossiveis="#{calculoDividaDiversaControlador.situacoesDisponiveis}"
+                                />
+
+                            </h:panelGrid>
+                        </p:panel>
+
+                        <p:panel id="pnCadastroRural" style="border: none"
+                                 rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'RURAL'}">
+                            <h:panelGrid columns="3">
+                                <p:autoComplete queryDelay="1000"
+                                                value="#{calculoDividaDiversaControlador.selecionado.cadastro}"
+                                                completeMethod="#{componentePesquisaCadastroRuralControlador.completaCadastroRuralJdbc}"
+                                                var="bcr"
+                                                id="cadastroRural"
+                                                size="70"
+                                                forceSelection="true"
+                                                scrollHeight="150"
+                                                itemLabel="#{bcr}"
+                                                itemValue="#{bcr.id}"
+                                                converter="#{componentePesquisaCadastroRuralControlador.converterCadastroRural}">
+                                    <p:ajax event="itemSelect" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                            process="@this" update="@this"/>
+                                </p:autoComplete>
+                            </h:panelGrid>
+                        </p:panel>
+
+                        <p:panel id="pnContribuinte" style="border: none"
+                                 rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'PESSOA'}">
+                            <fc:novoAutocompletePessoa value="#{calculoDividaDiversaControlador.pessoa}"
+                                                       caminhoAtual="#{calculoTaxasDiversasControlador.urlAtual}"
+                                                       size="70"
+                                                       mostraSituacoes="false"
+                                                       situacoesPossiveis="#{novoComponentePesquisaPessoaControlador.situacaoPorDescricao('ATIVO')}"
+                                                       listenerNavegacao="#{web.poeNaSessao(calculoTaxasDiversasControlador.selecionado)}"
+                                                       id="pessoafisica"
+                                                       disabled="#{calculoTaxasDiversasControlador.habilitaBotaoImprimeDAM()}"/>
+                        </p:panel>
+                        <p:commandButton icon="ui-icon-arrowthick-1-s"
+                                         title="Clique aqui para adicionar a pessoa."
+                                         rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'PESSOA'}"
+                                         actionListener="#{calculoDividaDiversaControlador.adicionarPessoa()}"
+                                         process="@form" update="@form"
+                                         styleClass="mtop03"
+                                         onclick="aguarde.show()" oncomplete="aguarde.hide()"/>
+
+                        <p:commandButton icon="ui-icon-search" oncomplete="aguarde.hide();consultaGenerica.show()"
+                                         onclick="aguarde.show()"
+                                         styleClass="mtop03"
+                                         update=":dlgConsultaGenerica"/>
+                    </h:panelGrid>
+                    <h:panelGroup
+                        rendered="${calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'PESSOA'}">
+                        <c:forEach items="${calculoDividaDiversaControlador.selecionado.pessoas}"
+                                   var="calculoPessoa">
+                            <table>
+                                <tbody>
+                                <tr>
+                                    <td>${calculoPessoa.pessoa.nomeCpfCnpj}</td>
+                                    <td>
+                                        <p:commandButton icon="ui-icon-circle-plus"
+                                                         title="Clique aqui para adicionar a pessoa."
+                                                         actionListener="#{calculoDividaDiversaControlador.removerPessoa(calculoPessoa)}"
+                                                         process="@form" update="@form"
+                                                         onclick="aguarde.show()" oncomplete="aguarde.hide()"/>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </c:forEach>
+                    </h:panelGroup>
+                </p:panel>
+            </p:panel>
+            <br/>
+            <p:panel id="panelTributos" header="Tributos do Lançamento da Dívida Diversa">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Tributo: "/>
+                    <h:selectOneMenu
+                        value="#{calculoDividaDiversaControlador.itemCalculoDivDiversa.tributoTaxaDividasDiversas}"
+                        converter="#{calculoDividaDiversaControlador.converterTributo}">
+                        <f:selectItems value="#{calculoDividaDiversaControlador.tributos}"/>
+                        <p:ajax event="change" update="Formulario:valorTributo" process="@this"
+                                listener="#{calculoDividaDiversaControlador.recuperaValorDoTributo}"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Quantidade: "/>
+                    <p:inputText id="quantidadeTributo"
+                                 value="#{calculoDividaDiversaControlador.itemCalculoDivDiversa.quantidade}"
+                                 maxlength="18"
+                                 disabled="#{!calculoDividaDiversaControlador.podeEditar()}">
+                        <f:convertNumber pattern="#,###,##0.0000"/>
+                        <p:ajax event="blur" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                process="@form" update="otValorTotal"/>
+                    </p:inputText>
+
+                    <h:outputText value="Valor Unitário (R$): "/>
+                    <p:inputText id="valorTributo"
+                                 value="#{calculoDividaDiversaControlador.itemCalculoDivDiversa.valorReal}"
+                                 maxlength="18" label="Valor (R$)"
+                                 disabled="#{!calculoDividaDiversaControlador.podeEditar() or !calculoDividaDiversaControlador.podeEditarValorTributo()}">
+                        <f:convertNumber pattern="#,###,##0.00"/>
+                        <p:ajax event="blur" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                process="@this" update="otValorTotal"/>
+                    </p:inputText>
+
+                    <h:outputText value="Valor Total (R$): "/>
+                    <h:outputText id="otValorTotal"
+                                  value="#{calculoDividaDiversaControlador.itemCalculoDivDiversa.valorRealTotal}"
+                                  styleClass="negrito">
+                        <f:convertNumber pattern="#,###,##0.00"/>
+                    </h:outputText>
+                </h:panelGrid>
+
+                <p:commandButton styleClass="operacao" style="margin-bottom: 10px" icon="ui-icon-arrowthickstop-1-s"
+                                 value="Adicionar"
+                                 actionListener="#{calculoDividaDiversaControlador.addItem}"
+                                 onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                 update="panelTributos,tipoDividaDiversa"
+                                 disabled="#{!calculoDividaDiversaControlador.podeEditar()}"/>
+                <br/>
+                <p:dataTable id="tabela" var="objeto"
+                             value="#{calculoDividaDiversaControlador.selecionado.itens}"
+                             emptyMessage="Nenhum Tributo adicionado"
+                             style="font-size: smaller"
+                             widgetVar="widgetTabela"
+                >
+                    <f:facet name="header">
+                        <h:outputText value="Tributos Adicionados"/>
+                    </f:facet>
+                    <f:facet name="footer">
+                        <h:outputText
+                            value="Quantidade de Tributos Adicionados: #{calculoDividaDiversaControlador.selecionado.itens.size()}"/>
+                    </f:facet>
+                    <p:column headerText="Remover"
+
+                              style="width: 10%; text-align: center;">
+                        <p:commandButton id="visualizarGenerico"
+                                         icon="ui-icon-circle-close"
+                                         title="Clique para remover"
+                                         styleClass="icone_vermelho"
+                                         actionListener="#{calculoDividaDiversaControlador.removeItem}"
+                                         update=":Formulario:panelTributos :Formulario:tipoDividaDiversa"
+                                         disabled="#{!calculoDividaDiversaControlador.podeEditar()}">
+                            <f:attribute name="objeto" value="#{objeto}"/>
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Tributo">
+                        <h:outputText value="#{objeto.tributoTaxaDividasDiversas.tributo.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" style="text-align: right; width: 12%">
+                        <h:outputText value="#{objeto.quantidade}">
+                            <f:convertNumber pattern="###,##0.0000"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor Unitário (UFM)" style="text-align: right; width: 12%">
+                        <h:outputText value="#{objeto.valorUFM}">
+                            <f:convertNumber pattern="###,##0.0000"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor Total (UFM)" style="text-align: right; width: 12%">
+                        <h:outputText value="#{objeto.valorUFMTotal}">
+                            <f:convertNumber pattern="###,##0.0000"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="Total: "/>
+                            <h:outputText styleClass="azulnegrito" value="#{calculoDividaDiversaControlador.totalUFM}">
+                                <f:convertNumber pattern="###,##0.0000"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Valor Unitário (R$)" style="text-align: right; width: 12%">
+                        <h:outputText value="#{objeto.valorReal}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" style="text-align: right; width: 12%">
+                        <h:outputText value="#{objeto.valorRealTotal}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="Total: "/>
+                            <h:outputText styleClass="azulnegrito"
+                                          value="#{calculoDividaDiversaControlador.totalReais}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+            <br/>
+            <p:panel id="panelUpload" header="Anexos">
+                <p:fileUpload multiple="true" cancelLabel="Cancelar" sizeExceedMessage="Arquivo Maior que 10 MB."
+                              label="Selecione..."
+                              uploadLabel="Upload Arquivo" update="tabelaAnexos panelUpload" sizeLimit="15728640"
+                              id="iBotaoUpload"
+                              fileUploadListener="#{calculoDividaDiversaControlador.handleFileUpload}"/>
+
+                <br/>
+                <p:dataTable id="tabelaAnexos" value="#{calculoDividaDiversaControlador.arquivos}" var="arq"
+                             emptyMessage="Nenhum arquivo cadastrado.">
+                    <p:column headerText="Data do Upload">
+                        <h:outputText value="#{arq.dataUpload}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Descrição" style="text-align: center">
+                        <h:inputText value="#{arq.arquivo.descricao}" size="100" maxlength="100"/>
+                    </p:column>
+                    <p:column rendered="#{arq.arquivo.id eq null}" headerText="Download" style="text-align: center">
+                        <p:commandButton id="downloadLink" value="Download" ajax="false" icon="ui-icon-arrowthichk-s">
+                            <p:fileDownload value="#{calculoDividaDiversaControlador.getArquivoStream(arq)}"/>
+                        </p:commandButton>
+                    </p:column>
+                    <p:column rendered="#{arq.arquivo.id ne null}" headerText="Download"
+                              style="width: 10%; text-align: center">
+                        <a title="Download"
+                           href="${facesContext.externalContext.requestContextPath}/arquivos/#{arq.arquivo.nome}?id=#{arq.arquivo.id}">#{arq.arquivo.nome}</a>
+                    </p:column>
+                    <p:column headerText="" style="width: 5%; text-align: center">
+                        <p:commandButton icon="ui-icon-trash" update="tabelaAnexos"
+                                         actionListener="#{calculoDividaDiversaControlador.removeArquivo(arq)}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+            <br/>
+            <p:panel header="Observação">
+                <p:inputTextarea id="observacao" value="#{calculoDividaDiversaControlador.selecionado.observacao}"
+                                 style="width: 99%; height: 80px"
+                                 readonly="#{!calculoDividaDiversaControlador.podeEditar()}"
+                                 maxlength="350"/>
+            </p:panel>
+            <br/>
+            <h:panelGrid columns="2" style="width: 100%" cellpadding="0" cellspacing="0">
+                <p:panel style="border: 0; padding: 0; margin: 0;">
+                    <p:commandButton icon="ui-icon-disk" styleClass="operacao prioritario" value="Salvar"
+                                     actionListener="#{calculoDividaDiversaControlador.salvar}"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     disabled="#{!calculoDividaDiversaControlador.podeEditar()}"/>
+                    <p:commandButton icon="ui-icon-cancel" styleClass="operacao" value="Fechar" ajax="false"
+                                     actionListener="#{calculoDividaDiversaControlador.cancelar}"/>
+                </p:panel>
+            </h:panelGrid>
+        </h:form>
+        <p:dialog modal="true" widgetVar="widgetDlgEspera"
+                  header="Um processo de longa duração foi iniciado! Por favor, aguarde..."
+                  draggable="false" closable="false">
+            <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+        </p:dialog>
+
+        <p:dialog header="Pesquisa de
+#{calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'PESSOA'? ' Pessoa Física/Jurídica - SOMENTE PESSOAS ATIVAS'
+: calculoDividaDiversaControlador.selecionado.tipoCadastroTributario.descricaoLonga}"
+
+                  modal="true" widgetVar="consultaGenerica" width="900" height="500"
+                  id="dlgConsultaGenerica">
+            <h:form id="formularioConsultaDebito">
+                <fc:pesquisaGenerico id="lista"
+                                     caminhoAtual="edita"
+                                     nomeDaClasse="#{calculoDividaDiversaControlador.nomeClasse}"
+                                     dialog="true"
+                                     pretty="true"
+                                     iconmSelecionar="check-icon.png"
+                                     novo="#{calculoDividaDiversaControlador.novo()}"
+                                     selecionar="#{calculoDividaDiversaControlador.selecionarObjetoPesquisaGenerico}"
+                                     mostrarHistorico="false"
+                                     mostrarBotaoNovo="false"
+                                     meuControlador="#{calculoDividaDiversaControlador.componentePesquisa}"
+                                     guardarNaSessao="false"
+                                     utilizarTabelaPessoa="#{calculoDividaDiversaControlador.selecionado.tipoCadastroTributario == 'PESSOA'? 'true' : 'false'}"
+                                     pesquisaNoEnter="false"
+                                     updateSelecionarTabela=":Formulario"/>
+            </h:form>
+        </p:dialog>
+        <p:dialog widgetVar="selecionaDams" modal="true" header="Selecione os DAMs que serão impressos" width="800">
+            <h:form id="formSelecionaDams">
+                <p:dataTable value="#{calculoDividaDiversaControlador.damsDisponiveis}"
+                             selection="#{calculoDividaDiversaControlador.damsSelecionados}"
+                             rowKey="#{dam}"
+                             var="dam">
+                    <p:column selectionMode="multiple"/>
+                    <p:column headerText="Dam">
+                        <h:outputText value="${dam.numeroDAM}"/>
+                    </p:column>
+                    <p:column headerText="Vencimento">
+                        <h:outputText value="${dam.vencimento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor" styleClass="alinhamentoDireita">
+                        <h:outputText value="${dam.valorOriginal}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Multa" styleClass="alinhamentoDireita">
+                        <h:outputText value="${dam.multa}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Juros" styleClass="alinhamentoDireita">
+                        <h:outputText value="${dam.juros}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Correção" styleClass="alinhamentoDireita">
+                        <h:outputText value="${dam.correcaoMonetaria}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Total" styleClass="alinhamentoDireita">
+                        <h:outputText value="${dam.valorTotal}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+                <br/>
+                <h:commandLink actionListener="#{calculoDividaDiversaControlador.imprimeDam()}"
+                               target="_blank" id="commandLinkImpDam" onclick="selecionaDams.hide()">
+                    <p:commandButton value="Imprimir" icon="ui-icon-print"
+                                     styleClass="operacao"
+                                     ajax="false"
+                                     id="commandButtonImpDam"/>
+                </h:commandLink>
+            </h:form>
+        </p:dialog>
+        <p:dialog header="Consulta do Cadastro" modal="true" widgetVar="consultaGenerica" width="900" height="500"
+                  id="dlgConsultaGenericaCMC">
+            <h:form id="formularioConsultaCMC">
+                <fc:pesquisaGenerico id="lista"
+                                     caminhoAtual="edita"
+                                     nomeDaClasse="CadastroEconomico"
+                                     dialog="true"
+                                     pretty="true"
+                                     iconmSelecionar="check-icon.png"
+                                     novo="#{cadastroEconomicoControlador.novo()}"
+                                     selecionar="#{calculoDividaDiversaControlador.selecionarObjetoPesquisaGenericoCMC}"
+                                     mostrarHistorico="false"
+                                     mostrarBotaoNovo="false"
+                                     meuControlador="#{calculoDividaDiversaControlador.componentePesquisaCMC}"
+                                     guardarNaSessao="false"
+                                     pesquisaNoEnter="false"
+                                     updateSelecionarTabela=":Formulario"/>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

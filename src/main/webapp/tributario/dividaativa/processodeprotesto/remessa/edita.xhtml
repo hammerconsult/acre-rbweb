@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:p="http://primefaces.org/ui">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="application/javascript">
+            var timer;
+
+            function iniciarEnvio() {
+                $("#dlgEnviar").modal({backdrop: 'static', keyboard: false});
+                $("#dlgEnviar").modal('show');
+
+                timer = setInterval(function () {
+                    rcAcompanharEnvio();
+                }, 1000);
+            }
+
+            function finalizarEnvio() {
+                stopTimer(timer);
+                rcFinalizarEnvio();
+            }
+
+            function stopTimer() {
+                clearInterval(timer);
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+        </script>
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="rcAcompanharEnvio"
+                             update=":FormularioEnviar"
+                             actionListener="#{remessaProtestoControlador.acompanharEnvio()}"/>
+            <p:remoteCommand name="rcFinalizarEnvio"
+                             onstart="aguarde.show()" onsuccess="aguarde.hide()"
+                             actionListener="#{remessaProtestoControlador.finalizarEnvio()}"
+                             oncomplete="aguarde.hide()"/>
+
+            <p:panel header="Remessa de Débitos Protestados">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Origem Remessa: "/>
+                    <h:outputText value="#{remessaProtestoControlador.selecionado.origemRemessa.descricao}"
+                                  styleClass="negrito"/>
+                </h:panelGrid>
+
+                <h:panelGrid columns="2" styleClass="mtop05">
+                    <h:outputText value="Data"/>
+                    <h:panelGrid columns="4" cellspacing="0" cellpadding="0">
+                        <fc:outputLabelObrigatorio value="Inicial: "/>
+                        <p:calendar value="#{remessaProtestoControlador.selecionado.dataInicial}"
+                                    navigator="true" pattern="dd/MM/yyyy" styleClass="mlef03"
+                                    title="Informe a data Inicial"
+                                    onkeypress="mascara(this, mdata)"/>
+                        <fc:outputLabelObrigatorio value="Final: " styleClass="mlef05"/>
+                        <p:calendar value="#{remessaProtestoControlador.selecionado.dataFinal}"
+                                    navigator="true" pattern="dd/MM/yyyy" styleClass="mlef03"
+                                    title="Informe a data final"
+                                    onkeypress="mascara(this, mdata)"/>
+                    </h:panelGrid>
+
+                    <h:outputText value="Dívida(s):"/>
+                    <h:panelGroup id="dividasSelecionadas">
+                        <table class="table">
+                            <c:forEach items="#{remessaProtestoControlador.dividasSelecionadas}"
+                                       var="divida">
+                                <tr>
+                                    <td>
+                                        <h:outputText value="#{divida.descricao}" styleClass="negrito"/>
+                                    </td>
+                                    <td>
+                                        <p:commandButton icon="ui-icon-trash"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         actionListener="#{remessaProtestoControlador.removerDivida(divida)}"
+                                                         process="dividasSelecionadas"
+                                                         update="dividasSelecionadas"/>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                            <tr>
+                                <td>
+                                    <h:selectOneMenu value="#{remessaProtestoControlador.divida}"
+                                                     id="divida"
+                                                     style="max-width: 400px"
+                                                     converter="#{consultaDebitoControlador.converterDivida}">
+                                        <f:selectItem itemValue="#{null}" itemLabel=" "/>
+                                        <f:selectItems value="#{remessaProtestoControlador.dividas}"/>
+                                    </h:selectOneMenu>
+                                </td>
+                                <td>
+                                    <p:commandButton icon="ui-icon-arrowthickstop-1-s"
+                                                     styleClass="prioritario"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{remessaProtestoControlador.adicionarDivida()}"
+                                                     process="dividasSelecionadas"
+                                                     update="dividasSelecionadas"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <p:scrollPanel mode="native" styleClass="mtop10 mbot10">
+                    <p:dataTable id="tabelaParcelas"
+                                 emptyMessage="Nenhum registro foi adicionado"
+                                 var="parcela" rowKey="#{parcela.id}" style="width: 100%; font-size: 12px !important;"
+                                 value="#{remessaProtestoControlador.cdasEncontradas}"
+                                 styleClass="mtop20" paginator="true" rows="10"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>PARCELA(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 rowIndexVar="rowlx" rowsPerPageTemplate="10,25,50,100">
+                        <p:column headerText="" style="text-align: center; width: 40px" id="colunaBotoesNotas">
+                            <f:facet name="header">
+                                <p:commandButton icon="ui-icon-check"
+                                                 styleClass="vinteLarguraVinteAltura"
+                                                 rendered="#{!empty remessaProtestoControlador.cdasComDebitosEmAberto and remessaProtestoControlador.hasTodasCdasAdicionadas()}"
+                                                 actionListener="#{remessaProtestoControlador.removerTodasCdas()}"
+                                                 update=":Formulario"
+                                                 title="Clique para remover todas as parcelas."
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"/>
+                                <p:commandButton value=" "
+                                                 title="Clique para adicionar todas as parcelas."
+                                                 styleClass="vinteLarguraVinteAltura"
+                                                 rendered="#{!remessaProtestoControlador.hasTodasCdasAdicionadas()}"
+                                                 actionListener="#{remessaProtestoControlador.adicionarTodasCdas()}"
+                                                 update=":Formulario"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"/>
+                            </f:facet>
+
+                            <p:commandButton icon="ui-icon-check"
+                                             styleClass="vinteLarguraVinteAltura"
+                                             rendered="#{remessaProtestoControlador.hasCdaAdiciona(parcela)}"
+                                             actionListener="#{remessaProtestoControlador.removerCda(parcela)}"
+                                             disabled="#{!remessaProtestoControlador.cdaSoComDebitoAberto(parcela)}"
+                                             update=":Formulario"
+                                             title="Clique para remover a parcela."
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"/>
+                            <p:commandButton value=" "
+                                             styleClass="vinteLarguraVinteAltura"
+                                             rendered="#{!remessaProtestoControlador.hasCdaAdiciona(parcela)}"
+                                             disabled="#{!remessaProtestoControlador.cdaSoComDebitoAberto(parcela)}"
+                                             actionListener="#{remessaProtestoControlador.adicionarCda(parcela)}"
+                                             title="Clique para adicionar a parcela."
+                                             update=":Formulario"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"/>
+                        </p:column>
+                        <p:column headerText="Protesto" style="width: 10%;" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{parcela.codigoProcesso}" styleClass="#{!remessaProtestoControlador.cdaSoComDebitoAberto(parcela) ? 'vermelhonegrito' : ''}"/>
+                        </p:column>
+                        <p:column headerText="CDA" style="width: 10%;" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{parcela.nossoNumero}" styleClass="#{!remessaProtestoControlador.cdaSoComDebitoAberto(parcela) ? 'vermelhonegrito' : ''}"/>
+                        </p:column>
+                        <p:column headerText="Pessoa/Cadastro" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{parcela.cadastroProcesso}" styleClass="#{!remessaProtestoControlador.cdaSoComDebitoAberto(parcela) ? 'vermelhonegrito' : ''}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:scrollPanel>
+            </p:panel>
+
+            <h:panelGrid columns="3" id="gridBotoes">
+                <p:commandButton id="buscar" icon="ui-icon-search"
+                                 value="Buscar"
+                                 update=":Formulario"
+                                 onclick="aguarde.show()"
+                                 styleClass="operacao prioritario mtop10"
+                                 title="Clique para buscar as parcelas."
+                                 actionListener="#{remessaProtestoControlador.buscarCdasPorProcessoDeProtesto()}"
+                                 oncomplete="aguarde.hide();"/>
+
+                <p:commandButton id="enviar" icon="ui-icon-check"
+                                 value="Enviar Remessa"
+                                 disabled="#{empty remessaProtestoControlador.cdasSelecionadas}"
+                                 update="@this" onclick="aguarde.show()"
+                                 styleClass="operacao prioritario mtop10"
+                                 title="Clique para enviar o arquivo de remessa."
+                                 actionListener="#{remessaProtestoControlador.enviarRemessaDeProtesto()}"
+                                 oncomplete="aguarde.hide();"/>
+
+                <fc:rodapePretty controlador="#{remessaProtestoControlador}" ocultarSalvar="true"/>
+            </h:panelGrid>
+        </h:form>
+
+        <div id="dlgEnviar" class="modal hide fade">
+            <h:form id="FormularioEnviar">
+                <div class="modal-body mtop20">
+                    <fc:acompanhamentoBarraProgresso exibirTotal="false"
+                        assistenteBarraProgresso="#{remessaProtestoControlador.assistente}"/>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

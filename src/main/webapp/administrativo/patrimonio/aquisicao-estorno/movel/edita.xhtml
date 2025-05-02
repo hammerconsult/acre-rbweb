@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            function acompanharSalvar() {
+                timer = setInterval(function () {
+                    rcAtualizaCompFutures();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timer);
+                rcFinalizaFutureSalvar();
+            }
+
+            var timerPesquisa;
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{aquisicaoEstornoControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                onstart="aguarde.show()"
+                oncomplete="aguarde.hide()"
+                actionListener="#{aquisicaoEstornoControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{aquisicaoEstornoControlador.consultarFutureSalvar}"
+                name="rcAtualizaCompFutures"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                update=":FormularioSalvar"
+                actionListener="#{aquisicaoEstornoControlador.finalizarProcesssoSalvar}"
+                name="rcFinalizaFutureSalvar"/>
+
+
+            <p:remoteCommand name="limparDadosAquisicao"
+                             process="@this"
+                             update=":Formulario:tabViewPrincipal:panelAquisicao
+                                     :Formulario:tabViewPrincipal:panelitensAquisicao :Formulario:tabViewPrincipal:panelDocumentos"
+                             actionListener="#{aquisicaoEstornoControlador.limparDadosAquisicao}"/>
+
+            <fc:cabecalhoPretty controlador="#{aquisicaoEstornoControlador}"
+                                origem="#{aquisicaoEstornoControlador.caminhoPadrao}listar"/>
+
+            <p:panel header="Estorno de Aquisição de Bens Móveis">
+
+                <p:tabView dynamic="true" id="tabViewPrincipal" styleClass="mtop05">
+                    <p:tab title="Dados Gerais ">
+                        <p:outputPanel id="panelPrincipal">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Número:"/>
+                                <h:outputLabel
+                                    value="#{aquisicaoEstornoControlador.selecionado.numero eq null ? 'Gerado automaticamente ao salvar' : aquisicaoEstornoControlador.selecionado.numero}"
+                                    styleClass="negrito"
+                                    id="numero"/>
+
+                                <h:outputLabel value="Data:"/>
+                                <h:outputLabel value="#{aquisicaoEstornoControlador.selecionado.dataEstorno}"
+                                               styleClass="negrito">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputLabel>
+
+                                <h:outputLabel value="Usuário:"/>
+                                <h:outputLabel value="#{aquisicaoEstornoControlador.selecionado.usuario}"
+                                               styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Aquisição:"/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="aquisicao"
+                                                title="Selecione uma aquisição"
+                                                value="#{aquisicaoEstornoControlador.selecionado.aquisicao}"
+                                                completeMethod="#{aquisicaoEstornoControlador.completarAquisicao}"
+                                                var="aq"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 900px"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosAquisicao()}"
+                                                itemLabel="#{aq}"
+                                                itemValue="#{aq.id}"
+                                                size="70"
+                                                converter="#{efetivacaoAquisicaoControlador.converterGenerico}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{aquisicaoEstornoControlador.buscarDadosAquisicao()}"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio for="motivo" value="Motivo:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="motivo"
+                                                     value="#{aquisicaoEstornoControlador.selecionado.motivo}"
+                                                     maxlength="3000"
+                                                     cols="70"
+                                                     autoResize="false"
+                                                     scrollHeight="50"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-motivo"
+                                                     style="text-transform: uppercase"/>
+                                    <h:outputText id="counter-motivo"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+                        </p:outputPanel>
+
+                        <p:outputPanel id="panelAquisicao">
+                            <p:panel header="Dados da Aquisição"
+                                     styleClass="mtop05"
+                                     toggleable="true"
+                                     rendered="#{aquisicaoEstornoControlador.selecionado.aquisicao ne null}">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Situação:"/>
+                                    <h:outputLabel
+                                        value="#{aquisicaoEstornoControlador.selecionado.aquisicao.situacao.descricao}"
+                                        styleClass="negrito"
+                                        id="situacao"/>
+
+                                    <h:outputLabel value="Número:"/>
+                                    <h:outputLabel
+                                        value="#{aquisicaoEstornoControlador.selecionado.aquisicao.numero}"
+                                        styleClass="negrito"
+                                        id="numeroAquisicao"/>
+
+                                    <h:outputLabel value="Data:"/>
+                                    <h:outputLabel
+                                        value="#{aquisicaoEstornoControlador.selecionado.aquisicao.dataDeAquisicao}"
+                                        styleClass="negrito">
+                                        <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                    </h:outputLabel>
+
+                                    <h:outputLabel value="Usuário:"/>
+                                    <h:outputLabel
+                                        value="#{aquisicaoEstornoControlador.selecionado.usuario.pessoaFisica.nome}"
+                                        styleClass="negrito" size="80"/>
+
+                                    <h:outputLabel value="Requisição:"/>
+                                    <h:outputLabel
+                                        value="#{aquisicaoEstornoControlador.selecionado.aquisicao.solicitacaoAquisicao.requisicaoDeCompra}"
+                                        styleClass="negrito"/>
+
+                                    <h:outputLabel for="descricao" value="Descrição da Requisição:"/>
+                                    <h:panelGrid columns="2"
+                                                 cellpadding="0"
+                                                 cellspacing="0">
+                                        <p:inputTextarea id="descricao"
+                                                         value="#{aquisicaoEstornoControlador.selecionado.aquisicao.solicitacaoAquisicao.requisicaoDeCompra.descricao}"
+                                                         readonly="true"
+                                                         cols="70"
+                                                         scrollHeight="50"
+                                                         styleClass="negrito"
+                                                         style="text-transform: uppercase"/>
+                                    </h:panelGrid>
+
+                                    <h:outputLabel for="logalDeEntrega" value="Local da Entrega:"/>
+                                    <h:panelGrid columns="2"
+                                                 cellpadding="0"
+                                                 cellspacing="0">
+                                        <p:inputTextarea id="logalDeEntrega"
+                                                         value="#{aquisicaoEstornoControlador.selecionado.aquisicao.solicitacaoAquisicao.requisicaoDeCompra.localEntrega}"
+                                                         readonly="true"
+                                                         cols="70"
+                                                         scrollHeight="50"
+                                                         styleClass="negrito"
+                                                         style="text-transform: uppercase"/>
+                                    </h:panelGrid>
+
+                                    <h:outputLabel value="Contrato:"/>
+                                    <h:outputLabel
+                                        value="#{aquisicaoEstornoControlador.selecionado.aquisicao.solicitacaoAquisicao.requisicaoDeCompra.contrato}"
+                                        readonly="true"
+                                        styleClass="negrito"/>
+
+                                    <h:outputLabel value="Execução do Contrato:"/>
+                                    <ad:requisicao-compra-execucao
+                                        idRequisicao="#{aquisicaoEstornoControlador.selecionado.aquisicao.solicitacaoAquisicao.requisicaoDeCompra.id}"/>
+
+                                </h:panelGrid>
+                            </p:panel>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Documento Fiscal" id="tabDadosDocumento">
+                        <p:outputPanel id="panelDocumentos">
+                            <p:dataTable paginator="true"
+                                         id="tabela-documentos"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{aquisicaoEstornoControlador.documentoFiscais}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Documentos Fiscais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="doc">
+                                <p:column headerText="Data do Documento" style="width:10%; text-align: center">
+                                    <h:outputText value="#{doc.dataDocto}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Número" style="width:10%; text-align: left">
+                                    <h:outputText value="#{doc.numero}"/>
+                                </p:column>
+                                <p:column headerText="Série" style="width:10%; text-align: left">
+                                    <h:outputText value="#{doc.serie}"/>
+                                </p:column>
+                                <p:column headerText="UF" style="width:2%; text-align: left">
+                                    <h:outputText value="#{doc.uf}"/>
+                                </p:column>
+                                <p:column headerText="Tipo do Documento" style="width:10%; text-align: left">
+                                    <h:outputText
+                                        value="#{doc.tipoDocumentoFiscal.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Valor Total (R$)" style="width:10%; text-align: right">
+                                    <h:outputText value="#{doc.total}"
+                                                  converter="moneyConverter"/>
+                                </p:column>
+                                <p:columnGroup id="total-documentos" type="footer">
+                                    <p:row>
+                                        <p:column styleClass="azulnegrito" colspan="5" style="text-align:right"
+                                                  footerText="Valor Total dos Documentos Fiscais"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{aquisicaoEstornoControlador.formatarValor(aquisicaoEstornoControlador.valorTotalDocumentosFiscais)}"/>
+                                    </p:row>
+                                </p:columnGroup>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Bens Adquiridos">
+                        <p:outputPanel id="panelitensAquisicao">
+                            <p:dataTable paginator="true"
+                                         id="tabela-bens-adquiridos"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{aquisicaoEstornoControlador.itensAquisicao}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens Adquiridos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="itemAquisicao">
+                                <p:column headerText="Registro Patrimonial" style="width: 2%; text-align: center;">
+                                    <h:outputText value="#{itemAquisicao.estadoResultante.identificacao}"/>
+                                </p:column>
+                                <p:column headerText="Bem" style="text-align: left;">
+                                    <h:outputText value="#{itemAquisicao.descricaoProduto}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial" style="text-align: left;">
+                                    <h:outputText value="#{itemAquisicao.estadoResultante.grupoBem}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Administrativa" style="text-align: left;">
+                                    <fc:codigo-descricao-hierarquia
+                                        dataMovimento="#{aquisicaoEstornoControlador.selecionado.dataEstorno}"
+                                        unidadeOrganizacional="#{itemAquisicao.unidadeAdministrativa}"
+                                        styleClass="default"
+                                        tipoHierarquia="ADMINISTRATIVA"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária" style="text-align: left;">
+                                    <fc:codigo-descricao-hierarquia
+                                        dataMovimento="#{aquisicaoEstornoControlador.selecionado.dataEstorno}"
+                                        unidadeOrganizacional="#{itemAquisicao.unidadeOrcamentaria}"
+                                        styleClass="default"
+                                        tipoHierarquia="ORCAMENTARIA"/>
+                                </p:column>
+                                <p:column headerText="Situação" style="text-align: left;">
+                                    <h:outputText value="#{itemAquisicao.situacaoEventoBem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Valor do Bem (R$)" style="text-align: right;">
+                                    <h:outputText value="#{itemAquisicao.estadoResultante.valorOriginal}"
+                                                  converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Valor Liquidado (R$)" style="text-align: right;">
+                                    <h:outputText value="#{itemAquisicao.estadoResultante.valorLiquidado}"
+                                                  converter="moneyConverter"/>
+                                </p:column>
+                                <p:columnGroup id="totalItens" type="footer">
+                                    <p:row>
+                                        <p:column styleClass="azulnegrito" colspan="6" style="text-align:right"
+                                                  footerText="Valor Total dos Bens"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{aquisicaoEstornoControlador.formatarValor(aquisicaoEstornoControlador.valorTotalOriginalAquisicao)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{aquisicaoEstornoControlador.formatarValor(aquisicaoEstornoControlador.valorTotalLiquidadoAquisicao)}"/>
+                                    </p:row>
+                                </p:columnGroup>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <p:outputPanel id="panel-anexo">
+                            <fc:filesUploadWP selecionado="#{aquisicaoEstornoControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             styleClass="operacao prioritario mtop10 mrig05"
+                             title="Clique para salvar este registro."
+                             process=":Formulario"
+                             update=":Formulario"
+                             onclick="if (!confirm('Tem certeza que deseja estornar esta aquisição?')) {return false; } else {aguarde.show();}"
+                             oncomplete="aguarde.hide()"
+                             actionListener="#{aquisicaoEstornoControlador.salvar()}"/>
+
+            <p:commandButton value="Cancelar"
+                             icon="ui-icon-cancel"
+                             styleClass="operacao mtop10"
+                             title="Clique para cancelar esta operação."
+                             process="@this"
+                             actionListener="#{aquisicaoEstornoControlador.cancelar()}"/>
+
+        </h:form>
+
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Estorno de Aquisição de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{aquisicaoEstornoControlador.assistenteBarraProgresso.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{aquisicaoEstornoControlador.assistenteBarraProgresso.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{aquisicaoEstornoControlador.assistenteBarraProgresso.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{aquisicaoEstornoControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{aquisicaoEstornoControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{aquisicaoEstornoControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{aquisicaoEstornoControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Buscando Bens da Aquisição</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"/>
+                        <br/><br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

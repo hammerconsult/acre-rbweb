@@ -1,0 +1,898 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fca="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+
+            <fc:cabecalhoPretty controlador="#{pregaoPorLoteControlador}"
+                                origem="#{pregaoPorLoteControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Fase de Lances por Lote de Material e Serviço" id="panelGeral">
+
+                <p:tabView id="tabGeral" activeIndex="#{pregaoPorLoteControlador.indiceAba}" styleClass="mtop05">
+                    <p:ajax event="tabChange"
+                            process="@this"
+                            listener="#{pregaoPorLoteControlador.onTabChange}"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"/>
+                    <p:tab title="Dados Gerais">
+                        <legend class="legenda">Dados Gerais</legend>
+
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Data de Realização:"/>
+                            <p:calendar id="realizado-em"
+                                        onkeypress="mascara(this, mdata)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        autocomplete="off"
+                                        showOn="button"
+                                        title="Informe a data de realização do pregão."
+                                        value="#{pregaoPorLoteControlador.selecionado.realizadoEm}"
+                                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                        size="12"/>
+
+                            <fc:outputLabelObrigatorio value="Licitação:"/>
+                            <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                <p:autoComplete queryDelay="1000" id="licitacao"
+                                                title="Digite o resumo da licitação."
+                                                value="#{pregaoPorLoteControlador.selecionado.licitacao}"
+                                                completeMethod="#{pregaoPorLoteControlador.completarLicitacao}"
+                                                converter="#{licitacaoControlador.converterGenerico}"
+                                                var="lic"
+                                                disabled="#{pregaoPorLoteControlador.operacaoEditar}"
+                                                forceSelection="true"
+                                                itemLabel="#{lic.toStringAutoComplete()}"
+                                                itemValue="#{lic.id}"
+                                                maxResults="50"
+                                                size="70"
+                                                panelStyle="max-height: 250px;max-width: 800px"
+                                                dropdown="true"
+                                                styleClass="mrig05">
+                                    <p:ajax event="itemSelect"
+                                            listener="#{pregaoPorLoteControlador.carregarItensDoPregao()}"
+                                            update="tabela-item"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                </p:autoComplete>
+
+                                <fc:novoParente destino="#{licitacaoControlador.caminhoDestinoNovoCadastro}"
+                                                origem="#{pregaoPorLoteControlador.caminhoOrigem}"
+                                                selecionado="#{pregaoPorLoteControlador.selecionado}"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+                        <p:dataTable paginator="true"
+                                     id="tabela-item"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{pregaoPorLoteControlador.selecionado.listaDeItemPregao}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="item">
+
+                            <p:column headerText="Lances" style="width: 30px;" styleClass="alinhamentoCentralizado">
+                                <p:commandButton icon="ui-icon-note"
+                                                 title="Clique para informar os fornecedores que participaram dos lances."
+                                                 update=":Formulario"
+                                                 process="@this"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 actionListener="#{pregaoPorLoteControlador.selecionarItemPregao(item)}">
+                                </p:commandButton>
+                            </p:column>
+                            <p:column style="width: 100px; text-align: center" headerText="Anular Lote">
+                                <p:commandButton icon="ui-icon-cancel"
+                                                 update=":form-anular-lote"
+                                                 process="@this"
+                                                 title="Clique para cancelar o lote"
+                                                 oncomplete=" dlgAnularLote.show(); aguarde.hide()"
+                                                 onstart="aguarde.show()"
+                                                 disabled="#{pregaoPorLoteControlador.hasFornecedorParaRodada(item)}"
+                                                 actionListener="#{pregaoPorLoteControlador.selecionaItemParaAnulacao(item)}"/>
+                            </p:column>
+                            <p:column headerText="Itens" style="width: 30px;" styleClass="alinhamentoCentralizado">
+                                <p:commandButton id="verItensProcessoList"
+                                                 icon="ui-icon-search"
+                                                 process="@this"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 title="Clique para ver detalhes dos itens do lote processo de compra."
+                                                 actionListener="#{pregaoPorLoteControlador.buscarItensLoteProcessoCompra(item)}"/>
+                            </p:column>
+                            <p:column headerText="Nº Lote" style="width: 30px;" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{item.itemPregaoLoteProcesso.loteProcessoDeCompra.numero}"/>
+                            </p:column>
+                            <p:column headerText="Descrição Lote" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.itemPregaoLoteProcesso.loteProcessoDeCompra.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Status do Item" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.tipoStatusItemPregao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Vencedor" styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{item.itemPregaoLanceVencedor.lancePregao.fornecedorDoLanceVencedor}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" style="width: 150px;" styleClass="alinhamentoDireita"
+                                      rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                                <h:outputText value="#{item.itemPregaoLanceVencedor.valor}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Desconto (%)" style="width: 150px;" styleClass="alinhamentoDireita"
+                                      rendered="#{pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                                <h:outputText value="#{item.itemPregaoLanceVencedor.percentualDesconto}">
+                                    <f:convertNumber pattern="#,##0.000"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Valor de Ref. (R$)"
+                                      rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                      style="width: 150px;"
+                                      styleClass="alinhamentoDireita">
+                                <h:outputText value="#{item.itemPregaoLoteProcesso.loteProcessoDeCompra.valor}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Percentual de Ref. (%)"
+                                      rendered="#{pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                      style="width: 150px;"
+                                      styleClass="alinhamentoDireita">
+                                <h:outputText
+                                    value="#{item.itemPregaoLoteProcesso.loteProcessoDeCompra.loteSolicitacaoMaterial.percentualDescontoMinimo}">
+                                    <f:convertNumber pattern="#,##0.000"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Economia (%)" styleClass="alinhamentoDireita"
+                                      style="width: 150px;"
+                                      rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                                <h:outputText
+                                    value="#{pregaoPorLoteControlador.diferencaEmPorcentagem(item.itemPregaoLoteProcesso.loteProcessoDeCompra.valor, item.itemPregaoLanceVencedor.valor)}"
+                                    converter="porcentagemConverter"/>
+                            </p:column>
+                            <p:column headerText="Valor por Item" style="width: 150px;" styleClass="centralizado">
+                                <p:commandButton
+                                    onclick="aguarde.show()"
+                                    title="Clique aqui para informar o valor por item."
+                                    disabled="#{!pregaoPorLoteControlador.verificarSeTemFornecedorVencedor(item)}"
+                                    actionListener="#{pregaoPorLoteControlador.criarItensPregaoLote(item)}"
+                                    update=":FormularioValorPorItem"
+                                    oncomplete="aguarde.hide(); valorPorItem.show()"
+                                    icon="ui-icon-categorias"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Rodadas" disabled="true">
+                        <p:outputPanel id="panelRodadas">
+                            <legend class="legenda">Rodadas do Pregão</legend>
+
+                            <h:panelGrid columns="2" id="gridGeral">
+                                <h:outputText value="Item: "/>
+                                <h:panelGroup>
+                                    <h:outputText
+                                        value="Lote Nº: #{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra}"
+                                        style="font-size: 13px;" styleClass="negrito"/>
+
+                                    <p:commandButton id="verItensProcesso"
+                                                     icon="ui-icon-search"
+                                                     styleClass="icone-20 mlef10"
+                                                     process="@this"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para ver detalhes dos itens do lote processo de compra."
+                                                     actionListener="#{pregaoPorLoteControlador.buscarItensLoteProcessoCompra()}"/>
+
+                                </h:panelGroup>
+
+                                <h:outputText value="Valor de Referência (R$): "
+                                              rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"/>
+                                <h:outputText
+                                    rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                    value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.valor}"
+                                    styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <h:outputText value="Percentual de Referência (%): "
+                                              rendered="#{pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"/>
+                                <h:outputText
+                                    rendered="#{pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                    value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.loteSolicitacaoMaterial.percentualDescontoMinimo}"
+                                    styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.000"/>
+                                </h:outputText>
+
+                                <h:outputLabel value="Rodada:" for="painelRodadas"/>
+                                <h:panelGroup id="painelRodadas">
+                                    <p:commandButton id="botaoPrimeiro"
+                                                     icon="ui-icon-arrowthickstop-1-w"
+                                                     styleClass="icone-20"
+                                                     update=":Formulario:tabGeral:panelRodadas :Formulario:tabGeral:panelBotoes :Formulario:tabGeral:tabelaFornecedorRodada"
+                                                     process="@this"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para mostrar a primeira rodada."
+                                                     actionListener="#{pregaoPorLoteControlador.navegarPrimeiraRodada}"/>
+
+                                    <p:commandButton id="botaoAnterior"
+                                                     icon="ui-icon-arrowthick-1-w"
+                                                     title="Clique para mostrar a rodada anterior."
+                                                     styleClass="icone-20 mlef03"
+                                                     update=":Formulario:tabGeral:panelRodadas :Formulario:tabGeral:panelBotoes :Formulario:tabGeral:tabelaFornecedorRodada"
+                                                     process="@this"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{pregaoPorLoteControlador.navegarRodadaAnterior()}"/>
+
+                                    <h:outputText value="" styleClass="mlef03"/>
+                                    <h:outputText value="#{pregaoPorLoteControlador.numeroDaRodadaAtual()}"
+                                                  styleClass="negrito" style="font-size: 13px"/>
+                                    <h:outputText value=" de " styleClass="cinzaEscuro" style="font-size: 13px"/>
+                                    <h:outputText value="#{pregaoPorLoteControlador.totalDeRodadasRealizadas()}"
+                                                  styleClass="negrito" style="font-size: 13px"/>
+                                    <h:outputText value="" styleClass="mrig03"/>
+
+                                    <p:commandButton id="botaoProximo"
+                                                     icon="ui-icon-arrowthick-1-e"
+                                                     title="Clique para mostrar a próxima rodada."
+                                                     styleClass="icone-20 mlef03"
+                                                     update=":Formulario:tabGeral:panelRodadas :Formulario:tabGeral:panelBotoes"
+                                                     process="@this"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{pregaoPorLoteControlador.navegarProximaRodada()}"/>
+
+                                    <p:commandButton id="botaoUltimo"
+                                                     title="Clique para mostrar a última rodada."
+                                                     icon="ui-icon-arrowthickstop-1-e"
+                                                     styleClass="icone-20 mlef03"
+                                                     update=":Formulario:tabGeral:panelRodadas :Formulario:tabGeral:panelBotoes"
+                                                     process="@this"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{pregaoPorLoteControlador.navegarUltimaRodada()}"/>
+                                </h:panelGroup>
+
+                                <h:outputText value="Observação: "/>
+                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                    <p:inputTextarea
+                                        value="#{pregaoPorLoteControlador.rodadaPregaoSelecionada.observacao}"
+                                        maxlength="3000"
+                                        counter="conta"
+                                        counterTemplate="{0} Caracteres Restantes."
+                                        rows="4"
+                                        cols="90"/>
+                                    <h:outputText id="conta" styleClass="mlef05"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+
+                            <p:dataTable paginator="true"
+                                         id="tabelaFornecedorRodada"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{pregaoPorLoteControlador.rodadaPregaoSelecionada.listaDeLancePregao}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>LANCES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="lance">
+
+                                <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{lance.propostaFornecedor.fornecedor.nome}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Empresa" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{lance.propostaFornecedor.fornecedor.tipoEmpresa.descricao}"/>
+                                </p:column>
+                                <p:column
+                                    rendered="#{pregaoPorLoteControlador.rodadaPregaoSelecionada.numero == 1 and !pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                    headerText="Proposta Inicial (R$)"
+                                    styleClass="alinhamentoDireita"
+                                    style="width: 150px;">
+                                    <h:outputText value="#{lance.valorPropostaInicial}">
+                                        <f:convertNumber pattern="##,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column
+                                    rendered="#{pregaoPorLoteControlador.rodadaPregaoSelecionada.numero == 1 and pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                    headerText="Desconto Inicial (%)" styleClass="alinhamentoDireita"
+                                    style="width: 150px;">
+                                    <h:outputText value="#{lance.valorPropostaInicial}">
+                                        <f:convertNumber pattern="#,##0.000"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column
+                                    rendered="#{pregaoPorLoteControlador.rodadaPregaoSelecionada.numero > 1 and !pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                    headerText="Lance Anterior (R$)" style="text-align: right; width: 150px;">
+                                    <h:outputText value="#{lance.valorNaRodadaAnterior}">
+                                        <f:convertNumber pattern="##,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column
+                                    rendered="#{pregaoPorLoteControlador.rodadaPregaoSelecionada.numero > 1 and pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                    headerText="Desconto Anterior (%)" style="text-align: center; width: 150px;">
+                                    <h:outputText value="#{lance.valorNaRodadaAnterior}">
+                                        <f:convertNumber pattern="#,##0.000"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Lance Atual (R$)" styleClass="alinhamentoDireita"
+                                          style="width: 150px;"
+                                          rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                                    <p:inputText value="#{lance.valor}"
+                                                 id="valorLanceAtual"
+                                                 disabled="#{pregaoPorLoteControlador.desabilitarLanceAtual(lance)}"
+                                                 onkeypress="cancelarAcaoBotaoEnter(event);mascara(this, mvalor)"
+                                                 onfocus="this.select()"
+                                                 styleClass="alinhamentoDireita">
+                                        <p:ajax event="blur"
+                                                process="@this :Formulario:tabGeral:tabelaFornecedorRodada"
+                                                update=":Formulario:tabGeral:gridGeral :Formulario:tabGeral:panelBotoes :Formulario:tabGeral:tabelaFornecedorRodada"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                listener="#{pregaoPorLoteControlador.executarLance(lance, rowIx)}"/>
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </p:inputText>
+                                </p:column>
+                                <p:column headerText="Economia (%)" styleClass="alinhamentoDireita"
+                                          style="width: 150px;"
+                                          rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                                    <h:outputText
+                                        value="#{pregaoPorLoteControlador.diferencaEmPorcentagem(pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.valor, lance.valor)}"
+                                        converter="porcentagemConverter"/>
+                                </p:column>
+                                <p:column headerText="Desconto Atual (%)" styleClass="alinhamentoDireita"
+                                          style="width: 150px;"
+                                          rendered="#{pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                                    <p:inputText styleClass="alinhamentoDireita"
+                                                 value="#{lance.percentualDesconto}"
+                                                 onkeypress="mascaraMonetariaDinamica(this, 3, 3)"
+                                                 onfocus="this.select()"
+                                                 maxlength="8"
+                                                 id="descontoAtual"
+                                                 disabled="#{pregaoPorLoteControlador.desabilitarLanceAtual(lance)}">
+                                        <f:convertNumber pattern="#,##0.000"/>
+                                        <p:ajax event="blur"
+                                                process="@this"
+                                                update=":Formulario:tabGeral:gridGeral :Formulario:tabGeral:panelBotoes :Formulario:tabGeral:tabelaFornecedorRodada"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                listener="#{pregaoPorLoteControlador.executarLance(lance, rowIx)}"/>
+                                    </p:inputText>
+                                </p:column>
+                                <p:column headerText="Status" styleClass="alinhamentoCentralizado"
+                                          style="width: 150px;">
+                                    <h:selectOneMenu id="selectStatusSemVencedor"
+                                                     value="#{lance.statusLancePregao}"
+                                                     rendered="#{!lance.statusLancePregao.vencedor}">
+                                        <f:selectItems
+                                            value="#{pregaoPorLoteControlador.statusLancePregao}"/>
+                                        <p:ajax event="change"
+                                                update=":Formulario:tabGeral:panelRodadas :Formulario:tabGeral:panelBotoes"
+                                                process=":Formulario:tabGeral:panelRodadas"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                listener="#{pregaoPorLoteControlador.processarAlteracaoStatusNaoVencedor(lance)}"/>
+                                    </h:selectOneMenu>
+
+                                    <h:selectOneMenu id="selectStatusSemAtivo"
+                                                     value="#{lance.statusLancePregao}"
+                                                     rendered="#{lance.statusLancePregao.vencedor}">
+                                        <f:selectItems
+                                            value="#{pregaoPorLoteControlador.statusLancePregaoExcetoAtivo}"/>
+                                        <p:ajax event="change"
+                                                process="@this"
+                                                update=":Formulario:tabGeral:panelRodadas"/>
+                                    </h:selectOneMenu>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+
+                        <hr/>
+                        <p:outputPanel id="panelBotoes">
+                            <p:commandButton value="Nova Rodada"
+                                             icon="ui-icon-circle-plus"
+                                             title="Clique para gerar nova rodada."
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             disabled="#{pregaoPorLoteControlador.isPermitidoNovaRodada()}"
+                                             actionListener="#{pregaoPorLoteControlador.novaRodadaValidando()}"
+                                             update=":Formulario:tabGeral:panelRodadas"
+                                             process="@this"
+                                             style="width: 140px"
+                                             styleClass="prioritario operacao mtop05 mrig05"/>
+
+                            <p:commandButton value="Excluir Rodada"
+                                             icon="ui-icon-trash"
+                                             style="width: 140px"
+                                             title="Clique para excluir essa rodada."
+                                             onclick="if (!confirm('Ao excluir a rodada todos os lances serão excluídos. Deseja continuar ?')) {return false; } else {aguarde.show();}"
+                                             oncomplete="aguarde.hide();"
+                                             disabled="#{pregaoPorLoteControlador.rodadaEditavel()}"
+                                             actionListener="#{pregaoPorLoteControlador.excluirRodada()}"
+                                             update=":Formulario:tabGeral:panelRodadas"
+                                             process="@this"
+                                             styleClass="operacao mtop05 mrig05"/>
+
+                            <p:commandButton value="Finalizar Rodadas"
+                                             icon="ui-icon-check"
+                                             title="Clique para finalizar as rodadas."
+                                             style="width: 170px"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             disabled="#{!pregaoPorLoteControlador.isPermitidoFinalizarRodadas()}"
+                                             actionListener="#{pregaoPorLoteControlador.finalizarRodadas()}"
+                                             update=":Formulario"
+                                             process="@this :Formulario:tabGeral:panelRodadas"
+                                             styleClass="operacao prioritario mtop05 mrig05"/>
+
+                            <p:commandButton value="Reiniciar Rodadas"
+                                             icon="ui-icon-atualizar"
+                                             style="width: 170px"
+                                             title="Clique para reiniciar as rodadas."
+                                             onclick="dialogReiniciarRodadas.show()"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide();setaFoco('formReiniciarRodada:btConfirmarReiniciar')"
+                                             process="@this"
+                                             styleClass="operacao mtop05 mrig05"/>
+
+                            <p:commandButton value="Cancelar"
+                                             icon="ui-icon-cancel"
+                                             style="width: 140px"
+                                             title="Clique para cancelar."
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{pregaoPorLoteControlador.cancelarRodadaPregaoSeleciondo()}"
+                                             update=":Formulario"
+                                             styleClass="operacao mtop05"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Histórico do Processo"
+                           titleStyle="background: #d9edf7" id="tab-historico"
+                           rendered="#{pregaoPorLoteControlador.operacaoEditar}">
+                        <fa:historico-processo-licitatorio
+                            filtroProcesso="#{pregaoPorLoteControlador.filtroHistoricoProcesso}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{pregaoPorLoteControlador}"/>
+        </h:form>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  closable="false"
+                  width="900"
+                  widgetVar="dlgFornecedores">
+            <h:form id="form-fornecedor">
+                <legend class="legenda mbot10">Fornecedores Participantes</legend>
+
+                <div class="alert alert-block alinhamentoCentralizado" style="padding: 7px">
+                    <h:outputText styleClass="negrito"
+                                  value="INFORME OS FORNECEDORES QUE IRÃO PARTICIPAR DOS LANCES."/>
+                </div>
+
+                <br/>
+                <h:outputLabel value="Lote Selecionado: " style="font-size: 13px"/>
+                <h:outputText
+                    value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.descricao}"
+                    style="font-size: 13px;" styleClass="negrito"/>
+
+                <p:dataTable paginator="true"
+                             id="tabelaFornecedorParticipante"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{pregaoPorLoteControlador.fornecedoresParticipantes}"
+                             rows="7"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>FORNECEDORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="fornecedor">
+
+                    <p:column style="width: 30px!important">
+                        <f:facet name="header">
+                            <p:commandButton icon="ui-icon-none"
+                                             process="@this :form-fornecedor"
+                                             update=":form-fornecedor"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             rendered="#{!pregaoPorLoteControlador.todosFornecedoresMarcados()}"
+                                             actionListener="#{pregaoPorLoteControlador.marcarTodosFornecedores()}"
+                                             styleClass="icone-20"/>
+                            <p:commandButton icon="ui-icon-check"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             process="@this :form-fornecedor"
+                                             update=":form-fornecedor"
+                                             rendered="#{pregaoPorLoteControlador.todosFornecedoresMarcados()}"
+                                             actionListener="#{pregaoPorLoteControlador.desmarcarTodosFornecedores()}"
+                                             styleClass="icone-20"/>
+                        </f:facet>
+                        <p:commandButton icon="ui-icon-none"
+                                         process="@this :form-fornecedor"
+                                         update=":form-fornecedor"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         rendered="#{!fornecedor.selecionado}"
+                                         actionListener="#{pregaoPorLoteControlador.marcarFornecedor(fornecedor)}"
+                                         styleClass="icone-20"/>
+                        <p:commandButton icon="ui-icon-check"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         update=":form-fornecedor"
+                                         process="@this :form-fornecedor"
+                                         rendered="#{fornecedor.selecionado}"
+                                         actionListener="#{pregaoPorLoteControlador.desmarcarFornecedor(fornecedor)}"
+                                         styleClass="icone-20"/>
+                    </p:column>
+
+                    <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{fornecedor.empresa.nome}"/>
+                    </p:column>
+                    <p:column headerText="Valor do Lote (R$)" styleClass="alinhamentoDireita"
+                              rendered="#{!pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                        <h:outputText value="#{fornecedor.valorDoLoteLancadoNaProposta}">
+                            <f:convertNumber pattern="##,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Desconto do Lote (%)" styleClass="alinhamentoDireita"
+                              rendered="#{pregaoPorLoteControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                        <h:outputText value="#{fornecedor.valorDoLoteLancadoNaProposta}">
+                            <f:convertNumber pattern="#,##0.000"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+
+
+                <div class="alinhamentoCentralizado">
+                    <p:commandButton value="Iniciar Rodadas"
+                                     id="bt-iniciar-rodadas"
+                                     icon="ui-icon-check"
+                                     disabled="#{pregaoPorLoteControlador.desabilitaInicioDeRodada()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{pregaoPorLoteControlador.iniciarRodadas()}"
+                                     title="Clique para iniciar as rodadas."
+                                     process="@this :form-fornecedor"
+                                     update=":Formulario:tabGeral:panelRodadas :Formulario:tabGeral:panelBotoes"
+                                     styleClass="prioritario padrao mtop10 mrig05"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     title="Clique para cancelar."
+                                     actionListener="#{pregaoPorLoteControlador.cancelarItemPregaoSelecionado()}"
+                                     onstart="aguarde.show();"
+                                     oncomplete="aguarde.hide(); dlgFornecedores.hide();"
+                                     update="@none"
+                                     process="@none"
+                                     styleClass="padrao mtop10"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important; "
+                  draggable="false"
+                  resizable="false"
+                  width="1000"
+                  height="450"
+                  widgetVar="dlgItensLote">
+            <h:form id="formItensLote">
+                <legend class="legenda">Detalhes dos Itens do Lote:
+                    <strong>#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra}</strong>
+                </legend>
+                <div style="overflow-y: scroll; max-height: 400px !important; ">
+
+                    <p:dataTable
+                        paginator="true"
+                        id="tabelaItensLoteProcessoCompra"
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{pregaoPorLoteControlador.itensLoteProcessoCompra}"
+                        rows="10"
+                        paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                        currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                        rowsPerPageTemplate="10,25,50,100"
+                        var="itemProcessoCompra">
+                        <p:column headerText="Item" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemProcessoCompra.numero} - #{itemProcessoCompra.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Especificação" styleClass="alinhamentoCentralizado">
+                            <fca:especificacao-objeto-compra
+                                especificacao="#{itemProcessoCompra.descricaoComplementar}"/>
+                        </p:column>
+                        <p:column headerText="Quantidade" styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{itemProcessoCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraQuantidade}"
+                                value="#{itemProcessoCompra.itemSolicitacaoMaterial.quantidade}"/>
+                        </p:column>
+                        <p:column headerText="Valor Unitário (R$)" styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{itemProcessoCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"
+                                value="#{itemProcessoCompra.itemSolicitacaoMaterial.preco}"/>
+                        </p:column>
+                        <p:column headerText="Valor Total (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemProcessoCompra.itemSolicitacaoMaterial.precoTotal}">
+                                <f:convertNumber pattern="##,##0.00"/>
+                            </h:outputText>
+                            <f:facet name="footer">
+                                <h:outputText
+                                    value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.valor}">
+                                    <f:convertNumber pattern="R$ ##,##0.00"/>
+                                </h:outputText>
+                            </f:facet>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important; "
+                  draggable="false"
+                  resizable="false"
+                  closable="true"
+                  width="1050"
+                  height="450"
+                  widgetVar="valorPorItem">
+            <h:form id="FormularioValorPorItem">
+                <legend class="legenda mbot05">Valor por Item</legend>
+                <h:panelGrid columns="2">
+                    <h:outputText value="Lote: "/>
+                    <h:outputText
+                        value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Fornecedor Vencedor: "/>
+                    <h:outputText
+                        value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLanceVencedor.lancePregao.fornecedorDoLanceVencedor}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Valor do Lote: "/>
+                    <h:outputText
+                        value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.valor}"
+                        styleClass="negrito">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+
+                    <h:outputText value="Valor Negociado: "/>
+                    <h:outputText
+                        value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLanceVencedor.valor}"
+                        styleClass="negrito">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+
+                    <h:outputText value="Percentual da Diferença do Lote: "/>
+                    <h:panelGroup>
+                        <h:outputText value="#{pregaoPorLoteControlador.percentualDiferencaLote}"
+                                      styleClass="negrito"
+                                      title="Percentual = (((Valor do Lote - Valor Negociado)) / Valor do Lote)*100">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <h:outputText value="%" styleClass="negrito"/>
+
+                        <p:commandButton value="Aplicar aos Itens"
+                                         icon="ui-icon-check"
+                                         actionListener="#{pregaoPorLoteControlador.aplicarPercentualParaItens()}"
+                                         process="@this"
+                                         title="Valor Unitário = Valor Unitário - ((Valor Unitário * Percentual Diferença do Lote) / 100)"
+                                         update=":FormularioValorPorItem:tableItensLote"
+                                         styleClass="padrao mlef05 botao-transparente"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"/>
+
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <p:dataTable
+                    paginator="true"
+                    id="tableItensLote"
+                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                    style="overflow: scroll; max-height: 400px; width: auto"
+                    rowIndexVar="rowIx"
+                    styleClass="mtop05"
+                    emptyMessage="Não foram localizados registros para serem apresentados"
+                    value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.itensPregaoLoteItemProcesso}"
+                    rows="10"
+                    paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                    rowsPerPageTemplate="10,25,50,100"
+                    var="itemPregaoLote">
+                    <p:column headerText="Nº Item" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{itemPregaoLote.itemProcessoDeCompra.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{itemPregaoLote.itemProcessoDeCompra.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Especif." styleClass="alinhamentoCentralizado">
+                        <fca:especificacao-objeto-compra
+                            especificacao="#{itemPregaoLote.itemProcessoDeCompra.descricaoComplementar}"/>
+                    </p:column>
+                    <p:column headerText="Qtde" styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraQuantidade}"
+                            value="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Valor Unit. (R$)" styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"
+                            value="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.preco}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText
+                            value="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.precoTotal}">
+                            <f:convertNumber pattern="##,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText
+                                value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra.valor}">
+                                <f:convertNumber pattern="R$ ##,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Preço Unit. (R$)" styleClass="">
+                        <fc:input-mascara-unidade-medida
+                            value="#{itemPregaoLote.valor}"
+                            size="15"
+                            update=":FormularioValorPorItem:tableItensLote"
+                            tipoMascara="#{itemPregaoLote.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"/>
+                    </p:column>
+                    <p:column headerText="Preço Total (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText
+                            value="#{itemPregaoLote.precoTotalItem}"
+                            id="precototal"
+                            size="15" styleClass="alinhamentoDireita">
+                            <f:convertNumber pattern="##,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText id="precoTotalLote"
+                                          value="#{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.precoTotalLote}">
+                                <f:convertNumber pattern="##,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Justificativa">
+                        <p:inputTextarea value="#{itemPregaoLote.justificativa}" maxlength="255" autoResize="false"
+                                         scrollHeight="3">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:inputTextarea>
+                    </p:column>
+                </p:dataTable>
+
+                <div class="centralizado mtop10 mbot10">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     actionListener="#{pregaoPorLoteControlador.confirmarInformacoesLote()}"
+                                     styleClass="padrao prioritario mtop10"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                    />
+                    <p:commandButton value="Fechar"
+                                     oncomplete="aguarde.hide()"
+                                     onstart="aguarde.show()"
+                                     onclick="valorPorItem.hide()"
+                                     icon="ui-icon-close"
+                                     styleClass="padrao mlef05 mtop10"
+                                     process="@this" update="@this"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog widgetVar="dialogReiniciarRodadas"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+
+            <h:form id="formReiniciarRodada">
+                <legend class="legenda">Reiniciar Rodadas</legend>
+
+                <div class="alert alert-danger mtop10" style="padding: 8px; font-size: 13px">
+                    <strong>Atenção! </strong>Ao continuar todas a rodadas e lances para este lote serão removidas, Deseja continuar?
+                </div>
+
+                <br/>
+                <hr/>
+                <div align="center">
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     id="btConfirmarReiniciar"
+                                     actionListener="#{pregaoPorLoteControlador.reiniciarRodadas()}"
+                                     update=":Formulario:tabGeral:panelRodadas :Formulario:tabGeral:panelBotoes"
+                                     styleClass="padrao mrig05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dialogReiniciarRodadas.hide()"/>
+
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     styleClass="padrao"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dialogReiniciarRodadas.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+        <p:dialog widgetVar="dlgAnularLote"
+                  modal="true"
+                  resizable="false"
+                  position="center"
+                  closable="false"
+                  style="position: fixed !important;">
+
+            <legend class="legenda">Anular Lote do Pregão</legend>
+
+            <h:form id="form-anular-lote">
+                <h:outputText
+                    value="Lote: #{pregaoPorLoteControlador.itemPregaoSelecionado.itemPregaoLoteProcesso.loteProcessoDeCompra}"
+                    style="font-size: 12px"
+                    styleClass="azulnegrito mtop10"/>
+
+                <h:panelGrid columns="3" styleClass="mtop10">
+                    <fc:outputLabelObrigatorio value="Situação do Item: "/>
+                    <h:selectOneMenu
+                        value="#{pregaoPorLoteControlador.itemPregaoSelecionado.tipoStatusItemPregao}">
+                        <f:selectItems value="#{pregaoPorLoteControlador.buscarTiposStatusItemParaAnulacao()}"/>
+                        <p:ajax event="change"
+                                process="@this"
+                                update="@this"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Anular lote não participante da rodada"
+                                  styleClass="mlef10"
+                                  style="color: gray"/>
+                </h:panelGrid>
+
+                <div class="centralizado mtop20">
+                    <p:commandButton id="btnAnularLote"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide(); dlgAnularLote.hide()"
+                                     title="Clique para confirmar a operação"
+                                     styleClass="prioritario padrao"
+                                     icon="ui-icon-check"
+                                     process="@this"
+                                     value="Confirmar"
+                                     actionListener="#{pregaoPorLoteControlador.anularLotePregao()}"/>
+
+                    <p:commandButton id="btnCancelarAnulacao"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();dlgAnularLote.hide()"
+                                     title="Clique para cancelar anulação do lote."
+                                     styleClass="padrao mlef05"
+                                     actionListener="#{pregaoPorLoteControlador.cancelarAnulacaolotePregao}"
+                                     icon="ui-icon-cancel"
+                                     value="Cancelar"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

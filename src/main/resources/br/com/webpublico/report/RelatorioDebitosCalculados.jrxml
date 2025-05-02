@@ -1,0 +1,798 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelatorioDebitosCalculados" language="java" pageWidth="595" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+	<property name="ireport.zoom" value="1.5"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="191"/>
+	<parameter name="BRASAO" class="java.lang.String"/>
+	<parameter name="USUARIO" class="java.lang.String"/>
+	<parameter name="WHERE" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<parameter name="ORDER" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[Select Ci.Inscricaocadastral,
+       (select sum(construcao.areaconstruida)
+           from construcao
+        where construcao.imovel_id = ci.id) area_total_construida,
+       coalesce(construcao.areaconstruida,0) area_construida,
+       Calculo.Valorreal Valor_Total,
+       Coalesce(Construcao.Descricao,'TERRITORIAL') As Unidade,
+       Calculo.Subdivida,
+       coalesce(pf.nome,pj.razaosocial) nome_proprietario,
+       coalesce(pf.cpf,pj.cnpj) cpf_cnpj,
+       processocalculo.descricao,
+       exercicio.ano,
+       iptu.id,
+       setor.codigo setor,
+       lot.codigolote lote,
+       qda.codigo quadra,
+       Lgdro.Nome||', '||Lot.Numerocorreio||' - '||Bro.Descricao Endereco,
+       (Select Count(Id) From Parcelavalordivida Where Valordivida_Id = Vd.Id) As Qtparcela,
+       (select min(vencimento) from parcelavalordivida where valordivida_id = vd.id) as vencimentoInicial,
+       (select max(vencimento) from Parcelavalordivida where valordivida_id = vd.id) as vencimentoFinal,
+       coalesce((select ici.valorreal
+           	from itemcalculoiptu ici
+          	         inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   and cii.nomenclatura = 'V.V.T'),0) valor_venal_terreno,
+       coalesce((select ici.valorreal
+                    from itemcalculoiptu ici
+                   inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   and cii.nomenclatura = 'V.V.C'),0) valor_venal_construcao,
+       coalesce((select ici.valorreal
+                    from itemcalculoiptu ici
+                   inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   and cii.nomenclatura = 'V.V.E'),0) valor_venal_excedente,
+       coalesce((select ici.valorreal
+           	from itemcalculoiptu ici
+          	         inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   And Cii.Nomenclatura = 'V.V.I'),0) Valor_Venal_Imovel,
+       coalesce((select ici.valorreal
+           	from itemcalculoiptu ici
+          	         inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   And Cii.Nomenclatura = 'V.I'),0) as iptu,
+       coalesce((select ici.valorreal
+           	from itemcalculoiptu ici
+          	         inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   And Cii.Nomenclatura = 'Il. Publ'),0) As Iluminacaopublica,
+       coalesce((select ici.valorreal
+           	from itemcalculoiptu ici
+          	         inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   And Cii.Nomenclatura = 'L.P'),0) as LimpezaPublica,
+       coalesce((select ici.valorreal
+           	from itemcalculoiptu ici
+          	         inner join configuracaoiptuitem cii on cii.id = ici.configuracaoiptuitem_id
+                 where ici.calculoiptu_id = iptu.id
+                   And Cii.Nomenclatura = 'C.L'),0) as coletaLixo
+   from calculoiptu iptu
+  Inner Join Calculo On Calculo.Id = Iptu.Id
+  left Join Valordivida Vd On Vd.Calculo_Id = Calculo.Id
+  inner join calculopessoa calcpes on calcpes.id = (select max(s_calcpes.id)
+                                                       from calculopessoa s_calcpes
+                                                    where s_calcpes.calculo_id = calculo.id)
+  left join pessoafisica pf on calcpes.pessoa_id = pf.id
+  left join pessoajuridica pj on calcpes.pessoa_id = pj.id
+  inner join processocalculoiptu prociptu on prociptu.id = iptu.processocalculoiptu_id
+  inner join processocalculo on processocalculo.id =prociptu.id
+  inner join exercicio on processocalculo.exercicio_id = exercicio.id
+  inner join cadastroimobiliario ci on ci.id = iptu.cadastroimobiliario_id
+  left join lote lot on ci.lote_id = lot.id
+  left join setor on setor.id = lot.setor_id
+  left join testada testa on lot.id = testa.lote_id and testa.principal = 1
+  left join face on face.id = testa.face_id
+  left join logradouro lgdro on lgdro.id = face.logradouro_id
+  left join bairro bro on bro.id = lgdro.bairro_id
+  left join quadra qda on lot.quadra_id = qda.id
+  left Join Construcao On Construcao.Id = Iptu.Construcao_Id
+$P!{WHERE}
+$P!{ORDER}]]>
+	</queryString>
+	<field name="INSCRICAOCADASTRAL" class="java.lang.String"/>
+	<field name="AREA_TOTAL_CONSTRUIDA" class="java.math.BigDecimal"/>
+	<field name="AREA_CONSTRUIDA" class="java.math.BigDecimal"/>
+	<field name="VALOR_TOTAL" class="java.math.BigDecimal"/>
+	<field name="UNIDADE" class="java.lang.String"/>
+	<field name="SUBDIVIDA" class="java.math.BigDecimal"/>
+	<field name="NOME_PROPRIETARIO" class="java.lang.String"/>
+	<field name="CPF_CNPJ" class="java.lang.String"/>
+	<field name="DESCRICAO" class="java.lang.String"/>
+	<field name="ANO" class="java.math.BigDecimal"/>
+	<field name="ID" class="java.math.BigDecimal"/>
+	<field name="SETOR" class="java.lang.String"/>
+	<field name="LOTE" class="java.lang.String"/>
+	<field name="QUADRA" class="java.math.BigDecimal"/>
+	<field name="ENDERECO" class="java.lang.String"/>
+	<field name="QTPARCELA" class="java.math.BigDecimal"/>
+	<field name="VENCIMENTOINICIAL" class="java.sql.Timestamp"/>
+	<field name="VENCIMENTOFINAL" class="java.sql.Timestamp"/>
+	<field name="VALOR_VENAL_TERRENO" class="java.math.BigDecimal"/>
+	<field name="VALOR_VENAL_CONSTRUCAO" class="java.math.BigDecimal"/>
+	<field name="VALOR_VENAL_EXCEDENTE" class="java.math.BigDecimal"/>
+	<field name="VALOR_VENAL_IMOVEL" class="java.math.BigDecimal"/>
+	<field name="IPTU" class="java.math.BigDecimal"/>
+	<field name="ILUMINACAOPUBLICA" class="java.math.BigDecimal"/>
+	<field name="LIMPEZAPUBLICA" class="java.math.BigDecimal"/>
+	<field name="COLETALIXO" class="java.math.BigDecimal"/>
+	<variable name="IPTU" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{IPTU}]]></variableExpression>
+	</variable>
+	<variable name="COLETA_LIXO" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{COLETALIXO}]]></variableExpression>
+	</variable>
+	<variable name="ILUM.PUBLICA" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{ILUMINACAOPUBLICA}]]></variableExpression>
+	</variable>
+	<variable name="TOTAL" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{VALOR_TOTAL}]]></variableExpression>
+	</variable>
+	<variable name="QTD_IPTU" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[$F{IPTU}.equals(new BigDecimal(0)) ? 0 : 1]]></variableExpression>
+	</variable>
+	<variable name="QTD_COLETA_LIXO" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[$F{COLETALIXO}.equals(new BigDecimal(0)) ? 0 : 1]]></variableExpression>
+	</variable>
+	<variable name="QTD_ILUMI_PUB" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[$F{ILUMINACAOPUBLICA}.equals(new BigDecimal(0)) ? 0 : 1]]></variableExpression>
+	</variable>
+	<variable name="QTD_LIMP_PUBLICA" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[$F{LIMPEZAPUBLICA}.equals(new BigDecimal(0)) ? 0 : 1]]></variableExpression>
+	</variable>
+	<variable name="LIMP.PUBLICA" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{LIMPEZAPUBLICA}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="79" splitType="Stretch">
+			<rectangle>
+				<reportElement x="0" y="0" width="554" height="79"/>
+			</rectangle>
+			<staticText>
+				<reportElement x="425" y="21" width="57" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Hora:]]></text>
+			</staticText>
+			<textField pattern="dd/MM/yyyy">
+				<reportElement x="483" y="5" width="59" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="425" y="5" width="57" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Data:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="78" y="7" width="334" height="20"/>
+				<textElement>
+					<font size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[ESTADO DO ACRE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="78" y="51" width="334" height="20"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[]]></text>
+			</staticText>
+			<image>
+				<reportElement x="11" y="14" width="46" height="52"/>
+				<imageExpression><![CDATA[$P{BRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+			<staticText>
+				<reportElement x="78" y="29" width="334" height="20"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA MUNICIPAL DE RIO BRANCO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="425" y="37" width="57" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Usuário:]]></text>
+			</staticText>
+			<textField pattern="h.mm a">
+				<reportElement x="483" y="21" width="59" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="483" y="37" width="59" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{USUARIO}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="35" splitType="Stretch">
+			<staticText>
+				<reportElement x="98" y="0" width="359" height="20"/>
+				<textElement textAlignment="Center">
+					<font isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Relatório de Débitos Calculados de IPTU]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="30" splitType="Stretch">
+			<staticText>
+				<reportElement x="484" y="19" width="70" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Valor Total]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="397" y="1" width="40" height="10"/>
+				<textElement textAlignment="Center">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Setor]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="1" width="78" height="10"/>
+				<textElement>
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Inscrição Cadastral]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="350" y="19" width="67" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Coleta Lixo]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="485" y="10" width="70" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Valor Venal Total]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="307" y="10" width="47" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[V.V.T]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="78" y="1" width="58" height="10"/>
+				<textElement>
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Unidade]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="10" width="150" height="10"/>
+				<textElement>
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Endereço do Imóvel]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="150" y="10" width="83" height="10"/>
+				<textElement textAlignment="Center">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Área Total Construída]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="218" y="19" width="67" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[IPTU]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="372" y="10" width="43" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[V.V.C]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="136" y="1" width="154" height="10"/>
+				<textElement>
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Nome do Proprietário]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="444" y="1" width="45" height="10"/>
+				<textElement textAlignment="Center">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Quadra]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="433" y="10" width="44" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[V.V.Exc]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="419" y="19" width="59" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Ilum. Pública]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="290" y="1" width="65" height="10"/>
+				<textElement>
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="503" y="1" width="47" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Lote]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="233" y="10" width="68" height="10"/>
+				<textElement textAlignment="Center">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Área Construída]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="0" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="29" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="355" y="1" width="42" height="10"/>
+				<textElement textAlignment="Center">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[SubDívida]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="287" y="19" width="61" height="10"/>
+				<textElement textAlignment="Right">
+					<font size="7" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Limp. Publica]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="28" splitType="Stretch">
+			<staticText>
+				<reportElement mode="Opaque" x="0" y="0" width="555" height="28" backcolor="#D7D7D7">
+					<printWhenExpression><![CDATA[$V{COLUMN_COUNT}%2 == 0]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Middle"/>
+				<text><![CDATA[]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="0" y="0" width="78" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{INSCRICAOCADASTRAL}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="78" y="0" width="58" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{UNIDADE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="136" y="0" width="154" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOME_PROPRIETARIO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="290" y="0" width="64" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CPF_CNPJ}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="397" y="0" width="40" height="10"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SETOR}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="496" y="0" width="58" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LOTE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="444" y="0" width="45" height="10"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{QUADRA}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="0" y="9" width="150" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ENDERECO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;-#,##0.00">
+				<reportElement x="150" y="9" width="83" height="10"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AREA_CONSTRUIDA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;-#,##0.00">
+				<reportElement x="233" y="9" width="68" height="10"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AREA_CONSTRUIDA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="301" y="9" width="53" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_VENAL_TERRENO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="362" y="9" width="53" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_VENAL_CONSTRUCAO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="485" y="9" width="70" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_VENAL_IMOVEL}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="424" y="9" width="53" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_VENAL_EXCEDENTE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="219" y="18" width="66" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{IPTU}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="350" y="18" width="67" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{COLETALIXO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="417" y="18" width="61" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ILUMINACAOPUBLICA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="482" y="18" width="71" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_TOTAL}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="355" y="0" width="42" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SUBDIVIDA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="287" y="18" width="61" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LIMPEZAPUBLICA}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="22" splitType="Stretch">
+			<textField evaluationTime="Report">
+				<reportElement x="542" y="7" width="11" height="15"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="437" y="7" width="105" height="15"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de "]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="121" splitType="Stretch">
+			<textField pattern="R$ #,##0.00">
+				<reportElement x="105" y="33" width="100" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{COLETA_LIXO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00">
+				<reportElement x="105" y="43" width="100" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{ILUM.PUBLICA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00">
+				<reportElement x="105" y="23" width="100" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{IPTU}]]></textFieldExpression>
+			</textField>
+			<textField pattern="R$ #,##0.00">
+				<reportElement x="105" y="67" width="100" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{TOTAL}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="4" y="23" width="100" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[IPTU:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="43" width="100" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Iluminação Pública:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="67" width="100" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Total Geral:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="33" width="100" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Coleta de Lixo:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="8" width="100" height="12"/>
+				<textElement>
+					<font size="8" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Taxa]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="105" y="8" width="100" height="12"/>
+				<textElement textAlignment="Right">
+					<font size="8" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Valor]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="206" y="23" width="86" height="11"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{QTD_IPTU}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="206" y="33" width="86" height="11"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{QTD_COLETA_LIXO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="206" y="43" width="86" height="11"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{QTD_ILUMI_PUB}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="216" y="8" width="86" height="12"/>
+				<textElement textAlignment="Right">
+					<font size="8" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Qtde de Ocorrências]]></text>
+			</staticText>
+			<line>
+				<reportElement x="4" y="65" width="201" height="1"/>
+			</line>
+			<textField>
+				<reportElement x="106" y="81" width="60" height="18"/>
+				<textElement verticalAlignment="Middle">
+					<font isBold="true" isUnderline="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{REPORT_COUNT}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="3" y="81" width="101" height="18"/>
+				<textElement verticalAlignment="Middle">
+					<font isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Total de Registros:]]></text>
+			</staticText>
+			<textField pattern="R$ #,##0.00">
+				<reportElement x="105" y="53" width="100" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{LIMP.PUBLICA}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="4" y="53" width="100" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Limpeza Pública:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="206" y="53" width="86" height="11"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{QTD_LIMP_PUBLICA}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="0" y="9" width="304" height="90"/>
+				<box>
+					<pen lineWidth="0.75"/>
+					<topPen lineWidth="0.75"/>
+					<leftPen lineWidth="0.75"/>
+					<bottomPen lineWidth="0.75"/>
+					<rightPen lineWidth="0.75"/>
+				</box>
+				<textElement/>
+				<text><![CDATA[]]></text>
+			</staticText>
+		</band>
+	</summary>
+	<noData>
+		<band height="133">
+			<rectangle>
+				<reportElement x="1" y="0" width="554" height="79"/>
+			</rectangle>
+			<staticText>
+				<reportElement x="426" y="21" width="57" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Hora:]]></text>
+			</staticText>
+			<textField pattern="dd/MM/yyyy">
+				<reportElement x="484" y="5" width="59" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="426" y="5" width="57" height="16"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Data:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="79" y="7" width="334" height="20"/>
+				<textElement>
+					<font size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[ESTADO DO ACRE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="79" y="51" width="334" height="20"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[]]></text>
+			</staticText>
+			<image>
+				<reportElement x="12" y="14" width="46" height="52"/>
+				<imageExpression><![CDATA[$P{BRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+			<staticText>
+				<reportElement x="79" y="29" width="334" height="20"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA MUNICIPAL DE RIO BRANCO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="426" y="37" width="57" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Usuário:]]></text>
+			</staticText>
+			<textField pattern="h.mm a">
+				<reportElement x="484" y="21" width="59" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="484" y="37" width="59" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{USUARIO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="98" y="79" width="359" height="20"/>
+				<textElement textAlignment="Center">
+					<font isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Relatório de Débitos Calculados de IPTU]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="94" y="109" width="366" height="20"/>
+				<textElement textAlignment="Center">
+					<font isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Nenhum Registro encontraldo com os Filtros selecionados!]]></text>
+			</staticText>
+		</band>
+	</noData>
+</jasperReport>

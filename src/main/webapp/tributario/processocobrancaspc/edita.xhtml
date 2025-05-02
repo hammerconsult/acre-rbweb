@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="formulario">
+            <fc:cabecalhoPretty id="cpCabecalhoPretty" origem="#{processoCobrancaSPCControlador.caminhoPadrao}/listar/"
+                                controlador="#{processoCobrancaSPCControlador}"/>
+
+            <p:panel id="opGeral" header="Processo de Cobrança pelo SPC">
+                <h:panelGrid columns="6" style="width: 50%">
+                    <h:outputText value="Exercício"/>
+                    <h:outputText value="Código"/>
+                    <h:outputText value="Data"/>
+                    <h:outputText value="Protocolo/Ano"/>
+                    <h:outputText value="Situação"/>
+                    <h:outputText value="Usuário"/>
+                    <p:inputText size="4" value="#{processoCobrancaSPCControlador.selecionado.exercicio}"
+                                 styleClass="campo-bloqueado" readonly="true"/>
+                    <p:inputText id="codigo" size="10"
+                                 value="#{processoCobrancaSPCControlador.selecionado.codigo}"
+                                 styleClass="campo-bloqueado"
+                                 readonly="true"/>
+                    <p:inputText id="data" size="10"
+                                 readonly="true"
+                                 styleClass="campo-bloqueado"
+                                 value="#{processoCobrancaSPCControlador.selecionado.dataLancamento}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </p:inputText>
+                    <p:inputText id="protocolo"
+                                 value="#{processoCobrancaSPCControlador.selecionado.numeroProtocolo}"
+                                 title="Digite o número do protocolo">
+                        <p:ajax event="blur" process="@this"/>
+                    </p:inputText>
+                    <p:inputText value="#{processoCobrancaSPCControlador.selecionado.situacao.descricao}"
+                                 styleClass="azulnegrito"
+                                 readonly="true"/>
+                    <p:inputText value="#{processoCobrancaSPCControlador.selecionado.usuarioLancamento.toString()}"
+                                 styleClass="amarelonegrito" readonly="true"/>
+                </h:panelGrid>
+
+                <p:tabView id="tbView">
+                    <p:tab title="Dados do Processo">
+                        <p:outputPanel id="opDadosProcesso">
+                            <h:panelGrid columns="1">
+                                <fc:outputLabelObrigatorio value="Ato Legal"/>
+                                <p:autoComplete id="completeAtoLegal"
+                                                queryDelay="1000"
+                                                maxResults="10"
+                                                forceSelection="true"
+                                                size="88"
+                                                var="atoLegal"
+                                                itemValue="#{atoLegal.id}"
+                                                itemLabel="#{atoLegal}"
+                                                converter="#{atoLegalControlador.converterGenerico}"
+                                                completeMethod="#{atoLegalControlador.completaAtoLegal}"
+                                                value="#{processoCobrancaSPCControlador.selecionado.atoLegal}"
+                                                process="@this"/>
+
+                                <fc:outputLabelObrigatorio value="Motivo ou Fundamentação Legal"/>
+                                <p:inputTextarea id="inputMotivo"
+                                                 value="#{processoCobrancaSPCControlador.selecionado.observacao}"
+                                                 maxlength="3000"
+                                                 autoResize="true"
+                                                 cols="88"
+                                                 counter="display"
+                                                 counterTemplate="{0} caracteres restantes."/>
+                                <h:outputText id="display"/>
+                            </h:panelGrid>
+                            <br/>
+                            <h:panelGrid columns="3">
+                                <fc:outputLabelObrigatorio value="Contribuinte: "/>
+                                <fc:novoAutocompletePessoa id="contribuinte"
+                                                           value="#{processoCobrancaSPCControlador.selecionado.contribuinte}"
+                                                           caminhoAtual="#{processoCobrancaSPCControlador.urlAtual}"
+                                                           mostraBotaoNovo="false"
+                                                           mostraBotaoEdita="false"
+                                                           mostraSituacoes="false"
+                                                           permiteAlterarSituacoes="false"
+                                                           fisica="#{processoCobrancaSPCControlador.permitePessoaFisica()}"
+                                                           juridica="#{processoCobrancaSPCControlador.permitePessoaJuridica()}"
+                                                           situacoesPossiveis="#{processoCobrancaSPCControlador.situacoesPesquisaPessoa}"
+                                                           listenerItemSelect="#{processoCobrancaSPCControlador.alterouContribuinte()}"
+                                                           process="@form"
+                                                           update="@form"
+                                                           size="70"/>
+                                <p:commandButton icon="ui-icon-search"
+                                                 value="Buscar Débitos"
+                                                 actionListener="#{processoCobrancaSPCControlador.abrirBuscaDebitos()}"
+                                                 title="Clique aqui para abrir a busca dos débitos."
+                                                 onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                                 process="@form" update="@form :FormularioDebitos"/>
+                            </h:panelGrid>
+
+                            <p:panel header="Debitos" style="margin-top: 10px;">
+                                <table class="table table-striped mtop10" style="margin-top: 10px;">
+                                    <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th class="column-referencia" title="Referência">Referência</th>
+                                        <th class="column-divida" title="Dívida">Dívida</th>
+                                        <th class="column-valores" style="text-align: left !important;"
+                                            title="Exercício">Exercício</th>
+                                        <th class="column-valores" style="min-width: 30px; text-align: left !important;"
+                                            title="Tipo de Débito²">Tipo de Débito²</th>
+                                        <th class="column-valores" style="text-align: left !important;"
+                                            title="Parcela">Parcela</th>
+                                        <th class="column-valores" style="text-align: left !important;" title="SD">SD</th>
+                                        <th class="column-valores" style="text-align: left !important;"
+                                            title="Vencimento">Vencimento</th>
+                                        <th class="column-valores" style="text-align: right !important;"
+                                            title="Imposto">Imposto</th>
+                                        <th class="column-valores" style="text-align: right !important;; min-width: 70px"
+                                            title="Taxa / M.P.¹">Taxa / M.P.¹</th>
+                                        <th class="column-valores" style="text-align: right !important;" title="Desconto">Desconto</th>
+                                        <th class="column-valores" style="text-align: right !important;" title="Juros">Juros</th>
+                                        <th class="column-valores" style="text-align: right !important;" title="Multa">Multa</th>
+                                        <th class="column-valores" style="text-align: right !important;"
+                                            title="Correção">Correção</th>
+                                        <th class="column-valores" style="text-align: right !important;"
+                                            title="Honorários">Honorários</th>
+                                        <th class="column-valores" style="text-align: right !important;" title="Total">Total</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <c:if test="#{empty processoCobrancaSPCControlador.selecionado.itens}">
+                                        <tr>
+                                            <td colspan="15">Nenhum débito adicionado.</td>
+                                        </tr>
+                                    </c:if>
+                                    <c:if test="#{not empty processoCobrancaSPCControlador.selecionado.itens}">
+                                        <ui:repeat value="#{processoCobrancaSPCControlador.selecionado.itens}" var="item">
+                                        <tr id="parcela#{item.resultadoParcela.idParcela}">
+                                            <td>
+                                                <p:commandButton icon="ui-icon-trash"
+                                                                 actionListener="#{processoCobrancaSPCControlador.excluirItem(item)}"
+                                                                 process="@form" update="@form"
+                                                                 onclick="if (!confirm('Tem certeza que deseja remover esse débito do processo?')) {return false; } else {aguarde.show();}"
+                                                                 oncomplete="aguarde.hide()"/>
+                                            </td>
+                                            <td class="column-referencia">
+                                                <h:outputText value="#{item.resultadoParcela.referencia}" title="#{item.resultadoParcela.referencia}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{item.resultadoParcela.divida}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{item.resultadoParcela.exercicio}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{item.resultadoParcela.siglaTipoDeDebito}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{item.resultadoParcela.parcela}" title="cod. ${item.resultadoParcela.idParcela}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{item.resultadoParcela.sd}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{item.resultadoParcela.vencimentoToString}"/>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorImposto}" title="Imposto">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorTaxa}" title="Taxa">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorDesconto}" title="Desconto">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorJuros}" title="Juros">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorMulta}" title="Multa">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorCorrecao}" title="Correção">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorHonorarios}" title="Honorários">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td style="text-align: right !important;">
+                                                <h:outputText value="#{item.resultadoParcela.valorTotal}" title="Total">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                        </tr>
+                                    </ui:repeat>
+                                    <tr class="negrito">
+                                        <td colspan="8"></td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorImposto}" title="Imposto">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorTaxa}" title="Taxa">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorDesconto}" title="Desconto">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorJuros}" title="Juros">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorMulta}" title="Multa">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorCorrecao}" title="Correção">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorHonorarios}" title="Honorários">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{processoCobrancaSPCControlador.selecionado.valorTotal}" title="Total">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                    </tr>
+                                    </c:if>
+                                    </tbody>
+                                </table>
+                            </p:panel>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Anexo(s)">
+                        <p:outputPanel id="opAnexos">
+                            <fc:filesUploadWP selecionado="#{processoCobrancaSPCControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty id="rpEditar" controlador="#{processoCobrancaSPCControlador}"/>
+        </h:form>
+
+        <p:dialog showEffect="puff"
+                  hideEffect="puff" id="dialog" width="1000" height="400" dynamic="false"
+                  modal="true" widgetVar="dlgDebitos" header="Consulta de Débitos"
+                  resizable="false" closable="false" closeOnEscape="false">
+            <h:form id="FormularioDebitos">
+                <h:panelGrid columns="4">
+                    <h:outputLabel value="Valor: "/>
+                    <fc:inputValorMonetario value="#{processoCobrancaSPCControlador.valorInicial}"/>
+                    <h:outputText value=" à "/>
+                    <fc:inputValorMonetario value="#{processoCobrancaSPCControlador.valorFinal}"/>
+                </h:panelGrid>
+                <br/>
+                <p:commandButton value="Pesquisar Débitos"
+                                 icon="ui-icon-search"
+                                 styleClass="operacao mrig03"
+                                 actionListener="#{processoCobrancaSPCControlador.pesquisarDebitos()}"
+                                 onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                 process="@form" update="@form"
+                />
+                <p:commandButton value="Adicionar Débitos"
+                                 icon="ui-icon-circle-plus"
+                                 styleClass="operacao prioritario mrig03"
+                                 process="@form" update="@form"
+                                 actionListener="#{processoCobrancaSPCControlador.adicionarDebitos()}"
+                />
+                <p:commandButton value="Fechar"
+                                 icon="ui-icon-close"
+                                 styleClass="operacao mrig03"
+                                 onclick="dlgDebitos.hide()"
+                />
+                <p:panel header="Débitos" style="margin-top: 10px;">
+                    <table class="table table-striped mtop10">
+                        <thead>
+                        <tr>
+                            <th style="width: 20px; text-align: center;"></th>
+                            <th class="column-referencia" title="Referência">Referência</th>
+                            <th class="column-divida" title="Dívida">Dívida</th>
+                            <th class="column-valores" style="text-align: left !important;"
+                                title="Exercício">Exercício</th>
+                            <th class="column-valores" style="min-width: 30px; text-align: left !important;"
+                                title="Tipo de Débito²">Tipo de Débito²</th>
+                            <th class="column-valores" style="text-align: left !important;"
+                                title="Parcela">Parcela</th>
+                            <th class="column-valores" style="text-align: left !important;" title="SD">SD</th>
+                            <th class="column-valores" style="text-align: left !important;"
+                                title="Vencimento">Vencimento</th>
+                            <th class="column-valores" style="text-align: right !important;"
+                                title="Imposto">Imposto</th>
+                            <th class="column-valores" style="text-align: right !important;; min-width: 70px"
+                                title="Taxa / M.P.¹">Taxa / M.P.¹</th>
+                            <th class="column-valores" style="text-align: right !important;" title="Desconto">Desconto</th>
+                            <th class="column-valores" style="text-align: right !important;" title="Juros">Juros</th>
+                            <th class="column-valores" style="text-align: right !important;" title="Multa">Multa</th>
+                            <th class="column-valores" style="text-align: right !important;"
+                                title="Correção">Correção</th>
+                            <th class="column-valores" style="text-align: right !important;"
+                                title="Honorários">Honorários</th>
+                            <th class="column-valores" style="text-align: right !important;" title="Total">Total</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <ui:repeat value="#{processoCobrancaSPCControlador.parcelas}" var="parcela">
+                            <tr id="parcela#{parcela.resultadoParcela.idParcela}">
+                                <td style="width: 50px; text-align: center;">
+                                    <p:selectBooleanCheckbox value="#{parcela.selecionado}"
+                                                             disabled="#{!processoCobrancaSPCControlador.isPermitidoSelecionar(parcela)}">
+                                        <p:ajax event="change" onstart="aguarde.show()" onsuccess="aguarde.hide()"
+                                                process="@this" update="@form"/>
+                                    </p:selectBooleanCheckbox>
+                                </td>
+                                <td class="column-referencia">
+                                    <h:outputText value="#{parcela.resultadoParcela.referencia}" title="#{parcela.resultadoParcela.referencia}"/>
+                                </td>
+                                <td>
+                                    <h:outputText value="#{parcela.resultadoParcela.divida}"/>
+                                </td>
+                                <td>
+                                    <h:outputText value="#{parcela.resultadoParcela.exercicio}"/>
+                                </td>
+                                <td>
+                                    <h:outputText value="#{parcela.resultadoParcela.siglaTipoDeDebito}"/>
+                                </td>
+                                <td>
+                                    <h:outputText value="#{parcela.resultadoParcela.parcela}" title="cod. ${parcela.resultadoParcela.idParcela}"/>
+                                </td>
+                                <td>
+                                    <h:outputText value="#{parcela.resultadoParcela.sd}"/>
+                                </td>
+                                <td>
+                                    <h:outputText value="#{parcela.resultadoParcela.vencimentoToString}"/>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorImposto}" title="Imposto">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorTaxa}" title="Taxa">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorDesconto}" title="Desconto">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorJuros}" title="Juros">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorMulta}" title="Multa">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorCorrecao}" title="Correção">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorHonorarios}" title="Honorários">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right !important;">
+                                    <h:outputText value="#{parcela.resultadoParcela.valorTotal}" title="Total">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </ui:repeat>
+                        </tbody>
+                    </table>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

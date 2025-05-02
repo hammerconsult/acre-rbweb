@@ -1,0 +1,5 @@
+ UPDATE BEM SET OBJETOCOMPRA_ID = (SELECT LEV.ITEM_ID
+                                    FROM LEVANTAMENTOBEMPATRIMONIAL LEV
+                                  WHERE BEM.ID = LEV.BEM_ID
+                                  )
+ WHERE EXISTS(SELECT 1 FROM LEVANTAMENTOBEMPATRIMONIAL L WHERE L.BEM_ID = BEM.ID)

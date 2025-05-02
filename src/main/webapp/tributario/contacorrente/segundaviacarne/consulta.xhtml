@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+    <ui:composition template="/corpo.xhtml">
+        <ui:define name="body">
+            <p:dialog modal="true" position="350,200" widgetVar="statusDialog" header="Pesquisando ...."   
+                      draggable="false" closable="false" resizable="false">  
+                <p:graphicImage value="/img/ajaxloadingbar.gif" />  
+            </p:dialog> 
+            <h:form id="Formulario">
+                <p:messages id="messages" showDetail="true" showSummary="true"/>
+                <p:panel header="Emissão de 2ª Via de Carnê" id="primeiro">
+                    <p:panel id="segundo">     
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Dívida"/>
+                            <p:autoComplete queryDelay="1000"
+                                id="divida"
+                                value="#{segundaViaCarneControlador.divida}"
+                                completeMethod="#{segundaViaCarneControlador.completaDivida}"
+                                var="divida"
+                                itemLabel="#{divida.descricao}"
+                                itemValue="#{divida.id}"
+                                size="40"
+                                converter="#{segundaViaCarneControlador.converterDivida}"
+                                title="Informe ou selecione a Dívida">
+                                <p:ajax event="itemSelect" update="@form" />
+                            </p:autoComplete>
+                            <h:outputText value="Exercício"/>
+                            <p:autoComplete queryDelay="1000"
+                                id="exercicio"
+                                value="#{segundaViaCarneControlador.exercicio}"
+                                completeMethod="#{segundaViaCarneControlador.completaExercicio}"
+                                var="exercicio"
+                                itemLabel="#{exercicio.ano}"
+                                itemValue="#{exercicio.id}"
+                                size="30"
+                                converter="#{segundaViaCarneControlador.converterExercicio}"
+                                title="Informe ou selecione o Exercício">
+                                <p:ajax event="itemSelect" update="@form" />
+                            </p:autoComplete>
+                           <h:outputText value="Tipo de Cadastro"/>
+                            <h:selectOneMenu value="#{segundaViaCarneControlador.tipoCadastro}">
+                                <f:selectItems value="#{segundaViaCarneControlador.tiposCadastros}"/>
+                                <p:ajax update="@form" event="change" listener="#{segundaViaCarneControlador.limpaCadastro}"/>
+                            </h:selectOneMenu>
+                            <h:outputText value="Cadastro"/>
+                            <fc:pesquisaCadastroImobiliario id="pesquisaCadastroIm"
+                                                            cadastro="#{segundaViaCarneControlador.cadastro}"
+                                                            mostrarDetalhesCadastro="false"
+                                                            mostrarLabelAutoComplete="false"  
+                                                            rendered="#{segundaViaCarneControlador.tipoCadastro eq 'IMOBILIARIO'}"
+                                                            size="70"/>
+                            <fc:pesquisaCadastroEconomico cadastro="#{segundaViaCarneControlador.cadastro}"
+                                                          id="pesquisaCadastro"
+                                                          rendered="#{segundaViaCarneControlador.tipoCadastro eq 'ECONOMICO'}"
+                                                          size="70"/>
+                            <fc:pesquisaCadastroRural cadastro="#{segundaViaCarneControlador.cadastro}"
+                                                      rendered="#{segundaViaCarneControlador.tipoCadastro eq 'RURAL'}"
+                                                      id="pesquisaCadastroRur" 
+                                                      size="70"/>                        
+                            <p:autoComplete queryDelay="1000"
+                                id="pesquisaCadastroRen"
+                                rendered="#{segundaViaCarneControlador.tipoCadastro eq 'PESSOA'}"
+                                value="#{segundaViaCarneControlador.cadastro}"
+                                completeMethod="#{segundaViaCarneControlador.completaContratolRendasPatrimonial}"
+                                var="contratoRendas"
+                                itemLabel="#{contratoRendas.numeroContrato} - #{contratoRendas.locatario.nome}"
+                                itemValue="#{contratoRendas.id}"
+                                size="40"
+                                converter="#{segundaViaCarneControlador.converterContratoRendasPatrimoniais}"
+                                title="Informe ou selecione o Contrato de Renda Patrimonial">
+                                <p:ajax event="itemSelect" update="@form" />
+                            </p:autoComplete>
+                            <p:commandButton id="botaoInfo" icon="ui-icon-info"
+                                             disabled="#{segundaViaCarneControlador.cadastro == null}"
+                                             oncomplete="cadastros.show()"
+                                             update=":formCadastros"
+                                             title="Informações para o cadastro selecionado!"
+                                             />
+                        </h:panelGrid>
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio value="Somente Parcelas do Exercício Selecionado: " for=""/>
+                            <p:selectBooleanCheckbox value="#{segundaViaCarneControlador.somenteParcExercCorrente}"/>
+                        </h:panelGrid>
+                        <br/>
+                        <h:panelGrid columns="3">
+                            <p:commandButton value="Pesquisar" 
+                                             icon="ui-icon-search" 
+                                             actionListener="#{segundaViaCarneControlador.iniciaBusca()}" 
+                                             onstart="statusDialog.show()"
+                                             oncomplete="statusDialog.hide()"
+                                             update="@form"/>&nbsp;
+                            <p:commandButton value="Limpar Dados" 
+                                             icon="ui-icon-document" 
+                                             actionListener="#{segundaViaCarneControlador.novo()}" ajax="false"/>
+                        </h:panelGrid>
+                    </p:panel>
+                    <br/>
+                    <p:separator/>
+                    <br/>
+                    <p:dataTable id="tabelaConsultas"  var="valordivida"
+                                 widgetVar="tabela" emptyMessage="Nenhum débito encontrado"
+                                 value="#{segundaViaCarneControlador.lista}"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'even-row' : 'odd-row'}" 
+                                 rowIndexVar="rowIx" 
+                                 >
+                        <f:facet name="header">
+                            <p:outputPanel>
+                                <h:outputText value="Busca: " />
+                                <h:inputText id="globalFilter" onkeyup="tabela.filter()" size="70"/>
+                            </p:outputPanel>
+                        </f:facet>
+                        <f:facet name="footer">
+                            <p:outputPanel style="text-align: center !important" rendered="#{segundaViaCarneControlador.lista.size() eq 0}">
+                                <div class="ui-messages-warn ui-corner-all textomedio">
+                                    <div class="ui-messages-warn-icon margem-direita-cinco-pixels"/>
+                                    <h:outputText value="Atenção! " styleClass="ui-messages-warn-summary"/>
+                                    <h:outputText value="Caso a pesquisa não dê resultado faça uma consulta de débitos para verificar débitos em atraso" styleClass="ui-messages-warn-detail"/>
+                                </div>
+                            </p:outputPanel>
+                        </f:facet>
+                        <p:column headerText="Cadastro">
+                            <h:outputText value="#{segundaViaCarneControlador.retornaNumeroCadastro(valordivida)}"/>
+                        </p:column>
+                        <p:column headerText="Tipo de Cadastro">
+                            <h:outputText value="#{valordivida.divida.tipoCadastro.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Dívida">
+                            <h:outputText value="#{valordivida.divida.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Exercício">
+                            <h:outputText value="#{valordivida.exercicio.ano}"/>
+                        </p:column>
+                        <p:column headerText="Data">
+                            <h:outputText value="#{valordivida.emissao}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor (UFM)">
+                            <h:outputText value="#{converterRealUfm.converterToUFMVigente(valordivida.valor)}" >
+                                <f:convertNumber pattern="###,##0.0000" />
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor (R$)">
+                            <h:outputText value="#{valordivida.valor}" >
+                                <f:convertNumber pattern="###,##0.00" />
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Imprimir" style="text-align: center;">
+                            <p:commandButton icon="ui-icon-print"  title="Clique para imprimir o DAM" oncomplete="dialogo.show()" update=":formDialogo" styleClass="icone_azul" actionListener="#{segundaViaCarneControlador.selecionaValorDivida(valordivida)}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+                <br/>
+
+            </h:form>
+            <p:dialog modal="true" showEffect="puff" hideEffect="puff" widgetVar="dialogo" id="ddialogo" width="700">
+                <h:form id="formDialogo">
+                    <h:outputText id="mensagem" value="#{segundaViaCarneControlador.mensagemCarne}"/>
+                    <h:panelGrid columns="2">
+                        <p:commandButton icon="ui-icon-print" value="Imprimir" styleClass="icone_azul" ajax="false" actionListener="#{segundaViaCarneControlador.imprimeCarne()}"/>
+                        <p:commandButton icon="ui-icon-cancel" value="Cancelar" styleClass="icone_vermelho" onclick="dialogo.hide()"/>
+                    </h:panelGrid>
+                </h:form>
+            </p:dialog>
+            <p:dialog id="dlgCadastros" widgetVar="cadastros" modal="true" width="1000" header="detalhes">
+                <h:form id="formCadastros">
+                    <c:if test="#{segundaViaCarneControlador.tipoCadastro eq 'ECONOMICO'}">
+                        <h:panelGrid style="width: 100%">
+                            <h:outputText value="CADASTRO ECONOMICO" styleClass="azulnegrito"/>
+                            <p:separator/>
+                            <h:panelGrid columns="2">
+                                <h:outputText value="C.M.C.: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.inscricaoCadastral}"/>
+                                <h:outputText value="Razão Social: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.pessoa.nome}"/>
+                                <h:outputText value="CNPJ: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.pessoa.cpf_Cnpj}"/>
+                                <h:outputText value="Situação: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.situacaoCadastroEconomico.situacaoCadastral}"/>
+                            </h:panelGrid>
+
+                        </h:panelGrid>
+                    </c:if>
+                    <c:if test="#{segundaViaCarneControlador.tipoCadastro eq 'IMOBILIARIO'}">
+                        <h:panelGrid style="width: 100%">
+                            <h:outputText value="CADASTRO IMOBILIÁRIO" styleClass="azulnegrito"/>
+                            <p:separator/>
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Inscrição Cadastral: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.inscricaoCadastral}"/>
+                                <h:outputText value="Logradouro: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.testadaPrincipal.face.logradouro}"/>
+                                <h:outputText value="Complemento: " styleClass="negrito" />
+                                <h:outputText value="#{autoCompleteCadastrosControlador.cadastro.lote.complemento}"/>
+                                <h:outputText value="Bairro: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.testadaPrincipal.face.logradouro.bairro.descricao}"/>
+                                <h:outputText value="Loteamento: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.lote.descricaoLoteamento}"/>
+                                <h:outputText value="Quadra: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.lote.quadra.descricao}"/>
+                                <h:outputText value="Lote: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.lote.codigoLote}"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+                    </c:if>
+                    <c:if test="#{segundaViaCarneControlador.tipoCadastro eq 'RURAL'}">
+                        <h:panelGrid style="width: 100%">
+                            <h:outputText value="CADASTRO RURAL" styleClass="azulnegrito"/>
+                            <p:separator/>
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Código: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControladorcadastro.codigo}"/>
+                                <h:outputText value="Nome da Propriedade: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.nomePropriedade}"/>
+                                <h:outputText value="Localização: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.localizacaoLote}"/>
+                                <h:outputText value="Área: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.areaLote}"/>
+                                <h:outputText value="Tipo de Área: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.tipoAreaRural}"/>
+                                <h:outputText value="INCRA: " styleClass="negrito"/>
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.numeroIncra}"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </c:if>
+                    <c:if test="{segundaViaCarneControlador.tipoCadastro eq 'PESSOA'}">
+                        <h:panelGrid  style="width: 100%">
+                            <h:outputText value="RENDA PATRIMONIAL" styleClass="azulnegrito"/>
+                            <p:separator/>
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Número Contrato: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.numeroContrato}"/>
+                                <h:outputText value="Localização: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.pontoComercial.localizacao.descricao}"/>
+                                <h:outputText value="Ponto Comercial: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.pontoComercial.numeroBox}"/>
+                                <h:outputText value="Locatário: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.locatario.nome}"/>
+                                <h:outputText value="CPF/CNPJ: " styleClass="negrito" />
+                                <h:outputText value="#{segundaViaCarneControlador.cadastro.locatario.cpf_Cnpj}"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </c:if>
+                    <p:dataTable 
+                        value="#{segundaViaCarneControlador.recuperaPessoasCadastro()}"
+                        var="pessoaCad"
+                        emptyMessage="Nenhuma pessoa encontrada no cadastro selecionado!">
+                        <f:facet name="header">
+                            <h:outputText value="#{segundaViaCarneControlador.tipoCadastro eq 'ECONOMICO' ? 'Sócios' : 'Proprietários'}"/>
+
+                        </f:facet>
+                        <p:column headerText="Nome">
+                            <h:outputText value="#{pessoaCad.nome}"/>
+                        </p:column>
+                        <p:column headerText="CPF/CNPJ">
+                            <h:outputText value="#{pessoaCad.cpf_Cnpj}"/>
+                        </p:column>
+                        <p:column headerText="Tipo de Pessoa">
+                            <h:outputText value="#{pessoaCad.tipoPessoa}"/>
+                        </p:column>
+                    </p:dataTable>
+                </h:form>
+            </p:dialog>
+        </ui:define>
+    </ui:composition>
+</html>

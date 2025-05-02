@@ -1,0 +1,1782 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <link rel="stylesheet"
+              href="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/codemirror.css"/>
+        <script type="text/javascript"
+                src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/codemirror.js"/>
+        <script type="text/javascript"
+                src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/util/simple-hint.js"/>
+        <link rel="stylesheet"
+              href="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/util/simple-hint.css"/>
+        <script type="text/javascript"
+                src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/util/javascript-hint.js"/>
+        <script type="text/javascript"
+                src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/mode/javascript/javascript.js"/>
+        <style type="text/css">
+            .CodeMirror-scroll {
+                height: 50%
+            }
+        </style>
+
+        <script type="text/javascript">
+            var timer;
+
+            function iniciarImportacao() {
+                dialogProgressBar.show();
+                timer = setInterval(function () {
+                    verificarImportacao();
+                }, 1000);
+            }
+
+            function terminarImportacao() {
+                clearInterval(timer);
+                dialogProgressBar.hide();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="verificarImportacao"
+                             process="@this"
+                             update=":formDialogProgressBar"
+                             actionListener="#{consultaOcorrenciasReinfControlador.finalizarImportacao}"/>
+
+            <p:panel header="Painel EFD-Reinf" id="panelEventos">
+                <h:panelGrid columns="3">
+                    <fc:outputLabelObrigatorio value="Empregador:"/>
+                    <h:selectOneMenu
+                        value="#{consultaOcorrenciasReinfControlador.selecionado.empregador}"
+                        converter="#{entidadeControlador.converterGenerico}">
+                        <f:selectItems
+                            value="#{consultaOcorrenciasReinfControlador.empregadores}"/>
+                        <p:ajax process="@form"
+                                event="change"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{consultaOcorrenciasReinfControlador.buscarUnidadesEmpregador}"/>
+                    </h:selectOneMenu>
+                    <p:commandButton
+                        icon="ui-icon-info"
+                        oncomplete="dialogVisualizarEmpregador.show();"
+                        update=":formDialogEmpregador"
+                        process="@this"
+                        styleClass="vinteLarguraVinteAltura icone_branco botao_verde">
+                    </p:commandButton>
+
+                    <p:selectBooleanCheckbox
+                        styleClass="mrig05 mtop10"
+                        value="#{consultaOcorrenciasReinfControlador.selecionado.utilizarVersao2_1}"
+                        itemLabel="Utilizar versão 2.1.2">
+                        <p:ajax event="change" update=":Formulario" process="@this"/>
+                    </p:selectBooleanCheckbox>
+
+                </h:panelGrid>
+                <p:tabView id="tabViewEnvioEventos" styleClass="mtop20">
+                    <p:tab title="Envio de Eventos" id="tabEnvio">
+
+
+                        <p:selectBooleanCheckbox
+                            styleClass="mrig05 mtop10"
+                            value="#{consultaOcorrenciasReinfControlador.selecionado.apenasNaoEnviados}"
+                            itemLabel="Buscar apenas não enviados">
+                            <p:ajax event="change" update=":Formulario" process="@this"/>
+                        </p:selectBooleanCheckbox>
+
+                        <div class="alert alert-info" align="center">
+                            <Strong>Atenção!</Strong>
+                            <br/> Marcando essa opção serão buscados apenas registros que ainda não foram enviados para o EFD-REINF.
+                        </div>
+
+                        <p:tabView id="tabEventosEnvio">
+                            <p:tab title="R-1000">
+
+                                <p:selectBooleanCheckbox
+                                    styleClass="mrig05 mtop10"
+                                    value="#{consultaOcorrenciasReinfControlador.selecionado.exclusaoR1000}"
+                                    itemLabel="Exclusão do evento R1000?">
+                                    <p:ajax event="change" update=":Formulario" process="@this"/>
+                                </p:selectBooleanCheckbox>
+
+                                <h:panelGrid columns="3">
+                                    <p:commandButton value="Buscar"
+                                                     style="min-height: 30px;"
+                                                     styleClass="mrig05 mtop10 prioritario"
+                                                     icon="ui-icon-esocial"
+                                                     update=":Formulario"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para buscar evento R-1000 para o ESocial"
+                                                     actionListener="#{consultaOcorrenciasReinfControlador.buscarR1000()}"/>
+
+                                    <p:commandButton value="Enviar"
+                                                     style="min-height: 30px;"
+                                                     styleClass="mrig05 mtop10"
+                                                     icon="ui-icon-esocial"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para buscar evento S-1000 para o ESocial"
+                                                     actionListener="#{consultaOcorrenciasReinfControlador.enviarR1000()}"
+                                                     onclick="if (!confirm('Deseja enviar o evento R-1000 para o sistema do governo federal?'))
+                                     return false;"/>
+
+                                </h:panelGrid>
+
+                                <div class="alert alert-info" align="center">
+                                    <Strong>Atenção!</Strong>
+                                    <br/> Serão enviados os contribuintes que possui representante do REINF.
+                                </div>
+                                <p:scrollPanel id="panelRelacionamentos" mode="native" style="max-height: 600px">
+                                    <p:dataTable paginator="true"
+                                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                 rowIndexVar="rowIx"
+                                                 styleClass="mtop05"
+                                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                                 value="#{consultaOcorrenciasReinfControlador.selecionado.itemEmpregadorR1000}"
+                                                 rows="10"
+                                                 id="tabela-busca-eventos-s1000"
+                                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>R-1000&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                 rowsPerPageTemplate="10,25,50,100"
+                                                 var="config">
+                                        <p:column headerText="Nome"
+                                                  styleClass="alinhamentoEsquerda"
+                                                  filterBy="#{config.entidade.nome}"
+                                                  filterMatchMode="contains">
+                                            <h:outputText value="#{config.entidade.nome}"
+                                                          styleClass="preformatted-fonte-padrao"/>
+                                        </p:column>
+                                        <p:column headerText="Cpf/Cnpj" styleClass="alinhamentoEsquerda"
+                                                  filterBy="#{config.entidade.pessoaJuridica.cnpj}"
+                                                  filterMatchMode="contains">
+                                            <h:outputText value="#{config.entidade.pessoaJuridica.cnpj}"
+                                                          styleClass="preformatted-fonte-padrao"/>
+                                        </p:column>
+                                        <p:column headerText="Responsável" styleClass="alinhamentoEsquerda"
+                                                  filterBy="#{config.responsavel.nomeCpfCnpj}"
+                                                  filterMatchMode="contains">
+                                            <h:outputText value="#{config.responsavel.nomeCpfCnpj}"
+                                                          styleClass="preformatted-fonte-padrao"/>
+                                        </p:column>
+                                        <p:column headerText="Endereço"
+                                                  styleClass="alinhamentoEsquerda"
+                                                  filterBy="#{config.entidade.pessoaJuridica.enderecoPrincipal}"
+                                                  filterMatchMode="contains">
+                                            <h:outputText value="#{config.entidade.pessoaJuridica.enderecoPrincipal}"
+                                                          styleClass="preformatted-fonte-padrao"/>
+                                        </p:column>
+
+                                    </p:dataTable>
+                                </p:scrollPanel>
+                            </p:tab>
+
+                            <p:tab title="R-1070">
+                                <p:outputPanel id="panelR1070">
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Buscar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR1070"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR1070"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-1070 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR1070()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento S-1070 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR1070()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-1000 para o sistema do governo federal?'))
+                                     return false;"/>
+
+                                    </h:panelGrid>
+
+                                    <div class="alert alert-info" align="center">
+                                        <Strong>Atenção!</Strong>
+                                        <br/> Serão enviados os processo cujo o tipo de integração seja REINF.
+                                    </div>
+                                    <p:scrollPanel mode="native" style="max-height: 600px">
+                                        <p:dataTable paginator="true"
+                                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                     rowIndexVar="rowIx"
+                                                     styleClass="mtop05"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.itemEmpregadorR1070}"
+                                                     rows="10"
+                                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>R-1070&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                     rowsPerPageTemplate="10,25,50,100"
+                                                     var="processo">
+                                            <p:column headerText="Autor"
+                                                      styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{processo.autorRequerente.nome}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{processo.autorRequerente.nome}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Cpf/Cnpj" styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{processo.autorRequerente.cpf_Cnpj}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{processo.autorRequerente.cpf_Cnpj}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Tipo do processo" styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{processo.tipoProcesso.descricao}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{processo.tipoProcesso.descricao}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Número do processo"
+                                                      styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{processo.numeroProcesso}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{processo.numeroProcesso}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+
+                                        </p:dataTable>
+                                    </p:scrollPanel>
+                                </p:outputPanel>
+                            </p:tab>
+
+                            <p:tab title="R-2010">
+                                <p:outputPanel id="panelR2010">
+                                    <h:panelGrid columns="2">
+
+                                        <fc:outputLabelObrigatorio value="Mês:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.mes}">
+                                            <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Ano:"/>
+                                        <p:inputMask mask="9999"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.exercicio}"
+                                                     converter="#{exercicioControlador.converterExercicio}" size="10">
+                                            <p:ajax process="@this" ev="blur"/>
+                                        </p:inputMask>
+
+                                        <h:outputText value="Quantidade enviada:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.quantidadeJaEnviadasR2010}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Quantidade selecionada:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.quantidadeR2010}"
+                                            styleClass="negrito"/>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Buscar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2010"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2010"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-1070 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR2010()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento S-1070 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR2010()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-2010 para o sistema do governo federal?')) return false;"/>
+
+                                        <co:botao_informacao
+                                            styleClass="mtop10"
+                                            titulo_negrito="Informações ao buscar R-2010"
+                                            descricao="-Utiliza a data de emissão das notas para recuperar os registros."/>
+                                    </h:panelGrid>
+                                    <div class="alert alert-info" align="center">
+                                        <Strong>Atenção!</Strong>
+                                        <br/> Serão enviados os eventos cujo o Prestador não esteja destacado em vermelho e valor líquido seja maior que 0 (ZERO).
+                                    </div>
+
+                                    <p:scrollPanel mode="native" style="max-height: 600px" id="scrollPanelR2010">
+                                        <co:legenda-envio-reinf/>
+                                        <p:dataTable paginator="true"
+                                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                     rowIndexVar="rowIx"
+                                                     styleClass="mtop05"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.itemEmpregadorR2010}"
+                                                     rows="10"
+                                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>R-2010&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                     rowsPerPageTemplate="10,25,50,100"
+                                                     var="registroR2010">
+                                            <p:column headerText="Detalhes" style="text-align: center; width: 6%">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Enviar" style="text-align: center; width: 6%">
+                                                <h:selectBooleanCheckbox
+                                                    disabled="#{registroR2010.isDesabilitaEnviar()}"
+                                                    styleClass="botao-transparente trintaAltura"
+                                                    value="#{registroR2010.marcarPraEnviar}">
+                                                    <p:ajax event="valueChange"
+                                                            onstart="aguarde.show()"
+                                                            oncomplete="aguarde.hide()"
+                                                            process="@this"
+                                                            update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2010"/>
+                                                </h:selectBooleanCheckbox>
+                                            </p:column>
+                                            <p:column headerText="Visualizar" styleClass="alinhamentoCentralizado">
+                                                <p:commandButton
+                                                    icon="ui-icon-search"
+                                                    oncomplete="dialogVisualizarR2010.show();"
+                                                    update=":formDialogR2010"
+                                                    process="@this"
+                                                    styleClass="vinteLarguraVinteAltura icone_branco botao_verde"
+                                                    actionListener="#{consultaOcorrenciasReinfControlador.setRegistroEventoRetencaoReinf(registroR2010)}">
+                                                </p:commandButton>
+                                            </p:column>
+                                            <p:column headerText="Prestador de Serviço"
+                                                      styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{registroR2010.pessoa.nome}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{registroR2010.pessoa.nome}"
+                                                              styleClass="#{registroR2010.styleTitulo}"/>
+                                            </p:column>
+                                            <p:column headerText="Cnpj" styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{registroR2010.pessoa.cpf_Cnpj}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{registroR2010.pessoa.cpf_Cnpj}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Bruto" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2010.valorTotalBruto}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Retenções" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2010.valorTotalRetencao}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Líquido" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2010.valorTotalLiquido}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Base de Cálculo"
+                                                      styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2010.valorTotalBaseCalculo}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Qtd de Notas" styleClass="alinhamentoCentralizado">
+                                                <h:outputText value="#{registroR2010.notas.size()}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Qtd de Retenções"
+                                                      styleClass="alinhamentoCentralizado">
+                                                <h:outputText value="#{registroR2010.receitas.size()}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+
+                                            <p:rowExpansion>
+                                                <div class="#{registroR2010.styleMensagem}">
+                                                    <strong>#{registroR2010.tituloMensagem} </strong><br/>
+                                                    <h:outputText value="#{registroR2010.mensagem}" escape="false"/>
+                                                </div>
+                                                <p:outputPanel styleClass="mtop10"
+                                                               rendered="#{!registroR2010.isValidoTodasNotas()}">
+                                                    <div class="alert alert-danger" align="center">
+                                                        <Strong>Atenção!</Strong>
+                                                        <br/> #{registroR2010.stringMensagemNotasInvalidas}
+                                                    </div>
+                                                </p:outputPanel>
+                                            </p:rowExpansion>
+                                        </p:dataTable>
+                                    </p:scrollPanel>
+                                </p:outputPanel>
+                            </p:tab>
+
+                            <p:tab title="R-2020">
+                                <p:outputPanel id="panelR2020">
+                                    <h:panelGrid columns="2">
+
+                                        <fc:outputLabelObrigatorio value="Mês:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.mes}">
+                                            <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Ano:"/>
+                                        <p:inputMask mask="9999"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.exercicio}"
+                                                     converter="#{exercicioControlador.converterExercicio}" size="10">
+                                            <p:ajax process="@this" ev="blur"/>
+                                        </p:inputMask>
+
+                                        <h:outputText value="Quantidade enviada:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.quantidadeJaEnviadasR2020}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Quantidade selecionada:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.quantidadeR2020}"
+                                            styleClass="negrito"/>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Buscar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2020"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2020"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-2020 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR2020()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento S-1070 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR2020()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-2020 para o sistema do governo federal?'))
+                                     return false;"/>
+
+                                    </h:panelGrid>
+                                    <div class="alert alert-info" align="center">
+                                        <Strong>Atenção!</Strong>
+                                        <br/> Serão enviados os eventos cujo o Tomador não esteja destacado em vermelho e valor líquido seja maior que 0 (ZERO).
+                                    </div>
+
+                                    <p:scrollPanel mode="native" style="max-height: 600px">
+                                        <p:dataTable paginator="true"
+                                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                     rowIndexVar="rowIx"
+                                                     styleClass="mtop05"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.itemEmpregadorR2020}"
+                                                     rows="10"
+                                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>R-2020&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                     rowsPerPageTemplate="10,25,50,100"
+                                                     var="registroR2020">
+                                            <p:column headerText="Detalhes" style="text-align: center; width: 6%">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Enviar" style="text-align: center; width: 6%">
+                                                <h:selectBooleanCheckbox
+                                                    disabled="#{registroR2020.isDesabilitaEnviar()}"
+                                                    styleClass="botao-transparente trintaAltura"
+                                                    value="#{registroR2020.marcarPraEnviar}">
+                                                    <p:ajax event="valueChange"
+                                                            onstart="aguarde.show()"
+                                                            oncomplete="aguarde.hide()"
+                                                            process="@this"
+                                                            update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2020"/>
+                                                </h:selectBooleanCheckbox>
+                                            </p:column>
+                                            <p:column headerText="Visualizar" styleClass="alinhamentoCentralizado">
+                                                <p:commandButton
+                                                    icon="ui-icon-search"
+                                                    oncomplete="dialogVisualizarR2010.show();"
+                                                    update=":formDialogR2010"
+                                                    process="@this"
+                                                    styleClass="vinteLarguraVinteAltura icone_branco botao_verde"
+                                                    actionListener="#{consultaOcorrenciasReinfControlador.setRegistroEventoRetencaoReinf(registroR2020)}">
+                                                </p:commandButton>
+                                            </p:column>
+                                            <p:column headerText="Tomador de Serviço"
+                                                      styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{registroR2020.pessoa.nome}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{registroR2020.pessoa.nome}"
+                                                              styleClass="#{registroR2020.styleTitulo}"/>
+                                            </p:column>
+                                            <p:column headerText="Cnpj" styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{registroR2020.pessoa.cpf_Cnpj}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{registroR2020.pessoa.cpf_Cnpj}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Bruto" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2020.valorTotalBruto}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Retenções" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2020.valorTotalRetencao}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Líquido" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2020.valorTotalLiquido}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Base de Cálculo"
+                                                      styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR2020.valorTotalBaseCalculo}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Qtd de Notas" styleClass="alinhamentoCentralizado">
+                                                <h:outputText value="#{registroR2020.notas.size()}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Qtd de Retenções"
+                                                      styleClass="alinhamentoCentralizado">
+                                                <h:outputText value="#{registroR2020.receitas.size()}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+
+                                            <p:rowExpansion>
+                                                <div class="#{registroR2020.styleMensagem}">
+                                                    <strong>#{registroR2020.tituloMensagem} </strong><br/>
+                                                    <h:outputText value="#{registroR2020.mensagem}" escape="false"/>
+                                                </div>
+                                                <p:outputPanel styleClass="mtop10"
+                                                               rendered="#{!registroR2020.isValidoTodasNotas()}">
+                                                    <div class="alert alert-danger" align="center">
+                                                        <Strong>Atenção!</Strong>
+                                                        <br/> #{registroR2020.stringMensagemNotasInvalidas}
+                                                    </div>
+                                                </p:outputPanel>
+                                            </p:rowExpansion>
+                                        </p:dataTable>
+                                    </p:scrollPanel>
+                                </p:outputPanel>
+                            </p:tab>
+
+                            <p:tab title="R-2098 (Abertura)">
+                                <p:outputPanel id="panelR2098">
+                                    <h:panelGrid columns="2">
+
+                                        <fc:outputLabelObrigatorio value="Mês:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.mes}">
+                                            <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Ano:"/>
+                                        <p:inputMask mask="9999"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.exercicio}"
+                                                     converter="#{exercicioControlador.converterExercicio}" size="10">
+                                            <p:ajax process="@this" ev="blur"/>
+                                        </p:inputMask>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Buscar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2098"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2098"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-2098 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR2098()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento S-2098 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR2098()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-2098 para o sistema do governo federal?'))
+                                     return false;"/>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="2">
+
+                                        <h:outputText value="Evento:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR2098}"/>
+
+                                    </h:panelGrid>
+                                </p:outputPanel>
+                            </p:tab>
+
+                            <p:tab title="R-2099 (Fechamento)">
+                                <p:outputPanel id="panelR2099">
+                                    <h:panelGrid columns="2">
+
+                                        <fc:outputLabelObrigatorio value="Mês:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.mes}">
+                                            <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Ano:"/>
+                                        <p:inputMask mask="9999"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.exercicio}"
+                                                     converter="#{exercicioControlador.converterExercicio}" size="10">
+                                            <p:ajax process="@this" ev="blur"/>
+                                        </p:inputMask>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Buscar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2099"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2099"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-2099 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR2099()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento S-2099 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR2099()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-2099 para o sistema do governo federal?'))
+                                     return false;"/>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="2">
+
+                                        <h:outputText value="Evento:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR2099}"/>
+
+                                    </h:panelGrid>
+                                </p:outputPanel>
+                            </p:tab>
+
+                            <p:tab title="R-4020">
+                                <p:outputPanel id="panelR4020">
+                                    <h:panelGrid columns="2">
+
+                                        <fc:outputLabelObrigatorio value="Mês:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.mes}">
+                                            <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Ano:"/>
+                                        <p:inputMask mask="9999"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.exercicio}"
+                                                     converter="#{exercicioControlador.converterExercicio}" size="10">
+                                            <p:ajax process="@this" ev="blur"/>
+                                        </p:inputMask>
+
+                                        <h:outputText value="Quantidade enviada:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.quantidadeJaEnviadasR4020}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Quantidade selecionada:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.quantidadeR4020}"
+                                            styleClass="negrito"/>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Buscar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR4020"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR4020"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-4020 para o REINF."
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR4020()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-4020 para o REINF."
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR4020()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-4020 para o sistema do governo federal?')) return false;"/>
+
+                                        <co:botao_informacao
+                                            styleClass="mtop10"
+                                            titulo_negrito="Informações ao buscar R-4020"
+                                            descricao="-Utiliza a data de pagamento para recuperar os registros."/>
+                                    </h:panelGrid>
+                                    <div class="alert alert-info" align="center">
+                                        <Strong>Atenção!</Strong>
+                                        <br/> Serão enviados os eventos cujo o Prestador não esteja destacado em vermelho e valor líquido seja maior que 0 (ZERO).
+                                    </div>
+
+                                    <p:scrollPanel mode="native" style="max-height: 600px" id="scrollPanelR4020">
+                                        <co:legenda-envio-reinf/>
+                                        <p:dataTable paginator="true"
+                                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                     rowIndexVar="rowIx"
+                                                     styleClass="mtop05"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.itemEmpregadorR4020}"
+                                                     rows="10"
+                                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>R-4020&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                     rowsPerPageTemplate="10,25,50,100"
+                                                     var="registroR4020">
+                                            <p:column headerText="Detalhes" style="text-align: center; width: 6%">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Enviar" style="text-align: center; width: 6%">
+                                                <h:selectBooleanCheckbox
+                                                    disabled="#{registroR4020.isDesabilitaEnviar()}"
+                                                    styleClass="botao-transparente trintaAltura"
+                                                    value="#{registroR4020.marcarPraEnviar}">
+                                                    <p:ajax event="valueChange"
+                                                            onstart="aguarde.show()"
+                                                            oncomplete="aguarde.hide()"
+                                                            process="@this"
+                                                            update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR4020"/>
+                                                </h:selectBooleanCheckbox>
+                                            </p:column>
+                                            <p:column headerText="Visualizar" styleClass="alinhamentoCentralizado">
+                                                <p:commandButton
+                                                    icon="ui-icon-search"
+                                                    oncomplete="dialogVisualizarR2010.show();"
+                                                    update=":formDialogR2010"
+                                                    process="@this"
+                                                    styleClass="vinteLarguraVinteAltura icone_branco botao_verde"
+                                                    actionListener="#{consultaOcorrenciasReinfControlador.setRegistroEventoRetencaoReinf(registroR4020)}">
+                                                </p:commandButton>
+                                            </p:column>
+                                            <p:column headerText="Beneficiario"
+                                                      styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{registroR4020.pessoa.nome}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{registroR4020.pessoa.nome}"
+                                                              styleClass="#{registroR4020.styleTitulo}"/>
+                                            </p:column>
+                                            <p:column headerText="Cnpj" styleClass="alinhamentoEsquerda"
+                                                      filterBy="#{registroR4020.pessoa.cpf_Cnpj}"
+                                                      filterMatchMode="contains">
+                                                <h:outputText value="#{registroR4020.pessoa.cpf_Cnpj}"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Bruto" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{registroR4020.valorTotalBruto}"
+                                                              converter="moneyConverter"
+                                                              styleClass="preformatted-fonte-padrao"/>
+                                            </p:column>
+                                            <p:rowExpansion>
+                                                <div class="#{registroR4020.styleMensagem}">
+                                                    <strong>#{registroR4020.tituloMensagem} </strong><br/>
+                                                    <h:outputText value="#{registroR4020.mensagem}" escape="false"/>
+                                                </div>
+                                                <p:outputPanel styleClass="mtop10"
+                                                               rendered="#{!registroR4020.isValidoTodasNotas()}">
+                                                    <div class="alert alert-danger" align="center">
+                                                        <Strong>Atenção!</Strong>
+                                                        <br/> #{registroR4020.stringMensagemNotasInvalidas}
+                                                    </div>
+                                                </p:outputPanel>
+                                            </p:rowExpansion>
+                                        </p:dataTable>
+                                    </p:scrollPanel>
+                                </p:outputPanel>
+                            </p:tab>
+
+                            <p:tab title="R-4099 (Fechamento/Reabertura)">
+                                <p:outputPanel id="panelR4099">
+                                    <h:panelGrid columns="2">
+                                        <fc:outputLabelObrigatorio value="Mês:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.mes}">
+                                            <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Ano:"/>
+                                        <p:inputMask mask="9999"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.exercicio}"
+                                                     converter="#{exercicioControlador.converterExercicio}" size="10">
+                                            <p:ajax process="@this" ev="blur"/>
+                                        </p:inputMask>
+
+                                        <h:outputText value="Tipo: "/>
+                                        <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                            <p:selectOneRadio
+                                                value="#{consultaOcorrenciasReinfControlador.selecionado.codigoFechamentoReabertura}">
+                                                <f:selectItem itemValue="#{0}" itemLabel="0 - Fechamento"/>
+                                                <f:selectItem itemValue="#{1}" itemLabel="1 - Reabertura"/>
+                                                <p:ajax event="valueChange" process="@this"/>
+                                            </p:selectOneRadio>
+                                            <co:botao_informacao
+                                                styleClass="icone-25"
+                                                descricao="Indicativo de fechamento ou reabertura de movimento relativo aos eventos de retenções na fonte (IR, CSLL, Pis/Pasep e Cofins)."/>
+                                        </h:panelGrid>
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Buscar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR4099"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR4099"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar o evento R-4099."
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR4099()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para enviar o evento R-4099."
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR4099()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-4099 para o sistema do governo federal?')) return false;"/>
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="2">
+                                        <h:outputText value="Evento:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR4099}"/>
+                                    </h:panelGrid>
+                                </p:outputPanel>
+                            </p:tab>
+
+                            <p:tab title="R-9000 (Remover)">
+                                <p:outputPanel id="panelR9000">
+                                    <h:panelGrid columns="2"
+                                                 rendered="#{consultaOcorrenciasReinfControlador.selecionado.eventoR9000 ne null}">
+
+                                        <fc:outputLabelObrigatorio value="Mês:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR9000.mes}">
+                                            <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Ano:"/>
+                                        <p:inputMask mask="9999"
+                                                     value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR9000.exercicio}"
+                                                     converter="#{exercicioControlador.converterExercicio}" size="10">
+                                            <p:ajax process="@this" ev="blur"/>
+                                        </p:inputMask>
+
+                                        <fc:outputLabelObrigatorio value="Tipo de Arquivo:"/>
+                                        <h:selectOneMenu
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR9000.tipoArquivo}">
+                                            <f:selectItems
+                                                value="#{consultaOcorrenciasReinfControlador.tiposDeArquivoReinf}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Número do Recibo:"/>
+                                        <p:inputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR9000.numeroRecibo}"
+                                            title="Digite o número do recibo do evento."
+                                            size="100"/>
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="3">
+                                        <p:commandButton value="Novo"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10 prioritario"
+                                                         icon="ui-icon-esocial"
+                                                         update=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR9000"
+                                                         process=":Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR9000"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento R-9000 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.buscarR9000()}"/>
+
+                                        <p:commandButton value="Enviar"
+                                                         style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-esocial"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para buscar evento S-9000 para o ESocial"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.enviarR9000()}"
+                                                         onclick="if (!confirm('Deseja enviar o evento R-9000 para o sistema do governo federal?'))
+                                     return false;"/>
+
+                                    </h:panelGrid>
+                                    <h:panelGrid columns="2">
+
+                                        <h:outputText value="Evento:"/>
+                                        <h:outputText
+                                            value="#{consultaOcorrenciasReinfControlador.selecionado.eventoR9000}"/>
+
+                                    </h:panelGrid>
+                                </p:outputPanel>
+                            </p:tab>
+                        </p:tabView>
+                    </p:tab>
+                    <p:tab title="Ocorrências por competência">
+                        <p:outputPanel id="panelOcorrenciasPorCompetencia">
+                            <h:panelGrid columns="2">
+
+                                <fc:outputLabelObrigatorio value="Mês:"/>
+                                <h:selectOneMenu
+                                    value="#{consultaOcorrenciasReinfControlador.selecionado.mes}">
+                                    <f:selectItems value="#{consultaOcorrenciasReinfControlador.mes}"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio value="Ano:"/>
+                                <p:inputMask mask="9999"
+                                             value="#{consultaOcorrenciasReinfControlador.selecionado.exercicio}"
+                                             converter="#{exercicioControlador.converterExercicio}" size="10">
+                                    <p:ajax process="@this" ev="blur"/>
+                                </p:inputMask>
+
+                                <h:outputText value="Mostrar somente novas ocorrências:"/>
+                                <p:selectBooleanCheckbox
+                                    styleClass="mrig05 mtop10"
+                                    value="#{consultaOcorrenciasReinfControlador.mostrarSomenteNovosEventos}"
+                                    itemLabel="Mostrar somente novas ocorrências">
+                                    <p:ajax event="change"
+                                            update=":Formulario:tabViewEnvioEventos:panelOcorrenciasPorCompetencia"
+                                            process="@this"/>
+                                </p:selectBooleanCheckbox>
+                            </h:panelGrid>
+
+                            <h:panelGrid columns="3">
+                                <p:commandButton value="Buscar"
+                                                 style="min-height: 30px;"
+                                                 styleClass="mrig05 mtop10 prioritario"
+                                                 icon="ui-icon-esocial"
+                                                 update=":Formulario:tabViewEnvioEventos:panelOcorrenciasPorCompetencia"
+                                                 process=":Formulario:tabViewEnvioEventos:panelOcorrenciasPorCompetencia"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 title="Clique para buscar evento R-1000 para o Reinf"
+                                                 actionListener="#{consultaOcorrenciasReinfControlador.buscarEventosPorPeriodo()}"/>
+
+                                <p:commandButton value="Vincular"
+                                                 style="min-height: 30px;"
+                                                 styleClass="mrig05 mtop10 prioritario"
+                                                 icon="ui-icon-esocial"
+                                                 update=":Formulario:tabViewEnvioEventos:panelOcorrenciasPorCompetencia"
+                                                 process=":Formulario:tabViewEnvioEventos:panelOcorrenciasPorCompetencia"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 title="Clique para vincular os XML dos eventos"
+                                                 actionListener="#{consultaOcorrenciasReinfControlador.vincularEventos()}"/>
+
+                                <p:commandButton value="Remover"
+                                                 style="min-height: 30px;"
+                                                 styleClass="mrig05 mtop10 prioritario"
+                                                 icon="ui-icon-esocial"
+                                                 update=":Formulario:tabViewEnvioEventos:panelOcorrenciasPorCompetencia"
+                                                 process=":Formulario:tabViewEnvioEventos:panelOcorrenciasPorCompetencia"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 title="Clique para remover as empresas"
+                                                 actionListener="#{consultaOcorrenciasReinfControlador.removerEventosComErro()}"/>
+                            </h:panelGrid>
+
+                            <p:dataTable paginator="true"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{consultaOcorrenciasReinfControlador.eventosCompetencia}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>EVENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="evento">
+                                <p:column headerText="Tipo"
+                                          filterBy="#{evento.tipoArquivo}"
+                                          filterMatchMode="contains"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{evento.tipoArquivo}"
+                                                  title="#{evento.id}"
+                                                  styleClass="preformatted-fonte-padrao"/>
+                                </p:column>
+                                <p:column headerText="Empresa"
+                                          filterBy="#{evento.cnpjEmpresa}"
+                                          filterMatchMode="contains"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{evento.cnpjEmpresa}"
+                                                  styleClass="preformatted-fonte-padrao"/>
+                                </p:column>
+                                <p:column headerText="Situação"
+                                          filterBy="#{evento.situacao}"
+                                          filterMatchMode="contains"
+                                          styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.situacao}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Código Resposta" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.codigoResposta}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Descriçao Resposta" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.descricaoResposta}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Operação" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.operacao}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Recibo" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.reciboEntrega}"
+                                                  styleClass="preformatted-fonte-padrao"/>
+                                    <br/>
+                                    <fc:botaoTargetBlank
+                                        actionListener="#{consultaOcorrenciasReinfControlador.gerarRecibo(evento)}"
+                                        rendered="#{evento.reciboEntrega ne null}"
+                                        imprimeNoDialog="true" update="@this"
+                                        styleClass="icone-30"
+                                        icon="ui-icon-print"
+                                        title="Clique para gerar o recibo."/>
+                                </p:column>
+                                <p:column headerText="Mês/Ano" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.mesApur}/#{evento.anoApur}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Data Registro" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.dataOperacao}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                        <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="XML" styleClass="alinhamentoCentralizado">
+                                    <p:commandButton
+                                        title="Clique para adicionar novo campo de Pesquisa"
+                                        icon="ui-icon-search"
+                                        oncomplete="dialogXml.show(); aguarde.hide()"
+                                        update=":FormDialog"
+                                        process="@this"
+                                        onclick="aguarde.show()"
+                                        styleClass="vinteLarguraVinteAltura icone_branco botao_verde"
+                                        actionListener="#{consultaOcorrenciasReinfControlador.setXml(evento.XML)}">
+                                    </p:commandButton>
+                                </p:column>
+                                <p:column headerText="Ocorrências" styleClass="alinhamentoCentralizado">
+                                    <p:commandButton
+                                        rendered="#{evento.ocorrencias ne null}"
+                                        icon="ui-icon-search"
+                                        oncomplete="dialogOcorrencia.show();"
+                                        update=":formDialogOcorrencia"
+                                        process="@this"
+                                        styleClass="vinteLarguraVinteAltura icone_branco botao_verde"
+                                        actionListener="#{consultaOcorrenciasReinfControlador.setOcorrencias(evento.ocorrencias)}">
+                                    </p:commandButton>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Consulta de Ocorrências">
+                        <p:outputPanel id="panelOcorrencias">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Situação:"/>
+                                <h:selectOneMenu
+                                    value="#{consultaOcorrenciasReinfControlador.selecionado.situacao}">
+                                    <f:selectItems
+                                        value="#{consultaOcorrenciasReinfControlador.situacoes}"/>
+                                    <p:ajax process="@form" event="change" onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                </h:selectOneMenu>
+
+
+                            </h:panelGrid>
+
+                            <p:commandButton value="Buscar"
+                                             style="min-height: 30px;"
+                                             styleClass="mrig05 mtop10 prioritario"
+                                             icon="ui-icon-esocial"
+                                             update=":Formulario:tabViewEnvioEventos:panelOcorrencias"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para buscar evento R-1000 para o Reinf"
+                                             actionListener="#{consultaOcorrenciasReinfControlador.buscarEventos()}"/>
+
+                            <p:tabView activeIndex="#{consultaOcorrenciasReinfControlador.activeIndex}">
+                                <p:ajax event="tabChange" listener="#{consultaOcorrenciasReinfControlador.alterarTabs}"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        update=":Formulario:tabViewEnvioEventos:panelOcorrencias"
+                                        process="@this"/>
+                                <c:forEach items="#{consultaOcorrenciasReinfControlador.tipoArquivoReinf}"
+                                           var="eventoEnum">
+                                    <p:tab title="#{eventoEnum.codigo}">
+
+                                    </p:tab>
+                                </c:forEach>
+                            </p:tabView>
+
+
+                            <div style="overflow: auto">
+
+                                <p:dataTable paginator="true"
+                                             lazy="true"
+                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             rowIndexVar="rowIx"
+                                             styleClass="mtop05"
+                                             emptyMessage="Não foram localizados registros para serem apresentados"
+                                             value="#{consultaOcorrenciasReinfControlador.eventosTabela}"
+                                             rows="10"
+                                             id="eventos"
+                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>EVENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                             rowsPerPageTemplate="10,25,50,100"
+                                             var="evento">
+                                    <f:facet name="header">
+                                        <div align="right">
+                                            <p:commandButton icon="ui-icon-refresh" style="align-items: flex-end"
+                                                             onstart="aguarde.show();" oncomplete="aguarde.hide();"
+                                                             process="@this"
+                                                             update=":Formulario:tabViewEnvioEventos:panelOcorrencias"
+                                                             actionListener="#{consultaOcorrenciasReinfControlador.alterarTabs}"
+                                                             title="Clique aqui para atualizar os eventos"/>
+                                        </div>
+                                    </f:facet>
+                                    <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{evento.tipoArquivo}"
+                                                      title="#{evento.id}"
+                                                      styleClass="preformatted-fonte-padrao"/>
+                                    </p:column>
+                                    <p:column headerText="Empresa" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{evento.cnpjEmpresa}"
+                                                      styleClass="preformatted-fonte-padrao"/>
+                                    </p:column>
+                                    <p:column headerText="Situação" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{evento.situacao}"
+                                                      styleClass="preformatted-fonte-padrao">
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Código Resposta" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{evento.codigoResposta}"
+                                                      styleClass="preformatted-fonte-padrao">
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Descriçao Resposta" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{evento.descricaoResposta}"
+                                                      styleClass="preformatted-fonte-padrao">
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Operação" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{evento.operacao}"
+                                                      styleClass="preformatted-fonte-padrao">
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Recibo" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{evento.reciboEntrega}"
+                                                      styleClass="preformatted-fonte-padrao"/>
+                                        <br/>
+                                        <fc:botaoTargetBlank
+                                            actionListener="#{consultaOcorrenciasReinfControlador.gerarRecibo(evento)}"
+                                            rendered="#{evento.reciboEntrega ne null}"
+                                            imprimeNoDialog="true" update="@this"
+                                            styleClass="icone-30"
+                                            icon="ui-icon-print"
+                                            title="Clique para gerar o recibo."/>
+                                    </p:column>
+                                    <p:column headerText="Mês/Ano" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{evento.mesApur}/#{evento.anoApur}"
+                                                      styleClass="preformatted-fonte-padrao">
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Data Registro" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{evento.dataOperacao}"
+                                                      styleClass="preformatted-fonte-padrao">
+                                            <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="XML" styleClass="alinhamentoCentralizado">
+                                        <p:commandButton
+                                            title="Clique para adicionar novo campo de Pesquisa"
+                                            id="btnAdicionarNovoCampoPesquisa"
+                                            icon="ui-icon-search"
+                                            oncomplete="dialogXml.show(); aguarde.hide()"
+                                            update=":FormDialog"
+                                            process="@this"
+                                            onclick="aguarde.show()"
+                                            styleClass="vinteLarguraVinteAltura icone_branco botao_verde"
+                                            actionListener="#{consultaOcorrenciasReinfControlador.setXml(evento.XML)}">
+                                        </p:commandButton>
+                                    </p:column>
+                                    <p:column headerText="Ocorrências" styleClass="alinhamentoCentralizado">
+                                        <p:commandButton
+                                            rendered="#{evento.ocorrencias ne null}"
+                                            id="btn-ocorrencias"
+                                            icon="ui-icon-search"
+                                            oncomplete="dialogOcorrencia.show();"
+                                            update=":formDialogOcorrencia"
+                                            process="@this"
+                                            styleClass="vinteLarguraVinteAltura icone_branco botao_verde"
+                                            actionListener="#{consultaOcorrenciasReinfControlador.setOcorrencias(evento.ocorrencias)}">
+                                        </p:commandButton>
+                                    </p:column>
+                                </p:dataTable>
+                            </div>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+
+
+            </p:panel>
+        </h:form>
+        <p:dialog widgetVar="dialogXml"
+                  position="center"
+                  closable="true"
+                  resizable="true"
+                  modal="true"
+                  id="dialog"
+                  draggable="true"
+                  hideEffect="fade"
+                  dynamic="true"
+                  header="Xml">
+            <h:form id="FormDialog">
+                <div style="overflow: auto; max-height: 300px; max-width: 900px">
+                    <h:inputHidden id="inputEscondido"
+                                   value="#{consultaOcorrenciasReinfControlador.xml}"/>
+                    <textarea id="code" name="code"/>
+                    <script type="text/javascript">
+                        var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+                            lineNumbers: true,
+                            mode: "xml"
+                        });
+                        var conteudoHidden = document.getElementById('FormDialog:inputEscondido').value;
+                        editor.setValue(formatXml(conteudoHidden));
+
+
+                    </script>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogOcorrencia"
+                  position="center"
+                  closable="true"
+                  resizable="true"
+                  modal="true"
+                  height="300"
+                  width="600"
+                  draggable="true"
+                  hideEffect="fade"
+                  header="Ocorrências">
+            <h:form id="formDialogOcorrencia">
+                <table style="width: 100%" class="table table-hover">
+                    <tr>
+                        <th>
+                            <h:outputText value="Código"/>
+                        </th>
+                        <td>
+                            <ui:repeat value="#{consultaOcorrenciasReinfControlador.ocorrencias}" var="mensagem">
+                                <h:outputText value="#{mensagem.codigo}"/> <br/>
+                            </ui:repeat>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                            <h:outputText value="Ocorrência"/>
+                        </th>
+                        <td style="width: 70%">
+                            <ui:repeat value="#{consultaOcorrenciasReinfControlador.ocorrencias}" var="mensagem">
+                                <h:outputText value="#{mensagem.descricao}"/> <br/>
+                            </ui:repeat>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                            <h:outputText value="Recibo"/>
+                        </th>
+                        <td style="width: 70%">
+                            <ui:repeat value="#{consultaOcorrenciasReinfControlador.ocorrencias}" var="mensagem">
+                                <h:outputText value="#{mensagem.tipo}"/> <br/>
+                            </ui:repeat>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                            <h:outputText value="Localização"/>
+                        </th>
+                        <td style="width: 70%">
+                            <ui:repeat value="#{consultaOcorrenciasReinfControlador.ocorrencias}" var="mensagem">
+                                <h:outputText value="#{mensagem.localizacao}"/> <br/>
+                            </ui:repeat>
+                        </td>
+                    </tr>
+                </table>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog widgetVar="dialogProgressBar"
+                  width="800"
+                  closable="false"
+                  showHeader="false"
+                  modal="true"
+                  hideEffect="clip"
+                  resizable="false"
+                  position="center"
+                  dynamic="true">
+            <h:form id="formDialogProgressBar">
+                <div class="alert alert-success centralizado mtop05">
+                    <strong>Aguarde, </strong> o processo de importação do sincronização do EFD-REINF...
+                </div>
+
+                <p:panel style="text-align: center; width: 100%; border: 0px;"
+                         visible="#{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.calculando}"
+                         id="panelBarra">
+
+                    <h:outputText
+                        value="#{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.mensagens}"
+                        escape="false"/>
+
+                    <br/>
+                    <h:outputText
+                        value="Total: #{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.total}"
+                        styleClass="negrito"/>
+                    <br/>
+                    <h:outputText
+                        value="Processados: #{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.processados}"
+                        styleClass="negrito"/>
+
+
+                    <div class="progress progress-striped active" id="barraProgresso">
+                        <div class="bar"
+                             style="width: #{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.porcentagemDoCalculo}%;">
+                            <h:outputText
+                                value="#{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.porcentagemDoCalculo}"
+                                styleClass="negrito">
+                                <f:convertNumber type="number" maxFractionDigits="2"/>
+                            </h:outputText>
+                            <h:outputText value="%"/>
+                        </div>
+                    </div>
+
+
+                    <br/>
+                    <h:outputText
+                        value="Tempo Decorrido: #{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.tempoDecorrido}"
+                        styleClass="negrito"/>
+
+                    <br/>
+                    <h:outputText
+                        value="Tempo Estimado: #{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.tempoEstimado}"
+                        styleClass="negrito"/>
+
+                    <br/>
+                    <p:commandButton icon="ui-icon-cancel"
+                                     styleClass="operacao prioritario"
+                                     value="Abortar"
+                                     update="@this"
+                                     process="@this"
+                                     immediate="true"
+                                     rendered="#{consultaOcorrenciasReinfControlador.assistente.barraProgressoItens.calculando}"
+                                     actionListener="#{consultaOcorrenciasReinfControlador.abortar()}"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog widgetVar="dialogVisualizarR2010"
+                  position="center"
+                  closable="true"
+                  resizable="true"
+                  modal="true"
+                  height="600"
+                  width="1000"
+                  draggable="true"
+                  hideEffect="fade"
+                  header="Visualizar Evento">
+            <h:form id="formDialogR2010">
+                <p:outputPanel>
+                    <co:titulo-panel titulo="Retificação"
+                                     rendered="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.id ne null}"/>
+
+                    <h:panelGrid columns="2"
+                                 rendered="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.id ne null}">
+                        <fc:outputLabelObrigatorio value="Número do Recibo:"/>
+                        <p:inputText
+                            value="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.numeroReciboOrigem}"
+                            title="Digite o número do recibo do evento de origem."
+                            size="100"/>
+                    </h:panelGrid>
+                    <p:commandButton value="Adicionar Evento Retificação"
+                                     style="min-height: 30px;"
+                                     styleClass="mrig05 mtop10"
+                                     icon="ui-icon-circle-plus"
+                                     rendered="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.id ne null}"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     title="Clique para adicionar a retificaçao desse evento"
+                                     actionListener="#{consultaOcorrenciasReinfControlador.adicionarRetificacao()}"
+                                     onclick="if (!confirm('Deseja adicionar a retificaçao desse evento?'))
+                                     return false;"/>
+                    <p:separator/>
+                    <br></br>
+                    <br></br>
+                    <br></br>
+                    <br></br>
+                    <co:titulo-panel titulo="Exclusão"
+                                     rendered="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.id ne null}"/>
+                    <p:outputPanel
+                        rendered="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.id ne null}">
+                        <div class="alert alert-info" align="center">
+                            <Strong>Atenção!</Strong>
+                            <br/> Caso houver alguém erro, pode remover pra enviar novamente.
+                        </div>
+
+                        <p:commandButton value="Remover"
+                                         style="min-height: 30px;"
+                                         styleClass="mrig05 mtop10"
+                                         icon="ui-icon-esocial"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para remover o evento"
+                                         update=":formDialogR2010 :Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR2010 :Formulario:tabViewEnvioEventos:tabEventosEnvio:panelR4020"
+                                         process="@this"
+                                         actionListener="#{consultaOcorrenciasReinfControlador.removerRegistro()}"
+                                         onclick="if (!confirm('Deseja remover este evento?'))
+                                     return false;"/>
+                    </p:outputPanel>
+
+                    <co:titulo-panel titulo="Informações"/>
+                    <p:tabView id="tabEventoR2010">
+                        <p:tab title="Principal">
+                            <p:dataTable id="pagamentos"
+                                         value="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.pagamentos}"
+                                         var="pag"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         styleClass="mtop10"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>PAGAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Remover" styleClass="alinhamentoCentralizado">
+                                    <p:commandButton
+                                        style="min-height: 30px;"
+                                        styleClass="mrig05 mtop10"
+                                        icon="ui-icon-trash"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        title="Clique para remover o pagamento"
+                                        actionListener="#{consultaOcorrenciasReinfControlador.removerPagamento(pag)}"
+                                        onclick="if (!confirm('Deseja remover este pagamento?'))
+                                     return false;"/>
+                                </p:column>
+                                <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{pag.pagamento.dataPagamento}">
+                                        <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                    <h:commandLink target="_blank"
+                                                   styleClass="thumbnail"
+                                                   title="Clique para visualizar este pagamento."
+                                                   actionListener="#{utilBeanContabil.redirecionarParaPagamento(pag.pagamento)}">
+                                        <h:outputText value="#{pag.pagamento.numeroPagamento}"/>
+                                    </h:commandLink>
+                                </p:column>
+                                <p:column headerText="Liquidação" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{pag.pagamento.liquidacao}"/>
+                                </p:column>
+                                <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{pag.pagamento.subConta.toStringAutoCompleteContaFinanceira()}"/>
+                                </p:column>
+                                <p:column headerText="Usuário" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{pag.pagamento.usuarioSistema.pessoaFisica.nome}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{pag.pagamento.valor}" converter="moneyConverter"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+                        <p:tab title="Notas">
+                            <p:outputPanel
+                                rendered="#{!consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.isValidoTodasNotas()}">
+                                <div class="alert alert-danger" align="center">
+                                    <Strong>Atenção!</Strong>
+                                    <br/> #{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.stringMensagemNotasInvalidas}
+                                </div>
+                            </p:outputPanel>
+                            <p:scrollPanel mode="native" style="max-height: 600px; border: none !important;"
+                                           id="scrollPanelNotasDialog">
+                                <p:dataTable id="tabelaDoctos"
+                                             value="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.notas}"
+                                             var="d"
+                                             styleClass="mtop02"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>NOTAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Remover" styleClass="alinhamentoCentralizado">
+                                        <p:commandButton style="min-height: 30px;"
+                                                         styleClass="mrig05 mtop10"
+                                                         icon="ui-icon-trash"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para remover a nota"
+                                                         actionListener="#{consultaOcorrenciasReinfControlador.removerNota(d)}"
+                                                         onclick="if (!confirm('Deseja remover esta nota?'))
+                                     return false;"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Documento" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{d.nota.doctoFiscalLiquidacao.tipoDocumentoFiscal}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}"/>
+                                    </p:column>
+                                    <p:column headerText="Chave de Acesso" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{d.nota.doctoFiscalLiquidacao.chaveDeAcesso}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}"/>
+                                    </p:column>
+                                    <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{d.nota.doctoFiscalLiquidacao.dataDocto}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Data do Atesto" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{d.nota.doctoFiscalLiquidacao.dataAtesto}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{d.nota.doctoFiscalLiquidacao.numero}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}"/>
+                                    </p:column>
+                                    <p:column headerText="Série" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{d.nota.doctoFiscalLiquidacao.serie}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{d.valorLiquido}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Retido(R$)" styleClass="alinhamentoDireita"
+                                              style="width: 16%">
+                                        <p:inputText value="#{d.valorRetido}"
+                                                     style="width: 80%; ${!d.isValido() ? 'font-weight: bold !important; color: tomato;' : ''}"
+                                                     styleClass="alinhamentoDireita"
+                                                     converter="moneyConverter"
+                                                     onfocus="mascaraMonetaria(this)">
+                                            <p:ajax event="valueChange" process="@this"
+                                                    update="tabelaDoctos :Formulario:tabViewEnvioEventos:tabEventosEnvio:scrollPanelR2010"
+                                                    listener="#{consultaOcorrenciasReinfControlador.atualizarValoresEMenssagemAoAlterarValorRetidoNota()}"/>
+                                        </p:inputText>
+                                    </p:column>
+                                    <p:column headerText="Valor Base (R$)" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{d.valorBaseCalculoPorTipoArquivo}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <p:column headerText="(%)" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{d.porcentagemRetido}"
+                                                      styleClass="#{!d.isValido() ? 'vermelhonegrito' : ''}"
+                                                      converter="porcentagemConverter"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:scrollPanel>
+                        </p:tab>
+                        <p:tab title="Retenção">
+                            <p:dataTable id="tableRetencoes"
+                                         value="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.receitas}"
+                                         var="ret"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop03"
+                                         paginator="true"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>RETENÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100">
+                                <p:column headerText="Remover" styleClass="alinhamentoCentralizado">
+                                    <p:commandButton style="min-height: 30px;"
+                                                     styleClass="mrig05 mtop10"
+                                                     icon="ui-icon-trash"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para remover a retenção"
+                                                     actionListener="#{consultaOcorrenciasReinfControlador.removerReceita(ret)}"
+                                                     onclick="if (!confirm('Deseja remover esta retenção?'))
+                                     return false;"/>
+                                </p:column>
+                                <p:column headerText="Número" style="text-align: right">
+                                    <h:outputText value="#{ret.receitaExtra.numero}"/>
+                                </p:column>
+                                <p:column headerText="Data" style="text-align: center">
+                                    <h:outputText value="#{ret.receitaExtra.dataReceita}">
+                                        <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Conta Extraorçamentária" style="text-align: left">
+                                    <h:outputText value="#{ret.receitaExtra.contaExtraorcamentaria}"/>
+                                </p:column>
+                                <p:column headerText="Pessoa" style="text-align: left">
+                                    <h:outputText value="#{ret.receitaExtra.pessoa}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Consignação" style="text-align: left">
+                                    <h:outputText value="#{ret.receitaExtra.tipoConsignacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" style="text-align: right">
+                                    <h:outputText value="#{ret.receitaExtra.valor}" converter="moneyConverter"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+
+                        <p:tab title="Eventos">
+                            <p:dataTable paginator="true"
+                                         lazy="true"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{consultaOcorrenciasReinfControlador.registroEventoRetencaoReinf.eventos}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>EVENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="evento">
+                                <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{evento.evento.tipoArquivo}"
+                                                  title="#{evento.evento.id}"
+                                                  styleClass="preformatted-fonte-padrao"/>
+                                </p:column>
+                                <p:column headerText="Situação" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.situacao}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Código Resposta" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.codigoResposta}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Descriçao Resposta" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.descricaoResposta}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Recibo" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.recibo}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Data Registro" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.dataIntegracao}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                        <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Ocorrência" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.observacao}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Código" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.codigoOcorrencia}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Localização" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{evento.evento.localizacao}"
+                                                  styleClass="preformatted-fonte-padrao">
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+                    </p:tabView>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogVisualizarEmpregador"
+                  position="center"
+                  closable="true"
+                  resizable="true"
+                  modal="true"
+                  height="300"
+                  width="1000"
+                  draggable="true"
+                  hideEffect="fade"
+                  header="Visualizar Empregador">
+            <h:form id="formDialogEmpregador">
+                <p:outputPanel rendered="#{consultaOcorrenciasReinfControlador.selecionado.empregador ne null}">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Nome"/>
+                        <h:outputText value="#{consultaOcorrenciasReinfControlador.selecionado.empregador.nome}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Cpf/Cnpj"/>
+                        <h:outputText
+                            value="#{consultaOcorrenciasReinfControlador.selecionado.empregador.pessoaJuridica.cnpj}"
+                            styleClass="negrito"/>
+
+                    </h:panelGrid>
+
+
+                    <p:dataTable paginator="true"
+                                 id="tabelaHierarquiaOrgao"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{consultaOcorrenciasReinfControlador.selecionado.hierarquias}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ÓRGÃOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="item">
+                        <p:column headerText="Orgão" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{item.descricaoHierarquia}"
+                                          styleClass="preformatted-fonte-padrao"/>
+                        </p:column>
+                        <p:column headerText="Início Vigência" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{item.inicioVigencia}"
+                                          styleClass="preformatted-fonte-padrao">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Final Vigência" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{item.fimVigencia}"
+                                          styleClass="preformatted-fonte-padrao">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

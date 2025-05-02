@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+<ui:composition template="/corpo.xhtml">
+<ui:define name="body">
+<h:form id="Formulario">
+<fc:aguarde widgetVar="statusDialog"/>
+<p:panel header="Emissão de Petição de Dívida Ativa">
+<h:panelGrid columns="3" style="width: 100%">
+    <fc:outputLabelObrigatorio value="Data de Emissão"/>
+    <fc:outputLabelObrigatorio value="Exercício"/>
+
+    <p:panel style="border: 0; text-align: right;">
+        <p:commandLink value="Clique aqui para ver a lista de Petições emitidas" action="lista"
+                       ajax="false" immediate="true" icon="ui-icon-cancel"
+                       styleClass="icone_vermelho negrito"/>
+    </p:panel>
+
+    <p:calendar id="dataEmissao" showOn="button" onkeyup="mascara(this, mdata)" pattern="dd/MM/yyyy"
+                value="#{peticaoControlador.dataEmissao}"
+                disabled="false"
+            />
+    <p:inputMask value="#{peticaoControlador.exercicio}" id="exercicio" mask="9999"
+                 converter="#{peticaoControlador.converterExercicio}"/>
+    <p:spacer/>
+
+    <fc:outputLabelObrigatorio value="Vara Cível"/>
+    <p:spacer/>
+    <p:spacer/>
+    <h:selectOneMenu value="#{peticaoControlador.selecionado.varaCivel}"
+                     converter="#{peticaoControlador.converterVaraCivel}">
+        <f:selectItems value="#{peticaoControlador.varaCivels}"/>
+    </h:selectOneMenu>
+
+</h:panelGrid>
+
+<br/>
+<p:fieldset legend="Gerar por" id="fildSet">
+    <h:panelGrid columns="1">
+        <h:outputText value="Situação da CDA"/>
+
+        <h:selectOneMenu value="#{peticaoControlador.opcao}">
+            <f:selectItem itemValue="1" itemLabel="Todas"/>
+            <f:selectItem itemValue="2" itemLabel="Aberta"/>
+        </h:selectOneMenu>
+    </h:panelGrid>
+    <h:panelGrid columns="2" style="width: 100%">
+        <p:selectOneRadio id="customRadio" value="#{peticaoControlador.geradoPor}"
+                          layout="pageDirection">
+            <f:selectItem itemLabel="Número da Certidão"
+                          itemValue="#{peticaoControlador.geradoPorNumeroCertidao}"/>
+            <f:selectItem itemLabel="Cadastro"
+                          itemValue="#{peticaoControlador.geradoPorNumeroCadastro}"/>
+            <p:ajax update="fildSet" event="change" listener="#{peticaoControlador.limpaFiltros()}"/>
+        </p:selectOneRadio>
+        <p:panel style="width: 100%;"
+                 rendered="#{peticaoControlador.geradoPor eq peticaoControlador.geradoPorNumeroCertidao}">
+            <h:panelGrid columns="2" style="width: 100%;">
+                <h:outputText value="Nº Inicial"/>
+                <h:outputText value="Nº Final"/>
+                <fc:inputGenerico id="nrInicial" obrigatorio="false" tipo="numero"
+                                  value="#{peticaoControlador.certidaoInicial}"/>
+                <fc:inputGenerico id="nrFinal" obrigatorio="false" tipo="numero"
+                                  value="#{peticaoControlador.certidaoFinal}"/>
+            </h:panelGrid>
+        </p:panel>
+
+        <p:panel style="width: 100%;"
+                 rendered="#{peticaoControlador.geradoPor eq peticaoControlador.geradoPorNumeroCadastro}">
+            <h:panelGrid columns="2" style="width: 100%;">
+                <h:panelGrid columns="1">
+                    <h:outputText value="Tipo de Cadastro"/>
+
+                    <h:selectOneMenu value="#{peticaoControlador.tipoCadastroTributario}">
+                        <f:selectItems value="#{peticaoControlador.tiposCadastro}"/>
+                        <p:ajax update="gridAutoCompletes" event="change"
+                                listener="#{peticaoControlador.setaInscricaoCadastro()}"/>
+                    </h:selectOneMenu>
+                </h:panelGrid>
+                <h:panelGrid columns="2" id="gridAutoCompletes">
+                    <p:spacer/>
+                    <p:autoComplete queryDelay="1000"
+                            id="contribuinte"
+                            rendered="#{peticaoControlador.tipoCadastroTributario eq 'PESSOA' and peticaoControlador.tipoCadastroTributario ne null}"
+                            value="#{peticaoControlador.pessoa}"
+                            completeMethod="#{peticaoControlador.completaPessoa}"
+                            var="pessoa"
+                            itemLabel="#{pessoa.nomeCpfCnpj}"
+                            itemValue="#{pessoa.id}"
+                            size="70"
+                            maxResults="10"
+                            converter="#{peticaoControlador.converterPessoa}"
+                            title="Informe ou selecione a pessoa">
+                    </p:autoComplete>
+                    <p:watermark value="TODOS" for="contribuinte"/>
+
+
+                    <h:outputText value="Cadastro Inicial: "
+                                  rendered="#{peticaoControlador.tipoCadastroTributario ne 'PESSOA' and peticaoControlador.tipoCadastroTributario ne null}"/>
+                    <h:outputText value="Cadastro Final: "
+                                  rendered="#{peticaoControlador.tipoCadastroTributario ne 'PESSOA' and peticaoControlador.tipoCadastroTributario ne null}"/>
+                    <p:inputText
+                            rendered="#{peticaoControlador.tipoCadastroTributario ne 'PESSOA' and peticaoControlador.tipoCadastroTributario ne null }"
+                            value="#{peticaoControlador.cadastroInicial}"
+                            size="25"
+                            maxlength="18"
+                            title="Informe o Cadastro">
+                        <p:ajax event="keyup" update=":Formulario:cadFinal"
+                                listener="#{peticaoControlador.copiarCadastroInicialParaCadastroFinal()}"/>
+                    </p:inputText>
+                    <p:inputText
+                            rendered="#{peticaoControlador.tipoCadastroTributario ne 'PESSOA' and peticaoControlador.tipoCadastroTributario ne null }"
+                            id="cadFinal"
+                            value="#{peticaoControlador.cadastroFinal}"
+                            size="25"
+                            maxlength="18"
+                            title="Informe o Cadastro">
+                    </p:inputText>
+
+
+                </h:panelGrid>
+            </h:panelGrid>
+        </p:panel>
+
+    </h:panelGrid>
+
+</p:fieldset>
+<br/>
+<p:messages showDetail="true" showSummary="true"/>
+
+<div style="text-align: right">
+    <p:commandButton icon="ui-icon-search"
+                     value="Pesquisar (F2)"
+                     title="Pesquisar todas as CDAs que se enquadram nessa petição"
+                     onstart="aguarde.show()"
+                     oncomplete="aguarde.hide()"
+                     update="@form"
+                     id="pesquisar"
+                     actionListener="#{peticaoControlador.filtrar()}"
+                     styleClass="icone_azul "/>
+    <p:commandButton disabled="#{peticaoControlador.certidoes.size() == 0}"
+                     value="Gerar Petições (F3)"
+                     icon="ui-icon-disk"
+                     styleClass="icone_azul"
+                     onstart="aguarde.show()"
+                     oncomplete="aguarde.hide()"
+                     action="#{peticaoControlador.emitir()}"/>
+    <fc:botaoInformacao id="btnlancanovo"
+                        resumo="Informações:"
+                        detalhes="Ao pressionar o botão PESQUISAR, todas as Certidões de Dívida Ativa que se enquadram nos filtros informados e que ainda não compõem alguma petição serão adicionadas a esta, podendo ser removidas."
+                        styleClassBotao="icone_branco botao_azul"/>
+    <br/>
+    <p:hotkey bind="f2" handler="document.getElementById('Formulario:pesquisar').click()"/>
+</div>
+
+
+<div class="ui-messages-warn ui-corner-all textomedio">
+    <div class="ui-messages-warn-icon  margem-direita-cinco-pixels"/>
+    <h:outputText value="Atenção! " styleClass="ui-messages-warn-summary"/>
+    <h:outputText
+            value="Só é possível gerar a petição para CDA's que estão em ABERTO ou para CDA's que não estão vinculadas a outra petição!"
+            styleClass="ui-messages-warn-detail"/>
+    <p:spacer width="5"/>
+</div>
+
+<h:outputText value="CDA's que compõem a Petição" styleClass="azulnegrito"/>
+<p:dataTable emptyMessage="Nenhuma CDA encontrada"
+             value="#{peticaoControlador.certidoes}"
+             var="certidao"
+             id="tabela"
+             paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+             widgetVar="wtabela"
+             rowKey="#{certidao}"
+             selection="#{peticaoControlador.certidaoSelecionada}"
+        >
+
+    <p:column style="text-align: center;width: 15px">
+        <p:rowToggler/>
+    </p:column>
+    <p:column selectionMode="multiple" disabledSelection="#{certidao.situacaoCertidaoDA ne 'ABERTA'}"/>
+
+
+    <p:column headerText="Número da CDA" style="text-align: center" filterBy="#{certidao.numero}"
+              filterMatchMode="contains">
+        <h:outputText value="#{certidao.numero} - #{certidao.exercicio.ano}"/>
+    </p:column>
+    <p:column headerText="Cadastro" style="text-align: center">
+        <h:panelGrid columns="1" cellpadding="0" cellspacing="0" style="border: transparent !important">
+            <h:outputText
+                    value="#{certidao.cadastro eq null? ' - ' : certidao.cadastro.numeroCadastro}"/>
+        </h:panelGrid>
+        <h:outputText
+                value="#{certidao.cadastro.tipoDeCadastro eq null? '': certidao.cadastro.tipoDeCadastro.descricao}"/>
+    </p:column>
+    <p:column headerText="Nome/Razão Social" style="text-align: center">
+        <h:panelGrid columns="1" cellpadding="0" cellspacing="0" style="border: transparent !important">
+            <h:outputText value="#{certidao.pessoa.nome}"/>
+        </h:panelGrid>
+    </p:column>
+    <p:column headerText="CPF/CNPJ" style="text-align: center">
+        <h:panelGrid columns="1" cellpadding="0" cellspacing="0" style="border: transparent !important">
+            <h:outputText value="#{certidao.pessoa.cpf_Cnpj}"/>
+        </h:panelGrid>
+    </p:column>
+    <p:column headerText="Data da Certidão" style="text-align: right">
+        <h:outputText value="#{certidao.dataCertidao}">
+            <f:convertDateTime pattern="dd/MM/yyyy"/>
+        </h:outputText>
+    </p:column>
+    <p:column headerText="Valor" style="text-align: right">
+        <h:outputText value="#{peticaoControlador.recuperaValorTotalCDA(certidao)}">
+            <f:convertNumber type="currency"/>
+        </h:outputText>
+    </p:column>
+    <p:column headerText="Situação da Certidão" style="text-align: center">
+        <h:outputText value="#{certidao.situacaoCertidaoDA.descricao}"
+                      style="color: #{certidao.situacaoCertidaoDA eq 'ABERTA' ? 'green' : certidao.situacaoCertidaoDA eq 'PETICIONADA' ? 'blue' : 'red'}"
+                      styleClass="negrito">
+            <f:convertDateTime pattern="dd/MM/yyyy"/>
+        </h:outputText>
+    </p:column>
+
+    <p:rowExpansion>
+        <p:dataTable value="#{peticaoControlador.itensInscricaoDividaAtiva(certidao)}" var="inscricoes">
+            <p:column headerText="Tipo de Cadastro">
+                <h:outputText
+                        value="#{inscricoes.inscricaoDividaAtiva.tipoCadastroTributario.descricao}"/>
+            </p:column>
+            <p:column headerText="Processo de Inscrição">
+                <h:outputText
+                        value="#{inscricoes.inscricaoDividaAtiva.numero} -  #{inscricoes.inscricaoDividaAtiva.exercicio.ano} "/>
+            </p:column>
+            <p:column headerText="Data da Inscrição">
+                <h:outputText value="#{inscricoes.inscricaoDividaAtiva.dataInscricao}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+            </p:column>
+            <p:column headerText="Saldo" style="text-align: right">
+                <h:outputText value="#{peticaoControlador.valorPorItem(inscricoes)}">
+                    <f:convertNumber type="currency"/>
+                </h:outputText>
+            </p:column>
+        </p:dataTable>
+    </p:rowExpansion>
+</p:dataTable>
+</p:panel>
+<br/>
+<p:panel style="border: 0; text-align: right;">
+    <p:commandButton value="Cancelar" action="lista" ajax="false" immediate="true" icon="ui-icon-cancel"
+                     styleClass="icone_vermelho "/>
+</p:panel>
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

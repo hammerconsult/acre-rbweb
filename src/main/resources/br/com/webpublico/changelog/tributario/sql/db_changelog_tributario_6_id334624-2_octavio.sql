@@ -1,0 +1,13 @@
+update cnae set grauderisco = 'BAIXO_RISCO_A' where codigocnae = '5611205' and situacao = 'ATIVO';
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1061901' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1081301' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1071600' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1065101' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_A' where codigocnae = '1092900' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_A' where codigocnae = '1031700' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_A' where codigocnae = '1032599' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1063500' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1064300' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1043100' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1093701' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;
+update cnae set grauderisco = 'BAIXO_RISCO_B' where codigocnae = '1069400' and situacao = 'ATIVO' and fiscalizacaosanitaria = 1;

@@ -1,0 +1,1 @@
+update vinculofp v set v.isentoPrevidencia = (select c.isentoPrevidencia from contratofp c where c.id = v.id)

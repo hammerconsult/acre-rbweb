@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty id="cpCabecalhoPretty"
+                                origem="#{solicitacaoReposicaoEstoqueControlador.caminhoPadrao}listar/"
+                                controlador="#{solicitacaoReposicaoEstoqueControlador}"/>
+            <p:panel id="painelgeral" header="Cadastro de Solicitação de Reposição de Estoque">
+                <h:panelGrid id="gridgeral" columns="2">
+                    <h:outputLabel value="Número:"/>
+                    <h:outputLabel title="Digite o número da Solicitação de Reposição de Estoque"
+                                 value="#{solicitacaoReposicaoEstoqueControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar.' : solicitacaoReposicaoEstoqueControlador.selecionado.numero}"
+                                 id="numero" styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Data:"/>
+                    <p:calendar title="Digite o dataSolicitacao da Solicitação de Reposição de Estoque"
+                                value="#{solicitacaoReposicaoEstoqueControlador.selecionado.dataSolicitacao}"
+                                id="dataSolicitacao" size="20" readonly="true"/>
+
+                    <fc:outputLabelObrigatorio value="Usuário:"/>
+                    <p:inputText
+                        value="#{solicitacaoReposicaoEstoqueControlador.selecionado.usuarioSistema.pessoaFisica.nome}"
+                        size="70" readonly="true"/>
+
+                    <fc:outputLabelObrigatorio value="Unidade Organizacional:"/>
+                    <p:autoComplete queryDelay="1000" id="hierarquiOrganizacional"
+                                    value="#{solicitacaoReposicaoEstoqueControlador.hierarquiaOrganizacional}"
+                                    completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalAdministrativa}"
+                                    var="ho" size="70"
+                                    itemLabel="#{ho}"
+                                    itemValue="#{ho.id}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    maxResults="10">
+                        <p:ajax event="itemSelect" process="@this"/>
+                    </p:autoComplete>
+                </h:panelGrid>
+
+                <br/>
+
+                <p:commandButton value="Recuperar Locais de Estoque" icon="ui-icon-refresh"
+                                 styleClass="icone_branco botao_azul"
+                                 actionListener="#{solicitacaoReposicaoEstoqueControlador.preencherMapa()}"
+                                 update=":Formulario"
+                                 title="Recupera Locais de Estoque/Materiais da Unidade Organizacional selecionada"
+                                 onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+
+                <br/>
+                <br/>
+
+                <h:outputText
+                    value="*Recupera os locais de estoque que possuem materiais com quantidades abaixo do ponto de reposição."
+                    style="font-weight: bold; font-size: xx-small;"/>
+
+                <br/>
+                <br/>
+
+                <p:panel id="tabelaDeLocaisDeEstoque"
+                         rendered="#{solicitacaoReposicaoEstoqueControlador.locaisEncontrados != null}"
+                         style="border: 0px;">
+                    <p:dataTable value="#{solicitacaoReposicaoEstoqueControlador.locaisEncontrados}"
+                                 var="local"
+                                 emptyMessage="Nenhum local de estoque encontrado!"
+                                 rowKey="#{local}"
+                                 paginator="true"
+                                 id="tabela-locais"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Locais de Estoque da unidade #{solicitacaoReposicaoEstoqueControlador.hierarquiaOrganizacional.subordinada.descricao}&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100">
+
+                        <p:column style="width: 4%;">
+                            <p:commandButton icon="ui-icon-search"
+                                             styleClass="vinteLarguraVinteAltura"
+                                             process="@this"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             update="@form"
+                                             actionListener="#{solicitacaoReposicaoEstoqueControlador.setLocalEstoqueSelecionado(local)}" />
+                        </p:column>
+
+                        <p:column headerText="Código" style="width: 10%;">
+                            <h:outputText value="#{local.codigo}"/>
+                        </p:column>
+                        <p:column headerText="Descrição" style="width: 60%; text-align: left;">
+                            <h:outputText value="#{local.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Tipo de Estoque" style="width: 30%; text-align: left;">
+                            <h:outputText value="#{local.tipoEstoque.descricao}"/>
+                        </p:column>
+                    </p:dataTable>
+                    <br/>
+                    <br/>
+                    <p:dataTable id="table_itens"
+                                 value="#{solicitacaoReposicaoEstoqueControlador.getItensDoLocalSelecionado()}"
+                                 var="item"
+                                 rendered="#{solicitacaoReposicaoEstoqueControlador.localEstoqueSelecionado != null}"
+                                 rowIndexVar="rowId"
+                                 paginator="true"
+                                 rowStyleClass="#{empty rowId or rowId mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materias do Local de Estoque : #{solicitacaoReposicaoEstoqueControlador.localEstoqueSelecionado.toStringAutoComplete()} &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100">
+
+                        <p:column style="text-align: center; width: 5%;">
+                            <p:commandButton id="botao_desmarcar"
+                                             styleClass="vinteLarguraVinteAltura"
+                                             icon="ui-icon-check"
+                                             process="@this"
+                                             update=":Formulario:table_itens :Formulario:botao_gerar_solicitacao :Formulario:botao_visualizar_materiais"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             actionListener="#{solicitacaoReposicaoEstoqueControlador.removerItemNaListaDoSelecionado(item)}"
+                                             rendered="#{solicitacaoReposicaoEstoqueControlador.itemEstaNaListaDoSelecionado(item)}"/>
+                            <p:commandButton id="botao_marcar"
+                                             styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                             value=""
+                                             process="@this"
+                                             update=":Formulario:table_itens :Formulario:botao_gerar_solicitacao :Formulario:botao_visualizar_materiais"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             actionListener="#{solicitacaoReposicaoEstoqueControlador.adicionarItemNaListaDoSelecionado(item)}"
+                                             rendered="#{!solicitacaoReposicaoEstoqueControlador.itemEstaNaListaDoSelecionado(item)}"/>
+                        </p:column>
+                        <p:column headerText="Código" style="text-align: center; width: 5%;">
+                            <h:outputText value="#{item.material.codigo}"/>
+                        </p:column>
+                        <p:column headerText="Descrição" style="text-align: center; width: 25%;">
+                            <h:outputText value="#{item.material.descricao}"
+                                          title="#{item.material.descricaoComplementar}"/>
+                        </p:column>
+                        <p:column headerText="Objeto de Compra" style="text-align: center; width: 20%;">
+                            <h:outputText value="#{item.material.objetoCompra}"
+                                          title="#{item.material.objetoCompra}"/>
+                        </p:column>
+                        <p:column headerText="Quant. em Estoque" style="text-align: center; width: 10%;">
+                            <h:outputText value="#{item.estoqueFisico}"/>
+                        </p:column>
+                        <p:column headerText="Ponto de Reposição" style="text-align: center; width: 10%;">
+                            <h:outputText value="#{item.politicaDeEstoque.pontoDeReposicao}"/>
+                        </p:column>
+                        <p:column headerText="Estoque Máximo" style="text-align: center; width: 10%;">
+                            <h:outputText
+                                value="#{item.politicaDeEstoque.estoqueMaximo eq null ? 'Não Possui.' : item.politicaDeEstoque.estoqueMaximo}"/>
+                        </p:column>
+                        <p:column headerText="Quant. em Processo" style="text-align: center; width: 10%;">
+                            <h:outputText value="#{item.quantidadeProcessoDeCompra}"/>
+                        </p:column>
+                        <p:column headerText="Quant. a Comprar" style="text-align: center; width: 10%;">
+                            <p:inputText style="text-align: right" value="#{item.quantidadeParaComprar}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+                <br/>
+                <h:panelGrid columns="7">
+                    <p:commandButton id="botao_gerar_solicitacao"
+                                     value="Gerar Formulário de Cotação"
+                                     actionListener="#{solicitacaoReposicaoEstoqueControlador.novoFormularioDeCotacaoReporEstoque()}"
+                                     icon="ui-icon-refresh"
+                                     title="Gerar Formulário de Cotação"
+                                     disabled="#{solicitacaoReposicaoEstoqueControlador.disableBotoesVisualizarEGerarSolicitacao()}"
+                                     styleClass="icone_branco botao_verde prioritario"
+                                     onclick="if (!confirm('Deseja realmente gerar Formulário de Cotação dos materais selecionados?'))return false;"/>
+
+                    <fc:botaoInformacao resumo="Informativo."
+                                        detalhes="É necessário que todos os campos obrigátorios estejam preenchidos e pelo menos um material esteja selecionado, para efetuar o Formulário de Cotação dos Materiais."
+                                        id="botao-info-gerarSolicitacao"/>&nbsp;&nbsp;&nbsp;
+
+                    <p:commandButton id="botao_visualizar_materiais"
+                                     value="Visualizar Materiais"
+                                     icon="ui-icon-search"
+                                     title="Visualizar Materiais selecionados para gerar o Formulário de Cotação"
+                                     disabled="#{solicitacaoReposicaoEstoqueControlador.disableBotoesVisualizarEGerarSolicitacao()}"
+                                     onclick="dialogItens.show()" update=":formdialogItens"/>
+
+                    <fc:botaoInformacao resumo="Informativo."
+                                        detalhes="É ncessário que pelo menos um item seja selecionado para visualização."
+                                        id="botao-info-visualizaçãoDosItens"/>
+                </h:panelGrid>
+                <br/>
+            </p:panel>
+            <fc:rodapePretty id="rpRodapePretty"
+                             controlador="#{solicitacaoReposicaoEstoqueControlador}"
+                             desabilitaSalvar="true"/>
+        </h:form>
+
+        <p:dialog id="iddialogItens"
+                  widgetVar="dialogItens"
+                  height="400"
+                  width="800"
+                  resizable="false"
+                  modal="true"
+                  draggable="false"
+                  header="Itens Selecionado"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+
+            <h:form id="formdialogItens">
+                <p:outputPanel>
+                    <p:dataTable value="#{solicitacaoReposicaoEstoqueControlador.selecionado.itensSolicitados}"
+                                 var="isrp"
+                                 paginator="true"
+                                 id="tabela-execucoes"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100">
+
+                        <p:column headerText="Local de Estoque" style="text-align: center; width: 30%;">
+                            <h:outputText value="#{isrp.localEstoque.toStringAutoComplete()}"/>
+                        </p:column>
+                        <p:column headerText="Código" style="text-align: center; width: 5%;">
+                            <h:outputText value="#{isrp.material.codigo}"/>
+                        </p:column>
+                        <p:column headerText="Descrição" style="text-align: center; width: 25%;">
+                            <h:outputText value="#{isrp.material.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Estoque Físico" style="text-align: center; width: 10%;">
+                            <h:outputText value="#{isrp.estoqueFisico}"/>
+                        </p:column>
+                        <p:column headerText="Quant. em Processo" style="text-align: center; width: 10%;">
+                            <h:outputText value="#{isrp.quantidadeProcessoDeCompra}"/>
+                        </p:column>
+                        <p:column headerText="Quant. a Comprar" style="text-align: center; width: 10%;">
+                            <h:outputText value="#{isrp.quantidadeParaComprar}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+                <div style="text-align: center; position:absolute; bottom:0; width:100%;" >
+                    <p:commandButton value="OK" icon="ui-icon-check" process="@none" update="@none" onclick="dialogItens.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

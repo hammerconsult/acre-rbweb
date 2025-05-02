@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<cc:interface>
+    <cc:attribute name="selecionado" required="true" type="java.lang.Object"/>
+    <cc:attribute name="tipoProcesso" required="true" type="br.com.webpublico.enums.TipoMovimentoProcessoLicitatorio"/>
+    <cc:attribute name="tipoVisualizacao" default="null" type="br.com.webpublico.enums.TipoApuracaoLicitacao"/>
+</cc:interface>
+
+<cc:implementation>
+
+    <f:event type="preRenderComponent"
+             listener="#{tabelaLoteItemProcessoCompraControlador.preRenderComponente(cc.attrs.selecionado, cc.attrs.tipoProcesso)}"/>
+
+    <p:outputPanel id="panel-lotes-itens">
+        <div class="thumbnail" align="center">
+            <h:panelGrid columns="2">
+                <strong>Visualizar por: </strong>
+                <h:selectOneRadio value="#{tabelaLoteItemProcessoCompraControlador.tipoVisualizacaoTabela}">
+                    <f:selectItems value="#{tabelaLoteItemProcessoCompraControlador.tiposVisualizacaoTabela}"/>
+                    <p:ajax event="change"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide();carregarTodasUnidadesMedidasDaTela()"
+                            process="@this"
+                            update=":#{cc.clientId}:panel-lotes-itens"/>
+                </h:selectOneRadio>
+            </h:panelGrid>
+        </div>
+
+        <p:dataTable
+            id="tabela-lotes"
+            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+            rowIndexVar="rowIx"
+            var="lote"
+            emptyMessage="Não foram localizados registros para serem apresentados"
+            rendered="#{tabelaLoteItemProcessoCompraControlador.tipoVisualizacaoTabela.isPorLote()}"
+            value="#{tabelaLoteItemProcessoCompraControlador.lotesVO}">
+            <p:ajax event="rowToggle" oncomplete="carregarTodasUnidadesMedidasDaTela()"/>
+            <f:facet name="header">
+                LOTES
+            </f:facet>
+            <p:column headerText="Itens" style="width: 3%">
+                <p:rowToggler/>
+            </p:column>
+            <p:column headerText="Número"
+                      style="text-align: left; width: 8%; ">
+                <h:outputText value="#{lote.numero}"/>
+            </p:column>
+            <p:column headerText="Descrição"
+                      style="text-align: left;">
+                <h:outputText value="#{lote.descricao}"/>
+            </p:column>
+            <p:column headerText="Valor (R$)"
+                      style="text-align: right;">
+                <h:outputText value="#{lote.valorTotal}">
+                    <f:convertNumber pattern="###,##0.00"/>
+                </h:outputText>
+            </p:column>
+
+            <p:rowExpansion>
+                <p:dataTable
+                    paginator="true"
+                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                    rowIndexVar="rowIx"
+                    styleClass="mtop05 mlef10"
+                    emptyMessage="Não foram localizados registros para serem apresentados"
+                    rows="10"
+                    style="overflow: scroll; max-height: 600px"
+                    paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                    rowsPerPageTemplate="10, 50, 100, 200, 500"
+                    value="#{lote.itens}"
+                    var="itemLote">
+                    <p:ajax event="page" oncomplete="carregarTodasUnidadesMedidasDaTela()"/>
+                    <p:column headerText="Valores"
+                              rendered="#{cc.attrs.tipoProcesso.isCotacao()}">
+                        <p:commandButton icon="ui-icon-currency-white"
+                                         title="Clique para visualizar os valores cotados para este item."
+                                         onclick="aguarde.show();"
+                                         oncomplete="dlgValoresCotacao.show(); aguarde.hide();"
+                                         actionListener="#{tabelaLoteItemProcessoCompraControlador.selecionarItemVO(itemLote)}"
+                                         process="@this"
+                                         update=":#{cc.clientId}:panel-valores-cot"/>
+                    </p:column>
+                    <p:column headerText="Nº" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{itemLote.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição"
+                              style="text-align: left">
+                        <h:outputText value="#{itemLote.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Especif."
+                              style="text-align: left">
+                        <ad:especificacao-objeto-compra
+                            exibirTexto="true"
+                            especificacao="#{itemLote.descricaoComplementar}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Grupo Objeto de Compra" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{itemLote.objetoCompra.grupoObjetoCompra}"/>
+
+                        <br/>
+                        <h:outputText
+                            style="font-size: 12px; color: grey"
+                            value="Cotação: "/>
+                        <h:outputText
+                            styleClass="negrito"
+                            style="font-size: 12px; color: grey"
+                            value="#{itemLote.objetoCompra.grupoObjetoCompra.tipoCotacao.descricao}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Grupo"
+                        style="text-align: left">
+                        <h:outputText
+                            value="#{itemLote.objetoCompra.grupoContaDespesa.grupo}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Conta" styleClass="alinhamentoEsquerda">
+                        <ad:conta-desdobrada-por-grupo
+                            styleClass="default"
+                            grupoContaDespesa="#{itemLote.objetoCompra.grupoContaDespesa}"/>
+                    </p:column>
+                    <p:column headerText="Unid. Med."
+                              style="text-align: center">
+                        <p unidade-medida-tip="#{itemLote.unidadeMedida.id}">
+                            #{itemLote.unidadeMedida.descricaoComponenteTip}
+                        </p>
+                    </p:column>
+                    <p:column headerText="Tipo Benefício"
+                              style="text-align: left">
+                        <h:outputText value="#{itemLote.tipoBeneficio.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Controle"
+                              style="text-align: left">
+                        <h:outputText value="#{itemLote.tipoControle.descricao}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Qtde/Valor (R$)"
+                        style="text-align: right; width: 10%">
+                        <fc:output-mascara-unidade-medida
+                            rendered="#{itemLote.tipoControlePorQuantidade}"
+                            tipoMascara="#{itemLote.unidadeMedida.mascaraQuantidade}"
+                            value="#{itemLote.quantidade}"/>
+
+                        <h:outputText value="#{itemLote.valorTotal}"
+                                      rendered="#{itemLote.tipoControlePorValor}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </p:rowExpansion>
+        </p:dataTable>
+
+        <p:dataTable
+            paginator="true"
+            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+            rowIndexVar="rowIx"
+            emptyMessage="Não foram localizados registros para serem apresentados"
+            rows="10"
+            paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+            rowsPerPageTemplate="10, 50, 100, 200, 500"
+            style="overflow: scroll; max-height: 600px"
+            rendered="#{tabelaLoteItemProcessoCompraControlador.tipoVisualizacaoTabela.isPorItem()}"
+            value="#{tabelaLoteItemProcessoCompraControlador.itensVO}"
+            var="item">
+            <p:ajax event="page" oncomplete="carregarTodasUnidadesMedidasDaTela()"/>
+            <p:column headerText="Valores"
+                      rendered="#{cc.attrs.tipoProcesso.isCotacao()}">
+                <p:commandButton icon="ui-icon-currency-white"
+                                 title="Clique para visualizar os valores cotados para este item."
+                                 onclick="aguarde.show();"
+                                 oncomplete="dlgValoresCotacao.show(); aguarde.hide();"
+                                 actionListener="#{tabelaLoteItemProcessoCompraControlador.selecionarItemVO(item)}"
+                                 process="@this"
+                                 update=":#{cc.clientId}:panel-valores-cot"/>
+            </p:column>
+            <p:column headerText="Lote" styleClass="alinhamentoDireita">
+                <h:outputText value="#{item.loteFormularioCompraVO.numero}"/>
+            </p:column>
+            <p:column headerText="Item" styleClass="alinhamentoDireita">
+                <h:outputText value="#{item.numero}"/>
+            </p:column>
+            <p:column headerText="Descrição"
+                      style="text-align: left">
+                <h:outputText value="#{item.descricao}"/>
+            </p:column>
+            <p:column headerText="Especif."
+                      style="text-align: left">
+                <ad:especificacao-objeto-compra
+                    exibirTexto="true"
+                    especificacao="#{item.descricaoComplementar}"/>
+            </p:column>
+            <p:column
+                headerText="Grupo Objeto de Compra" styleClass="alinhamentoEsquerda">
+                <h:outputText
+                    value="#{item.objetoCompra.grupoObjetoCompra}"/>
+
+                <br/>
+                <h:outputText
+                    style="font-size: 12px; color: grey"
+                    value="Cotação: "/>
+                <h:outputText
+                    styleClass="negrito"
+                    style="font-size: 12px; color: grey"
+                    value="#{item.objetoCompra.grupoObjetoCompra.tipoCotacao.descricao}"/>
+            </p:column>
+            <p:column
+                headerText="Grupo"
+                style="text-align: left">
+                <h:outputText
+                    value="#{item.objetoCompra.grupoContaDespesa.grupo}"/>
+            </p:column>
+            <p:column
+                headerText="Conta" styleClass="alinhamentoEsquerda">
+                <ad:conta-desdobrada-por-grupo
+                    styleClass="default"
+                    grupoContaDespesa="#{item.objetoCompra.grupoContaDespesa}"/>
+            </p:column>
+            <p:column headerText="Unid. Med."
+                      style="text-align: left">
+                <p unidade-medida-tip="#{item.unidadeMedida.id}">
+                    #{item.unidadeMedida.descricaoComponenteTip}
+                </p>
+            </p:column>
+            <p:column headerText="Tipo Benefício"
+                      style="text-align: left">
+                <h:outputText value="#{item.tipoBeneficio.descricao}"/>
+            </p:column>
+            <p:column headerText="Controle"
+                      style="text-align: left">
+                <h:outputText value="#{item.tipoControle.descricao}"/>
+            </p:column>
+            <p:column
+                headerText="Qtde/Valor (R$)"
+                style="text-align: right; width: 10%">
+
+                <fc:output-mascara-unidade-medida
+                    rendered="#{item.tipoControlePorQuantidade}"
+                    tipoMascara="#{item.unidadeMedida.mascaraQuantidade}"
+                    value="#{item.quantidade}"/>
+
+                <h:outputText value="#{item.valorTotal}"
+                              rendered="#{item.tipoControlePorValor}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </p:column>
+        </p:dataTable>
+
+
+        <p:dialog modal="true"
+                  onShow="carregarTodasUnidadesMedidasDaTela()"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="1000"
+                  max-height="450"
+                  widgetVar="dlgValoresCotacao"
+                  closable="true">
+
+            <p:outputPanel id="panel-valores-cot">
+
+                <div class="thumbnail">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Lote: "/>
+                        <h:outputText
+                            value="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.loteFormularioCompraVO.numero}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Item: "/>
+                        <h:outputText
+                            value="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.numero} - #{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Especificação: "/>
+                        <ad:especificacao-objeto-compra
+                            especificacao="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.descricaoComplementar}"
+                            exibirTexto="true"/>
+                    </h:panelGrid>
+
+                    <div class="alert alert-info mtop10" align="center"
+                         style="padding: 3px; display: #{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.objetoCompra.isObjetoValorReferencia() ? 'block' : 'none'}">
+                        <strong>VALOR DE REFERÊNCIA</strong>
+                    </div>
+                    <div class="thumbnail"
+                         style="display: #{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.objetoCompra.isObjetoValorReferencia() ? 'block' : 'none'}">
+
+                        <table style="width: 100%; text-align: center">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    <h:outputText value="Quantidade: "/>
+                                    <fc:output-mascara-unidade-medida
+                                        styleClass="negrito"
+                                        tipoMascara="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.unidadeMedida.mascaraQuantidade}"
+                                        value="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.quantidade}"/>
+                                </td>
+                                <td class="centralizado">
+                                    <h:outputText value="Valor de Unitário (R$): "/>
+                                    <fc:output-mascara-unidade-medida
+                                        styleClass="negrito"
+                                        tipoMascara="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.unidadeMedida.mascaraValorUnitario}"
+                                        value="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.valorUnitario}"/>
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="Valor Total (R$): "/>
+                                    <h:outputText
+                                        styleClass="negrito"
+                                        value="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.valorTotal}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-info mtop10" align="center"
+                         style="padding: 3px; display: #{!tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.objetoCompra.isObjetoValorReferencia() ? 'block' : 'none'}">
+                        <strong>VALORES DA COTAÇÃO</strong>
+                    </div>
+                    <div
+                        style="overflow: scroll; max-height: 300px; display: #{!tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.objetoCompra.isObjetoValorReferencia() ? 'block' : 'none'}">
+                        <table class="table table-striped table-hover">
+                            <tr>
+                                <th>Fornecedor</th>
+                                <th>Marca</th>
+                                <th class="alinhamentoDireita">Quantidade</th>
+                                <th class="alinhamentoDireita">Preço (R$)</th>
+                                <th class="alinhamentoDireita">Total (R$)</th>
+                            </tr>
+                            <ui:repeat
+                                value="#{tabelaLoteItemProcessoCompraControlador.itemVOSelecionado.valoresCotacao}"
+                                var="valor">
+                                <tr>
+                                    <td>#{valor.fornecedor.nomeCpfCnpj}</td>
+                                    <td>#{valor.marca}</td>
+                                    <td class="alinhamentoDireita">
+                                        <fc:output-mascara-unidade-medida
+                                            tipoMascara="#{valor.itemCotacao.unidadeMedida.mascaraQuantidade}"
+                                            value="#{valor.itemCotacao.quantidade}"/>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <fc:output-mascara-unidade-medida
+                                            tipoMascara="#{valor.itemCotacao.unidadeMedida.mascaraValorUnitario}"
+                                            value="#{valor.preco}"/>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText value="#{valor.total}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                        </table>
+                    </div>
+                </div>
+
+            </p:outputPanel>
+        </p:dialog>
+    </p:outputPanel>
+
+</cc:implementation>
+</html>

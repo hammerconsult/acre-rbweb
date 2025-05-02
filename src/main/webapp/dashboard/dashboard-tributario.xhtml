@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario" style="background-color: #eaeaea!important;">
+
+            <p:panel>
+                <h:panelGrid columns="2">
+                    <img src="/img/graph.jpg" width="40" height="40" alt="imagem de um gráfico"/>
+
+                    <co:titulo-panel titulo="Dashboard do Tributário"/>
+
+                </h:panelGrid>
+
+
+                <h:panelGrid columns="2">
+                    <p:outputLabel for="mes" value="Mês:"/>
+                    <p:inputText title="Informe o Mês."
+                                 size="4"
+                                 id="mes"/>
+                    <fc:outputLabelObrigatorio for="ano" value="Ano:"/>
+                    <p:inputMask title="Digite o ano."
+                                 mask="9999"
+                                 size="4"
+                                 id="ano" maxlength="70"/>
+
+                    <fc:outputLabelObrigatorio value="Entidade:"/>
+                    <p:autoComplete queryDelay="1000"
+                                    widgetVar="wgEntidade"
+                                    completeMethod="#{entidadeControlador.completarEntidades}"
+                                    converter="#{entidadeControlador.converterGenerico}"
+                                    size="70"
+                                    dropdown="true"
+                                    id="autoCompleteEntidade"
+                                    panelStyle="max-height: 250px; max-width: 800px"
+                                    maxResults="50"
+                                    itemLabel="#{entidade}"
+                                    itemValue="#{entidade.id}"
+                                    var="entidade">
+                        <p:ajax event="itemSelect" process="@this"/>
+                    </p:autoComplete>
+
+                    <h:outputLabel value="Tributo:"/>
+                    <p:autoComplete queryDelay="1000"
+                                    widgetVar="wgTributo"
+                                    completeMethod="#{tributoControlador.completarTributos}"
+                                    converter="#{tributoControlador.converterGenerico}"
+                                    size="70"
+                                    dropdown="true"
+                                    id="autoCompleteTributo"
+                                    panelStyle="max-height: 250px; max-width: 800px"
+                                    maxResults="50"
+                                    itemLabel="#{tributo}"
+                                    itemValue="#{tributo.id}"
+                                    var="tributo">
+                        <p:ajax event="itemSelect" process="@this"/>
+                    </p:autoComplete>
+
+                </h:panelGrid>
+
+                <p:commandButton value="Buscar Informações"
+                                 icon="ui-icon-search"
+                                 styleClass="icone_azul"
+                                 update="@none"
+                                 process="@none"
+                                 id="btnBuscar"
+                                 style=" height: 32px;"
+                                 onclick="pesquisar();"/>
+
+                <p:commandButton value="Limpar"
+                                 icon="ui-icon-clear"
+                                 styleClass="icone_azul"
+                                 update="@none"
+                                 process="@none"
+                                 id="btnLimpar"
+                                 style=" height: 32px;"
+                                 onclick="limpar();"/>
+
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" id="qtd5" name="qtd"
+                            onclick="atribuirQuantidade(5)">TOP 5
+                    </button>
+                    <button type="button" class="btn btn-primary" id="qtd10" name="qtd"
+                            onclick="atribuirQuantidade(10)">TOP 10
+                    </button>
+                    <button type="button" class="btn btn-primary" id="qtd20" name="qtd"
+                            onclick="atribuirQuantidade(20)">TOP 20
+                    </button>
+                    <button type="button" class="btn btn-primary" id="qtd0" name="qtd"
+                            onclick="atribuirQuantidade(0)">TODOS
+                    </button>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-info" id="bar" name="tipo"
+                            onclick="atribuirTipo('bar')">Barra
+                    </button>
+                    <button type="button" class="btn btn-info" id="line" name="tipo"
+                            onclick="atribuirTipo('line')">Linha
+                    </button>
+                    <button type="button" class="btn btn-info" id="radar" name="tipo"
+                            onclick="atribuirTipo('radar')">Radar
+                    </button>
+                    <button type="button" class="btn btn-info" id="pie" name="tipo" onclick="atribuirTipo('pie')">Pie
+                    </button>
+                    <button type="button" class="btn btn-info" id="polarArea" name="tipo"
+                            onclick="atribuirTipo('polarArea')">Polar
+                    </button>
+                </div>
+            </p:panel>
+
+            <table style="width: 100%!important;" id="tabela">
+                <tr style="width: 100%!important;">
+                    <td style="width: 100%!important;vertical-align: top!important;">
+                        <p:panel style="text-align: center!important;" styleClass="mtop10">
+                            <co:titulo-panel titulo="Arrecadação por Tributo"/>
+                            <div style="max-height: 350px">
+                                <canvas id="chartArrecadacaoPorTributo"></canvas>
+                            </div>
+                        </p:panel>
+                    </td>
+                </tr>
+            </table>
+        </h:form>
+
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/chart_js/dist/Chart.js"></script>
+
+        <script type="text/javascript">
+            var charArrecadacao = null;
+            var quantidade = 0;
+            var tipo = "";
+
+            function atribuirQuantidade(valor) {
+                this.quantidade = valor;
+
+                var elementos = document.getElementsByName('qtd');
+
+                function percorreElements(element, index, array) {
+                    var classes = element.classList;
+                    classes.remove("active");
+                }
+
+                elementos.forEach(percorreElements);
+
+                var classes = document.getElementById('qtd' + valor).classList;
+                classes.add("active");
+            }
+
+            function atribuirTipo(valor) {
+                this.tipo = valor;
+
+                var elementos = document.getElementsByName('tipo');
+
+                function percorreElements(element, index, array) {
+                    var classes = element.classList;
+                    classes.remove("active");
+                }
+
+                elementos.forEach(percorreElements);
+
+
+                var classes = document.getElementById(valor).classList;
+                classes.add("active");
+            }
+
+
+            window.onload = function () {
+                var d = new Date();
+                var mes = d.getMonth();
+                var ano = d.getFullYear();
+                getElement('Formulario:mes').value = mes + 1;
+                getElement('Formulario:ano').value = ano;
+
+                jQuery('#Formulario\\:btnLimpar').addClass('ui-state-disabled');
+
+                atribuirQuantidade(10);
+                atribuirTipo('bar');
+            }
+
+            function isNull(arg) {
+                if (arg == null == 'null' || arg == null || arg == 'undefined' || arg == '') {
+                    return true;
+                }
+                return false;
+            }
+
+            function limpar() {
+                try {
+                    if (this.charArrecadacao != null) {
+                        this.charArrecadacao.destroy();
+                    }
+                } catch (exception_var_1) {
+                    console.log(exception_var_1)
+                }
+                jQuery('#Formulario\\:btnBuscar').removeClass('ui-state-disabled');
+                jQuery('#Formulario\\:btnLimpar').addClass('ui-state-disabled');
+            }
+
+            function pesquisar() {
+
+                var mes = getElement('Formulario:mes').value;
+                var ano = getElement('Formulario:ano').value;
+                var idEntidade = getElement('Formulario:autoCompleteEntidade_hinput').value;
+                var idTributo = getElement('Formulario:autoCompleteTributo_hinput').value;
+
+                var validou = true;
+                if (isNull(ano)) {
+                    alert('O Campo ano é obrigatório.');
+                    validou = false;
+                }
+                if (isNull(idEntidade)) {
+                    alert('O Campo entidade é obrigatório.');
+                    validou = false;
+                }
+                if (validou) {
+                    realizarBusca(ano, mes, idEntidade, idTributo);
+                }
+
+            }
+
+            function realizarBusca(ano, mes, idEntidade, idTributo) {
+                aguarde.show();
+
+                jQuery('#Formulario\\:btnBuscar').addClass('ui-state-disabled');
+                jQuery('#Formulario\\:btnLimpar').removeClass('ui-state-disabled');
+
+                var ctxArrecadacaoPorTrituto = document.getElementById("chartArrecadacaoPorTributo");
+                if (ctxArrecadacaoPorTrituto != null) {
+                    ctxArrecadacaoPorTrituto = ctxArrecadacaoPorTrituto.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-tributario/arrecadacao-por-tributo?ano=' + ano + '&amp;mes=' + mes + '&amp;idEntidade=' + idEntidade + '&amp;idTributo=' + idTributo + '&amp;quantidade=' + quantidade + '&amp;tipo=' + tipo,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetorno(ctxArrecadacaoPorTrituto, JSON.parse(retorno));
+                        }
+                    });
+                }
+            }
+
+            function tratarRetorno(ctxArrecadacaoPorTrituto, retorno) {
+                this.charArrecadacao = new Chart(ctxArrecadacaoPorTrituto, retorno);
+
+
+                if (this.tipo == 'bar' || this.tipo == 'line') {
+
+                    retorno.options.tooltips = {
+                        callbacks: {
+                            label: function (t, d) {
+                                return formatarValorRSDashboard(t.yLabel);
+                            }
+                        }
+                    };
+
+                    retorno.options.scales = {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                callback: function (value, index, values) {
+                                    return formatarValorRSDashboard(value);
+                                }
+                            }
+                        }]
+                    };
+
+                    retorno.options.legend = {
+                        display: true,
+                        position: 'top'
+                    };
+                    retorno.options.responsive = true;
+                    retorno.options.maintainAspectRatio = false;
+                    retorno.options.height = 100;
+                }
+
+                aguarde.hide();
+            }
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

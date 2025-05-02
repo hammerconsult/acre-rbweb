@@ -1,0 +1,1 @@
+update eventocontabil set tipoeventocontabil = 'CREDITO_ADICIONAL' where tipoeventocontabil = 'PROVISAO_PPA_DESPESA' and codigo <> '15111'

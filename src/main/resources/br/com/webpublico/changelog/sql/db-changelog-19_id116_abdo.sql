@@ -1,0 +1,1 @@
+ update horariofuncionamentoitem set diaaux = dia;

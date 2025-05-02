@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerSalvar;
+
+            function acompanharSalvar() {
+                timerSalvar = setInterval(function () {
+                    rcAcompanharSalvar();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timerSalvar);
+                rcFinalizarSalvar();
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{aprovacaoAlienacaoControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                onstart="aguarde.show()"
+                oncomplete="aguarde.hide()"
+                update=":Formulario:tabviewprincipal:outpanelaprovacao :Formulario:tabviewprincipal:panelDadosSolicitacao :Formulario:tabviewprincipal:descricaoSecretaria"
+                actionListener="#{aprovacaoAlienacaoControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+
+            <fc:cabecalhoPretty controlador="#{aprovacaoAlienacaoControlador}"
+                                origem="#{aprovacaoAlienacaoControlador.caminhoPadrao}novo/"/>
+
+            <p:panel header="Aprovação de Alienação de Bem Móvel" id="panelPrincipal">
+                <p:tabView id="tabviewprincipal" styleClass="mtop05">
+                    <p:tab title="Dados da Aprovação">
+                        <p:outputPanel id="panelDadosAprovacao">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Código:"/>
+                                <h:outputLabel
+                                    value="${aprovacaoAlienacaoControlador.selecionado.codigo == null ? 'Gerado automaticamente ao salvar.' : aprovacaoAlienacaoControlador.selecionado.codigo}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Data da Aprovação: "/>
+                                <h:outputText
+                                    value="${aprovacaoAlienacaoControlador.selecionado.dataEfetivacao}"
+                                    styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputText value="Responsável: "/>
+                                <h:outputText
+                                    value="${aprovacaoAlienacaoControlador.selecionado.responsavel.pessoaFisica.nome}"
+                                    styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Solicitação de Alienação: "/>
+                                <h:panelGroup>
+                                    <p:autoComplete queryDelay="1000"
+                                                    panelStyle="max-width: 700px; max-height: 230px"
+                                                    id="ac-sol-alienacao"
+                                                    title="Selecione um registro"
+                                                    value="#{aprovacaoAlienacaoControlador.selecionado.solicitacaoAlienacao}"
+                                                    completeMethod="#{aprovacaoAlienacaoControlador.completaSolicitacaoAlienacaoParaEfetivacao}"
+                                                    converter="#{solicitacaoAlienacaoControlador.converterGenerico}"
+                                                    onfocus="this.select();"
+                                                    onclick="this.select();"
+                                                    dropdown="true"
+                                                    var="objeto"
+                                                    process="@this"
+                                                    itemValue="#{objeto.id}"
+                                                    itemLabel="#{objeto}"
+                                                    maxResults="50"
+                                                    size="70">
+                                        <p:ajax event="itemSelect"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"
+                                                process="@this"
+                                                listener="#{aprovacaoAlienacaoControlador.buscarBensDaSolicitacaoAlienacao()}"/>
+                                    </p:autoComplete>
+                                    <p:watermark value="Código, Descrição ou Data da Solicitação"
+                                                 for="ac-sol-alienacao"/>
+
+                                    <p:outputPanel id="panelDadosSolicitacao">
+                                        <fc:visualizarCampos
+                                            styleClass="mlef05"
+                                            objeto="#{aprovacaoAlienacaoControlador.selecionado.solicitacaoAlienacao}"
+                                            rendered="#{aprovacaoAlienacaoControlador.selecionado.solicitacaoAlienacao ne null}"/>
+                                    </p:outputPanel>
+                                </h:panelGroup>
+
+                                <h:outputText value="Unidade Administrativa: " id="secretaria"/>
+                                <p:outputPanel id="descricaoSecretaria">
+                                    <fc:codigo-descricao-hierarquia tipoHierarquia="ADMINISTRATIVA"
+                                                                    unidadeOrganizacional="#{aprovacaoAlienacaoControlador.selecionado.solicitacaoAlienacao.unidadeAdministrativa}"
+                                                                    dataMovimento="#{aprovacaoAlienacaoControlador.selecionado.dataEfetivacao}"/>
+                                </p:outputPanel>
+
+                                <fc:outputLabelObrigatorio for="descricao" value="Descrição:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="descricao"
+                                                     title="Digite a descrição para aprovação da alienação."
+                                                     value="#{aprovacaoAlienacaoControlador.selecionado.descricao}"
+                                                     maxlength="255"
+                                                     cols="70"
+                                                     rows="3"
+                                                     minQueryLength="70"
+                                                     autoResize="false"
+                                                     scrollHeight="50"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-descricao"
+                                                     style="text-transform: uppercase">
+                                        <p:ajax event="blur" process="@this" update="@this"/>
+                                    </p:inputTextarea>
+                                    <h:outputText id="counter-descricao"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+
+                                <fc:outputLabelObrigatorio value="Situação: "/>
+                                <h:selectOneMenu
+                                    value="#{aprovacaoAlienacaoControlador.selecionado.situacaoEfetivacao}">
+                                    <f:selectItems
+                                        value="#{aprovacaoAlienacaoControlador.situacoesParaEfetivacao()}"
+                                        var="situacao"
+                                        itemLabel="#{situacao.descricao}"/>
+                                    <p:ajax event="valueChange"
+                                            process="@this"
+                                            update="panelDadosAprovacao"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="motivo" value="Motivo da Rejeição:"
+                                                           rendered="#{aprovacaoAlienacaoControlador.getRenderizarMotivodaRejeicao()}"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="motivo"
+                                                     rendered="#{aprovacaoAlienacaoControlador.getRenderizarMotivodaRejeicao()}"
+                                                     title="Digite o motivo da rejeição."
+                                                     value="#{aprovacaoAlienacaoControlador.motivoRejeicao}"
+                                                     maxlength="255"
+                                                     minQueryLength="100"
+                                                     cols="70"
+                                                     rows="3"
+                                                     autoResize="false"
+                                                     scrollHeight="50"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-motivo"
+                                                     style="text-transform: uppercase">
+                                        <p:ajax event="blur" process="@this"/>
+                                    </p:inputTextarea>
+                                    <h:outputText id="counter-motivo"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+
+                            <p:panel header="Ato Legal" styleClass="mtop05">
+                                <p:outputPanel id="panel-ato-legal">
+                                    <h:panelGrid columns="3">
+                                        <fc:outputLabelObrigatorio value="Ato Legal: "/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        title="Digite o nome do ato legal que deseja pesquisar."
+                                                        value="#{aprovacaoAlienacaoControlador.itemAtoLegal.atoLegal}"
+                                                        completeMethod="#{atoLegalControlador.completaAtoLegal}"
+                                                        converter="#{atoLegalControlador.converterAtoLegal}"
+                                                        var="c"
+                                                        maxResults="50"
+                                                        panelStyle="max-height: 230px;max-width: 700px"
+                                                        dropdown="true"
+                                                        itemValue="#{c.id}"
+                                                        itemLabel="#{c.tipoNumeroAno}"
+                                                        size="70"/>
+
+                                        <p:commandButton styleClass="botao_azul icone_branco"
+                                                         update=":FormularioAtoLegal:paneldialogAtoLegal"
+                                                         oncomplete="dialogAtoLegal.show()"
+                                                         icon="ui-icon-search"
+                                                         title="Clique para selecionar um Ato Legal"/>
+                                    </h:panelGrid>
+
+                                    <p:commandButton value="Adicionar"
+                                                     update=":Formulario:tabviewprincipal:panel-ato-legal"
+                                                     process=":Formulario:tabviewprincipal:panel-ato-legal"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     styleClass="padrao mtop05"
+                                                     icon="ui-icon-plus"
+                                                     actionListener="#{aprovacaoAlienacaoControlador.adicionarAtoLegal()}"/>
+
+                                    <p:dataTable
+                                        id="tabela-ato-legal"
+                                        rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                        paginator="true"
+                                        rows="10"
+                                        styleClass="mtop02"
+                                        paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Atos Legais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                        currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                        emptyMessage="Não foram localizados registros para serem apresentados."
+                                        rowIndexVar="rowlx"
+                                        value="#{aprovacaoAlienacaoControlador.selecionado.itensAtoLegal}"
+                                        var="itemAtoLegal">
+                                        <p:column headerText="Ação" style="width: 10px"
+                                                  styleClass="alinhamentoCentralizado">
+                                            <p:commandButton icon="ui-icon-trash"
+                                                             process="@this"
+                                                             oncomplete="aguarde.hide()"
+                                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                             actionListener="#{aprovacaoAlienacaoControlador.removerAtoLegal(itemAtoLegal)}"
+                                                             title="Clique para remover este registro."
+                                                             update="tabela-ato-legal"/>
+                                        </p:column>
+                                        <p:column headerText="Ato Legal" styleClass="alinhamentoEsquerda">
+                                            <h:outputText value="#{itemAtoLegal.atoLegal}"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:outputPanel>
+                            </p:panel>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Bens para Aprovação" id="tablotes">
+                        <p:outputPanel id="outpanelaprovacao">
+
+                            <p:outputPanel
+                                rendered="#{!aprovacaoAlienacaoControlador.selecionado.isSolicitacaoSelecionada()}"
+                                id="panelInformacao">
+                                <div class="alert alert-info alinhamentoCentralizado"
+                                     style="font-size: 13px">
+                                    Selecione a solicitação de alienação desejada para visualizar os bens.
+                                </div>
+                            </p:outputPanel>
+
+                            <p:outputPanel id="op-lotes"
+                                           rendered="#{aprovacaoAlienacaoControlador.selecionado.isSolicitacaoSelecionada()}">
+                                <p:dataTable
+                                    id="tabela-itens-lote"
+                                    rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    styleClass="mtop02"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Bens da Solicitação&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx"
+                                    value="#{aprovacaoAlienacaoControlador.itensSolicitados}"
+                                    var="item">
+                                    <p:column headerText="Registro" style="text-align: left; width: 10%">
+                                        <h:outputLabel value="#{item.registroPatrimonial}"/>
+                                    </p:column>
+                                    <p:column headerText="Registro Anterior">
+                                        <h:outputText value="#{item.registroAnterior}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição" style="text-align: left; width: 45%">
+                                        <h:outputLabel value="#{item.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Orçamentária"
+                                              style="width: 35%; text-align: left;">
+                                        <h:outputLabel value="#{item.unidadeOrcamentaria}"/>
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                Total
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column headerText="Data Aquisição">
+                                        <h:outputText value="#{item.dataAquisicao}">
+                                            <f:convertDateTime type="date"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Tipo Fonte de Recurso" style="text-align: left; width: 45%">
+                                        <h:outputLabel
+                                            value="#{item.fonteRecurso}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Original (R$)"
+                                              styleClass="alinhamentoDireita"
+                                              style="width: 5%; text-align: left;">
+                                        <h:outputLabel value="#{item.valorOriginal}"
+                                                       converter="moedaConverter"/>
+                                        <div align="right">
+                                            <f:facet name="footer">
+                                                <h:outputLabel
+                                                    value="#{aprovacaoAlienacaoControlador.valorTotalOriginal}"
+                                                    converter="moedaConverter"/>
+                                            </f:facet>
+                                        </div>
+                                    </p:column>
+                                    <p:column headerText="Valor Ajuste (R$)"
+                                              styleClass="alinhamentoDireita"
+                                              style="width: 5%; text-align: left;">
+                                        <h:outputLabel value="#{item.valorAjuste}"
+                                                       converter="moedaConverter"/>
+                                        <div align="right">
+                                            <f:facet name="footer">
+                                                <h:outputLabel
+                                                    value="#{aprovacaoAlienacaoControlador.valorTotalAjuste}"
+                                                    converter="moedaConverter"/>
+                                            </f:facet>
+                                        </div>
+                                    </p:column>
+                                    <p:column headerText="Valor Líquido (R$)"
+                                              styleClass="alinhamentoDireita"
+                                              style="width: 5%; text-align: left;">
+                                        <h:outputLabel
+                                            value="#{item.valorLiquido}"
+                                            converter="moedaConverter"/>
+                                        <div align="right">
+                                            <f:facet name="footer">
+                                                <h:outputLabel
+                                                    value="#{aprovacaoAlienacaoControlador.valorTotalLiquido}"
+                                                    converter="moedaConverter"/>
+                                            </f:facet>
+                                        </div>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Anexos">
+                        <fc:filesUploadWP selecionado="#{aprovacaoAlienacaoControlador.selecionado}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             onstart="aguarde.show()"
+                             process=":Formulario"
+                             title="Clique para salvar este registro."
+                             actionListener="#{aprovacaoAlienacaoControlador.salvar()}"
+                             styleClass="mtop10 prioritario operacao"/>
+
+
+            <p:commandButton value="Cancelar"
+                             icon="ui-icon-cancel"
+                             onstart="aguarde.show()"
+                             process="@this"
+                             title="Clique para cancelar a operação."
+                             actionListener="#{aprovacaoAlienacaoControlador.cancelar()}"
+                             styleClass="mtop10 mlef05 operacao"/>
+        </h:form>
+
+        <p:dialog widgetVar="dialogAtoLegal" modal="true" width="1100" height="480">
+            <h:form id="FormularioAtoLegal">
+                <p:panel id="paneldialogAtoLegal">
+                    <fc:pesquisaGenerico id="lista"
+                                         caminhoAtual="edita"
+                                         caminhoControlador="#{aprovacaoAlienacaoControlador.caminho}"
+                                         nomeDaClasse="AtoLegal"
+                                         dialog="true"
+                                         pretty="true"
+                                         iconmSelecionar="check-icon.png"
+                                         novo="#{aprovacaoAlienacaoControlador.novo()}"
+                                         selecionar="#{aprovacaoAlienacaoControlador.selecionarAtoLegal}"
+                                         guardarNaSessao="false"
+                                         mostrarHistorico="false"
+                                         mostrarBotaoNovo="false"
+                                         updateSelecionarTabela=":Formulario"
+                                         mostrarBotaoImprimirRelatorioTabela="false"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Aprovação de Alienação de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <p:remoteCommand
+                    actionListener="#{aprovacaoAlienacaoControlador.acompanharAndamentoSalvar}"
+                    process=":FormularioSalvar"
+                    update=":FormularioSalvar"
+                    name="rcAcompanharSalvar"/>
+
+                <p:remoteCommand
+                    actionListener="#{aprovacaoAlienacaoControlador.finalizarSalvar()}"
+                    process=":FormularioSalvar"
+                    update=":FormularioSalvar"
+                    name="rcFinalizarSalvar"/>
+
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{aprovacaoAlienacaoControlador.assistenteMovimentacao.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{aprovacaoAlienacaoControlador.assistenteMovimentacao.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{aprovacaoAlienacaoControlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{aprovacaoAlienacaoControlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active">
+                            <div class="bar"
+                                 style="width: #{aprovacaoAlienacaoControlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+                    <br/>
+                </div>
+            </h:form>
+        </div>
+
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Buscando Bens da Solicitação de Alienação</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"/>
+                        <br/><br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+    </ui:define>
+</ui:composition>
+</html>

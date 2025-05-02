@@ -1,0 +1,1 @@
+update entidade set natureza = 'ORGAO'

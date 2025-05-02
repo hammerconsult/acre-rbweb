@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Obras" style="background-color: #eaeaea!important;">
+
+            <div style="text-align: center!important; ">
+
+                <img src="/img/graph.jpg" width="40" height="40" alt="imagem de um gráfico"
+                     style="margin-top: 10px!important;"/>
+
+                <h1>Dashboard De Obras</h1>
+
+            </div>
+
+
+            <table style="width: 100%!important;" id="tabela">
+                <tr style="width: 100%!important;">
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                    <td style="width: 70%!important;vertical-align: top!important;">
+                        <p:panel style="text-align: center!important;" styleClass="mtop10">
+                            <co:titulo-panel titulo=" Obras por Subtipo de Objeto de Compra"/>
+                            <div style="max-height: 350px">
+                                <canvas id="chartSubtipoTodos"></canvas>
+                            </div>
+                        </p:panel>
+                    </td>
+                    <td style="width: 15%!important;vertical-align: top!important;">
+
+                    </td>
+                </tr>
+            </table>
+        </h:form>
+
+        <script type="text/javascript"
+                src="http://sit.riobranco.ac.gov.br/mapa.js?key=34KEzpj7iTKK654_qdZ0Bn7mHI807ljqgLoiKAA"
+                charset="utf-8">
+        </script>
+
+        <h:form id="form1">
+
+            <p:panel header="Obra com Inscrição Cadastral">
+                <p:dataTable id="dataTable1" var="obra" value="#{obraMapaControlador.dtos}">
+
+                    <p:column headerText="Inscrição Cadastral" style="text-align:center;">
+                        <h:outputText value="#{obra.inscricacaoCadastral}"/>
+                    </p:column>
+                    <p:column headerText="Obra" style="text-align:center;">
+                        <h:outputText value="#{obra.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Lote" style="text-align:center;">
+                        <h:outputText value="#{obra.lote}"/>
+                    </p:column>
+                    <p:column headerText="Quadra" style="text-align:center;">
+                        <h:outputText value="#{obra.quadra}"/>
+                    </p:column>
+                    <p:column headerText="Setor" style="text-align:center;">
+                        <h:outputText value="#{obra.setor}"/>
+                    </p:column>
+                    <p:column headerText="Porcetagem" style="text-align:center;">
+                        <h:outputText value="#{obra.porcentagem}"/>
+                    </p:column>
+                    <p:column style="text-align:center;">
+                        <p:commandButton update="@form"
+                                         value="Ver"
+                                         icon="ui-icon-search"
+                                         styleClass="operacao" title="Ver Obra"
+                                         style="width:15px;text-align:center;"
+                                         actionListener="#{obraMapaControlador.verInscricaoMapa(obra)}">
+                        </p:commandButton>
+                    </p:column>
+
+                    <br/>
+
+                </p:dataTable>
+
+            </p:panel>
+            <br/>
+            <p:panel header="Mapa">
+
+                <div id="mapa"
+                     style="width: 100%; text-align: center; vertical-align: top;"/>
+
+            </p:panel>
+        </h:form>
+
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/chart_js/dist/Chart.js"></script>
+
+        <script type="text/javascript">
+            var porcentagem = true;
+
+            window.onload = function () {
+                pesquisar()
+            }
+
+            function atribuirTipo(valor) {
+                this.porcentagem = valor;
+            }
+
+            function pesquisar() {
+
+                realizarBusca();
+
+            }
+
+            function realizarBusca() {
+                aguarde.show();
+
+                var chartSubtipoTodos = document.getElementById("chartSubtipoTodos");
+                if (chartSubtipoTodos != null) {
+                    chartSubtipoTodos = chartSubtipoTodos.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/obras-por-subtipo?&amp;porcentagem=' + porcentagem,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoTodos(chartSubtipoTodos, JSON.parse(retorno));
+                            aguarde.hide();
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+            }
+
+            function tratarRetornoTodos(chartSubtipoTodos, retorno) {
+                this.chartSubtipoTodos = new Chart(chartSubtipoTodos, retorno);
+
+                retorno.options.tooltips = {
+                    callbacks: {
+                        label: function (t, d) {
+                            if (porcentagem == true) {
+                                return formatarValorPorcentagemDashboard(retorno.data.datasets[0].data[t.index]);
+                            } else {
+                                return formatarValorInteiroDashboard(retorno.data.datasets[0].data[t.index]);
+                            }
+                        }
+
+                    }
+                };
+
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom'
+                };
+
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+
+            }
+
+            var mapa;
+
+            function criarMapa() {
+                mapa = SITGeo_criarMapa('mapa');
+            }
+
+            function getLote(inscricao) {
+                setTimeout(function (inscricao) {
+                    mapa.lotes.SITGeo_getLote(inscricao);
+                    centralizar(inscricao, mapa.lotes)
+                }, 500, inscricao);
+            }
+
+            function exibeLote(iq) {
+                setTimeout(function (iq) {
+                    mapa.lotes.SITGeo_exibirLote(true, mapa.lotes[iq]);
+                }, 500, iq);
+            }
+
+            function centralizar(iq) {
+                setTimeout(function (iq) {
+                    mapa.lotes.SITGeo_centralizarLote(iq);
+                }, 500, iq);
+            }
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

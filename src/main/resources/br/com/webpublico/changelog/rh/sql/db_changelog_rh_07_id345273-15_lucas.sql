@@ -1,0 +1,10 @@
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 935), 'NORMAL');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 935), 'COMPLEMENTAR');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 935), 'RESCISAO');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 936), 'SALARIO_13');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 936), 'RESCISAO');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 1235), 'NORMAL');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 1235), 'COMPLEMENTAR');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 1235), 'RESCISAO');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 1236), 'SALARIO_13');
+insert into eventoFPTipoFolha (id, eventofp_id, tipoFolhaDePagamento) values (hibernate_sequence.nextval, (select e.id from eventofp e where e.codigo = 1236), 'RESCISAO');

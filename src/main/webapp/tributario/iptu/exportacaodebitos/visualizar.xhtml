@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty origem="#{exportacaoDebitosIPTUControlador.caminhoPadrao}listar/"
+                                mostrarBotaoNovo="${false}"
+                                auditavel="${true}"
+                                controlador="#{exportacaoDebitosIPTUControlador}"/>
+            <p:poll interval="1"
+                    widgetVar="pollProgresso"
+                    listener="#{exportacaoDebitosIPTUControlador.acompanharGeracaoArquivo()}"
+                    update=":formExportacao"
+                    process="@this"
+                    autoStart="false"/>
+
+            <p:panel header="Exportação de Débitos IPTU" id="panelPrincipal">
+                <h:panelGrid columns="2">
+
+                    <h:outputText value="Convênio: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.convenioListaDebitos.agencia}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Responsável: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.responsavel}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Data Geração: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.dataGeracao}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                    <h:outputText value="Exercício: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.exercicio}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Inscrição Inicial: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.inscricaoInicial}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Inscrição Final: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.inscricaoFinal}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Vencimento Inical: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.vencimentoIncial}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                    <h:outputText value="Vencimento Final: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.vencimentoFinal}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                    <h:outputText value="Situação: "/>
+                    <h:outputText value="#{exportacaoDebitosIPTUControlador.selecionado.situacaoExportacaoDebitosIPTU.descricao}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Download do Arquivo: "/>
+                    <p:commandButton ajax="false" value="Baixar o Arquivo"
+                                     styleClass="botao-transparente"
+                                     icon="ui-icon-download"
+                                     immediate="true"
+                                     process="@this"
+                                     update="@this"
+                                     disabled="#{exportacaoDebitosIPTUControlador.selecionado.situacaoExportacaoDebitosIPTU ne 'CONCLUIDO'}"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     onclick="PrimeFaces.monitorDownload(start, stop)">
+                        <p:fileDownload value="#{exportacaoDebitosIPTUControlador.baixarArquivo()}"/>
+                    </p:commandButton>
+                </h:panelGrid>
+
+            </p:panel>
+
+            <p:commandButton value="Gerar Arquivo" onclick="aguarde.show()"
+                             oncomplete="aguarde.hide();" rendered="#{exportacaoDebitosIPTUControlador.selecionado.situacaoExportacaoDebitosIPTU eq 'ABERTO'}"
+                             styleClass="operacao prioritario mtop10 mrig05"
+                             actionListener="#{exportacaoDebitosIPTUControlador.exportarDebitosIPTU()}"
+                             icon="ui-icon-download"/>
+
+            <fc:rodapeVisualizarPretty controlador="#{exportacaoDebitosIPTUControlador}"
+                                       mostrarEditar="false"
+                                       mostrarExcluir="#{exportacaoDebitosIPTUControlador.assistente eq null}"/>
+
+            <p:commandButton value="Acompanhar Geração" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                             styleClass="operacao prioritario mtop10 mlef05" rendered="#{exportacaoDebitosIPTUControlador.selecionado.situacaoExportacaoDebitosIPTU eq 'GERANDO'}"
+                             actionListener="#{exportacaoDebitosIPTUControlador.iniciarPool()}"/>
+
+            <p:commandButton value="Verificar Cadastros"
+                             rendered="false"
+                             styleClass="operacao"
+                             icon="ui-icon-refresh"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()">
+                <p:fileDownload value="#{exportacaoDebitosIPTUControlador.verificarCadastros()}"/>
+            </p:commandButton>
+        </h:form>
+
+
+        <p:dialog modal="true" width="800" id="dlgExportacao" widgetVar="wvExportacao" closable="false">
+
+            <div class="alert alert-info centralizado" id="mensagemFim">
+
+                <h:form id="formExportacao">
+                    <strong>#{exportacaoDebitosIPTUControlador.assistente.descricaoProcesso}</strong><br/>
+                    <span id="mgsAguarde">#{!exportacaoDebitosIPTUControlador.canBaixarArquivo ? 'Aguarde!' : 'Exportação Finalizada.'}</span><br/><br/>
+                    <p:outputPanel id="barra" rendered="#{!exportacaoDebitosIPTUControlador.canBaixarArquivo}">
+                        <div class="alinhamentoCentralizado">
+                            <h:outputText
+                                value="#{exportacaoDebitosIPTUControlador.assistente.porcentagemDoCalculo}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>%
+                        </div>
+                        <div class="progress progress-striped active" id="barraProgresso">
+                            <div class="bar"
+                                 style="width: #{exportacaoDebitosIPTUControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </p:outputPanel>
+                    <p:outputPanel id="botao">
+                        <div class="botaoFimProcesso">
+                            <h:panelGrid columns="2">
+                                <p:commandButton ajax="false" value="Baixar o Arquivo"
+                                                 styleClass="operacao prioritario"
+                                                 disabled="#{!exportacaoDebitosIPTUControlador.canBaixarArquivo}"
+                                                 icon="ui-icon-download"
+                                                 immediate="true"
+                                                 process="@this"
+                                                 update="@this"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 onclick="PrimeFaces.monitorDownload(start, stop)">
+                                    <p:fileDownload value="#{exportacaoDebitosIPTUControlador.baixarArquivo()}"/>
+                                </p:commandButton>
+
+                                <p:commandButton value="Fechar" icon="ui-icon-close"
+                                                 onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                                 update=":Formulario:panelPrincipal" process="@this"
+                                                 onclick="wvExportacao.close()"/>
+
+                            </h:panelGrid>
+                        </div>
+                    </p:outputPanel>
+                </h:form>
+            </div>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

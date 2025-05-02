@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparLocalEstoqueOrigem"
+                             process="@this"
+                             actionListener="#{requisicaoMaterialControlador.limparCampoLocalEstoque()}"
+                             update=":Formulario:gridLocalEstoqueOrigem"/>
+
+            <fc:cabecalhoPretty id="cpCabecalhoPretty" origem="#{requisicaoMaterialControlador.caminhoPadrao}listar/"
+                                controlador="#{requisicaoMaterialControlador}"/>
+
+            <p:panel header="Requisição de Material">
+                <h:panelGrid columns="2" id="gridRequisicao">
+                    <fc:outputLabelObrigatorio value="Tipo da Requisição:" for="tipoRequisicao"/>
+                    <h:selectOneMenu id="tipoRequisicao"
+                                     value="#{requisicaoMaterialControlador.selecionado.tipoRequisicao}"
+                                     disabled="#{requisicaoMaterialControlador.estaEmEdicao()}">
+                        <f:selectItems value="#{requisicaoMaterialControlador.tipoRequisicaoSelectItem}"/>
+                        <p:ajax update=":Formulario:gridRequisicao"
+                                event="valueChange"
+                                process=":Formulario:gridRequisicao"
+                                onstart="aguarde.show();"
+                                oncomplete="aguarde.hide();"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Situação:"/>
+                    <h:outputText
+                        value="#{requisicaoMaterialControlador.selecionado.tipoSituacaoRequisicao.descricao}"
+                        styleClass="negrito"/>
+
+                    <h:outputLabel value="Número:" for="numero"/>
+                    <h:outputText
+                        value="#{requisicaoMaterialControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar' : requisicaoMaterialControlador.selecionado.numero}"
+                        id="numero"
+                        styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Data da Requisição:" for="dataRequisicao"/>
+                    <h:outputText id="dataRequisicao"
+                                  value="#{requisicaoMaterialControlador.selecionado.dataRequisicao}"
+                                  styleClass="negrito">
+                        <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Requerente e Autorizador:" for="requerente"/>
+                    <h:outputText styleClass="negrito"
+                                  title="O campo requerente é preenchido automáticamente pelo sistema, com o usuário logado atualmente no sistema."
+                                  value="#{requisicaoMaterialControlador.selecionado.requerenteEAutorizador.pessoaFisica.nome}"
+                                  id="requerente"
+                                  maxlength="70"
+                                  size="98"/>
+
+                    <fc:outputLabelObrigatorio value="Descrição:" for="descricao"/>
+                    <h:panelGrid columns="2" cellspacing="0" cellpadding="0">
+                        <p:inputTextarea title="Informe a descrição desta requisição."
+                                         id="descricao"
+                                         value="#{requisicaoMaterialControlador.selecionado.descricao}"
+                                         rows="4" cols="67"
+                                         maxlength="255"
+                                         counter="descricaoCont"
+                                         counterTemplate="{0} Caracteres restantes."
+                                         autoResize="true"/>
+                        <h:outputText id="descricaoCont"
+                                      styleClass="mlef05 azul"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Unidade Administrativa Requerente:"
+                                               for="unidadeRequerenteConsumo"/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="unidadeRequerenteConsumo"
+                                    title="Digite a Unidade Administrativa."
+                                    size="70"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px;max-width: 700px"
+                                    value="#{requisicaoMaterialControlador.hierarquiaOrganizacional}"
+                                    completeMethod="#{requisicaoMaterialControlador.completarUnidadeAdiministrativa}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    var="uni"
+                                    onkeyup="if(keyUpCampoVazio(this)){limparLocalEstoqueOrigem()}"
+                                    maxResults="50"
+                                    itemLabel="#{uni}"
+                                    itemValue="#{uni.id}">
+                        <p:ajax
+                            update=":Formulario:gridLocalEstoqueOrigem"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"
+                            process="@this"
+                            event="itemSelect"
+                            listener="#{requisicaoMaterialControlador.adicionarUnidade()}"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Local de Estoque de Origem:"
+                                               rendered="${requisicaoMaterialControlador.selecionado.tipoRequisicao ne null}"
+                                               for="origem"/>
+                    <h:panelGrid rendered="${requisicaoMaterialControlador.selecionado.tipoRequisicao ne null}"
+                                 id="gridLocalEstoqueOrigem"
+                                 cellspacing="0" cellpadding="0"
+                                 columns="3">
+                        <ad:auto-complete-local-estoque
+                            id="localEstoqueOrigem"
+                            localEstoque="#{requisicaoMaterialControlador.selecionado.localEstoqueOrigem}"
+                            unidadeOrganizacional="#{requisicaoMaterialControlador.selecionado.unidadeRequerente}"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Local de Estoque de Destino:"
+                                               for="destino"
+                                               rendered="#{requisicaoMaterialControlador.selecionado.isRequisicaoTransferencia()}"/>
+                    <h:panelGrid
+                        rendered="#{requisicaoMaterialControlador.selecionado.isRequisicaoTransferencia()}"
+                        id="gridLocalEstoqueDestino"
+                        cellspacing="0" cellpadding="0"
+                        columns="3">
+                        <p:autoComplete queryDelay="1000" id="destino"
+                                        title="Digite o local de estoque de destino do(s) material(is)."
+                                        value="#{requisicaoMaterialControlador.selecionado.localEstoqueDestino}"
+                                        completeMethod="#{requisicaoMaterialControlador.completarLocaisEstoquePrimeiroNivelDaUnidade}"
+                                        var="localEstoque"
+                                        size="70"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px;max-width: 700px"
+                                        maxResults="50"
+                                        process="@this"
+                                        styleClass="mrig05"
+                                        itemLabel="#{localEstoque.toStringAutoComplete()}"
+                                        itemValue="#{localEstoque.id}"
+                                        converter="#{localEstoqueControlador.converterGenerico}">
+                            <p:ajax update="campoEstoqueDestino"
+                                    event="itemSelect"/>
+                        </p:autoComplete>
+
+                        <p:outputPanel id="campoEstoqueDestino">
+                            <fc:visualizarCampos
+                                objeto="#{requisicaoMaterialControlador.selecionado.localEstoqueDestino}"
+                                styleClass="mrig03"/>
+                        </p:outputPanel>
+
+                        <fc:novoParente destino="#{localEstoqueControlador.caminhoDestinoNovoCadastro}"
+                                        selecionado="#{requisicaoMaterialControlador.selecionado}"
+                                        origem="#{requisicaoMaterialControlador.caminhoOrigem}"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:outputPanel id="painelMateriais">
+                    <script type="text/javascript">
+                        carregarTodasUnidadesMedidasDaTela();
+                    </script>
+                    <p:panel header="Material para Requisição" styleClass="mtop10">
+                        <p:commandButton value="Novo Material"
+                                         icon="ui-icon-circle-plus"
+                                         process="@this"
+                                         id="btnNovoMaterial"
+                                         styleClass="mbot05 padrao"
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         title="Clique para adicionar um novo material a esta requisição."
+                                         actionListener="#{requisicaoMaterialControlador.novoItemRequisicaoMaterial()}"
+                                         rendered="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado eq null}"
+                                         disabled="#{requisicaoMaterialControlador.requisicaoJaFoiAvaliada()}"
+                                         update=":Formulario:painelMateriais"/>
+
+                        <h:panelGrid columns="2" id="gridmaterial"
+                                     rendered="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado ne null}">
+                            <h:outputLabel value="Material:" for="material"/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="material"
+                                            title="#{mat.descricaoComplementar}"
+                                            value="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado.materialRequisitado}"
+                                            completeMethod="#{requisicaoMaterialControlador.completarMateriais}"
+                                            var="mat"
+                                            size="70"
+                                            dropdown="true"
+                                            maxResults="100"
+                                            panelStyle="max-height: 250px;max-width: 700px"
+                                            process="@this"
+                                            itemLabel="#{mat.toStringAutoComplete()}"
+                                            itemValue="#{mat.id}"
+                                            converter="#{materialControlador.converterGenerico}">
+                                <p:ajax event="itemSelect"
+                                        listener="#{requisicaoMaterialControlador.listenerMaterial()}"
+                                        process="@this"
+                                        update="quantidade"/>
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Quantidade:"/>
+                            <p:outputPanel id="quantidade">
+                                <fc:input-mascara-unidade-medida
+                                    value="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado.quantidade}"
+                                    tipoMascara="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado.materialRequisitado.mascaraQuantidade}"/>
+                            </p:outputPanel>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Adicionar"
+                                         icon="ui-icon-check"
+                                         process=":Formulario:gridmaterial @this"
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         title="Clique para adicionar este material."
+                                         styleClass="mtop10 mrig05 prioritario"
+                                         rendered="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado ne null}"
+                                         actionListener="#{requisicaoMaterialControlador.adicionarItemRequisicaoMaterial()}"
+                                         update=":Formulario:painelMateriais"/>
+
+                        <p:commandButton value="Cancelar"
+                                         rendered="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado ne null}"
+                                         actionListener="#{requisicaoMaterialControlador.cancelarMaterial()}"
+                                         icon="ui-icon-cancel"
+                                         process="@this"
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         title="Clique para cancelar este material."
+                                         update=":Formulario:painelMateriais"
+                                         styleClass="mtop10 padrao"/>
+
+                        <p:dataTable id="tablemateriais"
+                                     emptyMessage="Não foram adicionados materiais a esta requisição"
+                                     value="#{requisicaoMaterialControlador.selecionado.itensRequisitados}"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     rows="10"
+                                     rowsPerPageTemplate="10,20,30,50"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais da Requisição&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     paginator="true"
+                                     var="itemReq">
+                            <p:ajax event="page" oncomplete="carregarTodasUnidadesMedidasDaTela()"/>
+                            <p:column headerText="Ações" style="width: 10%; text-align: center;">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 process="@this"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 title="Clique para alterar este item da requisição."
+                                                 disabled="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado != null  || requisicaoMaterialControlador.requisicaoJaFoiAvaliada()}"
+                                                 actionListener="#{requisicaoMaterialControlador.alterarItemRequisicao(itemReq)}"
+                                                 styleClass="mrig05"
+                                                 update=":Formulario:painelMateriais"/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 process="@this"
+                                                 onclick="if (!confirm('Tem certeza que deseja excluir este registro?'))return false;"
+                                                 title="Clique para remover este item da requisição."
+                                                 disabled="#{requisicaoMaterialControlador.itemRequisicaoMaterialSelecionado != null  || requisicaoMaterialControlador.requisicaoJaFoiAvaliada()}"
+                                                 actionListener="#{requisicaoMaterialControlador.removerItemRequisicao(itemReq)}"
+                                                 update=":Formulario:painelMateriais"/>
+                            </p:column>
+                            <p:column headerText="Material" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{itemReq.materialRequisitado}"
+                                              title="#{itemReq.materialRequisitado.descricaoComplementar}"/>
+                            </p:column>
+                            <p:column headerText="Unid. Med." styleClass="alinhamentoCentralizado">
+                                <p unidade-medida-tip="#{itemReq.materialRequisitado.unidadeMedida.id}" style="margin-top: 0">
+                                    #{itemReq.materialRequisitado.unidadeMedida.descricaoComponenteTip}
+                                </p>
+                            </p:column>
+                            <p:column headerText="Quantidade Requisitada" styleClass="alinhamentoDireita">
+                                <fc:output-mascara-unidade-medida value="#{itemReq.quantidade}"
+                                                                  tipoMascara="#{itemReq.materialRequisitado.mascaraQuantidade}"/>
+                            </p:column>
+                            <p:column headerText="Quantidade Autorizada" styleClass="alinhamentoDireita">
+                                <fc:output-mascara-unidade-medida value="#{itemReq.quantidadeAutorizada}"
+                                                                  tipoMascara="#{itemReq.materialRequisitado.mascaraQuantidade}"/>
+                            </p:column>
+                            <p:column headerText="Quantidade Atendida" styleClass="alinhamentoDireita">
+                                <fc:output-mascara-unidade-medida value="#{itemReq.quantidadeAutorizada}"
+                                                                  tipoMascara="#{itemReq.materialRequisitado.mascaraQuantidade}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:panel>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty id="rpRodapePretty" controlador="#{requisicaoMaterialControlador}"
+                             desabilitaSalvar="#{requisicaoMaterialControlador.requisicaoJaFoiAvaliada()}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

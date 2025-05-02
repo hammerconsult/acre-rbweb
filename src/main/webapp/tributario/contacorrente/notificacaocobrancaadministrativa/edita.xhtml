@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerSalvar;
+
+            function acompanharSalvar() {
+                timerSalvar = setInterval(function () {
+                    rcAtualizaCompFutures();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timerSalvar);
+                rcFinalizaFutureSalvar();
+            }
+
+        </script>
+        <h:form id="Formulario">
+
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{notificacaoCobrancaAdministrativaControlador.consultarFutureSalvar}"
+                name="rcAtualizaCompFutures"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                update=":FormularioSalvar"
+                actionListener="#{notificacaoCobrancaAdministrativaControlador.finalizarFutureSalvar}"
+                name="rcFinalizaFutureSalvar"/>
+
+            <p:panel header="Aviso/Notificação de Cobrança Administrativa">
+                <p:outputPanel id="panelGeral">
+
+                    <h:panelGrid columns="2" id="panelNotificacao">
+                        <h:outputLabel value="Programação:"/>
+                        <p:autoComplete queryDelay="1000"
+                                        value="#{notificacaoCobrancaAdministrativaControlador.programacao}"
+                                        id="programacao"
+                                        onstart="statusDialog.show()"
+                                        oncomplete="statusDialog.hide()"
+                                        dropdown="true"
+                                        converter="#{programacaoCobrancaControlador.converterGenerico}"
+                                        itemLabel="#{pro.numero} #{pro.descricao}"
+                                        var="pro"
+                                        size="100"
+                                        completeMethod="#{notificacaoCobrancaAdministrativaControlador.completaProgramacao}"
+                                        itemValue="#{pro}">
+                            <p:ajax event="itemSelect" process="@this" update="tabela"/>
+                        </p:autoComplete>
+                        <h:outputLabel value="Agrupar por: "/>
+                        <h:selectOneMenu value="#{notificacaoCobrancaAdministrativaControlador.selecionado.agrupado}">
+                            <f:selectItems value="#{notificacaoCobrancaAdministrativaControlador.agrupados()}" var="op"
+                                           itemValue="op"/>
+                        </h:selectOneMenu>
+                        <h:outputLabel value="Ação Cobrança: "/>
+                        <h:selectOneMenu
+                            value="#{notificacaoCobrancaAdministrativaControlador.selecionado.tipoAcaoCobranca}">
+                            <f:selectItems value="#{notificacaoCobrancaAdministrativaControlador.tipoAcaoCobranca()}"
+                                           var="tp"
+                                           itemValue="tp"/>
+                            <p:ajax event="blur" update="cbGerar"/>
+                        </h:selectOneMenu>
+                    </h:panelGrid>
+                    <h:panelGrid columns="6" styleClass="mtop05">
+
+                        <p:selectBooleanCheckbox id="booleanGuia"
+                                                 disabled="#{notificacaoCobrancaAdministrativaControlador.selecionado.damAgrupado eq true}"
+                                                 value="#{notificacaoCobrancaAdministrativaControlador.selecionado.emitirGuia}">
+                            <p:ajax process="@this" event="change"
+                                    update="booleanGuia booleanAgrupado panelDAMagrupado"/>
+                        </p:selectBooleanCheckbox>
+                        <h:outputLabel value="Emitir DAM "/>
+                        <p:selectBooleanCheckbox id="booleanAgrupado"
+                                                 disabled="#{notificacaoCobrancaAdministrativaControlador.selecionado.emitirGuia eq true}"
+                                                 value="#{notificacaoCobrancaAdministrativaControlador.selecionado.damAgrupado}">
+                            <p:ajax process="@this"
+                                    event="change"
+                                    update="booleanGuia booleanAgrupado panelDAMagrupado"/>
+                        </p:selectBooleanCheckbox>
+                        <h:outputLabel value="Emitir DAM Agrupado "/>
+                    </h:panelGrid>
+                    <p:panel id="panelDAMagrupado"
+                             styleClass="mtop05"
+                             visible="#{notificacaoCobrancaAdministrativaControlador.selecionado.damAgrupado eq true}">
+                        <fc:outputLabelObrigatorio value="Vencimento para DAM Agrupado: "/>
+                        <p:inputMask mask="99/99/9999"
+                                     value="#{notificacaoCobrancaAdministrativaControlador.selecionado.vencimentoDam}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            <p:ajax event="change" process="@this" update="panelDAMagrupado"/>
+                        </p:inputMask>
+                    </p:panel>
+                </p:outputPanel>
+                <br/>
+                <p:commandButton value="Agrupar"
+                                 process=":Formulario:panelGeral @this"
+                                 styleClass="operacao prioritario"
+                                 icon="ui-icon-shuffle"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{notificacaoCobrancaAdministrativaControlador.agruparDebitos()}"/>
+
+                <p:outputPanel id="tableItens">
+
+                    <p:dataTable id="tabela"
+                                 styleClass="mtop05"
+                                 paginator="true" rows="100"
+                                 paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 rowsPerPageTemplate="50,100,150"
+                                 rendered="#{notificacaoCobrancaAdministrativaControlador.getMostrarTabelaSemAgrupamento()}"
+                                 value="#{notificacaoCobrancaAdministrativaControlador.resultadoConsulta}"
+                                 var="parcela"
+                                 emptyMessage="Nenhum Registro Selecionado!"
+                                 rowStyleClass="#{parcela.situacaoDescricaoEnum eq 'Em Aberto'? parcela.vencimento lt programacaoCobrancaControlador.dataOperacao? 'vermelho': 'verde': ''}"
+                    >
+                        <f:facet name="header">
+                            <p:outputPanel>
+                                <h:outputText value="Parcelas"/>
+                            </p:outputPanel>
+                        </f:facet>
+                        <p:column headerText="Cadastro" style="width: 5%;">
+                            <h:outputText value="#{parcela.cadastro}"/>
+                        </p:column>
+                        <p:column headerText="Dívida" style="width: 12%;">
+                            <h:outputText value="#{parcela.divida}"/>
+                        </p:column>
+                        <p:column headerText="Exercício" style="width: 5%; text-align: center;"
+                                  sortBy="#{parcela.exercicio}" filterMatchMode="contains">
+                            <h:outputText value="#{parcela.exercicio}"/>
+                        </p:column>
+                        <p:column headerText="Tipo de Débito" style="width: 5%;">
+                            <h:outputText value="#{parcela.tipoDeDebito}"/>
+                        </p:column>
+                        <p:column headerText="Parcela" style="width: 2%; text-align: center;"
+                                  sortBy="#{parcela.parcela}" filterMatchMode="contains">
+                            <h:outputText value="#{parcela.parcela}"/>
+                        </p:column>
+                        <p:column headerText="SD" style="width: 2%; text-align: center;">
+                            <h:outputText value="#{parcela.sd}"/>
+                        </p:column>
+                        <p:column headerText="Vencimento" style="width: 5%; text-align: center;"
+                                  sortBy="#{parcela.vencimentoToString}" filterMatchMode="contains">
+                            <h:outputText value="#{parcela.vencimentoToString}"/>
+                        </p:column>
+                        <p:column headerText="Valor" style="text-align: right">
+                            <h:outputText value="#{parcela.valorOriginal}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Imposto" style="text-align: right">
+                            <h:outputText value="#{parcela.valorImposto}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Taxa" style="text-align: right">
+                            <h:outputText value="#{parcela.valorTaxa}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Desconto" style="text-align: right">
+                            <h:outputText value="#{parcela.valorDesconto}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Juros" style="text-align: right">
+                            <h:outputText value="#{parcela.valorJuros}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Multa" style="text-align: right">
+                            <h:outputText value="#{parcela.valorMulta}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Correcao" style="text-align: right">
+                            <h:outputText value="#{parcela.valorCorrecao}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Honorários" style="text-align: right">
+                            <h:outputText value="#{parcela.valorHonorarios}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Total" style="text-align: right">
+                            <h:outputText value="#{parcela.valorTotal}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Situação">
+                            <h:outputText value="#{parcela.situacaoDescricaoEnum}" title="cod. ${parcela.idParcela}"/>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:dataTable id="tabelaAgrupada"
+                                 paginator="true"
+                                 rows="50"
+                                 styleClass="mtop05"
+                                 paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 rowsPerPageTemplate="30,60,90"
+                                 value="#{notificacaoCobrancaAdministrativaControlador.selecionado.itemNotificacaoLista}"
+                                 var="itemNotificacao"
+                                 rendered="#{notificacaoCobrancaAdministrativaControlador.getMostrarTabelaAgrupada()}"
+                                 emptyMessage="Nenhum Registro Selecionado!"
+                    >
+                        <p:column style="width:2%">
+                            <p:rowToggler/>
+                        </p:column>
+                        <p:column headerText="Tipo de Cadastro">
+                            <h:outputText
+                                rendered="#{itemNotificacao.cadastro ne null}"
+                                value="#{itemNotificacao.cadastro.tipoDeCadastro}"/>
+
+                            <h:outputText
+                                rendered="#{itemNotificacao.cadastro eq null}"
+                                value="#{itemNotificacao.notificacaoADM.programacaoCobranca.tipoCadastro}"/>
+                        </p:column>
+                        <p:column headerText="Cadastro">
+                            <h:outputText
+                                value="#{notificacaoCobrancaAdministrativaControlador.retornaCadastro(itemNotificacao.cadastro)}"/>
+                        </p:column>
+                        <p:column headerText="Contribuinte">
+                            <h:outputText
+                                value="#{notificacaoCobrancaAdministrativaControlador.retornaContribuinte(itemNotificacao.contribuinte)}"/>
+                        </p:column>
+                        <p:column headerText="Número do Item Notificação" style="width: 8%; text-align: center;">
+                            <h:outputText value="#{itemNotificacao.numero}"/>
+                        </p:column>
+                        <p:rowExpansion>
+                            <p:dataTable id="tabelaParcela"
+                                         value="#{notificacaoCobrancaAdministrativaControlador.recuperarResultadoParcelaItemNotificacao(itemNotificacao)}"
+                                         var="parcela"
+                                         styleClass="mtop05"
+                                         emptyMessage="Nenhum Registro Selecionado!"
+                                         rowStyleClass="#{parcela.situacaoDescricaoEnum eq 'Em Aberto'? parcela.vencimento lt programacaoCobrancaControlador.dataOperacao? 'vermelho': 'verde': ''}">
+                                <f:facet name="header">
+                                    <p:outputPanel>
+                                        <h:outputText value="Parcelas"/>
+                                    </p:outputPanel>
+                                </f:facet>
+                                <p:column headerText="Cadastro" style="width: 8%;">
+                                    <h:outputText value="#{parcela.cadastro}"/>
+                                </p:column>
+                                <p:column headerText="Contribuinte do Cadastro" style="width: 13%;">
+                                    <h:outputText escape="false"
+                                                  value="#{programacaoCobrancaControlador.pessoasDoCalculoDoValorDivida(parcela)}"/>
+                                </p:column>
+                                <p:column headerText="Dívida" style="width: 12%;">
+                                    <h:outputText value="#{parcela.divida}"/>
+                                </p:column>
+                                <p:column headerText="Exercício" style="width: 5%; text-align: center;"
+                                          sortBy="#{parcela.exercicio}" filterMatchMode="contains">
+                                    <h:outputText value="#{parcela.exercicio}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Débito" style="width: 5%;">
+                                    <h:outputText value="#{parcela.tipoDeDebito}"/>
+                                </p:column>
+                                <p:column headerText="Parcela" style="width: 2%; text-align: center;"
+                                          sortBy="#{parcela.parcela}" filterMatchMode="contains">
+                                    <h:outputText value="#{parcela.parcela}"/>
+                                </p:column>
+                                <p:column headerText="SD" style="width: 2%; text-align: center;">
+                                    <h:outputText value="#{parcela.sd}"/>
+                                </p:column>
+                                <p:column headerText="Vencimento" style="width: 5%; text-align: center;"
+                                          sortBy="#{parcela.vencimentoToString}" filterMatchMode="contains">
+                                    <h:outputText value="#{parcela.vencimentoToString}"/>
+                                </p:column>
+                                <p:column headerText="Valor" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorOriginal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Imposto" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorImposto}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Taxa" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorTaxa}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Desconto" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorDesconto}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Juros" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorJuros}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Multa" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorMulta}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Correcao" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorCorrecao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Honorários" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorHonorarios}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Total" style="text-align: right">
+                                    <h:outputText value="#{parcela.valorTotal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Situação">
+                                    <h:outputText value="#{parcela.situacaoDescricaoEnum}"
+                                                  title="cod. ${parcela.idParcela}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:rowExpansion>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+
+            <h:panelGrid columns="2">
+                <p:commandButton
+                    value="Gerar #{notificacaoCobrancaAdministrativaControlador.selecionado.tipoAcaoCobranca.descricao}"
+                    id="cbGerar"
+                    styleClass="mtop10 mrig05 operacao prioritario"
+                    process=":Formulario @this"
+                    style="width: auto; !important;"
+                    icon="ui-icon-gear"
+                    title="Clique para gerar o registro"
+                    actionListener="#{notificacaoCobrancaAdministrativaControlador.salvar()}"
+                    onstart="aguarde.show()"
+                    oncomplete="aguarde.hide()"
+                />
+                <p:commandButton value="Cancelar"
+                                 id="cbCancelar"
+                                 styleClass="operacao mtop10"
+                                 icon="ui-icon-cancel"
+                                 title="Clique para cancelar e retornar a página anterior"
+                                 actionListener="#{notificacaoCobrancaAdministrativaControlador.cancelar()}"
+                                 immediate="true"
+                />
+            </h:panelGrid>
+        </h:form>
+
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <h:form id="FormularioSalvar">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>#{notificacaoCobrancaAdministrativaControlador.assistenteCobranca.finalizarProcesso ?
+                     'Salvando Aviso/Notificação de Notificação de Cobrança' : 'Agrupando Débitos'}</strong>
+                </div>
+            </div>
+
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{notificacaoCobrancaAdministrativaControlador.assistente.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{notificacaoCobrancaAdministrativaControlador.assistente.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{notificacaoCobrancaAdministrativaControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{notificacaoCobrancaAdministrativaControlador.assistente.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{notificacaoCobrancaAdministrativaControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{notificacaoCobrancaAdministrativaControlador.assistente.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{notificacaoCobrancaAdministrativaControlador.assistente.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

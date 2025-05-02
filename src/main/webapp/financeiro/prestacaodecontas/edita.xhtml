@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+        >
+<ui:composition template="/corpo.xhtml">
+<ui:define name="body">
+<h:form id="Formulario">
+<script type="text/javascript">
+
+    function deletaArquivo() {
+        deletarArquivo();
+        stop();
+    }
+    function removeClassBarra() {
+        $("#barraProgresso").removeClass("active");
+    }
+    function efeitoFade() {
+        $("#panelBarra").fadeOut();
+    }
+</script>
+
+
+<p:remoteCommand name="deletarArquivo"
+                 actionListener="#{prestacaoDeContasControlador.apagar}"
+                 update="@form"
+/>
+<p:tabView id="tabViewGeral">
+    <p:tab title="Prestação de Contas">
+        <p:outputPanel id="pNormal">
+            <h:panelGrid columns="2">
+                <h:outputText value="Gerar Arquivo do Planejamento? "/>
+                <p:selectBooleanCheckbox value="#{prestacaoDeContasControlador.selecionado.gerarArquivoOrcamento}">
+                    <p:ajax event="change" update=":Formulario"/>
+                </p:selectBooleanCheckbox>
+
+                <fc:outputLabelObrigatorio value="Tipos de Movimentos? "
+                                           rendered="#{!prestacaoDeContasControlador.selecionado.gerarArquivoOrcamento}"/>
+                <p:pickList value="#{prestacaoDeContasControlador.selecionado.tiposEventosContabeis}"
+                            addAllLabel="Adicionar Todos"
+                            addLabel="Adicionar"
+                            removeAllLabel="Remover Todos"
+                            removeLabel="Remover"
+                            showTargetFilter="true"
+                            showSourceFilter="true"
+                            var="tipoEventoContabil"
+                            itemValue="#{tipoEventoContabil}"
+                            itemLabel="#{tipoEventoContabil}"
+                            filterMatchMode="contains"
+                            rendered="#{!prestacaoDeContasControlador.selecionado.gerarArquivoOrcamento}">
+                    <f:facet name="sourceCaption">Disponíveis</f:facet>
+                    <f:facet name="targetCaption">Selecionados</f:facet>
+                </p:pickList>
+
+                <h:outputText value="Exercício: "/>
+                <h:outputText value="#{prestacaoDeContasControlador.selecionado.exercicio}" styleClass="negrito"/>
+
+                <fc:outputLabelObrigatorio value="Mês: "/>
+                <h:selectOneMenu value="#{prestacaoDeContasControlador.selecionado.mes}">
+                    <f:selectItems value="#{prestacaoDeContasControlador.mesSelect}"/>
+                    <p:ajax event="change"
+                            listener="#{prestacaoDeContasControlador.alterarMes()}"
+                            process="@this" update=":Formulario"/>
+                </h:selectOneMenu>
+
+
+                <fc:outputLabelObrigatorio value="Unidade Gestora: "
+                                           rendered="#{!prestacaoDeContasControlador.selecionado.gerarArquivoOrcamento}"/>
+                <p:autoComplete queryDelay="1000" value="#{prestacaoDeContasControlador.selecionado.unidadeGestora}"
+                                completeMethod="#{prestacaoDeContasControlador.completaUnidadeGestora}"
+                                var="ug"
+                                size="70"
+                                itemLabel="#{ug}"
+                                dropdown="true"
+                                maxResults="50"
+                                panelStyle="max-height: 250px; max-width: 800px"
+                                itemValue="#{ug.id}"
+                                converter="#{prestacaoDeContasControlador.converterUnidadeGestora}"
+                                rendered="#{!prestacaoDeContasControlador.selecionado.gerarArquivoOrcamento}">
+                    <p:ajax event="itemSelect" update=":Formulario" process="@this"
+                            listener="#{prestacaoDeContasControlador.zerarMovimentos()}"/>
+                </p:autoComplete>
+            </h:panelGrid>
+
+            <br/>
+            <h:panelGrid columns="2" id="panleQtde">
+                <h:outputText value="Qtde de Lançamentos Contábeis: "
+                              rendered="#{prestacaoDeContasControlador.selecionado.quantidadeDeLancamento gt 0}"/>
+                <h:outputText value="#{prestacaoDeContasControlador.selecionado.quantidadeDeLancamento}"
+                              styleClass="negrito"
+                              rendered="#{prestacaoDeContasControlador.selecionado.quantidadeDeLancamento gt 0}"/>
+
+                <h:outputText value="Qtde de Movimentos: "
+                              rendered="#{prestacaoDeContasControlador.selecionado.quantidadeDeLancamentoPorMovimento gt 0}"/>
+                <h:outputText value="#{prestacaoDeContasControlador.selecionado.quantidadeDeLancamentoPorMovimento}"
+                              styleClass="negrito"
+                              rendered="#{prestacaoDeContasControlador.selecionado.quantidadeDeLancamentoPorMovimento gt 0}"/>
+            </h:panelGrid>
+            <br/>
+            <p:panel header="Erros"
+                     rendered="#{prestacaoDeContasControlador.selecionado.errosGeracaoDoArquivo.size() gt 0}">
+                <div id="log"
+                     style="height: 220px; border : solid #92B8D3 1px; overflow: scroll;text-align: left!important;">
+                    <p:dataList value="#{prestacaoDeContasControlador.selecionado.errosGeracaoDoArquivo}"
+                                var="erro">
+                        <h:outputText value="#{erro}"/>
+                    </p:dataList>
+                </div>
+            </p:panel>
+
+            <p:poll interval="1"
+                    widgetVar="poll"
+                    listener="#{prestacaoDeContasControlador.removerBarraStatus()}"
+                    update=":Formulario:tabViewGeral:panelBarra"
+                    stop="#{!prestacaoDeContasControlador.selecionado.calculando}"
+                    autoStart="false"/>
+
+            <p:panel style="text-align: center; width: 100%; border: 0px"
+                     visible="#{prestacaoDeContasControlador.selecionado.calculando}"
+                     id="panelBarra">
+
+
+                <h:outputText value="#{prestacaoDeContasControlador.selecionado.mensagens}"
+                              escape="false"
+                              />
+
+                <br/>
+                <div class="progress progress-striped active" id="barraProgresso">
+                    <div class="bar" style="width: #{prestacaoDeContasControlador.porcentagemDoCalculo}%;">
+                        <h:outputText value="#{prestacaoDeContasControlador.porcentagemDoCalculo}" styleClass="negrito">
+                            <f:convertNumber type="number" maxFractionDigits="2"/>
+                        </h:outputText>
+                        <h:outputText value="%"/>
+                    </div>
+                </div>
+
+                <br/>
+                <h:outputText value="Tempo Decorrido: #{prestacaoDeContasControlador.tempoDecorrido}"/>
+
+                <br/>
+                <h:outputText value="Tempo Estimado: #{prestacaoDeContasControlador.tempoEstimado}"/>
+
+            </p:panel>
+
+            <hr class="mbot05"/>
+            <h:panelGrid columns="3" id="panelBotoes">
+                <p:commandButton value="Gerar Arquivo"
+                                 actionListener="#{prestacaoDeContasControlador.gerarArquivo()}"
+                                 rendered="#{prestacaoDeContasControlador.selecionado.streamedContent eq null}"
+                                 disabled="#{prestacaoDeContasControlador.selecionado.calculando}"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 icon="ui-icon-folder-open"
+                                 title="Clique para gerar o arquivo de prestação de contas."
+                                 style="height: 30px;"
+                                 onclick="poll.start();"
+                                 update=":Formulario:tabViewGeral:panelBarra :Formulario:tabViewGeral:panleQtde :Formulario:tabViewGeral:panelBotoes"
+                                 process="@this"
+                        />
+
+                <p:commandButton value="Download"
+                                 ajax="false"
+                                 icon="ui-icon-disk"
+                                 style="height: 30px;"
+                                 title="Clique para fazer o download do arquivo gerado."
+                                 onclick="PrimeFaces.monitorDownload(start, deletaArquivo)"
+                                 rendered="#{prestacaoDeContasControlador.selecionado.streamedContent ne null}">
+                    <p:fileDownload value="#{prestacaoDeContasControlador.streamedContent}"/>
+                </p:commandButton>
+
+                <p:outputPanel rendered="#{!prestacaoDeContasControlador.selecionado.gerarArquivoOrcamento}">
+                    <h:panelGrid columns="7">
+                        <p:commandButton value="Relatório por Tipo de Evento Contábil"
+                                         icon="ui-icon-print"
+                                         style="height: 30px;"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mrig05"
+                                         actionListener="#{prestacaoDeContasControlador.gerarPorTipoEventoContabil()}"
+                                         disabled="#{prestacaoDeContasControlador.selecionado.calculando}"
+                                         title="Clique para gerar o Relatório por Tipo de Evento Contábil."/>
+
+                        <p:commandButton value="Balancete"
+                                         icon="ui-icon-print"
+                                         style="height: 30px;"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mrig05"
+                                         actionListener="#{prestacaoDeContasControlador.gerarBalancete()}"
+                                         disabled="#{prestacaoDeContasControlador.selecionado.calculando}"
+                                         title="Clique para gerar o Balancete Contábil."/>
+
+                        <fc:botaoTargetBlank
+                                actionListener="#{prestacaoDeContasControlador.gerarDemonstrativoCreditosReceber()}"
+                                disabled="#{prestacaoDeContasControlador.selecionado.calculando}"
+                                label="DCR"
+                                style="height: 30px;"
+                                icon="ui-icon-print"
+                                title="Clique para gerar o Relatório de Demonstrativo de Créditos a Receber - DCR."
+                                styleClass="mrig05"/>
+
+                        <fc:botaoTargetBlank
+                                actionListener="#{prestacaoDeContasControlador.gerarDemonstrativoDividaAtiva()}"
+                                disabled="#{prestacaoDeContasControlador.selecionado.calculando}"
+                                label="DDA"
+                                style="height: 30px;"
+                                icon="ui-icon-print"
+                                title="Clique para gerar o Relatório de Demonstrativo de Dívida Ativa - DDA."
+                                styleClass="mrig05"/>
+
+                        <fc:botaoTargetBlank
+                                actionListener="#{prestacaoDeContasControlador.gerarDemonstrativoDisponibilidadePorDestinacaoRecurso()}"
+                                disabled="#{prestacaoDeContasControlador.selecionado.calculando}"
+                                label="DDR"
+                                style="height: 30px;"
+                                icon="ui-icon-print"
+                                title="Clique para gerar o Relatório de Demonstrativo de Disponibilidade por Destinação de Recurso - DDR."
+                                styleClass="mrig05"/>
+
+                        <p:commandButton value="Detalhamento da Liquidação"
+                                         icon="ui-icon-print"
+                                         style="height: 30px;"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mrig05"
+                                         actionListener="#{prestacaoDeContasControlador.gerarDetalhamentoLiquidacaoPorElementoDeDespesa()}"
+                                         disabled="#{prestacaoDeContasControlador.selecionado.calculando}"
+                                         title="Clique para gerar o Relatório de Detalhamento da Liquidação por Elemento de Despesa."/>
+
+                        <p:commandButton value="Cancelar"
+                                         id="cbCancelar"
+                                         style="height: 30px; width: 110px"
+                                         styleClass="mrig05"
+                                         icon="ui-icon-cancel"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{prestacaoDeContasControlador.redirecionarListarArquivos()}"
+                                         immediate="true"/>
+                    </h:panelGrid>
+                </p:outputPanel>
+            </h:panelGrid>
+
+        </p:outputPanel>
+    </p:tab>
+</p:tabView>
+
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

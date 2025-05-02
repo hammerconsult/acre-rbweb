@@ -1,0 +1,1 @@
+insert into statuslicitacao values(hibernate_sequence.nextval, 1, (select lic.emitidaem from licitacao lic where id = 10567999789), 'ANDAMENTO', 10567999789, 'Status criado automaticamente pelo sistema para nova licitação', 498401014, null, null, null,null)

@@ -1,0 +1,902 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <p:messages id="msgs" showDetail="true"/>
+        <h:form id="Formulario">
+            <f:metadata>
+                <f:event type="preRenderView" listener="#{fiscalizacaoRBTransControlador.recuperaMotoristaDaSessao}"/>
+            </f:metadata>
+            <p:panel header="Fiscalização RBTrans">
+                <center>
+                    <h:outputLabel value="#{fiscalizacaoRBTransControlador.descricaoSituacaoAtual}"
+                                   style="font-weight: bolder; color: #{fiscalizacaoRBTransControlador.corStatus} "/>
+                </center>
+                <br/>
+                <h:panelGrid columns="11">
+                    <fc:outputLabelObrigatorio id="oNumero" value="Nº do Auto de Infração:" for="iNumero"/>
+                    <p:inputText disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null}"
+                                 id="iNumero"
+                                 value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.codigo}"
+                                 onkeypress="mascara(this, soNumeros);">
+                        <p:ajax event="blur" process="@this"/>
+                    </p:inputText>
+                    <p:spacer style="width: 20px"/>
+                    <fc:outputLabelObrigatorio id="oOrgaoAutuador" value="Órgão Autuador:"/>
+                    <p:selectOneMenu disabled="true"
+                                     id="iOrgaoAutuador"
+                                     value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.orgaoAutuador}">
+                        <f:selectItems value="#{fiscalizacaoRBTransControlador.orgaosAutuadores}"/>
+                        <p:ajax event="change" process="@this"/>
+                    </p:selectOneMenu>
+                    <p:spacer style="width: 20px"/>
+                    <fc:outputLabelObrigatorio value="Data Autuação:"/>
+                    <p:calendar disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null}"
+                                id="iDataAutuacao" maxdate="new Date()"
+                                value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.dataAutuacao}"
+                                pattern="dd/MM/yyyy HH:mm" navigator="true">
+                        <p:ajax event="dateSelect" listener="#{fiscalizacaoRBTransControlador.atribuiDataAutuacao}"
+                                update=":Formulario:tabView:iDataAutuacaoForm"/>
+                    </p:calendar>
+                    <p:spacer style="width: 20px"/>
+                    <h:outputLabel value="Tipo de Autuação:"/>
+                    <p:selectOneMenu disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null}"
+                                     style="width: 140px"
+                                     value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.especieTransporte}">
+                        <f:selectItems value="#{fiscalizacaoRBTransControlador.especiesTransporte}"/>
+                        <p:ajax event="change" process="@this" update="@form"
+                            onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                    </p:selectOneMenu>
+                </h:panelGrid>
+                <p:panel id="veiculoP" header="Veículo" styleClass="mbot10">
+                    <h:panelGrid columns="2" rendered="#{!fiscalizacaoRBTransControlador.isFiscalizacaoClandestina()}">
+                        <h:outputLabel id="oaPlaca" value="Placa:"/>
+                        <p:autoComplete queryDelay="1000" id="veiculoTransporte"
+                                        value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte}"
+                                        converter="#{permissaoTransportePrettyControlador.conveterVeiculoTransporte}"
+                                        disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null}"
+                                        completeMethod="#{permissaoTransportePrettyControlador.completarVeiculoTransporte}"
+                                        var="veiculo"
+                                        itemLabel="#{veiculo.placa} - #{veiculo.especie} - #{veiculo.modelo}"
+                                        itemValue="#{veiculo.id}"
+                                        size="70">
+                            <p:ajax update="veiculoP" process="@this" event="itemSelect"/>
+                        </p:autoComplete>
+                    </h:panelGrid>
+                    <h:panelGrid columns="2" rendered="#{fiscalizacaoRBTransControlador.isFiscalizacaoClandestina()}">
+                        <fc:outputLabelObrigatorio id="placaVeiculo" value="Placa:"/>
+                        <p:inputText value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.placaVeiculo}"
+                                     size="15" maxlength="10">
+                            <p:ajax process="@this" event="blur"/>
+                        </p:inputText>
+
+                        <fc:outputLabelObrigatorio id="descricaoVeiculo" value="Descrição:"/>
+                        <p:inputText value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.descricaoVeiculo}"
+                                     size="70" maxlength="100">
+                            <p:ajax process="@this" event="blur"/>
+                        </p:inputText>
+                    </h:panelGrid>
+                    <p:spacer/>
+                    <p:panel id="idVeiculo" header="Identificação do Veículo"
+                             rendered="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte != null
+                                         and !fiscalizacaoRBTransControlador.isFiscalizacaoClandestina()}">
+                        <p:outputPanel>
+                            <h:panelGrid id="panelInfoVeiculo" columns="2"
+                                         rendered="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte != null}">
+                                <h:outputLabel value="Marca:" style="font-weight: bolder"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte.modelo.marca.descricao}"/>
+                                <h:outputLabel value="Modelo:" style="font-weight: bolder"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte.modelo.descricao}"/>
+                                <h:outputLabel value="Espécie:" style="font-weight: bolder"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte.especie}"/>
+                                <h:outputLabel value="Município:" style="font-weight: bolder"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte.cidade.nome}"/>
+                                <h:outputLabel value="UF:" style="font-weight: bolder"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.veiculoTransporte.cidade.uf}"/>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:panel>
+                </p:panel>
+
+                <p:panel id="motoristaInfrator" header="Condutor" styleClass="mbot10"
+                         rendered="#{!fiscalizacaoRBTransControlador.isFiscalizacaoClandestina()}">
+                    <h:panelGrid columns="5">
+                        <h:outputLabel value="Motorista:"/>
+                        <p:autoComplete queryDelay="1000" id="iMotorista"
+                                        value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.motoristaInfrator}"
+                                        converter="#{fiscalizacaoRBTransControlador.converterPessoaFisica}"
+                                        disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null}"
+                                        completeMethod="#{fiscalizacaoRBTransControlador.completaPessoaFisica}"
+                                        var="pessoa"
+                                        itemLabel="#{pessoa.nome} - #{pessoa.cpf}"
+                                        itemValue="#{pessoa.id}"
+                                        size="70">
+                            <p:ajax update="@form" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                    event="itemSelect"
+                                    listener="#{fiscalizacaoRBTransControlador.recuperarMotorista()}"/>
+                        </p:autoComplete>
+                        <fc:navegaCadastros porNaSessao="#{fiscalizacaoRBTransControlador.form}"
+                                            origem="#{fiscalizacaoRBTransControlador.urlAtual}"
+                                            destinoEditar="/tributario/configuracoes/pessoa/editarpessoafisica/#{pessoaTributarioControlador.id}/"
+                                            destinoNovo="/tributario/configuracoes/pessoa/novapessoafisica/"
+                                            objetoDoCadastro="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.motoristaInfrator}"/>
+                        <p:commandButton icon="ui-icon-clear"
+                                         title="Limpar"
+                                         disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null}"
+                                         actionListener="#{fiscalizacaoRBTransControlador.limpaMotorista()}"
+                                         update="Formulario:motoristaInfrator"/>
+                    </h:panelGrid>
+                    <br/>
+                    <p:outputPanel id="infoMotoristaInfrator"
+                                   rendered="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.motoristaInfrator != null}">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel style="font-weight: bolder" value="Nome:"/>
+                            <h:outputLabel
+                                value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.motoristaInfrator.nome}"/>
+                            <h:outputLabel style="font-weight: bolder" value="CPF:"/>
+                            <h:outputLabel
+                                value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.motoristaInfrator.cpf}"/>
+                            <h:outputLabel style="font-weight: bolder" value="CNH:"/>
+                            <h:outputLabel value="#{fiscalizacaoRBTransControlador.cnhMotorista}"/>
+                        </h:panelGrid>
+                        <br/>
+                        <p:dataTable id="endersD" value="#{fiscalizacaoRBTransControlador.enderecosMotorista}"
+                                     var="ender"
+                                     emptyMessage="Sem registros...">
+                            <p:column style="width: 80%">
+                                <f:facet name="header">
+                                    <h:outputText value="Endereço"/>
+                                </f:facet>
+                                <h:outputText
+                                    value="#{ender.logradouro}, #{ender.numero}, #{ender.localidade}, #{ender.uf}, #{ender.cep} - #{ender.tipoEndereco}"/>
+                            </p:column>
+                            <p:column headerText="Principal">
+                                <h:outputText value="#{ender.principal ? 'Principal' : ''}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                    <br/>
+                </p:panel>
+
+                <p:panel id="pemissionario" header="Identificação do Permissionário" styleClass="mbot10"
+                         rendered="#{!fiscalizacaoRBTransControlador.isFiscalizacaoClandestina()}">
+                    <p:outputPanel id="infoPermissionario">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Permissionário:"/>
+                            <p:autoComplete queryDelay="1000" id="iCadastroEconomico"
+                                            value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.cadastroEconomico}"
+                                            converter="#{fiscalizacaoRBTransControlador.converterCadastroEconomico}"
+                                            disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null and fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.cadastroEconomico != null}"
+                                            completeMethod="#{fiscalizacaoRBTransControlador.completaCadastroEconomico}"
+                                            var="ce"
+                                            itemValue="#{ce.id}"
+                                            itemLabel="#{ce} - #{ce.pessoa} - #{ce.pessoa.cpf_Cnpj}"
+                                            size="100">
+                                <p:ajax event="itemSelect" update="infoPermissionario" process="@this"/>
+                            </p:autoComplete>
+                        </h:panelGrid>
+                        <p:outputPanel
+                            rendered="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.cadastroEconomico != null}">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel style="font-weight: bolder" value="Permissionário:"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.cadastroEconomico.pessoa.nome}"/>
+                                <h:outputLabel style="font-weight: bolder" value="CPF/CNPJ:"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.cadastroEconomico.pessoa.cpf_Cnpj}"/>
+                                <h:outputLabel style="font-weight: bolder;" value="Timpo de Autônomo:"/>
+                                <h:outputLabel
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.cadastroEconomico.tipoAutonomo}"/>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                        <br/>
+                        <p:dataTable id="endersPermissionario"
+                                     value="#{fiscalizacaoRBTransControlador.enderecosPermissionario}"
+                                     var="ender"
+                                     emptyMessage="Sem registros...">
+                            <p:column style="width: 80%">
+                                <f:facet name="header">
+                                    <h:outputText value="Endereço"/>
+                                </f:facet>
+                                <h:outputText
+                                    value="#{ender.logradouro}, #{ender.numero}, #{ender.localidade}, #{ender.uf}, #{ender.cep} - #{ender.tipoEndereco}"/>
+                            </p:column>
+                            <p:column headerText="Principal">
+                                <h:outputText value="#{ender.principal ? 'Principal' : ''}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:panel>
+
+                <p:panel id="clandestino" header="Clandestino" styleClass="mbot10"
+                         rendered="#{fiscalizacaoRBTransControlador.isFiscalizacaoClandestina()}">
+                    <h:panelGrid columns="2">
+                        <h:outputLabel value="Pessoa:"/>
+                        <p:autoComplete queryDelay="1000" id="iPessoaClandestina"
+                                        value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.pessoaClandestina}"
+                                        converter="#{fiscalizacaoRBTransControlador.converterPessoaFisica}"
+                                        disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null and fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.pessoaClandestina != null}"
+                                        completeMethod="#{fiscalizacaoRBTransControlador.completaPessoaFisica}"
+                                        var="cl"
+                                        itemValue="#{cl.id}"
+                                        itemLabel="#{cl.nome} - #{cl.cpf}"
+                                        size="100">
+                            <p:ajax process="@this" event="itemSelect"/>
+                        </p:autoComplete>
+                    </h:panelGrid>
+                </p:panel>
+
+                <p:tabView id="tabView" activeIndex="#{fiscalizacaoRBTransControlador.abaAtiva}">
+                    <p:tab title="Autuação">
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio value="Local:"/>
+                            <p:inputText size="120" readonly="#{fiscalizacaoRBTransControlador.desabilitaAbaAutuacao}"
+                                         value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.localAutuacao}"
+                                         title="Digite o local da infração">
+                                <p:ajax process="@this" event="blur"/>
+                            </p:inputText>
+                            <h:outputLabel value="Data:"/>
+                            <p:calendar readonly="#{fiscalizacaoRBTransControlador.desabilitaAbaAutuacao}"
+                                        id="iDataAutuacaoForm"
+                                        value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.dataAutuacao}"
+                                        disabled="true" pattern="dd/MM/yyyy"/>
+                            <fc:outputLabelObrigatorio value="Município:"/>
+                            <p:selectOneMenu disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAutuacao}"
+                                             converter="#{fiscalizacaoRBTransControlador.converterCidade}"
+                                             value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.cidadeInfracao}">
+                                <f:selectItems value="#{fiscalizacaoRBTransControlador.cidades}"/>
+                                <p:ajax event="change" process="@this"/>
+                            </p:selectOneMenu>
+                        </h:panelGrid>
+                        <br/>
+                        <p:panel header="Infração e Penalidade">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Infrações:"/>
+                                <p:autoComplete queryDelay="1000"
+                                                disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAutuacao || fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.especieTransporte eq null}"
+                                                value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada}"
+                                                converter="#{fiscalizacaoRBTransControlador.converterOcorrenciaFiscalizacaoRBTrans}"
+                                                completeMethod="#{fiscalizacaoRBTransControlador.completaOcorrencias}"
+                                                var="ocorrencia"
+                                                maxResults="15"
+                                                itemValue="#{ocorrencia.id}"
+                                                itemLabel="#{ocorrencia}"
+                                                size="173">
+                                    <p:ajax update="@form" event="itemSelect" process="@this"
+                                            listener="#{fiscalizacaoRBTransControlador.adicionaOcorrenciaAutuacao}"/>
+                                </p:autoComplete>
+
+                                <h:outputLabel value="Infrator Reincidente?"/>
+                                <p:selectBooleanCheckbox
+                                    value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.infratorReincidente}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAutuacao || fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.especieTransporte eq null}"
+
+                                    />
+                            </h:panelGrid>
+                            <br/>
+                            <p:panel rendered="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada ne null}">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Código: " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.codigo}"/>
+                                    <h:outputLabel value="Grupo: " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.grupo}"/>
+                                    <h:outputLabel value="Artigo: " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.artigo}"/>
+                                    <h:outputLabel value="Conduta: " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.conduta}"/>
+                                    <h:outputLabel value="Descrição: " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.descricao}"/>
+                                    <h:outputLabel value="Tipo de Transporte: " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.especieTransporte.descricao}"/>
+                                    <h:outputLabel value="Valor (UFM): " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.valor}">
+                                        <f:convertNumber pattern="#,##0.0000"/>
+                                    </h:outputLabel>
+                                    <h:outputLabel value="Fator Mult. da Reincidência: " styleClass="negrito"/>
+                                    <h:outputLabel
+                                        value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.fatorMultReincidencia}"/>
+                                    <h:outputLabel value="Penalidade Permissão: " styleClass="negrito"/>
+                                    <p:selectBooleanCheckbox disabled="true"
+                                                             value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.permissionario}"/>
+                                    <h:outputLabel value="Penalidade Motorista " styleClass="negrito"/>
+                                    <p:selectBooleanCheckbox disabled="true"
+                                                             value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.motorista}"/>
+                                </h:panelGrid>
+                                <br/>
+                                <p:dataTable
+                                    value="#{fiscalizacaoRBTransControlador.ocorrenciaSelecionada.ocorrenciaFiscalizacao}"
+                                    var="medida"
+                                    emptyMessage="Sem registros...">
+                                    <f:facet name="header">
+                                        <h:outputText value="Medidas Administrativas" styleClass="negrito"/>
+                                    </f:facet>
+                                    <p:column headerText="Código" style="width: 40px">
+                                        <h:outputLabel value="#{medida.medidaAdministrativa.codigo}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição">
+                                        <h:outputLabel value="#{medida.medidaAdministrativa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Bloqueio de Tráfego" style="width: 10px">
+                                        <h:outputLabel
+                                            value="#{medida.medidaAdministrativa.bloqueioTrafego eq true ? 'SIM' : 'NÃO'}"/>
+                                    </p:column>
+                                    <p:column headerText="Bloqueio de Transporte" style="width: 10px">
+                                        <h:outputLabel
+                                            value="#{medida.medidaAdministrativa.bloqueioTransporte eq true ? 'SIM' : 'NÃO'}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:panel>
+                        </p:panel>
+                        <br/>
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Observações:"/>
+                            <p:inputTextarea rows="4" cols="100"
+                                             readonly="#{fiscalizacaoRBTransControlador.desabilitaAbaAutuacao}"
+                                             value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.descricaoDetalhada}">
+                            </p:inputTextarea>
+                            <fc:outputLabelObrigatorio value="Agente Autuador:"/>
+                            <p:autoComplete queryDelay="1000" id="funcionario"
+                                            value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.autuacaoFiscalizacao.agenteAutuador}"
+                                            completeMethod="#{fiscalizacaoRBTransControlador.completarAgentesAutuadores}"
+                                            var="usuario"
+                                            itemLabel="#{usuario}"
+                                            itemValue="#{usuario.id}"
+                                            disabled="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.id != null}"
+                                            converter="#{fiscalizacaoRBTransControlador.converterAgenteAutuador}"
+                                            size="70">
+                                <p:ajax process="@this" event="itemSelect"/>
+                            </p:autoComplete>
+                        </h:panelGrid>
+                        <p:commandButton update=":Formulario :FormularioDialogInconsistencia"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaAutuacao}"
+                                         value="Próximo" icon="ui-icon-circle-arrow-e"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvarAutuacao()}">
+                        </p:commandButton>
+
+                    </p:tab>
+                    <p:tab title="Análise da Autuação">
+                        <h:panelGrid columns="3">
+                            <fc:outputLabelObrigatorio value="Parecer:"/>
+                            <p:selectOneMenu disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseAutuacao}"
+                                             value="#{fiscalizacaoRBTransControlador.analiseAutuacao.parecerAnalise}"
+                                             style="width: 100px">
+                                <f:selectItem itemValue="#{null}" itemLabel=""/>
+                                <f:selectItem itemValue="DEFERIDO" itemLabel="Consistente"/>
+                                <f:selectItem itemValue="INDEFERIDO" itemLabel="Inconsistente"/>
+                                <p:ajax update="@form" event="change"/>
+                            </p:selectOneMenu>
+                            <p:spacer/>
+                            <fc:outputLabelObrigatorio value="Descrição:"/>
+                            <p:inputTextarea readonly="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseAutuacao}"
+                                             rows="4" cols="80"
+                                             value="#{fiscalizacaoRBTransControlador.analiseAutuacao.descricao}"
+                                             disabled="#{fiscalizacaoRBTransControlador.analiseAutuacao.parecerAnalise eq 'DEFERIDO'}">
+                            </p:inputTextarea>
+                            <p:commandButton value="Identificação" title="Identificação dos campos inconsistentes"
+                                             rendered="#{fiscalizacaoRBTransControlador.analiseAutuacao.parecerAnalise eq 'INDEFERIDO'}"
+                                             onclick="dialogSelecaoCampos.show()">
+                            </p:commandButton>
+                        </h:panelGrid>
+                        <center>
+
+                            <p:commandButton disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseAutuacao}"
+                                             icon="ui-icon-print"
+                                             value="Solicitação de Arquivamento"
+                                             style="font-weight: bolder; width: 40%"
+                                             actionListener="#{fiscalizacaoRBTransControlador.imprimeDocumentoNotificacao()}"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             rendered="#{fiscalizacaoRBTransControlador.analiseAutuacao.parecerAnalise eq 'INDEFERIDO'}">
+                            </p:commandButton>
+                        </center>
+
+                        <br/>
+                        <p:commandButton update=":Formulario :FormularioDialogInconsistencia"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaAnaliseAutuacao}"
+                                         value="Próximo" icon="ui-icon-circle-arrow-e"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvaAnaliseAutuacao()}"/>
+                    </p:tab>
+                    <p:tab title="Notificação">
+                        <center>
+                            <p:commandButton value="Imprimir Notificação"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             icon="ui-icon-print"
+                                             styleClass="operacao width300"
+                                             actionListener="#{fiscalizacaoRBTransControlador.imprimirDocumentoNotificacao()}">
+                            </p:commandButton>
+                        </center>
+                        <br/>
+                        <p:panel header="Ciência da Notificação" id="panelCienciaNotificacao">
+                            <h:panelGrid columns="2">
+                                <fc:outputLabelObrigatorio value="Tipo de Ciência:"/>
+                                <p:selectOneMenu disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                                 value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia}"
+                                                 style="width: 200px;">
+                                    <f:selectItems value="#{fiscalizacaoRBTransControlador.tipoDeCiencia}"/>
+                                    <p:ajax process="@this" event="change"
+                                            update=":Formulario:tabView:panelCienciaNotificacao"/>
+                                </p:selectOneMenu>
+                                <fc:outputLabelObrigatorio
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA'|| fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY'}"
+                                    value="Data da Ciência:"/>
+                                <p:calendar disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                            rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY' }"
+                                            navigator="true" pattern="dd/MM/yyyy"
+                                            value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.dataCiencia}">
+                                    <p:ajax event="dateSelect"
+                                            listener="#{fiscalizacaoRBTransControlador.atribuiDataCienciaNotificacao}"/>
+                                </p:calendar>
+                                <fc:outputLabelObrigatorio value="Nome do Responsável:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.nomeResponsavelCiencia}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                    size="100"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <h:outputLabel value="CPF:"
+                                               rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <p:inputMask
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.cpfResponsavelCiencia}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                    mask="999.999.999-99"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <h:outputLabel value="RG:"
+                                               rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.rgResponsavelCiencia}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <fc:outputLabelObrigatorio
+                                    value="Número do Diário Oficial"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.numeroDiarioOficial}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                    size="10"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+
+                                <fc:outputLabelObrigatorio value="Órgão de Comunicação:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.orgaoComunicacao}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                    size="100"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <fc:outputLabelObrigatorio value="Data de Publicação:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:calendar
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.dataPublicacaoDiarioOficial}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                    pattern="dd/MM/yyyy" navigator="true"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <fc:outputLabelObrigatorio value="Texto de Publicação:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:inputTextarea
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.textoPublicacaoDiarioOficial}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                    rows="4" cols="75"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoAutuacaoRBTrans.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                            </h:panelGrid>
+                        </p:panel>
+                        <br/>
+                        <p:commandButton update=":Formulario"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaNotificacao}"
+                                         value="Próximo"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         icon="ui-icon-circle-arrow-e"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvarCienciaNotificacao()}"/>
+                    </p:tab>
+                    <p:tab title="Defesa Prévia">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Apresentado:"/>
+                            <p:selectBooleanCheckbox disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecurso}"
+                                                     value="#{fiscalizacaoRBTransControlador.recursoRBTrans.apresentado}">
+                                <p:ajax event="change" update="@form"/>
+                            </p:selectBooleanCheckbox>
+                            <p:spacer height="20"/><p:spacer/>
+                            <fc:outputLabelObrigatorio value="Número do Protocolo:"/>
+                            <p:inputText size="20"
+                                         value="#{fiscalizacaoRBTransControlador.recursoRBTrans.numeroProtocolo}"
+                                         disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecurso || !fiscalizacaoRBTransControlador.recursoRBTrans.apresentado}"
+                                         onkeypress="mascara(this, soNumeros);">
+                            </p:inputText>
+                            <fc:outputLabelObrigatorio value="Ano do Protocolo:"/>
+                            <p:inputMask mask="9999"
+                                         value="#{fiscalizacaoRBTransControlador.recursoRBTrans.anoProtocolo}" size="4"
+                                         disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecurso || !fiscalizacaoRBTransControlador.recursoRBTrans.apresentado}"/>
+                            <fc:outputLabelObrigatorio value="Teor do Protocolo:"/>
+                            <p:inputTextarea rows="3"
+                                             value="#{fiscalizacaoRBTransControlador.recursoRBTrans.teorProtocolo}"
+                                             cols="100"
+                                             disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecurso || !fiscalizacaoRBTransControlador.recursoRBTrans.apresentado}"/>
+                        </h:panelGrid>
+                        <br/>
+                        <p:commandButton update=":Formulario"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaRecurso}"
+                                         value="Próximo" icon="ui-icon-circle-arrow-e"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvarRecurso}"/>
+                    </p:tab>
+                    <p:tab title="Análise de Defesa Prévia">
+                        <h:panelGrid id="gridRecurso" columns="2">
+                            <fc:outputLabelObrigatorio value="Parecer:"/>
+                            <p:selectOneMenu disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecurso}"
+                                             value="#{fiscalizacaoRBTransControlador.analiseRecurso.parecerAnalise}"
+                                             style="width: 100px">
+                                <f:selectItems value="#{fiscalizacaoRBTransControlador.pareceresAnaliseAutuacao}"/>
+                                <p:ajax process="@this" update="@form" event="change"/>
+                            </p:selectOneMenu>
+                            <fc:outputLabelObrigatorio value="Descrição:"/>
+                            <p:inputTextarea readonly="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecurso}"
+                                             rows="4" cols="80"
+                                             value="#{fiscalizacaoRBTransControlador.analiseRecurso.descricao}">
+                            </p:inputTextarea>
+                        </h:panelGrid>
+                        <br/>
+                        <center>
+                            <h:commandLink
+                                rendered="#{fiscalizacaoRBTransControlador.analiseRecurso.parecerAnalise eq 'DEFERIDO'}"
+                                disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecurso}"
+                                target="_blank"
+                                actionListener="#{fiscalizacaoRBTransControlador.imprimirDocumentoParecerRecurso()}">
+                                <p:commandButton
+                                    rendered="#{fiscalizacaoRBTransControlador.analiseRecurso.parecerAnalise eq 'DEFERIDO'}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecurso}"
+                                    value="Imprimir Parecer do Recurso"
+                                    style="font-weight: bolder; width: 40%"
+                                    action="edita"
+                                    ajax="false"
+                                    icon="ui-icon-print">
+                                </p:commandButton>
+                            </h:commandLink>
+                        </center>
+                        <br/>
+                        <p:commandButton update=":Formulario"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecurso}"
+                                         value="Próximo" icon="ui-icon-circle-arrow-e"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvarAnaliseRecurso()}"/>
+
+                    </p:tab>
+                    <p:tab title="Notificação de Penalidade">
+                        <center>
+                            <p:commandButton
+                                value="Imprimir Notificação de Penalidade"
+                                styleClass="operacao width300"
+                                onclick="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                icon="ui-icon-print"
+                                actionListener="#{fiscalizacaoRBTransControlador.imprimirDocumentoNotificacaoPenalidade()}">
+                            </p:commandButton>
+                            <p:commandButton
+                                value="Imprimir DAM"
+                                styleClass="operacao width300"
+                                onclick="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                actionListener="#{fiscalizacaoRBTransControlador.gerarDAM()}"
+                                icon="ui-icon-print">
+                            </p:commandButton>
+                        </center>
+                        <br/>
+                        <p:panel header="Ciência da Notificação de Penalidade" id="panelCienciaNotificacaoPenalidade">
+                            <h:panelGrid columns="2">
+                                <fc:outputLabelObrigatorio value="Tipo de Ciência:"/>
+                                <p:selectOneMenu
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia}"
+                                    style="width: 150px">
+                                    <f:selectItems value="#{fiscalizacaoRBTransControlador.tipoDeCiencia}"/>
+                                    <p:ajax process="@this" event="change"
+                                            update=":Formulario:tabView:panelCienciaNotificacaoPenalidade"/>
+                                </p:selectOneMenu>
+                                <fc:outputLabelObrigatorio
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"
+                                    value="Data da Ciência:"/>
+                                <p:calendar
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"
+                                    navigator="true" pattern="dd/MM/yyyy"
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.dataCiencia}">
+                                    <p:ajax event="dateSelect"
+                                            listener="#{fiscalizacaoRBTransControlador.atribuiDataCienciaNotificacao}"/>
+                                </p:calendar>
+                                <fc:outputLabelObrigatorio value="Nome do Responsável:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.nomeResponsavelCiencia}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    size="100"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <h:outputLabel value="CPF:"
+                                               rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <p:inputMask
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.cpfResponsavelCiencia}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    mask="999.999.999-99"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <h:outputLabel value="RG:"
+                                               rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.rgResponsavelCiencia}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'CORRESPONDENCIA' || fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'OFFICE_BOY'}"/>
+                                <fc:outputLabelObrigatorio
+                                    value="Número do Diário Oficial:"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.numeroDiarioOficial}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    size="10"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <fc:outputLabelObrigatorio value="Órgão de Comunicação:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:inputText
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.orgaoComunicacao}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    size="100"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <fc:outputLabelObrigatorio value="Data de Publicação:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:calendar
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.dataPublicacaoDiarioOficial}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    pattern="dd/MM/yyyy" navigator="true"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <fc:outputLabelObrigatorio value="Texto de Publicação:"
+                                                           rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                                <p:inputTextarea
+                                    value="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.textoPublicacaoDiarioOficial}"
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                    rows="4" cols="75"
+                                    rendered="#{fiscalizacaoRBTransControlador.notificacaoPenalidade.tipoCiencia eq 'DIARIO_OFICIAL'}"/>
+                            </h:panelGrid>
+                        </p:panel>
+                        <br/>
+                        <p:commandButton update=":Formulario"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaNotificacaoPenalidade}"
+                                         value="Próximo"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         icon="ui-icon-circle-arrow-e"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvarCienciaNotificacaoPenalidade()}"/>
+                    </p:tab>
+                    <p:tab title="Recurso JARI">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Apresentado:"/>
+                            <p:selectBooleanCheckbox
+                                disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecursoJARI}"
+                                value="#{fiscalizacaoRBTransControlador.recursoJARI.apresentado}">
+                                <p:ajax event="change" update="@form"/>
+                            </p:selectBooleanCheckbox>
+                            <p:spacer height="20"/><p:spacer/>
+                            <fc:outputLabelObrigatorio value="Número do Protocolo:"/>
+                            <p:inputText size="20" value="#{fiscalizacaoRBTransControlador.recursoJARI.numeroProtocolo}"
+                                         disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecursoJARI || !fiscalizacaoRBTransControlador.recursoJARI.apresentado}"
+                                         onkeypress="mascara(this, soNumeros);">
+                            </p:inputText>
+                            <fc:outputLabelObrigatorio value="Ano do Protocolo:"/>
+                            <p:inputMask mask="9999" value="#{fiscalizacaoRBTransControlador.recursoJARI.anoProtocolo}"
+                                         size="4"
+                                         disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecursoJARI || !fiscalizacaoRBTransControlador.recursoJARI.apresentado}"/>
+                            <fc:outputLabelObrigatorio value="Teor do Protocolo:"/>
+                            <p:inputTextarea rows="3"
+                                             value="#{fiscalizacaoRBTransControlador.recursoJARI.teorProtocolo}"
+                                             cols="100"
+                                             disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaRecursoJARI || !fiscalizacaoRBTransControlador.recursoJARI.apresentado}"/>
+                        </h:panelGrid>
+                        <br/>
+                        <p:commandButton update=":Formulario"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaRecursoJARI}"
+                                         value="Próximo"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         icon="ui-icon-circle-arrow-e"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvarRecursoJARI()}"/>
+                    </p:tab>
+                    <p:tab title="Análise Recurso JARI">
+                        <h:panelGrid id="gridRecursoJARI" columns="2">
+                            <fc:outputLabelObrigatorio value="Voto/Decisão:"/>
+                            <p:selectOneMenu
+                                disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecursoJARI}"
+                                value="#{fiscalizacaoRBTransControlador.analiseRecursoJARI.parecerAnalise}"
+                                style="width: 100px">
+                                <f:selectItems value="#{fiscalizacaoRBTransControlador.pareceresAnaliseAutuacao}"/>
+                                <p:ajax process="@this" update="@form" event="change"/>
+                            </p:selectOneMenu>
+                            <fc:outputLabelObrigatorio value="Descrição:"/>
+                            <p:inputTextarea
+                                readonly="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecursoJARI}" rows="4"
+                                cols="80"
+                                value="#{fiscalizacaoRBTransControlador.analiseRecursoJARI.descricao}">
+                                <p:ajax event="blur" update="@form" process="@this"/>
+                            </p:inputTextarea>
+                        </h:panelGrid>
+                        <br/>
+                        <center>
+                            <h:commandLink disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecursoJARI}"
+                                           target="_blank"
+                                           actionListener="#{fiscalizacaoRBTransControlador.imprimirSolicitacaoCancelamentoMulta()}"
+                                           rendered="#{fiscalizacaoRBTransControlador.analiseRecursoJARI.parecerAnalise eq 'DEFERIDO'}">
+                                <p:commandButton
+                                    disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecursoJARI}"
+                                    value="Imprimir Solicitação de Cancelamento"
+                                    style="font-weight: bolder; width: 40%"
+                                    action="edita"
+                                    ajax="false"
+                                    rendered="#{fiscalizacaoRBTransControlador.analiseRecursoJARI.parecerAnalise eq 'DEFERIDO'}"
+                                    icon="ui-icon-print">
+                                </p:commandButton>
+                            </h:commandLink>
+
+                        </center>
+                        <p:commandButton update="@form"
+                                         rendered="#{!fiscalizacaoRBTransControlador.desabilitaAbaAnaliseRecursoJARI}"
+                                         value="Próximo" icon="ui-icon-circle-arrow-e"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{fiscalizacaoRBTransControlador.salvarAnaliseRecursoJari}"/>
+                    </p:tab>
+                </p:tabView>
+                <br/>
+                <p:tab title="Anexos da Fiscalizaçao da RBTrans">
+                    <p:outputPanel id="documentos" style="border: 5">
+                        <p:fileUpload
+                            multiple="true"
+                            cancelLabel="Cancelar"
+                            sizeLimit="15728640"
+                            invalidSizeMessage="Arquivo maior que 10 MB"
+                            mode="advanced"
+                            label="Selecione..."
+                            uploadLabel="Upload Arquivo"
+                            fileUploadListener="#{fiscalizacaoRBTransControlador.uploadArquivo}"
+                            update="documentos"
+                            auto="false"/>
+                        <br/>
+                        <p:dataTable id="tabelaArquivosGeral" var="item"
+                                     value="#{fiscalizacaoRBTransControlador.fiscalizacaoRBTrans.fiscalizacaoArquivo}"
+                                     emptyMessage="Nenhum Arquivo foi anexado"
+                                     paginator="true"
+                                     editable="true"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;spanclass='titulo-tabela mrig10'>ANEXOS AÇÃO FISCAL RBTRANS &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Ações"
+                                      style="text-align: center; width: 5%; ">
+                                <h:panelGrid columns="2" cellspacing="0">
+                                    <p:commandButton rendered="#{item.arquivo.id eq null}"
+                                                     id="downloadLink" ajax="false"
+                                                     icon="ui-icon-arrowthickstop-1-s"
+                                                     title="Download do Arquivo"
+                                                     process="@form" update="tabelaArquivosGeral"
+                                                     styleClass="mrig05"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()">
+                                        <p:fileDownload
+                                            value="#{fiscalizacaoRBTransControlador.getArquivoStream(item)}"/>
+                                    </p:commandButton>
+                                    <p:outputPanel rendered="#{item.arquivo.id ne null}">
+                                        <a href='${facesContext.externalContext.requestContextPath}/arquivos/#{item.arquivo.nome}?id=#{item.arquivo.id}'>
+                                            <p:button icon="ui-icon-arrowthickstop-1-s"
+                                                      styleClass="mrig05"
+                                                      title="Download do Arquivo"/>
+                                        </a>
+                                    </p:outputPanel>
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     update="tabelaArquivosGeral"
+                                                     process="@this"
+                                                     styleClass="mrig05"
+                                                     actionListener="#{fiscalizacaoRBTransControlador.removeArquivo(item)}"
+                                                     onclick="if(!confirm('Tem certeza que deseja remover este registro?')) {return true} else {statusDialog.show();}"
+                                                     oncomplete="statusDialog.hide();"/>
+                                </h:panelGrid>
+                            </p:column>
+                            <p:column headerText="Tamanho">
+                                <h:outputText value="#{item.arquivo.tamanho}"/>
+                            </p:column>
+                            <p:column headerText="Nome">
+                                <h:outputText value="#{item.arquivo.nome}"/>
+                            </p:column>
+                            <p:column headerText="Descrição">
+                                <p:inputText value="#{item.arquivo.descricao}" style="width: 95%"
+                                             rendered="#{item.arquivo.descricao eq null}"
+                                             maxlength="255"/>
+                                <h:outputText value="#{item.arquivo.descricao}" style="width: 95%"
+                                              rendered="#{item.arquivo.descricao ne null}"
+                                              maxlength="255"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+                <br/>
+                <p:commandButton value="Salvar"
+                                 icon="ui-icon-check"
+                                 styleClass="operacao prioritario"
+                                 actionListener="#{fiscalizacaoRBTransControlador.salvarFiscalizacao()}"/>
+                <p:commandButton value="Cancelar"
+                                 styleClass="operacao"
+                                 icon="ui-icon-cancel"
+                                 actionListener="#{fiscalizacaoRBTransControlador.voltar()}"/>
+            </p:panel>
+        </h:form>
+        <p:dialog widgetVar="dialogSelecaoCampos"
+                  modal="true"
+                  closable="true"
+                  resizable="false"
+                  header="Identificação de Inconsistências"
+                  width="1200"
+                  height="500">
+            <h:form id="FormularioDialogInconsistencia">
+
+                <p:dataTable value="#{fiscalizacaoRBTransControlador.camposInconsistentes}"
+                             var="campo"
+                             emptyMessage="Sem registros...">
+                    <p:column style="width: 30px">
+                        <p:commandButton icon="ui-icon-check"
+                                         actionListener="#{fiscalizacaoRBTransControlador.removeCamposInconsistencia(campo)}"
+                                         immediate="true"
+                                         update="@form"
+                                         styleClass="vinteLarguraVinteAltura"
+                                         rendered="#{fiscalizacaoRBTransControlador.isCampoInconsistenciaSelecionado(campo)}"
+                                         disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseAutuacao}"/>
+                        <p:commandButton styleClass="vinteLarguraVinteAltura"
+                                         value=""
+                                         actionListener="#{fiscalizacaoRBTransControlador.adicionaCamposInconsistencia(campo)}"
+                                         update="@form"
+                                         rendered="#{!fiscalizacaoRBTransControlador.isCampoInconsistenciaSelecionado(campo)}"
+                                         disabled="#{fiscalizacaoRBTransControlador.desabilitaAbaAnaliseAutuacao}"/>
+                    </p:column>
+                    <p:column headerText="Campo">
+                        <h:outputLabel value="#{campo.camposAutoInfracao.descricao}"/>
+                    </p:column>
+                </p:dataTable>
+
+            </h:form>
+            <br/>
+            <center>
+                <p:commandButton value="Confirmar" styleClass="prioritario" icon="ui-icon-check"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide(); dialogSelecaoCampos.hide()"/>
+            </center>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

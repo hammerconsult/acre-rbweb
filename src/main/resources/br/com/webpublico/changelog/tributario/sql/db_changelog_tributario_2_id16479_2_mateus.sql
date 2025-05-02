@@ -1,0 +1,1 @@
+update TIPOAUTONOMO set QUANTIDADECADASTRORBTRANS = 3 where taxista = 1

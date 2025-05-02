@@ -1,0 +1,1 @@
+update receitaextra set transportado = 0

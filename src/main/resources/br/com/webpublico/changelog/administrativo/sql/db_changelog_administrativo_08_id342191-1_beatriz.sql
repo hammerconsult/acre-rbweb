@@ -1,0 +1,3 @@
+update contrato
+set RESPONSAVELPREFEITURA_ID = 10732104216
+where id = 10855760607;

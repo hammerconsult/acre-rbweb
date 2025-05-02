@@ -1,0 +1,302 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package br.com.webpublico.entidades;
+
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
+import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.util.DataUtil;
+import br.com.webpublico.util.Util;
+import br.com.webpublico.util.UtilBeanContabil;
+import br.com.webpublico.util.anotacoes.*;
+import org.hibernate.envers.Audited;
+
+import javax.persistence.*;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.UUID;
+
+/**
+ * @author major
+ */
+@Audited
+@Entity
+@Etiqueta("Estorno de Transferência Financeira Mesma Unidade")
+public class EstornoTransfMesmaUnidade extends SuperEntidadeContabilGerarContaAuxiliar implements EntidadeContabil {
+
+    private static final long serialVersionUID = 1L;
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+    @ErroReprocessamentoContabil
+    @Tabelavel
+    @Pesquisavel
+    @Etiqueta("Número")
+    private String numero;
+    @ReprocessamentoContabil
+    @ErroReprocessamentoContabil
+    @Tabelavel
+    @Pesquisavel
+    @Etiqueta("Data")
+    @Obrigatorio
+    @Temporal(javax.persistence.TemporalType.DATE)
+    private Date dataEstorno;
+    @Etiqueta("Data Concedida")
+    @Pesquisavel
+    @Tabelavel
+    @Temporal(javax.persistence.TemporalType.DATE)
+    @ErroReprocessamentoContabil
+    private Date dataConciliacao;
+    @Pesquisavel
+    @Tabelavel
+    @Temporal(javax.persistence.TemporalType.DATE)
+    @ErroReprocessamentoContabil
+    @Etiqueta("Data Recebida")
+    private Date recebida;
+    @ReprocessamentoContabil
+    @ErroReprocessamentoContabil
+    @Etiqueta("Unidade Organizacional")
+    @Obrigatorio
+    @ManyToOne
+    private UnidadeOrganizacional unidadeOrganizacional;
+    @ErroReprocessamentoContabil
+    @Etiqueta("Transferência")
+    @Obrigatorio
+    @ManyToOne
+    @Tabelavel
+    private TransferenciaMesmaUnidade transferenciaMesmaUnidade;
+    @Etiqueta("Histórico")
+    @Obrigatorio
+    private String historico;
+    @ReprocessamentoContabil
+    @ErroReprocessamentoContabil
+    @Etiqueta("Evento Contábil Recebido")
+    @ManyToOne
+    @Tabelavel
+    private EventoContabil eventoContabil;
+    @ReprocessamentoContabil
+    @ErroReprocessamentoContabil
+    @Etiqueta("Evento Contábil Concebido")
+    @ManyToOne
+    @Tabelavel
+    private EventoContabil eventoContabilRetirada;
+    @Tabelavel
+    @Pesquisavel
+    @Monetario
+    @Etiqueta("Valor")
+    @Obrigatorio
+    private BigDecimal valor;
+    @Etiqueta("Unidade Organizacional Administrativa")
+    @ManyToOne
+    private UnidadeOrganizacional unidadeOrganizacionalAdm;
+    private String historicoNota;
+    private String historicoRazao;
+    private String uuid;
+    @ManyToOne
+    private Identificador identificador;
+
+    public EstornoTransfMesmaUnidade() {
+        dataEstorno = new Date();
+        valor = BigDecimal.ZERO;
+        uuid = UUID.randomUUID().toString();
+    }
+
+    public Date getRecebida() {
+        return recebida;
+    }
+
+    public void setRecebida(Date recebida) {
+        this.recebida = recebida;
+    }
+
+    public String getHistoricoNota() {
+        return historicoNota;
+    }
+
+    public void setHistoricoNota(String historicoNota) {
+        this.historicoNota = historicoNota;
+    }
+
+    public String getHistoricoRazao() {
+        return historicoRazao;
+    }
+
+    public void setHistoricoRazao(String historicoRazao) {
+        this.historicoRazao = historicoRazao;
+    }
+
+    public EventoContabil getEventoContabilRetirada() {
+        return eventoContabilRetirada;
+    }
+
+    public void setEventoContabilRetirada(EventoContabil eventoContabilRetirada) {
+        this.eventoContabilRetirada = eventoContabilRetirada;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Date getDataEstorno() {
+        return dataEstorno;
+    }
+
+    public void setDataEstorno(Date dataEstorno) {
+        this.dataEstorno = dataEstorno;
+    }
+
+    public String getHistorico() {
+        return historico;
+    }
+
+    public void setHistorico(String historico) {
+        this.historico = historico;
+    }
+
+    public String getNumero() {
+        return numero;
+    }
+
+    public void setNumero(String numero) {
+        this.numero = numero;
+    }
+
+    public TransferenciaMesmaUnidade getTransferenciaMesmaUnidade() {
+        return transferenciaMesmaUnidade;
+    }
+
+    public void setTransferenciaMesmaUnidade(TransferenciaMesmaUnidade transferenciaMesmaUnidade) {
+        this.transferenciaMesmaUnidade = transferenciaMesmaUnidade;
+    }
+
+    public UnidadeOrganizacional getUnidadeOrganizacional() {
+        return unidadeOrganizacional;
+    }
+
+    public void setUnidadeOrganizacional(UnidadeOrganizacional unidadeOrganizacional) {
+        this.unidadeOrganizacional = unidadeOrganizacional;
+    }
+
+    public BigDecimal getValor() {
+        return valor;
+    }
+
+    public void setValor(BigDecimal valor) {
+        this.valor = valor;
+    }
+
+    public EventoContabil getEventoContabil() {
+        return eventoContabil;
+    }
+
+    public void setEventoContabil(EventoContabil eventoContabil) {
+        this.eventoContabil = eventoContabil;
+    }
+
+    public UnidadeOrganizacional getUnidadeOrganizacionalAdm() {
+        return unidadeOrganizacionalAdm;
+    }
+
+    public void setUnidadeOrganizacionalAdm(UnidadeOrganizacional unidadeOrganizacionalAdm) {
+        this.unidadeOrganizacionalAdm = unidadeOrganizacionalAdm;
+    }
+
+    public Date getDataConciliacao() {
+        return dataConciliacao;
+    }
+
+    public void setDataConciliacao(Date dataConciliacao) {
+        this.dataConciliacao = dataConciliacao;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    public Identificador getIdentificador() {
+        return identificador;
+    }
+
+    public void setIdentificador(Identificador identificador) {
+        this.identificador = identificador;
+    }
+
+    public void gerarHistoricoNota() {
+        historicoNota = "";
+        if (this.getNumero() != null) {
+            historicoNota += "N°: " + this.getNumero() + "/" + Util.getAnoDaData(this.getDataEstorno()) + UtilBeanContabil.SEPARADOR_HISTORICO;
+        }
+        if (this.getTransferenciaMesmaUnidade().getSubContaDeposito() != null) {
+            historicoNota += " Conta Financeira Recebida: " + this.getTransferenciaMesmaUnidade().getSubContaDeposito() + UtilBeanContabil.SEPARADOR_HISTORICO;
+        }
+        if (this.getTransferenciaMesmaUnidade().getFonteDeRecursosDeposito() != null) {
+            historicoNota += " Fonte de Recursos Recebida: " + this.getTransferenciaMesmaUnidade().getFonteDeRecursosDeposito() + UtilBeanContabil.SEPARADOR_HISTORICO;
+        }
+        if (this.getTransferenciaMesmaUnidade().getSubContaRetirada() != null) {
+            historicoNota += " Conta Financeira Concedida: " + this.getTransferenciaMesmaUnidade().getSubContaRetirada() + UtilBeanContabil.SEPARADOR_HISTORICO;
+        }
+        if (this.getTransferenciaMesmaUnidade().getFonteDeRecursosRetirada() != null) {
+            historicoNota += " Fonte de Recursos Concedida: " + this.getTransferenciaMesmaUnidade().getFonteDeRecursosRetirada() + UtilBeanContabil.SEPARADOR_HISTORICO;
+        }
+        historicoNota = historicoNota + " " + historico;
+        this.historicoNota = Util.cortarString(this.historicoNota, UtilBeanContabil.QUANTIDADE_CARACTERES_HISTORICO);
+    }
+
+    public void gerarHistoricoRazao() {
+        String historicoEvento = "";
+        if (this.getEventoContabil() != null) {
+            if (this.getEventoContabil().getClpHistoricoContabil() != null) {
+                historicoEvento = "Evento Contábil Recebido: " + this.getEventoContabil().getClpHistoricoContabil().toString();
+            }
+        }
+        if (this.getEventoContabilRetirada() != null) {
+            if (this.getEventoContabilRetirada().getClpHistoricoContabil() != null) {
+                historicoEvento = "Evento Contábil Concedido: " + this.getEventoContabilRetirada().getClpHistoricoContabil().toString();
+            }
+        }
+        this.historicoRazao = historicoEvento + " " + this.historicoNota;
+        this.historicoRazao = Util.cortarString(this.historicoRazao, UtilBeanContabil.QUANTIDADE_CARACTERES_HISTORICO);
+    }
+
+    public void gerarHistoricos() {
+        gerarHistoricoNota();
+        gerarHistoricoRazao();
+    }
+
+    @Override
+    public String toString() {
+        return numero + " - " + Util.formataValor(valor) + "(" + DataUtil.getDataFormatada(dataEstorno) + ")";
+    }
+
+    @Override
+    public String getReferenciaArquivoPrestacaoDeContas() {
+        return this.getNumero() + " - " + ((EntidadeContabil) transferenciaMesmaUnidade).getReferenciaArquivoPrestacaoDeContas();
+    }
+
+    @Override
+    public String getComplementoHistoricoPrestacaoDeContas() {
+        return toString();
+    }
+
+    @Override
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+        if (ParametroEvento.ComplementoId.CONCEDIDO.equals(complementoId)) {
+            return new GeradorContaAuxiliarDTO(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                transferenciaMesmaUnidade.getContaDeDestinacaoRetirada(), transferenciaMesmaUnidade.getExercicio());
+        } else if (ParametroEvento.ComplementoId.RECEBIDO.equals(complementoId)) {
+            return new GeradorContaAuxiliarDTO(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                transferenciaMesmaUnidade.getContaDeDestinacaoDeposito(), transferenciaMesmaUnidade.getExercicio());
+        }
+        return null;
+    }
+}

@@ -1,0 +1,1 @@
+update saldocontacontabil set tipobalancete = 'MENSAL'

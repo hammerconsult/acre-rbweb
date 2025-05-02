@@ -1,0 +1,1 @@
+update cadastroeconomico set porte= 'GRANDE' where porte = 'GRAMDE'

@@ -1,0 +1,1 @@
+update paramparcelamento set verificacancelamentoautomatico = 'SIM';

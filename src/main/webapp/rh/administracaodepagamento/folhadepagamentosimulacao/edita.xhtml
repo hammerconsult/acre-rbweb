@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:rh="http://java.sun.com/jsf/composite/components/rh"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecarioEditar controlador="#{calculoFolhaDePagamentoSimulacaoControlador}"/>
+
+            <p:panel header="Requisitos para o Cálculo da Folha de Pagamento - SIMULAÇÃO">
+                <h:panelGrid columns="2">
+
+                    <fc:outputLabelObrigatorio for="competencia" value="Competência:"/>
+                    <h:selectOneMenu value="#{calculoFolhaDePagamentoSimulacaoControlador.competenciaFP}"
+                                     style="width: 99%;"
+                                     id="competencia"
+                                     converter="#{calculoFolhaDePagamentoSimulacaoControlador.converterCompetenciaFP}">
+                        <f:selectItems value="#{calculoFolhaDePagamentoSimulacaoControlador.competenciasFP}"/>
+                        <p:ajax event="valueChange"
+                                onstart="aguarde.show()"
+                                update="folhaPagamento calculadaEm tipoFolhaDePagamento qtdeRetroativo gerar-folha"
+                                oncomplete="aguarde.hide()"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio for="folhaPagamento" value="Folha:"/>
+                    <h:selectOneMenu id="folhaPagamento"
+                                     style="width: 99%;"
+                                     value="#{calculoFolhaDePagamentoSimulacaoControlador.selecionado}"
+                                     converter="#{calculoFolhaDePagamentoSimulacaoControlador.converterGenerico}">
+                        <f:selectItems value="#{calculoFolhaDePagamentoSimulacaoControlador.folhasDePagamento}"/>
+                        <p:ajax process="@this" update="calculadaEm tipoFolhaDePagamento qtdeRetroativo gerar-folha"
+                                oncomplete="aguarde.hide()"
+                                listener="#{calculoFolhaDePagamentoSimulacaoControlador.definirPropriedades()}"
+                                onstart="aguarde.show()"
+                        />
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio for="calculadaEm" value="Calculada Em:"/>
+                    <p:calendar onkeypress="mascara(this, Data)" maxlength="10"
+                                title="Digite o data da Folha de Pagamento" navigator="true"
+                                value="#{calculoFolhaDePagamentoSimulacaoControlador.selecionado.calculadaEm}"
+                                id="calculadaEm" pattern="dd/MM/yyyy" locale="pt_BR"/>
+
+                    <fc:outputLabelObrigatorio for="tipoFolhaDePagamento" value="Tipo de Folha de Pagamento:"/>
+                    <h:selectOneMenu title="Selecione o Tipo de Folha de Pagamento"
+                                     disabled="true"
+                                     value="#{calculoFolhaDePagamentoSimulacaoControlador.selecionado.tipoFolhaDePagamento}"
+                                     id="tipoFolhaDePagamento">
+                        <f:selectItems value="#{calculoFolhaDePagamentoSimulacaoControlador.tipoFolhaDePagamento}"/>
+                        <p:ajax process="@this"
+                                update="Formulario:qtdeRetroativo"
+                                onstart="aguarde.show();" oncomplete="aguarde.hide();"
+                                event="change">
+                        </p:ajax>
+                    </h:selectOneMenu>
+
+                    <h:outputLabel value="Quem deseja calcular:"/>
+                    <p:selectOneRadio id="options" value="#{calculoFolhaDePagamentoSimulacaoControlador.tipoCalculo}">
+                        <f:selectItem itemLabel="Individual" itemValue="INDIVIDUAL"/>
+                        <f:selectItem itemLabel="Orgão" itemValue="ORGAO"/>
+                        <f:selectItem itemLabel="Calcular Lote" itemValue="LOTE"/>
+                        <f:selectItem itemLabel="Calcular Todos" itemValue="TODOS"/>
+                        <p:ajax onstart="aguarde.show();"
+                                oncomplete="aguarde.hide();"
+                                update="@form"/>
+                    </p:selectOneRadio>
+
+                    <h:outputLabel value="Orgão:"/>
+                    <p:autoComplete queryDelay="1000" id="orgao"
+                                    disabled="#{calculoFolhaDePagamentoSimulacaoControlador.tipoCalculo ne 'ORGAO'}"
+                                    value="#{calculoFolhaDePagamentoSimulacaoControlador.hierarquiaOrganizacional}"
+                                    converter="#{calculoFolhaDePagamentoSimulacaoControlador.converterHierarquiaOrganizacional}"
+                                    completeMethod="#{calculoFolhaDePagamentoSimulacaoControlador.completaHierarquia}"
+                                    forceSelection="true"
+                                    size="70"
+                                    var="h"
+                                    maxResults="10"
+                                    itemLabel="#{h}"
+                                    itemValue="#{h.id}">
+                        <p:ajax event="itemSelect" update="servidor"
+                                listener="#{calculoFolhaDePagamentoSimulacaoControlador.liberaServidor}"/>
+                        <p:ajax event="blur" update="servidor"/>
+                    </p:autoComplete>
+
+                    <h:outputText title="Engloba também os ativos e inativos do sistema" value="Servidor(a):"/>
+                    <rh:auto-complete-vinculofp id="servidor"
+                                                typeMatriculaNumero="hidden"
+                                                disabled="#{calculoFolhaDePagamentoSimulacaoControlador.tipoCalculo ne 'INDIVIDUAL'}"
+                                                value="#{calculoFolhaDePagamentoSimulacaoControlador.servidor}"
+                                                completeMethod="#{calculoFolhaDePagamentoSimulacaoControlador.completarContratoFP}"
+                                                classe="VinculoFP"
+                                                update="@this"
+                                                process="@this"
+                                                actionListener="#{calculoFolhaDePagamentoSimulacaoControlador.liberarUnidade()}"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();">
+                    </rh:auto-complete-vinculofp>
+
+                    <h:outputLabel value="Lote:"/>
+                    <h:selectOneMenu id="lote"
+                                     disabled="#{calculoFolhaDePagamentoSimulacaoControlador.tipoCalculo ne 'LOTE'}"
+                                     value="#{calculoFolhaDePagamentoSimulacaoControlador.loteProcessamento}"
+                                     converter="#{calculoFolhaDePagamentoSimulacaoControlador.converterLoteProcessamento}">
+                        <f:selectItems value="#{calculoFolhaDePagamentoSimulacaoControlador.loteProcessamentos}"/>
+                        <p:ajax update="orgao servidor qtdeRetroativo"
+                                listener="#{calculoFolhaDePagamentoSimulacaoControlador.liberaLote}"/>
+                    </h:selectOneMenu>
+
+                    <h:outputLabel value="Quantidade de Meses de Retroação:"/>
+                    <p:inputText size="5" id="qtdeRetroativo"
+                                 readonly="#{calculoFolhaDePagamentoSimulacaoControlador.selecionado.tipoFolhaDePagamento eq 'SALARIO_13'}"
+                                 disabled="true"
+                                 value="#{calculoFolhaDePagamentoSimulacaoControlador.selecionado.qtdeMesesRetroacao}">
+                        <p:ajax process="@this"/>
+                    </p:inputText>
+
+                    <h:outputLabel value="Verbas Bloqueadas:"/>
+                    <p:autoComplete converter="#{eventoFPControlador.converterGenerico}"
+                                    value="#{calculoFolhaDePagamentoSimulacaoControlador.eventosBloqueados}"
+                                    var="valor"
+                                    itemValue="#{valor.id}"
+                                    itemLabel="#{valor}"
+                                    maxResults="10"
+                                    completeMethod="#{lancamentoFPControlador.completaEventoFP}"
+                                    multiple="true">
+                        <p:ajax process="@this"/>
+                    </p:autoComplete>
+
+                    <h:outputText
+                        rendered="#{calculoFolhaDePagamentoSimulacaoControlador.podeMostrarBotaoCalcularTodosLotes}"
+                        value="Imprimir Log no Resumo:"/>
+                    <p:selectBooleanCheckbox
+                        rendered="#{calculoFolhaDePagamentoSimulacaoControlador.podeMostrarBotaoCalcularTodosLotes}"
+                        value="#{calculoFolhaDePagamentoSimulacaoControlador.imprimeLogEmArquivo}">
+                        <p:ajax process="@this"/>
+                    </p:selectBooleanCheckbox>
+
+                </h:panelGrid>
+            </p:panel>
+            <p:commandButton
+                value="#{calculoFolhaDePagamentoSimulacaoControlador.liberaCalculo? 'Calcular' : 'Calculando ...'}"
+                id="gerar-folha"
+                disabled="#{calculoFolhaDePagamentoSimulacaoControlador.selecionado eq null}"
+                actionListener="#{calculoFolhaDePagamentoSimulacaoControlador.calcularFolha()}"
+                onclick="if (!confirm('O Calculo da Folha de Pagamento pode ser um processo demorado, você será redirecionado para a tela de acompanhamento do cálculo, tem certeza que deseja continuar?'))
+                                            return false;"
+                ajax="true" icon="ui-icon-calculator"
+                onstart="aguarde.show();"
+                oncomplete="aguarde.hide();"
+                styleClass="mtop10 mrig05 prioritario"
+                update="@form"
+                style="height: 30px;"/>
+
+            <p:commandButton value="Calcular Todos os Lotes do Mes"
+                             rendered="#{calculoFolhaDePagamentoSimulacaoControlador.podeMostrarBotaoCalcularTodosLotes}"
+                             actionListener="#{calculoFolhaDePagamentoSimulacaoControlador.calcularTodosLotesDoMes}"
+                             onclick="if (!confirm('Ao iniciar o este processo o sistema irá calcular todos os lotes para o mes selecionado, sendo assim, será um processo demorado, tem certeza que deseja continuar?'))
+                                            return false;"
+                             ajax="true" icon="ui-icon-calculator"
+                             onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             styleClass="mtop10 mrig05 prioritario"
+                             update="@form"
+                             style="height: 30px"/>
+
+            <p:commandButton action="#{calculoFolhaDePagamentoSimulacaoControlador.cancelar}"
+                             styleClass="mtop10 mrig05"
+                             icon="ui-icon-cancel"
+                             style="height: 30px;"
+                             value="Cancelar"
+                             immediate="true"/>
+
+        </h:form>
+        <h:form rendered="false">
+            <fc:ajaxLoader16x16/>
+            <p:poll interval="1" update="scroll"/>
+
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

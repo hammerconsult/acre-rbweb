@@ -1,0 +1,712 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets">
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="chave"/>
+    <cc:attribute name="functionOnLoad" default="naoFazNadaConsultaEntidade"/>
+    <cc:attribute name="id"
+                  required="true"
+                  default="componentePesquisaAtributo"/>
+    <cc:attribute name="actionsTabela" default="#{consultaEntidadeController.defaultActions}" type="java.util.List"/>
+    <cc:attribute name="outrosBotoes"/>
+    <cc:attribute name="posicaoInferior" type="java.lang.Boolean" required="false" default="false"/>
+    <cc:attribute name="outrosBotoesTabela"/>
+    <cc:attribute name="selecionar" default="${false}"/>
+    <cc:attribute name="selecionarVarios" default="#{cc.attrs.selecionar}"/>
+    <cc:attribute name="itensSelecionados"/>
+    <cc:attribute name="caminhoIdConsultaEntidade" type="java.lang.String" default=""/>
+    <cc:attribute name="showActionsHeader" default="${true}"/>
+    <cc:attribute name="renderedBotaoExportarDados" default="${true}"/>
+</cc:interface>
+
+<!-- IMPLEMENTATION -->
+<cc:implementation>
+    <script type="application/javascript">
+        PrimeFaces.widget.DefaultCommand = PrimeFaces.widget.BaseWidget.extend({
+            init: function (b) {
+                this.cfg = b;
+                this.id = this.cfg.id;
+                this.jqId = PrimeFaces.escapeClientId(this.id);
+                this.jqTarget = $(PrimeFaces.escapeClientId(this.cfg.target));
+                this.jqTarget.parents("form:first").keypress(function (d) {
+                    var c = $.ui.keyCode;
+                    console.log(d);
+                    if (d.which == c.ENTER) {
+                        rcPesquisar();
+                        d.preventDefault();
+                    }
+                });
+                $(this.jqId + "_s").remove()
+            }
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            setTimeout(function () {
+                carregarPesquisaEntidade();
+            }, 1000);
+        });
+        var interval;
+
+        function iniciarGeracaoExcel() {
+            interval = setInterval(function () {
+                acompanharGeracaoExcel();
+            }, 2000);
+        }
+
+        function pararInterval() {
+            clearInterval(interval);
+        }
+
+        function naoFazNadaConsultaEntidade() {
+            console.debug("Finalizou a consulta de entidade ...")
+        }
+    </script>
+
+    <h:form id="FormularioPesquisa">
+        <p:remoteCommand name="rcPesquisar" update="resultados"
+                         actionListener="#{consultaEntidadeController.consultarEntidade()}"
+                         onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+
+        <p:remoteCommand name="limparFiltros" update="filtros"
+                         actionListener="#{consultaEntidadeController.limparFiltros()}"
+                         onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+
+        <p:defaultCommand target="pesquisar"/>
+
+        <p:outputPanel id="panelCarregando" rendered="${consultaEntidadeController.consulta eq null}"
+                       styleClass="text-raleway">
+            <div class="centralizado mtop100">
+                Carregando ...
+            </div>
+        </p:outputPanel>
+
+        <p:outputPanel styleClass="text-raleway"
+                       rendered="${consultaEntidadeController.consulta ne null and empty consultaEntidadeController.consulta.from}">
+            <div class="alert alert-info centralizado">
+                Ainda não existe uma configuração de pesquisa para essa chave <b>${cc.attrs.chave}</b>
+                <br/>
+                <p:commandButton value="Configurar"
+                                 icon="ui-icon-gear"
+                                 onclick="aguarde.show()"
+                                 style="width: 180px; height: 30px"
+                                 styleClass="botao_cinza mtop20"
+                                 actionListener="#{consultaEntidadeController.redirecionaParaEditar()}"/>
+            </div>
+        </p:outputPanel>
+
+        <p:panel id="filtros"
+                 header="Pesquisa de #{consultaEntidadeController.consulta.nomeTela}"
+                 styleClass="text-raleway"
+                 rendered="${!empty consultaEntidadeController.consulta.from}">
+
+            <table style="width: 100%; ">
+                <tr valign="top">
+                    <td style="width: 70%;padding: 10px 5px">
+                        <h:outputText value="Informe os filtros para efetuar uma pesquisa."
+                                      style="font-size: 13px"/>
+                    </td>
+                    <td valign="top" style="width: 30%;padding: 10px 5px; text-align: right">
+                        <c:if test="${cc.attrs.showActionsHeader}">
+                            <c:forEach items="#{consultaEntidadeController.consulta.actionsHeader}"
+                                       var="action"
+                                       varStatus="index">
+                                <p:commandButton
+                                    icon="${action.icone}"
+                                    style="min-width: 150px; height: 30px"
+                                    styleClass="prioritario mrig05 pesquisar"
+                                    value="${action.descricao}"
+                                    title="${action.title}"
+                                    actionListener="#{action.action(null)}"/>
+                            </c:forEach>
+                        </c:if>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="mtop10">
+                <tr>
+                    <td>
+                        <h:outputText value="Pesquisar por"
+                                      styleClass="azulnegrito"/>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="mtop10">
+                <c:forEach items="#{consultaEntidadeController.consulta.filtros}" var="filtro" varStatus="index">
+
+                    <tr>
+                        <td>
+                            <p:commandButton actionListener="#{filtro.mudarOperadorLogico}"
+                                             onclick="aguarde.show()"
+                                             rendered="#{(consultaEntidadeController.consulta.filtros.size() > 1) and
+                            (index.index ne 0)}"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="condicao-consulta-entidade-#{filtro.operadorLogico.condicional}"
+                                             value="#{filtro.operadorLogico.descricao}"
+                                             process="filtros"
+                                             update="filtros"/>
+
+                        </td>
+                        <td>
+                            <h:selectOneMenu value="#{filtro.field}"
+                                             converter="#{consultaEntidadeController.converterFieldConsulta}">
+                                <f:selectItems value="#{consultaEntidadeController.pesquisaveis}"/>
+                                <p:ajax process="@this" event="change" update="filtros"
+                                        listener="#{consultaEntidadeController.definirOperacaoPadrao(filtro)}"/>
+                            </h:selectOneMenu>
+                        </td>
+                        <td>
+                            <h:selectOneMenu value="#{filtro.operacao}">
+                                <f:selectItems value="#{filtro.field.tipo.selectItens}"/>
+                                <p:ajax process="@this" event="change" update="filtros"/>
+                            </h:selectOneMenu>
+                        </td>
+                        <td>
+                            <fc:inputConsultaEntidade tipoEnum="#{filtro.field.tipoEnum}"
+                                                      valor="#{filtro.valor}"
+                                                      operacao="#{filtro.operacao.name()}"
+                                                      select="#{filtro.field.select}"
+                                                      tipo="#{filtro.field.tipo}"/>
+                        </td>
+                        <td>
+                            <p:commandButton icon="ui-icon-plus"
+                                             rendered="#{index.index +1 == consultaEntidadeController.consulta.filtros.size()}"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             process="filtros"
+                                             update="filtros"
+                                             actionListener="#{consultaEntidadeController.addFiltro()}"/>
+                        </td>
+                        <td>
+                            <p:commandButton icon="ui-icon-close"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             process="filtros"
+                                             update="filtros"
+                                             actionListener="#{consultaEntidadeController.removeFiltro(index.index)}"/>
+                        </td>
+                    </tr>
+                </c:forEach>
+            </table>
+            <h:panelGrid columns="10" styleClass="mtop20">
+                <p:commandButton value="Pesquisar"
+                                 id="pesquisar"
+                                 icon="ui-icon-search"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 process="#{cc.attrs.caminhoIdConsultaEntidade}:#{cc.attrs.id}:FormularioPesquisa"
+                                 title="Clique para pesquisar"
+                                 style="width: 180px; height: 30px"
+                                 accesskey="P"
+                                 update="resultados btnExportar"
+                                 styleClass="prioritario mrig05 pesquisar"
+                                 actionListener="#{consultaEntidadeController.consultarEntidade()}"/>
+
+                <p:commandButton value="Limpar Filtros"
+                                 icon="ui-icon-document"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide();"
+                                 process="filtros"
+                                 update="filtros"
+                                 style="width: 180px; height: 30px"
+                                 styleClass="botao_cinza mrig05"
+                                 actionListener="#{consultaEntidadeController.limparFiltros()}"/>
+
+                <p:commandButton value="Configurar"
+                                 icon="ui-icon-gear"
+                                 onclick="aguarde.show()"
+                                 style="width: 180px; height: 30px"
+                                 styleClass="botao_cinza mrig05"
+                                 actionListener="#{consultaEntidadeController.redirecionaParaEditar()}"/>
+
+                <p:commandButton id="btnExportar"
+                                 disabled="#{empty consultaEntidadeController.consulta.resultados}"
+                                 rendered="#{cc.attrs.renderedBotaoExportarDados}"
+                                 value="Exportar Dados"
+                                 style="width: 180px; height: 30px;color: black"
+                                 icon="ui-icon-copy"
+                                 styleClass="botao_cinza"
+                                 ajax="true"/>
+                <p:overlayPanel id="overAutoBtnExportar"
+                                for="btnExportar"
+                                showEffect="blind"
+                                hideEffect="blind"
+                                style="width: 100px!important">
+
+                    <p:commandButton value="PDF"
+                                     icon="ui-icon-export-pdf"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="filtros"
+                                     update="filtros"
+                                     style="width: 100px; height: 30px"
+                                     styleClass="mtop02"
+                                     actionListener="#{consultaEntidadeController.gerarPDF()}"/>
+
+                    <p:commandButton value="XLS"
+                                     icon="ui-icon-export-xlsx"
+                                     process="filtros"
+                                     update="filtros #{cc.attrs.caminhoIdConsultaEntidade}:#{cc.attrs.id}:FormularioExcel"
+                                     rendered="#{cc.attrs.renderedBotaoExportarDados}"
+                                     style="width: 100px; height: 30px"
+                                     styleClass="mtop02"
+                                     oncomplete="openDialog(dialogExcel)"/>
+
+                    <p:commandButton value="CSV"
+                                     icon="ui-icon-csv"
+                                     process="filtros"
+                                     update="filtros :#{cc.attrs.id}:FormularioCSV"
+                                     rendered="#{cc.attrs.renderedBotaoExportarDados}"
+                                     style="width: 100px; height: 30px"
+                                     styleClass="mtop02"
+                                     oncomplete="openDialog(dialogCSV)"/>
+
+
+                    <p:commandButton value="TXT"
+                                     icon="ui-icon-export-text"
+                                     ajax="false"
+                                     process="filtros"
+                                     update="filtros"
+                                     style="width: 100px; height: 30px"
+                                     styleClass="mtop02">
+                        <p:fileDownload
+                            value="#{consultaEntidadeController.gerarTexto()}"/>
+                    </p:commandButton>
+
+                    <p:commandButton value="DOCX"
+                                     icon="ui-icon-export-word"
+                                     ajax="false"
+                                     process="filtros"
+                                     update="filtros"
+                                     style="width: 100px; height: 30px"
+                                     styleClass="mtop02">
+                        <p:fileDownload
+                            value="#{consultaEntidadeController.gerarDocx()}"/>
+                    </p:commandButton>
+
+                    <p:commandButton value="XML"
+                                     icon="ui-icon-export-xml"
+                                     ajax="false"
+                                     process="filtros"
+                                     update="filtros"
+                                     style="width: 100px; height: 30px"
+                                     styleClass="mtop02">
+                        <p:fileDownload
+                            value="#{consultaEntidadeController.gerarXml()}"/>
+                    </p:commandButton>
+
+
+                    <p:commandButton value="HTML"
+                                     icon="ui-icon-export-html"
+                                     ajax="false"
+                                     process="filtros"
+                                     update="filtros"
+                                     style="width: 100px; height: 30px"
+                                     styleClass="mtop02">
+                        <p:fileDownload
+                            value="#{consultaEntidadeController.gerarHtml()}"/>
+                    </p:commandButton>
+                </p:overlayPanel>
+
+                <c:if test="#{cc.attrs.outrosBotoes ne null and cc.attrs.posicaoInferior eq false}">
+                    <ui:include src="#{cc.attrs.outrosBotoes}"/>
+                </c:if>
+            </h:panelGrid>
+
+            <p:panel header="Lista de #{consultaEntidadeController.consulta.nomeTela}"
+                     visible="${!empty consultaEntidadeController.consulta.from}"
+                     id="resultados" styleClass="mtop20 text-raleway">
+                <table style="width: 100%" class="mtop30">
+                    <tr>
+                        <td class="alinhamentoDireita">
+                            <small class="italico">*Clique no titulo da coluna para ordenar</small>
+                        </td>
+                    </tr>
+                </table>
+                <div class="ui-datatable">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                        <tr class="ui-datatable-header ui-widget-header ui-corner-top">
+                            <th colspan="#{consultaEntidadeController.consulta.tabelaveis.size() + 1 +
+                                            (consultaEntidadeController.canMostrarTabelaHistorico() ?  1 : 0) +
+                                            (cc.attrs.selecionar ? 1 : 0)}">
+                                <table style="width: 100%">
+                                    <tr style="border: none !important; background: none !important;">
+                                        <td style="border: none !important; background: none !important; width: 20%">
+                                            <p:commandButton value="1"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${consultaEntidadeController.consulta.registroPorPagina == 1? 'botao-cabecalho-selecionado': ''}"
+                                                             actionListener="#{consultaEntidadeController.definirTotalRegistros(1)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             update="resultados">
+                                            </p:commandButton>
+
+                                            <p:commandButton value="10"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${consultaEntidadeController.consulta.registroPorPagina == 10? 'botao-cabecalho-selecionado': ''}"
+                                                             actionListener="#{consultaEntidadeController.definirTotalRegistros(10)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             update="resultados">
+                                            </p:commandButton>
+
+                                            <p:commandButton value="25"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${consultaEntidadeController.consulta.registroPorPagina == 25? 'botao-cabecalho-selecionado': ''}"
+                                                             actionListener="#{consultaEntidadeController.definirTotalRegistros(25)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             update="resultados">
+                                            </p:commandButton>
+
+                                            <p:commandButton value="50"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${consultaEntidadeController.consulta.registroPorPagina == 50? 'botao-cabecalho-selecionado': ''}"
+                                                             actionListener="#{consultaEntidadeController.definirTotalRegistros(50)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             update="resultados">
+                                            </p:commandButton>
+
+                                            <p:commandButton value="100"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${consultaEntidadeController.consulta.registroPorPagina == 100? 'botao-cabecalho-selecionado': ''}"
+                                                             actionListener="#{consultaEntidadeController.definirTotalRegistros(100)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             update="resultados">
+                                            </p:commandButton>
+
+                                            <p:commandButton value="500"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${consultaEntidadeController.consulta.registroPorPagina == 500? 'botao-cabecalho-selecionado': ''}"
+                                                             actionListener="#{consultaEntidadeController.definirTotalRegistros(500)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             update="resultados">
+                                            </p:commandButton>
+                                        </td>
+                                        <td class="centralizado"
+                                            style="border: none !important; background: none !important; width: 80%; text-align: center">
+                                            <p:commandButton icon="ui-icon-anterior"
+                                                             styleClass="botao-cabecalho-tabela icone-25"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             disabled="#{consultaEntidadeController.consulta.paginaAtual == 0}"
+                                                             actionListener="#{consultaEntidadeController.primeiraPagina()}"
+                                                             update="resultados"/>
+                                            <p:commandButton icon="ui-icon-primeiro"
+                                                             styleClass="botao-cabecalho-tabela icone-25"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             disabled="#{consultaEntidadeController.consulta.paginaAtual == 0}"
+                                                             actionListener="#{consultaEntidadeController.paginaAnterior()}"
+                                                             update="resultados"/>
+                                            Página
+                                            <h:outputText
+                                                value="#{consultaEntidadeController.consulta.paginaAtual +1}"
+                                                converter="javax.faces.Integer"/>
+                                            de
+                                            <h:outputText
+                                                value="#{consultaEntidadeController.consulta.totalPagina  +1}"
+                                                converter="javax.faces.Integer"/>
+                                            &nbsp;
+                                            <p:commandButton icon="ui-icon-ultimo"
+                                                             styleClass="botao-cabecalho-tabela icone-25"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             disabled="#{consultaEntidadeController.consulta.paginaAtual ge consultaEntidadeController.consulta.totalPagina}"
+                                                             actionListener="#{consultaEntidadeController.proximaPagina()}"
+                                                             update="resultados"/>
+                                            <p:commandButton icon="ui-icon-proximo"
+                                                             styleClass="botao-cabecalho-tabela icone-25"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             disabled="#{consultaEntidadeController.consulta.paginaAtual ge consultaEntidadeController.consulta.totalPagina}"
+                                                             actionListener="#{consultaEntidadeController.ultimaPagina()}"
+                                                             update="resultados"/>
+                                        </td>
+                                        <td class="alinhamentoDireita"
+                                            style="border: none !important; background: none !important;width: 20%; color : #222; font-weight: normal; padding-right: 5px">
+                                            Total de Registros:
+                                            <strong>#{consultaEntidadeController.consulta.totalRegistros}</strong>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </th>
+                        </tr>
+                        </thead>
+
+                        <tr>
+                            <c:if test="#{cc.attrs.selecionar}">
+                                <th style="padding: 5px;border-left: 1px solid #CCCCCC !important;"
+                                    class="centralizado"></th>
+                            </c:if>
+                            <c:if
+                                test="#{!empty consultaEntidadeController.consulta.actionsTabelaPorAlinhamento('ESQUERDA') || !empty cc.attrs.actionsTabela || !empty cc.attrs.outrosBotoesTabela}">
+                                <th style="padding: 5px;border-left: 1px solid #CCCCCC !important;"
+                                    class="centralizado">Ações
+                                </th>
+                            </c:if>
+                            <c:forEach items="#{consultaEntidadeController.consulta.tabelaveis}" var="tabelavel">
+                                <th style="padding: 5px; white-space: normal" class="${tabelavel.tipoAlinhamento.css}">
+                                    <p:commandLink
+                                        style="text-decoration: none;"
+                                        actionListener="#{consultaEntidadeController.adicionarOrdenacao(tabelavel)}"
+                                        onclick="aguarde.show()"
+                                        styleClass="text-raleway"
+                                        oncomplete="aguarde.hide()"
+                                        update="resultados">
+                                        ${tabelavel.descricao}
+                                        <i class="fa ${tabelavel.tipoOrdenacao eq 'ASC' ? 'fa-caret-down': tabelavel.tipoOrdenacao eq 'DESC' ? 'fa-caret-up' : ''}"></i>
+                                    </p:commandLink>
+                                </th>
+                            </c:forEach>
+                            <c:if
+                                test="#{consultaEntidadeController.canMostrarTabelaHistorico() || !empty cc.attrs.actionsTabela}">
+                                <th style="padding: 5px;border-left: 1px solid #CCCCCC !important;"
+                                    class="centralizado">Histórico
+                                </th>
+                            </c:if>
+                        </tr>
+                        <c:forEach items="#{consultaEntidadeController.consulta.resultados}" var="resultado">
+                            <tr class="ui-widget-content" style="${resultado['estiloLinha']}">
+                                <c:if test="${cc.attrs.selecionar}">
+                                    <td style="text-align: center;">
+                                        <p:commandButton icon="ui-icon-check"
+                                                         style="height: 25px; width: 25px; "
+                                                         onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                                         title="Clique para desconsiderar o registro."
+                                                         process="@this"
+                                                         update="resultados filtros"
+                                                         rendered="#{consultaEntidadeController.itemSelecionado(cc.attrs.itensSelecionados, resultado)}"
+                                                         actionListener="#{consultaEntidadeController.desconsiderarItem(cc.attrs.itensSelecionados, resultado)}"/>
+                                        <p:commandButton icon="ui-icon-none"
+                                                         style="height: 25px; width: 25px; "
+                                                         onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                                         process="@this"
+                                                         update="resultados filtros"
+                                                         title="Clique para selecionar o registro."
+                                                         rendered="#{!consultaEntidadeController.itemSelecionado(cc.attrs.itensSelecionados, resultado)}"
+                                                         actionListener="#{consultaEntidadeController.selecionarItem(cc.attrs.itensSelecionados, resultado, cc.attrs.selecionarVarios)}"/>
+                                    </td>
+                                </c:if>
+                                <c:if
+                                    test="#{!empty consultaEntidadeController.consulta.actionsTabelaPorAlinhamento('ESQUERDA') || !empty cc.attrs.actionsTabela  || !empty cc.attrs.outrosBotoesTabela}">
+                                    <td class="centralizado" style="width: 5%">
+                                        <table style="width: 100%">
+                                            <tr>
+                                                <c:forEach
+                                                    items="#{consultaEntidadeController.consulta.actionsTabelaPorAlinhamento('ESQUERDA')}"
+                                                    var="action"
+                                                    varStatus="index">
+
+                                                    <td style="background: none !important; border: none !important; text-align: center">
+                                                        <a href="#{consultaEntidadeController.montarHref(action, resultado)}"
+                                                           id="btn"
+                                                           class="icone-25 ui-button ui-widget ui-state-default ui-corner-all">
+                                                            <div class="icone-25 ${action.icone}"
+                                                                 title="${action.title}"
+                                                                 style="background-repeat: no-repeat!important; background-position: center!important"/>
+                                                        </a>
+                                                    </td>
+
+                                                </c:forEach>
+                                                <td style="background: none !important; border: none !important; text-align: center">
+                                                    <ui:include src="#{cc.attrs.outrosBotoesTabela}"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <c:forEach items="#{cc.attrs.actionsTabela}" var="action">
+                                            <c:if test="#{action.download ne null and action.download}">
+                                                <p:commandButton
+                                                    ajax="false"
+                                                    value="${action.descricao}"
+                                                    icon="${action.icone}"
+                                                    title="${action.title}"
+                                                    style="${action.style}"
+                                                    rendered="#{action.canRenderizar(resultado)}"
+                                                    actionListener="#{action.action(resultado)}"/>
+                                            </c:if>
+                                            <c:if test="#{action.download eq null or !action.download}">
+                                                <p:commandButton
+                                                    onclick="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    value="${action.descricao}"
+                                                    icon="${action.icone}"
+                                                    title="${action.title}"
+                                                    style="${action.style}"
+                                                    rendered="#{action.canRenderizar(resultado)}"
+                                                    actionListener="#{action.action(resultado)}"/>
+                                            </c:if>
+                                        </c:forEach>
+                                    </td>
+                                </c:if>
+                                <c:forEach items="#{consultaEntidadeController.consulta.tabelaveis}"
+                                           var="tabelavel"
+                                           varStatus="index">
+                                    <td style="padding: 4px 10px" class="${tabelavel.tipoAlinhamento.css}">
+                                        <h:outputText escape="false" value="${resultado[tabelavel.valor]}"/>
+                                    </td>
+                                </c:forEach>
+                                <c:if
+                                    test="#{consultaEntidadeController.canMostrarTabelaHistorico() || !empty cc.attrs.actionsTabela}">
+                                    <td class="centralizado" style="width: 5%">
+                                        <table style="width: 100%">
+                                            <tr>
+                                                <c:forEach
+                                                    items="#{consultaEntidadeController.consulta.actionsTabelaPorAlinhamento('DIREITA')}"
+                                                    var="action"
+                                                    varStatus="index">
+
+                                                    <td style="background: none !important; border: none !important; text-align: center">
+                                                        <a href="#{consultaEntidadeController.montarHref(action, resultado)}"
+                                                           id="btnHist"
+                                                           class="icone-25 ui-button ui-widget ui-state-default ui-corner-all">
+                                                            <div class="icone-25 ${action.icone}"
+                                                                 title="${action.title}"
+                                                                 style="background-repeat: no-repeat!important; background-position: center!important"/>
+                                                        </a>
+                                                    </td>
+                                                </c:forEach>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </c:if>
+                            </tr>
+                        </c:forEach>
+                        <tfoot>
+                        <tr>
+                            <c:if test="#{!empty consultaEntidadeController.consulta.actionsTabela}">
+                                <td class="ui-state-default"></td>
+                            </c:if>
+                            <c:forEach items="#{consultaEntidadeController.consulta.tabelaveis}"
+                                       var="tabelavel"
+                                       varStatus="index">
+                                <td style="padding: 4px 10px;"
+                                    class="${tabelavel.tipoAlinhamento.css} ui-state-default">
+                                    <h:outputText
+                                        value="#{consultaEntidadeController.consulta.totalizadores[tabelavel.valor]}"
+                                        converter="converterBigDecimal"/>
+                                </td>
+                            </c:forEach>
+                            <c:if test="#{consultaEntidadeController.canMostrarTabelaHistorico()}">
+                                <td class="ui-state-default"></td>
+                            </c:if>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </p:panel>
+            <c:if test="#{cc.attrs.outrosBotoes ne null and cc.attrs.posicaoInferior eq true}">
+                <ui:include src="#{cc.attrs.outrosBotoes}"/>
+            </c:if>
+        </p:panel>
+
+        <p:remoteCommand actionListener="#{consultaEntidadeController.montarPesquisa(cc.attrs.chave)}"
+                         onstart="aguarde.show()"
+                         oncomplete="aguarde.hide();#{cc.attrs.functionOnLoad}();"
+                         name="carregarPesquisaEntidade"
+                         update="#{cc.attrs.caminhoIdConsultaEntidade}:#{cc.attrs.id}:FormularioPesquisa"/>
+
+        <p:remoteCommand actionListener="#{consultaEntidadeController.acompanharGeracaoExcel()}"
+                         rendered="#{cc.attrs.renderedBotaoExportarDados}"
+                         name="acompanharGeracaoExcel" oncomplete="atualizarFormularioExcel()"/>
+
+        <p:remoteCommand name="atualizarFormularioExcel"
+                         update="#{cc.attrs.caminhoIdConsultaEntidade}:#{cc.attrs.id}:FormularioExcel"
+                         rendered="#{cc.attrs.renderedBotaoExportarDados}"/>
+
+    </h:form>
+
+    <div id="dialogExcel" class="modal hide fade">
+        <div class="modal-header">
+            <div class="centralizado">
+                <h3>Exportação dos registros para XLS</h3>
+            </div>
+        </div>
+        <div class="modal-body">
+            <h:form id="FormularioExcel">
+
+                <div class="centralizado">
+                    <div>
+                        <p:commandButton value="Gerar XLS (Página)"
+                                         icon="ui-icon-excel"
+                                         styleClass="operacao mrig03"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide();"
+                                         actionListener="#{consultaEntidadeController.gerarExcel(false)}"/>
+                        <p:commandButton value="Gerar XLS (Todos)"
+                                         icon="ui-icon-excel"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide();"
+                                         actionListener="#{consultaEntidadeController.gerarExcel(true)}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+        <div class="modal-footer">
+            <p:commandButton value="Fechar"
+                             icon="ui-icon-cancel"
+                             styleClass="operacao"
+                             onclick="closeDialog(dialogExcel)"/>
+        </div>
+    </div>
+
+    <div id="dialogCSV" class="modal hide fade">
+        <div class="modal-header">
+            <div class="centralizado">
+                <h3>Exportação dos registros para CSV</h3>
+            </div>
+        </div>
+        <div class="modal-body">
+            <h:form id="FormularioCSV">
+
+                <div class="centralizado">
+                    <div>
+                        <p:commandButton value="Gerar CSV (Página)"
+                                         icon="ui-icon-csv"
+                                         styleClass="operacao mrig03"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide();"
+                                         actionListener="#{consultaEntidadeController.gerarCSV(false)}"/>
+                        <p:commandButton value="Gerar CSV (Todos)"
+                                         icon="ui-icon-csv"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide();"
+                                         actionListener="#{consultaEntidadeController.gerarCSV(true)}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+        <div class="modal-footer">
+            <p:commandButton value="Fechar"
+                             icon="ui-icon-cancel"
+                             styleClass="operacao"
+                             onclick="closeDialog(dialogCSV)"/>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            setTimeout(function () {
+                carregarPesquisaEntidade();
+            }, 1000);
+        });
+
+        function naoFazNadaConsultaEntidade() {
+            console.debug("Finalizou a consulta de entidade ...")
+        }
+    </script>
+</cc:implementation>
+</html>

@@ -1,0 +1,1 @@
+UPDATE CNAE SET situacao = 'ATIVO';

@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:rh="http://java.sun.com/jsf/composite/components/rh"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function gerarProgrecoesAutomaticas() {
+                dialogo.show();
+                timer = setInterval(function () {
+                    acompanharProgresso();
+                }, 1000);
+            }
+
+            function termina() {
+                clearInterval(timer);
+                console.log('acabou');
+                $('#calculando').css('display', 'none');
+                $('#calculado').css('display', 'block');
+                $('#barraProgresso').css('display', 'none');
+                $('#tipoProcesso').css('display', 'none');
+                $('#processogeral').css('display', 'none');
+                $('#barraProgressoGeral').css('display', 'none');
+                $('#tabela-estimativa').css('display', 'none');
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":progressoGeracaoProgrecoes"
+                actionListener="#{gerarProgressoesControlador.verificarTermino()}"
+                name="acompanharProgresso"/>
+            <p:fieldset legend="Geração de Progressões Automáticas">
+
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Ato Legal:"/>
+                    <p:autoComplete queryDelay="1000" size="100"
+                                    id="atoDePessoal" title="Digite um ato legal"
+                                    process="@this"
+                                    value="#{gerarProgressoesControlador.atoLegal}"
+                                    completeMethod="#{gerarProgressoesControlador.completaAtoLegal}"
+                                    var="atoLegal"
+                                    itemLabel="#{atoLegal.numero} - #{atoLegal.nome}"
+                                    itemValue="#{atoLegal.id}"
+                                    forceSelection="true"
+                                    converter="#{gerarProgressoesControlador.converterAtoLegal}"/>
+
+                    <fc:outputLabelObrigatorio value="Órgãos:"/>
+                    <fc:arvoreHierarquiaAdministrativa
+                        hoSelecionadas="#{gerarProgressoesControlador.hieraquiasOrganizacionaisSelecionadas}"
+                        marcarTodosAoAtualizar="false"/>
+
+
+                    <h:outputText value="Novo Início de Vigência:"/>
+                    <h:panelGroup>
+                        <p:calendar onkeypress="mascara(this, Data)" maxlength="10"
+                                    title="Digite a data de refência para buscas."
+                                    value="#{gerarProgressoesControlador.dataInicioVigencia}"
+                                    locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                    id="dataFinalVigencia" size="20">
+                            <p:ajax event="dateSelect" process="@this"/>
+                        </p:calendar>
+                        <p:commandButton icon="ui-icon-info"
+                                         id="info-inicio-vigencia"
+                                         styleClass="mrig05"
+                                         process="@none"
+                                         update="@none"
+                                         style="width: 20px; height: 20px; margin-left: 5px!important; "/>
+
+                        <p:overlayPanel at="right"
+                                        for="info-inicio-vigencia"
+                                        appendToBody="true"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout"
+                                        dynamic="false"
+                                        style="width: 420px;">
+                            <h:outputText
+                                value="Se preenchida o sistema estabelecerá essa data como início dos novos enquadramentos. Se não preenchida o sistema utilizará os meses de progressão configurados, dependendo do Modo de Geração escolhido."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Modo de Geração:"/>
+                    <h:panelGroup>
+                        <h:selectOneMenu title="Selecione um modo de geração"
+                                         value="#{gerarProgressoesControlador.selecionado.modoGeracaoProgressao}"
+                                         id="modo-geracao">
+                            <f:selectItems value="#{gerarProgressoesControlador.modosGeracao}"/>
+                            <p:ajax update="@this multiplasLetras"/>
+                        </h:selectOneMenu>
+                        <p:commandButton icon="ui-icon-info"
+                                         id="info-modo-geracao"
+                                         styleClass="mrig05"
+                                         process="@none"
+                                         update="@none"
+                                         style="width: 20px; height: 20px; margin-left: 5px!important; "/>
+
+                        <p:overlayPanel at="right"
+                                        for="info-modo-geracao"
+                                        appendToBody="true"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout"
+                                        dynamic="false"
+                                        style="width: 420px;">
+                            <h:outputText
+                                value="&lt;ul>
+                                              &lt;li>
+                                                Baseado no último enquadramento elegível para PgA: Utiliza como início da contagem de letras a progredir a data do último enquadramento do servidor habilitado para progressão automática (campo &#34;Considera para Progressão Automática&#34;).&lt;/b>
+                                              &lt;/li>
+                                              &lt;li>
+                                                Baseado na data de nomeação do servidor: Utiliza como início da contagem de letras a progredir a data de nomeação do servidor.&lt;/b>
+                                              &lt;/li>
+                                      &lt;/ul>"
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio styleAsterisco="color: blue !important"
+                                               value="Plano de Cargos e Salários:"/>
+                    <h:panelGroup>
+                        <h:selectOneMenu title="Selecione um plano de cargos e salários"
+                                         value="#{gerarProgressoesControlador.planoCargosSalarios}"
+                                         converter="#{enquadramentoPCSReajusteControlador.converterP}"
+                                         id="planoCargosSalarios">
+                            <f:selectItems value="#{gerarProgressoesControlador.planos}"/>
+                            <p:ajax update="Formulario:categoriaPCS Formulario:progressaoPCS"/>
+                        </h:selectOneMenu>
+                        <p:commandButton icon="ui-icon-info"
+                                         id="info-plano-cargos-salarios"
+                                         styleClass="mrig05"
+                                         process="@none"
+                                         update="@none"
+                                         style="width: 20px; height: 20px; margin-left: 5px!important; "/>
+
+                        <p:overlayPanel at="right"
+                                        for="info-plano-cargos-salarios"
+                                        appendToBody="true"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout"
+                                        dynamic="false"
+                                        style="width: 420px;">
+                            <h:outputText
+                                value="O campo Plano de Cargos e Salários será obrigatório caso não seja selecionado um servidor."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                    <h:outputText value="Categoria:"/>
+                    <h:selectOneMenu title="Selecione uma categoria " id="categoriaPCS"
+                                     value="#{gerarProgressoesControlador.selecionadoCategoriaPCS}"
+                                     converter="#{enquadramentoPCSReajusteControlador.converterCategoriaPCSg}">
+                        <f:selectItems value="#{gerarProgressoesControlador.categorias}"/>
+                        <p:ajax update="progressaoPCS"/>
+                    </h:selectOneMenu>
+
+
+                    <h:outputText value="Progressão:"/>
+                    <h:selectOneMenu title="Selecione uma Progressao " id="progressaoPCS"
+                                     value="#{gerarProgressoesControlador.selecionadoProgressaoPCS}"
+                                     converter="#{enquadramentoPCSReajusteControlador.converterProgressao}">
+                        <f:selectItems value="#{gerarProgressoesControlador.progressoes}"/>
+                    </h:selectOneMenu>
+                    <h:outputText value="Servidor:"/>
+                    <rh:auto-complete-vinculofp id="auto-complete-contrato"
+                                                validarPermissaoDeAcessoAoVinculo="false"
+                                                process=":Formulario:auto-complete-contrato"
+                                                converter="#{consultaFichaFinanceiraControlador.converterContratoFP}"
+                                                completeMethod="#{consultaFichaFinanceiraControlador.completaContrato}"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                value="#{gerarProgressoesControlador.vinculoFP}"/>
+                    <h:outputText value="Progredir múltiplas letras:"/>
+                    <h:panelGroup id="multiplasLetras">
+                        <p:selectBooleanCheckbox
+                            value="#{gerarProgressoesControlador.multiplasLetras}"
+                            style="vertical-align: middle"
+                            disabled="#{gerarProgressoesControlador.selecionado.modoGeracaoProgressao ne 'MODO_PADRAO_BASE_ULTIMO_ENQUADRAMENTO'}">
+                        </p:selectBooleanCheckbox>
+                        <p:commandButton icon="ui-icon-info"
+                                         id="info-multiplas-letras"
+                                         styleClass="mrig05"
+                                         process="@none"
+                                         update="@none"
+                                         style="width: 20px; height: 20px; margin-left: 5px!important; "/>
+
+                        <p:overlayPanel at="right"
+                                        for="info-multiplas-letras"
+                                        appendToBody="true"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout"
+                                        dynamic="false"
+                                        style="width: 420px;">
+                            <h:outputText
+                                value="Uma vez assinalado o campo o sistema irá progredir o servidor quantos períodos de direito ele possuir de uma única vez. Se não assinalada a opção,
+                                o sistema progredirá o servidor apenas uma letra, sendo necessário novos reprocessamentos da rotina até atingir a última letra de direito."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Competência de Referência: "/>
+                    <h:panelGroup>
+                        <p:calendar id="dtCompetenciaDeReferencia"
+                                    size="7"
+                                    maxlength="10"
+                                    locale="pt_BR"
+                                    pattern="MM/yyyy"
+                                    title="Informe a competencia."
+                                    navigator="true"
+                                    onkeypress="mascara(this, mdataMesAno)"
+                                    value="#{gerarProgressoesControlador.competenciaReferencia}"/>
+                        <p:commandButton icon="ui-icon-info"
+                                         id="info-competencia-referencia"
+                                         styleClass="mrig05"
+                                         process="@none"
+                                         update="@none"
+                                         style="width: 20px; height: 20px; margin-left: 5px!important; "/>
+
+                        <p:overlayPanel at="right"
+                                        for="info-competencia-referencia"
+                                        appendToBody="true"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout"
+                                        dynamic="false"
+                                        style="width: 420px;">
+                            <h:outputText
+                                value="Usada como limite final para se apurar a contagem de letras a progredir. Limitado a competência atual e posterior. Por padrão, o sistema considera a competência seguinte."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                </h:panelGrid>
+                <br/>
+                <br/>
+                <center>
+                    <p:commandButton value="Gerar Progressões" update="@form" icon="ui-icon-refresh"
+                                     style="width: 200px; height: 32px;"
+                                     styleClass="icone_azul"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     onclick="if (!confirm('Esta operação demanda uma grande quantidade de tempo, realmente deseja continuar?'))
+                                            return false;"
+                                     actionListener="#{gerarProgressoesControlador.gerarProgressoesAutomaticas}"/>
+                    <p:spacer width="2"/>
+                    <p:commandButton value="Confirmar/Salvar" update="@form" icon="ui-icon-disk"
+                                     onclick="if (!confirm('A ação desse botão, criará enquadramentos funcionais e provimentos no sistema. Deseja continuar?'))
+                                            return false;"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     style="width: 200px; height: 32px;"
+                                     actionListener="#{gerarProgressoesControlador.salvar}"/>
+                    <p:spacer width="2"/>
+                    <p:commandButton value="Cancelar" icon="ui-icon-cancel"
+                                     style="width: 200px; height: 32px;"
+                                     actionListener="#{gerarProgressoesControlador.cancelar()}"/>
+                    <p:spacer width="2"/>
+                    <h:panelGroup>
+                        <p:commandButton icon="ui-icon-info"
+                                         id="info-botoes-gerar"
+                                         styleClass="mrig05"
+                                         process="@none"
+                                         update="@none"
+                                         style="width: 20px; height: 20px; margin-left: 5px!important; "/>
+
+                        <p:overlayPanel at="right"
+                                        for="info-botoes-gerar"
+                                        appendToBody="true"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout"
+                                        dynamic="false"
+                                        style="width: 420px;">
+                            <h:outputText
+                                value="Registros em Verde representam aqueles passíveis de progressão sem objeções.
+                            Os registros em Vermelho apresentam alguma inconsistência, que poderá ser consultada
+                            posicionando o cursor sobre o botão de exclamação. Algumas inconsistências poderão sofrer
+                            a progressão, desde que habilitada para salvamento, enquanto que outras provocariam uma falha
+                            grave no histórico de enquadramentos e, por isso, estão bloqueadas."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+                </center>
+                <br/>
+                <br/>
+
+                <p:dataTable id="tabelaPrincipal" var="pro" widgetVar="prog"
+                             value="#{gerarProgressoesControlador.progressaoAutomaticaList}">
+                    <p:column style="text-align: center" headerText="Será Salvo?">
+                        <f:facet name="header">
+                            <h:outputText value="Será Salvo?"/> <br/>
+                            <p:selectBooleanCheckbox value="#{gerarProgressoesControlador.marcarTodos}">
+                                <p:ajax event="change" oncomplete="aguarde.hide();" onstart="aguarde.show();"
+                                        process="@this" update="tabelaPrincipal"
+                                        listener="#{gerarProgressoesControlador.todos}"/>
+                            </p:selectBooleanCheckbox>
+                        </f:facet>
+                        <p:selectBooleanCheckbox
+                            style="#{pro.temInconsistencia eq true? 'color: #800004; text': 'color: #117700'}"
+                            value="#{pro.seraSalvo}"
+                            disabled="#{pro.inconsistenciaProgressao.bloquearSalvar}">
+                            <p:ajax process="@this"/>
+                        </p:selectBooleanCheckbox>
+                    </p:column>
+                    <p:column headerText="Servidor">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.antigoEnquadramentoFuncional.contratoServidor}"/>
+
+                    </p:column>
+                    <p:column headerText="Vigência da Progressão Atual">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.antigoEnquadramentoFuncional.inicioVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                        -
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.antigoEnquadramentoFuncional.finalVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                        <h:panelGroup>
+                            <p:commandButton icon="ui-icon-info"
+                                             id="info-vigencia-atual"
+                                             styleClass="mrig05"
+                                             process="@none"
+                                             update="@none"
+                                             style="width: 20px; height: 20px; margin-left: 5px!important; "/>
+
+                            <p:overlayPanel at="right"
+                                            for="info-vigencia-atual"
+                                            appendToBody="true"
+                                            showEvent="mouseover"
+                                            hideEvent="mouseout"
+                                            dynamic="false"
+                                            style="width: 420px;">
+                                <h:outputText
+                                    value="Se a vigência estiver sem final, a rotina o incluirá como sendo o dia anterior ao início da nova referência."
+                                    escape="false"/>
+                            </p:overlayPanel>
+                        </h:panelGroup>
+
+                    </p:column>
+                    <p:column headerText="Vigência Anterior Considerada">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.enquadramentoConsidProgAut.inicioVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                        -
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.enquadramentoConsidProgAut.finalVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column style="text-align: center" headerText="Progressão Anterior">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.antigoEnquadramentoFuncional.progressaoPCS}"/>
+                    </p:column>
+                    <p:column style="text-align: right" headerText="Valor Anterior">
+                        <h:outputText converter="moneyConverter"
+                                      style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.antigoEnquadramentoFuncional.vencimentoBase}"/>
+                    </p:column>
+
+                    <p:column style="background-color: #eeeeee" >
+                    </p:column>
+
+                    <p:column style="text-align: center" headerText="Meses">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.quantidadeMesesProgressao}"/>
+                    </p:column>
+
+                    <p:column style="background-color: #eeeeee" >
+                    </p:column>
+
+                    <p:column headerText="Novo Início">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.novoEnquadramentoFuncional.inicioVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column style="text-align: center" headerText="Nova Progressão">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.novoEnquadramentoFuncional.progressaoPCS}"/>
+                    </p:column>
+                    <p:column style="text-align: right" headerText="Novo Valor">
+                        <h:outputText converter="moneyConverter"
+                                      style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.novoEnquadramentoFuncional.vencimentoBase}"/>
+                    </p:column>
+
+                    <p:column style="text-align: center" headerText="Ultima Refêrencia">
+                        <h:outputText style="#{pro.temInconsistencia eq true? 'color: #800004': 'color: #117700'}"
+                                      value="#{pro.chegouUltimaLetra eq true? 'SIM': 'NÃO'}"/>
+                    </p:column>
+                    <p:column style="text-align: center" headerText="Ocorrências">
+                        <h:panelGroup rendered="#{pro.temInconsistencia}">
+                            <p:commandButton icon="ui-icon-alert"
+                                             id="info-ir"
+                                             styleClass="mrig05"
+                                             process="@none"
+                                             update="@none"
+                                             style="background : transparent !important;"/>
+
+                            <p:overlayPanel at="right"
+                                            for="info-ir"
+                                            appendToBody="true"
+                                            showEvent="mouseover"
+                                            hideEvent="mouseout"
+                                            dynamic="fase"
+                                            style="width: 260px;">
+                                <h:outputText
+                                    value="#{pro.inconsistenciaProgressao.descricao}"
+                                    escape="false"/>
+                            </p:overlayPanel>
+                        </h:panelGroup>
+                    </p:column>
+
+                </p:dataTable>
+            </p:fieldset>
+        </h:form>
+        <p:dialog widgetVar="dialogo"
+                  id="dialogGeracaoProgrecoes"
+                  width="800"
+                  closable="false"
+                  resizable="false"
+                  modal="true" position="center" dynamic="true" header="Realizando a comparação">
+
+            <p:outputPanel id="progressoGeracaoProgrecoes">
+                <div class="alert alert-info centralizado " id="calculando">
+                    <strong>Aguarde,</strong> O processo está em execução
+
+                </div>
+                <div class="alert alert-success centralizado " style="display: none" id="calculado">
+                    <strong>Pronto!</strong> Geração das Progressões Automáticas efetuada com sucesso! <br/>
+                    <br/>
+                    <p:commandButton value="Ok" icon="ui-icon-check" styleClass="operacao"
+                                     onclick="dialogo.hide()"
+                    />
+                </div>
+                <div class="centralizado" id="tipoProcesso">
+                    <strong>#{gerarProgressoesControlador.assistenteBarraProgresso.descricaoProcesso}</strong><br/>
+                </div>
+
+                <div class="progress progress-striped active" id="barraProgresso">
+                    <div class="bar"
+                         style="width: #{gerarProgressoesControlador.assistenteBarraProgresso.porcentagemDoCalculo}%"></div>
+                </div>
+                <div class="centralizado" id="porcentagem">
+                    <strong>#{gerarProgressoesControlador.assistenteBarraProgresso.porcentagemDoCalculo}%</strong><br/>
+                </div>
+                <div id="tabela-estimativa">
+                    <table style="width: 100%; text-align: center">
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="#{gerarProgressoesControlador.assistenteBarraProgresso.calculados}"/>
+                                de
+                                <h:outputText
+                                    value="#{gerarProgressoesControlador.assistenteBarraProgresso.total}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Decorrido #{gerarProgressoesControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Estimado #{gerarProgressoesControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+            </p:outputPanel>
+
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

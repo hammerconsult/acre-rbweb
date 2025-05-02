@@ -1,0 +1,1763 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+            function imprimirMinutaNoWord() {
+                $(".editor-minuta").css("display", "none");
+                $(".conteudo-minuta").css("display", "block");
+                impŕimirNoWord($(".conteudo-minuta"));
+                $(".editor-minuta").css("display", "block");
+                $(".conteudo-minuta").css("display", "none");
+            }
+
+            var timerSalvar;
+            function acompanharDeferir() {
+                timerSalvar = setInterval(function () {
+                    rcAcompanharDeferir();
+                }, 1000);
+            }
+
+            function finalizarDeferir() {
+                clearInterval(timerSalvar);
+                rcFinalizarDeferir();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand
+                actionListener="#{alteracaoORCControlador.acompanharFuture}"
+                update=":formDialogProgressBar"
+                name="rcAcompanharDeferir"/>
+
+            <p:remoteCommand
+                actionListener="#{alteracaoORCControlador.finalizarFuture}"
+                update=":formDialogProgressBar"
+                name="rcFinalizarDeferir"/>
+
+            <p:remoteCommand name="limparContaReceita"
+                             process="@this"
+                             actionListener="#{alteracaoORCControlador.limparContaReceitaAndUnidade()}"
+                             update=":Formulario:tabView:contaReceita"/>
+
+            <p:remoteCommand name="limparFonteRecurso"
+                             process="@this"
+                             actionListener="#{alteracaoORCControlador.limparFonteRecursoAndContaReceita()}"
+                             update=":Formulario:tabView:fonte"/>
+
+            <fc:cabecalhoPretty controlador="#{alteracaoORCControlador}"
+                                origem="#{alteracaoORCControlador.caminhoPadrao}novo/"/>
+            <p:panel header="Cadastro de Alteracão Orçamentária">
+                <h:panelGrid columns="2">
+
+                    <h:outputText value="Número: "/>
+                    <h:panelGroup>
+                        <p:inputText title="Código da Alteração"
+                                     value="#{alteracaoORCControlador.selecionado.codigo}"
+                                     id="codigo"
+                                     size="21"
+                                     readonly="true"
+                        />
+                        <p:watermark for="codigo" value="Gerado Automaticamente"/>
+                    </h:panelGroup>
+
+                    <h:outputText value="Unidade Orçamentária: "/>
+                    <h:outputText
+                        value="#{alteracaoORCControlador.getDescricaoUnidade(alteracaoORCControlador.selecionado.unidadeOrganizacionalOrc)}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Situação: "/>
+                    <h:outputText value="#{alteracaoORCControlador.selecionado.status.descricao}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Motivo: "
+                                  rendered="#{alteracaoORCControlador.isAlteracaoIndeferida()
+                                              and !alteracaoORCControlador.isGestorOrcamento()}"/>
+                    <h:outputText value="#{alteracaoORCControlador.selecionado.motivoIndeferimento}"
+                                  rendered="#{alteracaoORCControlador.isAlteracaoIndeferida()
+                                              and !alteracaoORCControlador.isGestorOrcamento()}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio for="mot" value="Motivo:"
+                                               rendered="#{alteracaoORCControlador.isAlteracaoIndeferida()
+                                                           and alteracaoORCControlador.isGestorOrcamento()}"/>
+                    <h:panelGrid columns="2" rendered="#{alteracaoORCControlador.isAlteracaoIndeferida()
+                                                         and alteracaoORCControlador.isGestorOrcamento()}">
+                        <p:inputTextarea title="Informe um motivo."
+                                         id="mot"
+                                         cols="70"
+                                         rows="3"
+                                         maxlength="3000"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counterMot"
+                                         autoResize="true"
+                                         value="#{alteracaoORCControlador.selecionado.motivoIndeferimento}"
+                                         style="margin-left: -3px"/>
+                        <h:outputText id="counterMot"/>
+                    </h:panelGrid>
+
+                    <h:outputText value="Data: " rendered="#{alteracaoORCControlador.isAlteracaoIndeferida()}"/>
+                    <h:outputText value="#{alteracaoORCControlador.selecionado.dataIndeferimento}"
+                                  rendered="#{alteracaoORCControlador.isAlteracaoIndeferida()}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+
+                    <h:outputText value="Data da Alteração: "/>
+                    <p:calendar value="#{alteracaoORCControlador.selecionado.dataAlteracao}"
+                                disabled="true"
+                                size="21"
+                                onkeyup="mascara(this, mdata)"
+                                id="dataAlteracao"
+                                pattern="dd/MM/yyyy">
+                    </p:calendar>
+
+                    <fc:outputLabelObrigatorio value="Descrição: "/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea title="Informe uma descrição."
+                                         id="descricao"
+                                         cols="70"
+                                         rows="3"
+                                         maxlength="3000"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counterDescricao"
+                                         autoResize="true"
+                                         disabled="#{!alteracaoORCControlador.podeEditarQuandoForGestor()}"
+                                         value="#{alteracaoORCControlador.selecionado.descricao}"
+                                         style="margin-left: -3px"/>
+                        <h:outputText id="counterDescricao"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Justificava da Suplementação: "/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea title="Informe uma justificava para suplementação."
+                                         id="justSuplem"
+                                         cols="70"
+                                         rows="3"
+                                         maxlength="3000"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counterSuplementacao"
+                                         autoResize="true"
+                                         disabled="#{!alteracaoORCControlador.podeEditarQuandoForGestor()}"
+                                         value="#{alteracaoORCControlador.selecionado.justificativaSuplementacao}"
+                                         style="margin-left: -3px"/>
+                        <h:outputText id="counterSuplementacao"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Justificava da Anulação: "/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea title="Informe uma Justificava para Anulação."
+                                         id="justAnulacao"
+                                         cols="70"
+                                         rows="3"
+                                         maxlength="3000"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counterAnulacao"
+                                         autoResize="true"
+                                         disabled="#{!alteracaoORCControlador.podeEditarQuandoForGestor()}"
+                                         value="#{alteracaoORCControlador.selecionado.justificativaAnulacao}"
+                                         style="margin-left: -3px"/>
+                        <h:outputText id="counterAnulacao"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Crédito: "
+                                               rendered="#{alteracaoORCControlador.isGestorOrcamento()}"/>
+                    <h:selectOneMenu id="origem"
+                                     value="#{alteracaoORCControlador.selecionado.tipoDespesaORC}"
+                                     disabled="#{alteracaoORCControlador.selecionado.isAlteracaoDeferida()}"
+                                     rendered="#{alteracaoORCControlador.isGestorOrcamento()}"
+                                     title="Selecione o tipo de crédito.">
+                        <f:selectItems value="#{alteracaoORCControlador.tipoCredito}"/>
+                        <p:ajax update=":Formulario:tabView:creditoAdicional :Formulario:tabView:anulacaoDotacao"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{alteracaoORCControlador.definirTipoCreditoNaSuplementacaoAndAnulacao()}"/>
+                    </h:selectOneMenu>
+                </h:panelGrid>
+
+                <br/>
+                <p:outputPanel id="panel">
+                    <p:tabView id="tabView">
+                        <p:tab title="Solicitação de Nova Fonte ou Elemento de Despesa">
+                            <p:remoteCommand name="definirUnidade"
+                                             actionListener="#{alteracaoORCControlador.limparCamposUnidade}"
+                                             process="@this"
+                                             update=":Formulario:tabView:solicitacao">
+                                <f:setPropertyActionListener
+                                    value="#{alteracaoORCControlador.orcamentariaSolicitacao.subordinada}"
+                                    target="#{alteracaoORCControlador.solicitacaoDespesaOrc.unidadeOrganizacional}"/>
+                            </p:remoteCommand>
+
+                            <h:panelGrid columns="2" id="solicitacao"
+                                         rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+
+                                <fc:outputLabelObrigatorio for="unidade" value="Unidade Orçamentária: "
+                                                           rendered="#{alteracaoORCControlador.isUsuarioAcessoMaisQueUmaOrcamentaria()}"/>
+                                <h:selectOneMenu id="unidade"
+                                                 title="Selecione uma unidade orçamentária"
+                                                 rendered="#{alteracaoORCControlador.isUsuarioAcessoMaisQueUmaOrcamentaria()}"
+                                                 value="#{alteracaoORCControlador.orcamentariaSolicitacao}"
+                                                 converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                    <f:selectItems value="#{alteracaoORCControlador.orcamentariasUsuario}"/>
+                                    <p:ajax event="valueChange"
+                                            onstart="aguarde.show()"
+                                            update="@this"
+                                            process="@this"
+                                            oncomplete="aguarde.hide();definirUnidade()"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="projetoAti" value="Projeto/Atividade: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                value="#{alteracaoORCControlador.solicitacaoDespesaOrc.acaoPPA}"
+                                                converter="#{projetoAtividadeControlador.converterGenerico}"
+                                                completeMethod="#{alteracaoORCControlador.completarAcaoPPA}"
+                                                var="projAti"
+                                                id="projetoAti"
+                                                maxResults="10"
+                                                itemValue="#{projAti.id}"
+                                                itemLabel="#{projAti}"
+                                                onkeyup="keyUpLimparEsconderDesabilidarCampo(this,'subProj_input',true,false,false)"
+                                                size="70"
+                                                title="Selecione o projeto/atividade.">
+                                    <p:ajax update="@this"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            event="itemSelect"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio for="subProj" value="Sub-Projeto/Atividade: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                value="#{alteracaoORCControlador.solicitacaoDespesaOrc.subAcaoPPA}"
+                                                converter="#{alteracaoORCControlador.converterSubProjetoAtividade}"
+                                                completeMethod="#{alteracaoORCControlador.completarSubAcaoPPA}"
+                                                var="subProjetoAtividade"
+                                                maxResults="10"
+                                                id="subProj"
+                                                itemValue="#{subProjetoAtividade.id}"
+                                                itemLabel="#{subProjetoAtividade}"
+                                                size="70"
+                                                title="Selecione o Sub-Projeto/Atividade"/>
+
+                                <fc:outputLabelObrigatorio for="contaDeDespesa" value="Conta de Despesa: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="contaDeDespesa"
+                                                completeMethod="#{alteracaoORCControlador.completarContaDespesa}"
+                                                value="#{alteracaoORCControlador.solicitacaoDespesaOrc.conta}"
+                                                var="cont"
+                                                maxResults="10"
+                                                itemLabel="#{cont}"
+                                                itemValue="#{cont.id}"
+                                                converter="#{provisaoPPAWizardControlador.converterContaDeDespesa}"
+                                                size="70"
+                                                title="Selecione a conta de despesa."/>
+
+                                <fc:outputLabelObrigatorio for="fonteDeRecursos" value="Fonte de Recurso: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="fonteDeRecursos"
+                                                completeMethod="#{alteracaoORCControlador.completarDestinacao}"
+                                                converter="#{provisaoPPAWizardControlador.converterFonteDeRecursos}"
+                                                value="#{alteracaoORCControlador.solicitacaoDespesaOrc.destinacaoDeRecursos}"
+                                                var="fonte"
+                                                maxResults="10"
+                                                itemValue="#{fonte.id}"
+                                                itemLabel="#{fonte.fonteDeRecursos}"
+                                                size="70"
+                                                title="Selecione a fonte de recurso."/>
+
+                                <fc:outputLabelObrigatorio value="Extensão da Fonte de Recurso: " for="extensaoFonte"/>
+                                <h:selectOneMenu
+                                    value="#{alteracaoORCControlador.solicitacaoDespesaOrc.extensaoFonteRecurso}"
+                                    title="Informe a extensão para a fonte de recurso."
+                                    converter="#{extensaoFonteRecursoControlador.converterGenerico}"
+                                    id="extensaoFonte">
+                                    <f:selectItems value="#{alteracaoORCControlador.extensaoFonteRecurso}"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="cbEsfera" value="Esfera Orçamentária: "/>
+                                <h:selectOneMenu
+                                    value="#{alteracaoORCControlador.solicitacaoDespesaOrc.esferaOrcamentaria}"
+                                    title="Informe a Esfera Orçamentária"
+                                    id="cbEsfera">
+                                    <f:selectItems value="#{provisaoPPAWizardControlador.listaEsferaOrcamentaria}"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="valor" value="Valor: "/>
+                                <fc:inputMoeda id="valor" value="#{alteracaoORCControlador.solicitacaoDespesaOrc.valor}"
+                                               title="Informe o Valor"/>
+
+                            </h:panelGrid>
+
+                            <p:commandButton id="btnAddSolicitacao"
+                                             value="Adicionar"
+                                             icon="ui-icon-circle-plus"
+                                             styleClass="padrao mtop10"
+                                             rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}"
+                                             actionListener="#{alteracaoORCControlador.adicionarSolicitacao()}"
+                                             update=":Formulario:tabView:solicitacao :Formulario:tabView:solicitacoes"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar a solicitação."/>
+
+                            <p:dataTable id="solicitacoes"
+                                         value="#{alteracaoORCControlador.selecionado.solicitacoes}"
+                                         var="solicitacao"
+                                         styleClass="mtop03"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>SOLICITAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Aprovar" style="text-align: center; width: 5px"
+                                          rendered="#{alteracaoORCControlador.renderizarBotaoDeferirSolicitacao()}">
+                                    <p:commandButton icon="ui-icon-check"
+                                                     title="Clique para deferir(Aprovar a Solicitação) do novo elemento de despesa."
+                                                     update=":FormDeferirNovoElemento"
+                                                     process="@this"
+                                                     disabled="#{solicitacao.deferidaEm ne null}"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="dialogNovoElemento.show();aguarde.hide()"
+                                                     actionListener="#{alteracaoORCControlador.definirSolicitacaoElementoDesepesa(solicitacao)}"
+                                    />
+                                </p:column>
+
+                                <p:column headerText="Ações" style="text-align: center; width: 7%"
+                                          rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     title="Clique para remover este registro."
+                                                     update=":Formulario:tabView:solicitacoes"
+                                                     disabled="#{solicitacao.deferidaEm ne null}"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     actionListener="#{alteracaoORCControlador.removerSolicitacao(solicitacao)}"/>
+
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     title="Clique para Alterar este registro."
+                                                     update=":Formulario:tabView:solicitacoes :Formulario:tabView:solicitacao"
+                                                     styleClass="mlef03"
+                                                     disabled="#{solicitacao.deferidaEm ne null}"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this"
+                                                     actionListener="#{alteracaoORCControlador.alterarSolicitacao(solicitacao)}"/>
+                                </p:column>
+
+                                <p:column headerText="Unidade" style="text-align: center; width: 5px">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Projeto/Atividade" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{solicitacao.acaoPPA}"/>
+                                </p:column>
+                                <p:column headerText="Sub-Projeto/Atividade" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{solicitacao.subAcaoPPA}"/>
+                                </p:column>
+                                <p:column headerText="Conta de Despesa" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{solicitacao.conta}"/>
+                                </p:column>
+                                <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{solicitacao.destinacaoDeRecursos}"/>
+                                </p:column>
+                                <p:column headerText="Extensão da Fonte Recurso" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{solicitacao.extensaoFonteRecurso.toString()}"/>
+                                </p:column>
+                                <p:column headerText="Esfera Orçamentária" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{solicitacao.esferaOrcamentaria.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Deferida em" styleClass="alinhamentoCentralizada">
+                                    <h:outputText value="A Aprovar" rendered="#{solicitacao.deferidaEm eq null}"
+                                                  style="color: green"/>
+                                    <h:outputText value="#{solicitacao.deferidaEm}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{solicitacao.valor}" converter="moneyConverter"/>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="negrito"/>
+                                            <h:outputText
+                                                value="#{alteracaoORCControlador.totalSolicitacoesElementoDesp()}"
+                                                converter="#{alteracaoORCControlador.moneyConverter}"
+                                                styleClass="negrito"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+
+                                <p:rowExpansion>
+                                    <h:outputText value="Unidade Organizacional: "/>
+                                    <h:outputText
+                                        value="#{alteracaoORCControlador.getDescricaoUnidade(solicitacao.unidadeOrganizacional)}"
+                                        styleClass="negrito"/>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:tab>
+
+                        <p:tab title="Crédito Adicional/Anulação de Dotação" id="tabSupleAnula">
+                            <h:panelGrid columns="2">
+                                <fc:outputLabelObrigatorio value="Selecionar: "/>
+                                <p:selectOneRadio value="#{alteracaoORCControlador.tipoConfigAlteracaoOrc}"
+                                                  id="selecionar">
+                                    <f:selectItems value="#{alteracaoORCControlador.tipoConfiguracaoAlteracao}"/>
+                                    <p:ajax event="change"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            process="@this"
+                                            update=":Formulario:tabView:panelGridSuplemAnul"/>
+                                </p:selectOneRadio>
+                            </h:panelGrid>
+
+                            <p:outputPanel id="panelGridSuplemAnul">
+
+                                <p:outputPanel id="creditoAdicional">
+                                    <p:panel
+                                        rendered="#{alteracaoORCControlador.tipoConfigAlteracaoOrc eq 'SUPLEMENTAR'}"
+                                        id="panelGridSuplementacao">
+
+                                        <h:panelGrid columns="2" id="gridCreditoAdicional"
+                                                     rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+
+                                            <fc:outputLabelObrigatorio value="Elemento de Despesa: "/>
+                                            <co:consultar-despesa-orcamentaria
+                                                value="#{alteracaoORCControlador.despesaORCSuplementacao}"
+                                                update=":Formulario:tabView:creditoAdicional"
+                                                mostrarArvoreExpandida="true"
+                                                permiteFiltrarTodasUnidades="#{alteracaoORCControlador.isGestorOrcamento() or alteracaoORCControlador.isUsuarioAcessoMaisQueUmaOrcamentaria() ? 'true' : 'false'}"
+                                                actionListener="#{alteracaoORCControlador.definirNullFonteSuplementacao()}"/>
+
+
+                                            <fc:outputLabelObrigatorio value="Fonte Despesa Orçamento: "/>
+                                            <p:autoComplete queryDelay="1000" id="fonteDespesaOrc"
+                                                            completeMethod="#{alteracaoORCControlador.completarDespesasORCSuplementacao}"
+                                                            size="70"
+                                                            maxResults="10"
+                                                            converter="#{alteracaoORCControlador.converterFonteDespesaORC}"
+                                                            value="#{alteracaoORCControlador.suplementacaoORCSelecionado.fonteDespesaORC}"
+                                                            var="ft"
+                                                            title="Selecione a fonte de despesa orçamento."
+                                                            itemValue="#{ft.id}"
+                                                            itemLabel="#{ft.provisaoPPAFonte.destinacaoDeRecursos}">
+                                                <p:ajax event="itemSelect" update="saldoFonte2"/>
+                                            </p:autoComplete>
+
+                                            <h:outputText value="Saldo: "/>
+                                            <h:outputText
+                                                value="#{alteracaoORCControlador.saldoOrcamentarioSuplementacao}"
+                                                id="saldoFonte2"
+                                                converter="moneyConverter"
+                                                styleClass="negrito"/>
+                                            <fc:outputLabelObrigatorio value="Origem do Recurso: "
+                                                                       rendered="#{alteracaoORCControlador.isGestorOrcamento()}"/>
+                                            <h:panelGroup rendered="#{alteracaoORCControlador.isGestorOrcamento()}">
+                                                <h:selectOneMenu id="origem2"
+                                                                 value="#{alteracaoORCControlador.suplementacaoORCSelecionado.origemSuplemtacao}"
+                                                                 title="Selecione a Origem do Recurso do Crédito Adicional">
+                                                    <f:selectItems value="#{alteracaoORCControlador.origensSupl}"/>
+                                                </h:selectOneMenu>
+                                                <p:commandButton
+                                                    title="Alterar todas origens de recurso para o selecionado"
+                                                    icon="ui-icon-check"
+                                                    style="left: 5px"
+                                                    actionListener="#{alteracaoORCControlador.alterarTodasOrigemRecurso()}"
+                                                    update="tabelaSuplemenataca"
+                                                    onclick="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"/>
+                                            </h:panelGroup>
+
+                                            <fc:outputLabelObrigatorio value="Mês: "/>
+                                            <h:selectOneMenu id="mes"
+                                                             value="#{alteracaoORCControlador.suplementacaoORCSelecionado.mesSupmentencao}"
+                                                             disabled="#{!alteracaoORCControlador.isGestorOrcamento()}"
+                                                             title="Selecione o mês da suplementação."
+                                                             style="width: 127px">
+                                                <f:selectItems value="#{alteracaoORCControlador.mes}"/>
+                                            </h:selectOneMenu>
+
+                                            <fc:outputLabelObrigatorio value="Valor: "/>
+                                            <fc:inputMoeda id="valorSuplementa"
+                                                           title="Informe o valor da suplementação."
+                                                           value="#{alteracaoORCControlador.suplementacaoORCSelecionado.valor}"/>
+                                        </h:panelGrid>
+
+                                        <p:commandButton id="btnAddSuplement"
+                                                         value="Adicionar"
+                                                         icon="ui-icon-circle-plus"
+                                                         onstart="aguarde.show()"
+                                                         styleClass="padrao mtop10"
+                                                         oncomplete="aguarde.hide()"
+                                                         rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}"
+                                                         actionListener="#{alteracaoORCControlador.adicionarSuplementacao()}"
+                                                         update=":Formulario:tabView:creditoAdicional :Formulario:tabView:anulacaoDotacao
+                                                                 :Formulario:tabView:saldoFonte2 :Formulario:origem :Formulario:tabView:selecionar"
+                                                         title="Clique para Adicionar o Crédito Adicional"/>
+
+
+                                        <p:dataTable id="tabelaSuplemenataca"
+                                                     value="#{alteracaoORCControlador.selecionado.suplementacoesORCs}"
+                                                     var="sup"
+                                                     styleClass="mtop02"
+                                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                     paginator="true"
+                                                     rows="10"
+                                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>SUPLEMENTAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                                     rowIndexVar="rowlx">
+
+                                            <p:column style="width: 20px" headerText="Ver">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Ações" style="width: 07%;text-align: center"
+                                                      rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+                                                <p:commandButton
+                                                    icon="ui-icon-pencil"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    actionListener="#{alteracaoORCControlador.alterarSuplementacao}"
+                                                    update=":Formulario:tabView:creditoAdicional"
+                                                    title="Clique para alterar o Crédito Adicional.">
+                                                    <f:attribute name="sup" value="#{sup}"/>
+                                                </p:commandButton>
+
+                                                <p:commandButton
+                                                    icon="ui-icon-trash"
+                                                    actionListener="#{alteracaoORCControlador.removerSuplementacao}"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    styleClass="mlef03"
+                                                    process="@this"
+                                                    update=":Formulario:tabView:creditoAdicional :Formulario:origem :Formulario:tabView:selecionar"
+                                                    onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                    title="Clique para remover o Crédito Adicional">
+                                                    <f:attribute name="sup" value="#{sup}"/>
+                                                </p:commandButton>
+                                            </p:column>
+
+                                            <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                                                <h:outputText
+                                                    value="#{sup.fonteDespesaORC.provisaoPPAFonte.provisaoPPADespesa.contaDeDespesa}"/>
+                                            </p:column>
+                                            <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                                <h:outputText
+                                                    value="#{sup.fonteDespesaORC.provisaoPPAFonte.destinacaoDeRecursos}"/>
+                                            </p:column>
+                                            <p:column headerText="Mês" style="width: 10%"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{utilBean.getDescricaoMes(sup.mes)}"/>
+                                            </p:column>
+                                            <p:column headerText="Tipo de Crédito" style="width: 15%"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{sup.tipoDespesaORC.descricao}"/>
+                                            </p:column>
+                                            <p:column headerText="Origem do Recurso" style="width: 15%"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{sup.origemSuplemtacao.descricao}"/>
+                                            </p:column>
+                                            <p:column headerText="Valor (R$)" style="width: 10%; text-align: right">
+                                                <h:outputText value="#{sup.valor}"
+                                                              converter="#{alteracaoORCControlador.moneyConverter}"/>
+                                                <f:facet name="footer">
+                                                    <div style="text-align: right">
+                                                        <h:outputText value="Total: " styleClass="negrito"/>
+                                                        <h:outputText
+                                                            value="#{alteracaoORCControlador.totalSuplementacoes()}"
+                                                            converter="#{alteracaoORCControlador.moneyConverter}"
+                                                            styleClass="negrito"/>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+
+                                            <p:rowExpansion>
+                                                <table>
+                                                    <tr>
+                                                        <td>
+                                                            <h:outputText value="Unidade: " style="font-weight: bold"/>
+                                                            <h:outputText
+                                                                value="#{alteracaoORCControlador.getDescricaoUnidade(sup.fonteDespesaORC.provisaoPPAFonte.provisaoPPADespesa.subAcaoPPA.acaoPPA.responsavel)}"/>
+                                                        </td>
+                                                        <td>
+                                                            <h:outputText value="Funcional: "
+                                                                          style="font-weight: bold"/>
+                                                            <h:outputText id="idString"
+                                                                          value="#{sup.fonteDespesaORC.despesaORC.codigo}"/>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </p:rowExpansion>
+
+                                        </p:dataTable>
+                                    </p:panel>
+                                </p:outputPanel>
+
+                                <p:outputPanel id="anulacaoDotacao">
+                                    <p:panel rendered="#{alteracaoORCControlador.tipoConfigAlteracaoOrc eq 'ANULACAO'}">
+
+                                        <h:panelGrid columns="2" id="gridAnulacao"
+                                                     rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+
+                                            <fc:outputLabelObrigatorio value="Elemento de Despesa: "/>
+                                            <co:consultar-despesa-orcamentaria
+                                                value="#{alteracaoORCControlador.despesaORCAnulacao}"
+                                                update=":Formulario:tabView:anulacaoDotacao"
+                                                mostrarArvoreExpandida="true"
+                                                permiteFiltrarTodasUnidades="#{alteracaoORCControlador.isGestorOrcamento() or alteracaoORCControlador.isUsuarioAcessoMaisQueUmaOrcamentaria() ? 'true' : 'false'}"
+                                                actionListener="#{alteracaoORCControlador.definirNullFonteAnulacao()}"/>
+
+                                            <fc:outputLabelObrigatorio value="Fonte Despesa Orçamento: "/>
+                                            <p:autoComplete queryDelay="1000"
+                                                            id="fonteDespesaOrcOrig"
+                                                            converter="#{alteracaoORCControlador.converterFonteDespesaORC}"
+                                                            value="#{alteracaoORCControlador.anulacaoORCSelecionado.fonteDespesaORC}"
+                                                            completeMethod="#{alteracaoORCControlador.completarDespesasORCAnulacao}"
+                                                            size="70"
+                                                            title="Informe a Fonte de Despesa Orçamento da Conta de Despesa Selecionada acima"
+                                                            maxResults="10"
+                                                            var="fti"
+                                                            itemValue="#{fti.id}"
+                                                            itemLabel="#{fti.provisaoPPAFonte.destinacaoDeRecursos}">
+                                                <p:ajax event="itemSelect"
+                                                        listener="#{alteracaoORCControlador.definirFonteOrcOrig}"
+                                                        update="saldoFonte"/>
+                                            </p:autoComplete>
+
+                                            <h:outputText value="Saldo: "/>
+                                            <h:outputText
+                                                value="#{alteracaoORCControlador.saldoFonteDespesaORCAnulacao}"
+                                                id="saldoFonte"
+                                                converter="moneyConverter"
+                                                styleClass="negrito"/>
+
+                                            <fc:outputLabelObrigatorio value="Mês: "/>
+                                            <h:selectOneMenu id="mesAnu"
+                                                             value="#{alteracaoORCControlador.anulacaoORCSelecionado.mesAnulacao}"
+                                                             disabled="#{!alteracaoORCControlador.isGestorOrcamento()}"
+                                                             style="width: 127px"
+                                                             title="Selecione o mês para anulação.">
+                                                <f:selectItems value="#{alteracaoORCControlador.mes}"/>
+                                            </h:selectOneMenu>
+
+                                            <fc:outputLabelObrigatorio value="Valor: "/>
+                                            <fc:inputMoeda id="valorAnualacao"
+                                                           value="#{alteracaoORCControlador.anulacaoORCSelecionado.valor}"/>
+                                        </h:panelGrid>
+
+                                        <p:commandButton id="btnAddSup"
+                                                         value="Adicionar"
+                                                         icon="ui-icon-circle-plus"
+                                                         styleClass="padrao mtop10"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}"
+                                                         actionListener="#{alteracaoORCControlador.adicionarAnulacao}"
+                                                         title="Clique para Adicionar a Anulação de Dotação"
+                                                         update=":Formulario:tabView:anulacaoDotacao :Formulario:tabView:creditoAdicional :Formulario:origem"/>
+
+                                        <p:dataTable id="tabelaAnulacao"
+                                                     value="#{alteracaoORCControlador.selecionado.anulacoesORCs}"
+                                                     var="anu"
+                                                     styleClass="mtop03"
+                                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                     paginator="true"
+                                                     rows="10"
+                                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>ANULAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                                     rowIndexVar="rowlx">
+
+                                            <p:column style="width: 20px" headerText="Ver">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Ações" style="width: 7%;text-align: center"
+                                                      rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+                                                <p:commandButton icon="ui-icon-pencil"
+                                                                 onstart="aguarde.show()"
+                                                                 oncomplete="aguarde.hide()"
+                                                                 disabled="#{alteracaoORCControlador.desabilitarBtnEditarAnulacao(anu)}"
+                                                                 title="Clique para alterar este registro."
+                                                                 update=":Formulario:tabView:gridAnulacao"
+                                                                 process="@this"
+                                                                 actionListener="#{alteracaoORCControlador.alterarAnulacao(anu)}"/>
+
+                                                <p:commandButton icon="ui-icon-trash"
+                                                                 title="Clique para remover este registro."
+                                                                 onstart="aguarde.show()"
+                                                                 oncomplete="aguarde.hide()"
+                                                                 styleClass="mlef05"
+                                                                 process="@this"
+                                                                 update=":Formulario:tabView:anulacaoDotacao :Formulario:tabView:gridAnulacao :Formulario:origem"
+                                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                                 actionListener="#{alteracaoORCControlador.removerAnulacao}">
+                                                    <f:attribute name="anu" value="#{anu}"/>
+                                                </p:commandButton>
+                                            </p:column>
+                                            <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                                                <h:outputText
+                                                    value="#{anu.fonteDespesaORC.despesaORC.provisaoPPADespesa.contaDeDespesa}"/>
+                                            </p:column>
+                                            <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                                <h:outputText
+                                                    value="#{anu.fonteDespesaORC.provisaoPPAFonte.destinacaoDeRecursos}"/>
+                                            </p:column>
+                                            <p:column headerText="Mês" style="width: 15%"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{utilBean.getDescricaoMes(anu.mes)}"/>
+                                            </p:column>
+                                            <p:column headerText="Tipo de Crédito" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{anu.tipoDespesaORC.descricao}"/>
+                                            </p:column>
+                                            <p:column headerText="Valor (R$)" style="width: 15%; text-align: right">
+                                                <h:outputText value="#{anu.valor}"
+                                                              converter="#{alteracaoORCControlador.moneyConverter}"/>
+                                                <f:facet name="footer">
+                                                    <div style="text-align: right">
+                                                        <h:outputText value="Total: " styleClass="negrito"/>
+                                                        <h:outputText
+                                                            value="#{alteracaoORCControlador.totalAnulacoes()}"
+                                                            converter="#{alteracaoORCControlador.moneyConverter}"
+                                                            styleClass="negrito"/>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+
+                                            <p:rowExpansion>
+                                                <table class="mtop05">
+                                                    <tr>
+                                                        <td>
+                                                            <h:outputText value="Unidade: " style="font-weight: bold"/>
+                                                            <h:outputText
+                                                                value="#{alteracaoORCControlador.getDescricaoUnidade(anu.fonteDespesaORC.provisaoPPAFonte.provisaoPPADespesa.subAcaoPPA.acaoPPA.responsavel)}"/>
+                                                        </td>
+                                                        <td>
+                                                            <h:outputText value="Funcional: "
+                                                                          style="font-weight: bold"/>
+                                                            <h:outputText
+                                                                value="#{anu.fonteDespesaORC.despesaORC.codigo}"/>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </p:rowExpansion>
+
+                                        </p:dataTable>
+                                    </p:panel>
+                                </p:outputPanel>
+                            </p:outputPanel>
+                        </p:tab>
+
+                        <p:tab title="Receita">
+                            <p:outputPanel id="receita">
+
+                                <h:panelGrid columns="2"
+                                             rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+
+                                    <fc:outputLabelObrigatorio value="Operação: " for="operacao"/>
+                                    <h:selectOneMenu id="operacao"
+                                                     value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.operacaoReceita}"
+                                                     title="Selecione uma operação.">
+                                        <p:ajax event="change"
+                                                update="contaReceita"
+                                                process="@this"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                listener="#{alteracaoORCControlador.limparCampoReceitaLoa()}"/>
+                                        <f:selectItems
+                                            value="#{lancamentoReceitaOrcControlador.listaOperacoesReceitaRealizada}"/>
+                                    </h:selectOneMenu>
+
+                                    <fc:outputLabelObrigatorio value="Unidade Organizacional: "/>
+                                    <p:autoComplete queryDelay="1000"
+                                                    value="#{alteracaoORCControlador.hierarquiaOrganizacional}"
+                                                    var="ho"
+                                                    title="Selecione a unidade organizacional."
+                                                    completeMethod="#{alteracaoORCControlador.completarHierarquiaOrganizacionalUnidade}"
+                                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                    itemValue="#{ho.id}"
+                                                    itemLabel="#{ho}"
+                                                    onkeyup="if(keyUpCampoVazio(this)){limparContaReceita();}"
+                                                    size="70">
+                                        <p:ajax event="itemSelect"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                listener="#{alteracaoORCControlador.definirUnidade()}"
+                                                update=":Formulario:tabView:contaReceita"/>
+                                    </p:autoComplete>
+
+                                    <fc:outputLabelObrigatorio value="Conta de Receita: "/>
+                                    <h:panelGroup>
+                                        <p:autoComplete queryDelay="1000"
+                                                        id="contaReceita"
+                                                        title="Selecione a conta de receita filtrando por descrição ou código."
+                                                        completeMethod="#{alteracaoORCControlador.completarReceitaLoa}"
+                                                        value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.receitaLOA}"
+                                                        var="recLoa"
+                                                        disabled="#{alteracaoORCControlador.hierarquiaOrganizacional eq null and alteracaoORCControlador.receitaAlteracaoORCSelecionada.operacaoReceita eq null}"
+                                                        maxResults="10"
+                                                        itemValue="#{recLoa.id}"
+                                                        itemLabel="#{recLoa.contaDeReceita}"
+                                                        onkeyup="keyUpLimparCampo(this, 'fonte')"
+                                                        converter="#{alteracaoORCControlador.converterReceitaLOA}"
+                                                        size="70">
+                                            <p:ajax event="itemSelect" update=":Formulario:tabView:fonte"/>
+                                        </p:autoComplete>
+                                        <p:watermark value="Filtra por operação da receita e unidade organizacional."
+                                                     for="contaReceita"/>
+                                    </h:panelGroup>
+
+                                    <fc:outputLabelObrigatorio value="Conta de Destinação de Recurso: "/>
+                                    <h:selectOneMenu id="fonte"
+                                                     value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.contaDeDestinacao}"
+                                                     title="Selecione a Conta de Destinação de Recurso da Conta de Receita Selecionada"
+                                                     disabled="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.receitaLOA eq null}"
+                                                     converter="#{planoDeContasWizardControlador.converterConta}">
+                                        <f:selectItems value="#{alteracaoORCControlador.contasDeDestinacao}"/>
+                                    </h:selectOneMenu>
+
+                                    <fc:outputLabelObrigatorio value="Origem do Recurso: "/>
+                                    <h:selectOneMenu id="origemAl"
+                                                     value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.origemReceitaAlteracaoORC}"
+                                                     title="Selecione a Origem da Receita">
+                                        <f:selectItems value="#{alteracaoORCControlador.origens}"/>
+                                    </h:selectOneMenu>
+
+                                    <fc:outputLabelObrigatorio value="Tipo de Alteração: "/>
+                                    <h:selectOneMenu id="tipoAlteracao"
+                                                     value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.tipoAlteracaoORC}"
+                                                     style="width: 127px"
+                                                     title="Selecione o Tipo de alteração da Receita">
+                                        <f:selectItems value="#{alteracaoORCControlador.tiposAlteracaoORC}"/>
+                                    </h:selectOneMenu>
+
+                                    <fc:outputLabelObrigatorio value="Valor: "/>
+                                    <fc:inputMoeda id="valorReceita"
+                                                   value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.valor}"
+                                                   title="Informe o Valor da Receita"/>
+
+                                </h:panelGrid>
+
+                                <p:commandButton id="btnRec"
+                                                 value="Adicionar"
+                                                 title="Clique para adicionar a Receita na Lista"
+                                                 icon="ui-icon-circle-plus"
+                                                 styleClass="padrao motp10"
+                                                 process=":Formulario:tabView:receita"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}"
+                                                 actionListener="#{alteracaoORCControlador.adicionarReceita}"
+                                                 update=":Formulario:tabView:receita"/>
+
+                                <p:dataTable id="tabelaReceita"
+                                             value="#{alteracaoORCControlador.selecionado.receitasAlteracoesORCs}"
+                                             var="rec"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>RECEITAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Ver" style="width: 4%; text-align: center">
+                                        <p:commandButton icon="ui-icon-eye"
+                                                         actionListener="#{alteracaoORCControlador.recuperarInformacoesReceita(rec)}"
+                                                         title="Clique para visualizar as informações da receita."
+                                                         onstart="aguarde.show()"
+                                                         update=":FormInfoReceitas"
+                                                         process="@this"
+                                                         oncomplete="dialogInfoReceitas.show();aguarde.hide()">
+
+                                        </p:commandButton>
+                                    </p:column>
+
+                                    <p:column headerText="Ações" style="width: 7%; text-align: center"
+                                              rendered="#{alteracaoORCControlador.podeEditarQuandoForGestor()}">
+                                        <p:commandButton icon="ui-icon-pencil"
+                                                         actionListener="#{alteracaoORCControlador.alterarReceita(rec)}"
+                                                         update=":Formulario:tabView:receita"
+                                                         onstart="aguarde.show()"
+                                                         process="@this"
+                                                         oncomplete="aguarde.hide()"
+                                                         title="Clique para alterar a Receita">
+                                        </p:commandButton>
+
+                                        <p:commandButton icon="ui-icon-trash"
+                                                         actionListener="#{alteracaoORCControlador.removerReceita(rec)}"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         styleClass="mlef05"
+                                                         process="@this"
+                                                         update=":Formulario:tabView:tabelaReceita"
+                                                         onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                         title="Clique para remover este registro.">
+                                        </p:commandButton>
+                                    </p:column>
+                                    <p:column headerText="Conta de Receita" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{rec.receitaLOA.contaDeReceita}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Destinação de Recurso" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{rec.contaDeDestinacao}"/>
+                                    </p:column>
+                                    <p:column headerText="Origem do Recurso" style="width: 15%"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{rec.origemReceitaAlteracaoORC.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Alteração" style="width: 15%"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{rec.tipoAlteracaoORC.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$)" style="width: 10%; text-align: right">
+                                        <h:outputText value="#{rec.valor}"
+                                                      converter="#{alteracaoORCControlador.moneyConverter}"/>
+                                        <f:facet name="footer">
+                                            <div style="text-align: right" class="negrito">
+                                                <h:outputText value="Total: "/>
+                                                <h:outputText value="#{alteracaoORCControlador.totalReceitas()}"
+                                                              converter="#{alteracaoORCControlador.moneyConverter}"
+                                                              styleClass="negrito"/>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+
+                                </p:dataTable>
+
+                            </p:outputPanel>
+                        </p:tab>
+                    </p:tabView>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{alteracaoORCControlador}"/>
+
+            <p:commandButton value="Deferir"
+                             id="btDeferir"
+                             update=":formDeferirAlteracao"
+                             process="@this"
+                             title="Clique para Gerar Efetivação"
+                             icon="ui-icon-deferir"
+                             onstart="aguarde.show()"
+                             oncomplete="dialogDeferir.show();aguarde.hide()"
+                             actionListener="#{alteracaoORCControlador.atribuirDataEfetiavao()}"
+                             styleClass="mtop10 mlef05"
+                             rendered="#{alteracaoORCControlador.renderizarBotaoIndeferirOuDefeir()}"
+                             style="height: 30px;">
+            </p:commandButton>
+
+            <p:commandButton value="Indeferir"
+                             id="btIndeferir"
+                             title="Clique para Indereferir a alteração orçamentária."
+                             icon="ui-icon-transferthick-e-w"
+                             styleClass="mtop10 mlef05"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide();dialogIndeferir.show()"
+                             style="height: 30px"
+                             rendered="#{alteracaoORCControlador.renderizarBotaoIndeferirOuDefeir()}"/>
+
+            <p:commandButton value="Retornar p/ Elaboração"
+                             id="btRetornarElaboracao"
+                             process="@this"
+                             update="@none"
+                             title="Clique para enviar a alteração orçamentária para elaboração."
+                             icon="ui-icon-arrowreturnthick-1-w"
+                             oncomplete="aguarde.hide()"
+                             onclick="if (!confirm('Tem certeza que deseja enviar alteração para elaboração?')) {return false; } else {aguarde.show();}"
+                             styleClass="mtop10 mlef05"
+                             style=" height: 30px"
+                             actionListener="#{alteracaoORCControlador.enviarAlteracaoParaElaboracao()}"
+                             rendered="#{alteracaoORCControlador.renderizarBotaoIndeferirOuDefeir()}"/>
+
+            <p:commandButton value="Enviar p/ Análise"
+                             id="btEnviarAnalise"
+                             process="@this"
+                             update="@none"
+                             title="Clique para enviar a alteração orçamentária para análise."
+                             icon="ui-icon-note"
+                             oncomplete="aguarde.hide()"
+                             onclick="if (!confirm('Tem certeza que deseja enviar alteração para análise?')) {return false; } else {aguarde.show();}"
+                             styleClass="mtop10 mlef05"
+                             style="width: 130px;height: 30px"
+                             actionListener="#{alteracaoORCControlador.enviarAlteracaoParaAnalise()}"
+                             rendered="#{alteracaoORCControlador.isAlteracaoSalvaEmElaboracao()}"/>
+
+            <p:commandButton id="btImprimirFicha"
+                             value="Imprimir Ficha"
+                             icon="ui-icon-print"
+                             onstart="aguarde.show()"
+                             oncomplete="dialogImprimirFicha.show();aguarde.hide()"
+                             rendered="#{alteracaoORCControlador.isAlteracaoSalvaEmElaboracao()}"
+                             styleClass="mtop10 mlef05"
+                             actionListener="#{alteracaoORCControlador.prepararFichaParaImprimir()}"
+                             update=":formImprimirFicha"
+                             process="@this"
+                             style="height: 30px;"
+                             title="Clique para imprimir a ficha de solicitação de crédito em formato PDF."/>
+
+            <p:commandButton id="botaoImprimirPDF"
+                             value="Imprimir Minuta"
+                             icon="ui-icon-print"
+                             onstart="aguarde.show()"
+                             oncomplete="dialogImprimirMinuta.show();aguarde.hide()"
+                             rendered="#{alteracaoORCControlador.renderizarBotaoImprimirMinuta()}"
+                             actionListener="#{alteracaoORCControlador.buscarConteudoMinuta()}"
+                             styleClass="mtop10 mlef05"
+                             update=":formImprimirMinutaDiaria"
+                             style="height: 30px; margin-right: 5px"
+                             title="Clique para imprimir a Minuta da Alteração Orçamentária no formato PDF">
+            </p:commandButton>
+
+            <p:commandButton id="btImprimirPDF"
+                             value="Imprimir Minuta do Diário"
+                             icon="ui-icon-print"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide();dialogImprimirMinutaDiaria.show()"
+                             rendered="#{alteracaoORCControlador.renderizarBotaoImprimirMinuta()}"
+                             styleClass="mtop10 mlef05"
+                             actionListener="#{alteracaoORCControlador.prepararMinutaDiarioParaImprimir()}"
+                             update=":formImprimirMinutaDiaria"
+                             style="height: 30px"
+                             title="Clique para imprimir a Minuta Diária da Alteração Orçamentária no formato PDF"/>
+
+            <p:poll interval="1"
+                    widgetVar="poll"
+                    listener="#{alteracaoORCControlador.finalizarBarraProgressao()}"
+                    update=":formDialogProgressBar:panelBarra"
+                    stop="#{!alteracaoORCControlador.assistente.barraProgressoItens.calculando}"
+                    autoStart="false"/>
+        </h:form>
+
+
+        <!--ENVIAR PARA ANÁLISE-->
+        <p:dialog widgetVar="dialogIndeferir"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  position="center"
+                  showHeader="false"
+                  style="position: fixed !important;"
+                  dynamic="true">
+            <h:form id="formIndeferir">
+                <div align="center">
+                    <p:panel header="Indeferir Alteração orçamentária" styleClass="mtop05 mbot05">
+                        <br/>
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio for="data" value="Data:"/>
+                            <p:calendar onkeypress="mascara(this, Data)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        id="data"
+                                        autocomplete="off"
+                                        title="Digite a data da caução."
+                                        value="#{alteracaoORCControlador.selecionado.dataIndeferimento}"
+                                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                        size="10"/>
+
+                            <fc:outputLabelObrigatorio for="motivo" value="Motivo:"/>
+                            <h:panelGrid columns="2">
+                                <p:inputTextarea title="Informe um motivo."
+                                                 id="motivo"
+                                                 cols="70"
+                                                 rows="3"
+                                                 maxlength="3000"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counterMotivoIndeferimento"
+                                                 autoResize="true"
+                                                 value="#{alteracaoORCControlador.selecionado.motivoIndeferimento}"
+                                                 style="margin-left: -3px"/>
+                                <h:outputText id="counterMotivoIndeferimento"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                        <br/><br/><br/>
+                        <h:panelGrid columns="2">
+
+                            <p:commandButton
+                                value="SIM"
+                                icon="ui-icon-check"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                styleClass="padrao mrig05"
+                                onclick="if (!confirm('Deseja INDEFERIR esta Alteração Orçamentária?'))return false;"
+                                actionListener="#{alteracaoORCControlador.indeferirAleracao()}"
+                                title="Clique para indeferir a alteração orçamentária."/>
+
+                            <p:commandButton value="NÃO"
+                                             icon="ui-icon-cancel"
+                                             onclick="aguarde.show()"
+                                             styleClass="padrao"
+                                             oncomplete="dialogIndeferir.hide();aguarde.hide()"
+                                             title="Clique para cancelar o indeferimento da alteração orçamentária."/>
+                        </h:panelGrid>
+                    </p:panel>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <!--EDITAR FICHA DE SOLICITAÇÃO DE CRÉDITO-->
+        <p:dialog widgetVar="dialogImprimirFicha"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  header="Imprimir Ficha de Solicitação de Crédito">
+
+            <h:form id="formImprimirFicha">
+                <p:editor value="#{alteracaoORCControlador.conteudoFicha}"
+                          styleClass="mtop05"
+                          height="470"
+                          width="1000"/>
+                <br/>
+                <h:commandLink actionListener="#{alteracaoORCControlador.imprimirFicha()}"
+                               target="_blank"
+                               style="height: 30px;">
+                    <p:commandButton id="botaoImprimirFicha"
+                                     value="Imprimir"
+                                     icon="ui-icon-print"
+                                     onclick="abrirDialogEnviarAnalise();redirecionar()"
+                                     oncomplete="dialogImprimirFicha.hide() "
+                                     styleClass="padrao"
+                                     process="@this"
+                                     title="Clique para imprimir a Ficha de Solicitação de Crédito."
+                                     ajax="false">
+                    </p:commandButton>
+                </h:commandLink>
+
+                <p:commandButton value="Cancelar"
+                                 icon="ui-icon-cancel"
+                                 onstart="aguarde.show()"
+                                 styleClass="padrao mlef05"
+                                 onclick="redirecionar()"
+                                 oncomplete="dialogImprimirFicha.hide();aguarde.hide()"
+                                 title="Clique para cancelar."/>
+            </h:form>
+        </p:dialog>
+
+
+        <!--MINUTA DO DIÁRIO-->
+        <p:dialog widgetVar="dialogImprimirMinutaDiaria"
+                  modal="true"
+                  closable="false"
+                  resizable="true"
+                  position="center"
+                  style="position: fixed!important;"
+                  dynamic="true"
+                  header="Imprimir Minuta Diário da Alteração Orçamentária">
+
+            <h:form id="formImprimirMinutaDiaria">
+                <p:outputPanel>
+                    <p:editor value="#{alteracaoORCControlador.conteudoMinutaDiario}"
+                              height="450"
+                              width="1000"/>
+
+                    <br/><br/>
+                    <h:commandLink actionListener="#{alteracaoORCControlador.imprimirMinutaDiarioPDF}"
+                                   target="_blank"
+                                   style="height: 30px;">
+                        <p:commandButton id="botaoImprimirMinutaDiaria"
+                                         value="Imprimir"
+                                         icon="ui-icon-print"
+                                         onclick="dialogImprimirMinutaDiaria.hide()"
+                                         styleClass="padrao"
+                                         process="@this"
+                                         title="Clique para imprimir a Minuta Diário da Alteração Orçamentária"
+                                         ajax="false">
+                        </p:commandButton>
+                    </h:commandLink>
+
+                    <p:commandButton id="btCancelarMinuta"
+                                     value="Fechar"
+                                     icon="ui-icon-closethick"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dialogImprimirMinutaDiaria.hide();"
+                                     styleClass="padrao mlef05"
+                                     process="@this"
+                                     update="@none"
+                                     title="Clique para fechar a janela.">
+                    </p:commandButton>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+
+        <!--MINUTA DA ALTERAÇÃO ORÇAMENTÁRIA-->
+        <p:dialog widgetVar="dialogImprimirMinuta"
+                  modal="true"
+                  closable="false"
+                  dynamic="true"
+                  style="position: fixed !important;"
+                  position="center"
+                  header="Imprimir Minuta da Alteração Orçamentária">
+
+            <h:form id="formImprimirMinuta">
+                <p:outputPanel>
+                    <div class="editor-minuta">
+                        <p:editor value="#{alteracaoORCControlador.conteudoMinuta}" height="485" width="1000"/>
+                    </div>
+                    <div class="conteudo-minuta" style="display: none">
+                        <h:outputText escape="false" value="#{alteracaoORCControlador.conteudoMinutaWord}"/>
+                    </div>
+
+                    <br/><br/>
+
+                    <p:commandButton value="Imprimir em PDF"
+                                     icon="ui-icon-pdf"
+                                     style="height: 30px"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="operacao"
+                                     actionListener="#{alteracaoORCControlador.imprimirMinutaPDF()}"
+                                     title="Clique para imprimir a Minuta da Alteração Orçamentária."/>
+
+                    <p:commandButton id="botaoWordMinuta"
+                                     value="Imprimir em Word"
+                                     styleClass="operacao"
+                                     icon="ui-icon-print"
+                                     onstart="aguarde.show()"
+                                     actionListener="#{alteracaoORCControlador.copiarConteudoWord()}"
+                                     oncomplete="aguarde.hide();imprimirMinutaNoWord()"
+                                     title="Clique para fechar a janela."
+                                     process="@form"
+                                     update="@form"/>
+
+                    <p:commandButton id="botaoCancelarMinuta"
+                                     value="Fechar"
+                                     styleClass="mlef05 operacao"
+                                     icon="ui-icon-closethick"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dialogImprimirMinuta.hide()"
+                                     title="Clique para fechar a janela."
+                                     process="@this"
+                                     update="@none"/>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog id="dialogInfoReceita"
+                  modal="true"
+                  resizable="false"
+                  closable="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  widgetVar="dialogInfoReceitas">
+
+            <h:form id="FormInfoReceitas">
+                <p:panel styleClass="mtop05 mbot05">
+
+                    <co:titulo-panel titulo="Informações da Receita"
+                                     separator="true"/>
+                    <h:panelGrid columns="2" cellpadding="2">
+                        <h:outputText value="Conta de Receita: "/>
+                        <h:outputText value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.receitaLOA}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Conta de Destinação de Recurso: "/>
+                        <h:outputText value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.contaDeDestinacao}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Origem do Recurso: "/>
+                        <h:outputText
+                            value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.origemReceitaAlteracaoORC.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Tipo de Alteração: "/>
+                        <h:outputText
+                            value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.tipoAlteracaoORC.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Operação: "/>
+                        <h:outputText
+                            value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.receitaLOA.operacaoReceita.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Valor: "/>
+                        <h:outputText value="#{alteracaoORCControlador.receitaAlteracaoORCSelecionada.valor}"
+                                      converter="#{alteracaoORCControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog id="GeraEfetivacao"
+                  widgetVar="dialogDeferir"
+                  position="center"
+                  style="position: fixed !important;"
+                  dynamic="true"
+                  width="1200"
+                  height="500"
+                  showHeader="false"
+                  closable="false"
+                  resizable="false"
+                  modal="true">
+
+            <h:form id="formDeferirAlteracao">
+                <p:panel header="Deferir Alteração Orçamentária" styleClass="mtop05 mbot05">
+                    <p:outputPanel rendered="#{alteracaoORCControlador.renderizarMensagemSolicitacoesPendentes()}">
+                        <div class="alert alert-block" align="center" style="padding: 6px; font-size: 13px">
+                            Existem solicitações para novo elemento de desepsa que não foram DEFERIDAS (Aprovadas).
+                        </div>
+                    </p:outputPanel>
+
+
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio for="atoLegal" value="Ato Legal: "/>
+                        <h:panelGrid columns="5">
+                            <p:autoComplete queryDelay="1000"
+                                            id="atoLegal"
+                                            size="70"
+                                            completeMethod="#{alteracaoORCControlador.completarAtoLegal}"
+                                            converter="#{atoLegalControlador.converterGenerico}"
+                                            value="#{alteracaoORCControlador.selecionado.atoLegal}"
+                                            var="ato"
+                                            maxResults="30"
+                                            dropdown="true"
+                                            panelStyle="max-width: 800px; max-height: 250px"
+                                            itemValue="#{ato.id}"
+                                            itemLabel="#{ato.numero} - #{ato.nome}"
+                                            title="Selecione um ato legal.">
+                                <p:ajax event="itemSelect"
+                                        process="@this"
+                                        update="@this"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        listener="#{alteracaoORCControlador.definirAtoLegalOrc}"/>
+                            </p:autoComplete>
+
+                            <p:watermark value="Filtra por Decreto(Executivo) / Resolução(Legislativo)"
+                                         for="atoLegal"/>
+
+                            <p:commandButton icon="ui-icon-circle-plus"
+                                             onclick="window.open('#{request.contextPath}/atolegal/novo/?sessao=true', '_blank')"
+                                             update="@this"
+                                             title="Clique para inserir um novo registro."
+                                             process="@this"/>
+                        </h:panelGrid>
+
+                        <fc:outputLabelObrigatorio value="Tipo de Crédito: "/>
+                        <h:selectOneMenu id="tipoCreditoDeferir"
+                                         value="#{alteracaoORCControlador.selecionado.tipoDespesaORC}"
+                                         title="Selecione o tipo de crédito."
+                                         >
+                            <f:selectItems value="#{alteracaoORCControlador.tipoCredito}"/>
+                            <p:ajax
+                                update="@form :Formulario:tabView:creditoAdicional :Formulario:tabView:anulacaoDotacao"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{alteracaoORCControlador.definirTipoCreditoNaSuplementacaoAndAnulacao()}"/>
+                        </h:selectOneMenu>
+
+                        <fc:outputLabelObrigatorio value="Data da Efetivação: "/>
+                        <p:calendar title="Informe a data de efetivação da alteração orçamentária"
+                                    value="#{alteracaoORCControlador.selecionado.dataEfetivacao}"
+                                    navigator="true"
+                                    disabled="true"
+                                    onkeypress="mascara(this, mdata)"
+                                    id="dataPromulga"
+                                    pattern="dd/MM/yyyy">
+                            <p:ajax event="dateSelect" update="@this" process="@this"/>
+                        </p:calendar>
+
+                        <h:outputText value="Arquivo: "/>
+                        <h:panelGrid columns="4">
+                            <p:fileUpload fileUploadListener="#{alteracaoORCControlador.uploadArquivo}"
+                                          mode="advanced"
+                                          update=":formDeferirAlteracao"
+                                          rendered="#{alteracaoORCControlador.selecionado.arquivo eq null}"
+                                          style="width: 500px"
+                                          label="Anexar"
+                                          sizeLimit="15728640"
+                                          id="botaoSelecionar"
+                                          dragDropSupport="true"
+                                          auto="true"
+                                          allowTypes="/(\.|\/)(pdf)$/"
+                                          invalidFileMessage="Extensão do arquivo inválida!"
+                                          invalidSizeMessage="Tamanho do arquivo não suportador, o tamanho do arquivo não pode ser superior a 10Mb."/>
+
+                            <p:commandButton rendered="#{alteracaoORCControlador.selecionado.arquivo ne null}"
+                                             icon="ui-icon-trash"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="botao-transparente"
+                                             title="Clique para remover o arquivo anexado."
+                                             update="formDeferirAlteracao"
+                                             onclick="if (!confirm('Tem certeza que deseja remover este arquivo?')) {return false; } else {aguarde.show();}"
+                                             actionListener="#{alteracaoORCControlador.removerArquivo}"/>
+
+                            <p:commandButton icon="ui-icon-download"
+                                             ajax="false"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="botao-transparente"
+                                             rendered="#{alteracaoORCControlador.selecionado.arquivo ne null}"
+                                             action="log"
+                                             onclick="PrimeFaces.monitorDownload(start, stop)">
+                                <p:fileDownload
+                                    value="#{alteracaoORCControlador.baixarAnexo()}"/>
+                            </p:commandButton>
+
+                            <p:panel id="painel" visible="#{alteracaoORCControlador.selecionado.arquivo ne null}">
+                                <h:outputText value="Arquivo Adicionado: "/>
+                                <h:outputText styleClass="negrito"
+                                              value="#{alteracaoORCControlador.selecionado.arquivo.descricao}"/>
+                            </p:panel>
+                            <h:inputHidden/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+
+                    <p:tabView id="tabGeralDialog" activeIndex="#{alteracaoORCControlador.indiceAba}">
+                        <p:tab title="Suplementações">
+
+                            <p:outputPanel
+                                rendered="#{alteracaoORCControlador.renderizarMensagemSuplementacoesSemGrupoOrcamentorio()}">
+                                <div class="alert alert-block" align="center" style="padding: 6px; font-size: 13px">
+                                    Existem Suplementações sem grupo orçamentário.
+                                </div>
+                            </p:outputPanel>
+
+                            <p:dataTable id="tabelaSuplem"
+                                         value="#{alteracaoORCControlador.selecionado.suplementacoesORCs}"
+                                         var="suplem"
+                                         styleClass="mtop05"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>SUPLEMENTAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{suplem.fonteDespesaORC.provisaoPPAFonte.provisaoPPADespesa.contaDeDespesa}"/>
+                                </p:column>
+                                <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{suplem.fonteDespesaORC.provisaoPPAFonte.destinacaoDeRecursos}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Orçamentário" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{suplem.fonteDespesaORC.grupoOrcamentario}"
+                                                  rendered="#{!suplem.permiteAlteracaoGrupoOrcamentario}"/>
+
+                                    <h:panelGrid columns="2" rendered="#{suplem.permiteAlteracaoGrupoOrcamentario}">
+                                        <p:autoComplete queryDelay="1000"
+                                                        id="grupoOrcSuplem"
+                                                        size="70"
+                                                        completeMethod="#{alteracaoORCControlador.completarGrupoOrcamentario}"
+                                                        converter="#{alteracaoORCControlador.converterGrupoOrcamentario}"
+                                                        value="#{suplem.fonteDespesaORC.grupoOrcamentario}"
+                                                        var="g"
+                                                        maxResults="10"
+                                                        itemValue="#{g.id}"
+                                                        itemLabel="#{g}"
+                                                        title="Selecione uma grupo orçamentário para a suplementação.">
+                                        </p:autoComplete>
+                                    </h:panelGrid>
+                                </p:column>
+                                <p:column headerText="Tipo de Crédito" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{suplem.tipoDespesaORC.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Origem do Recurso" styleClass="alinhamentoEsquerda">
+                                    <h:selectOneMenu id="origemDeferir"
+                                                     value="#{suplem.origemSuplemtacao}"
+                                                     title="Selecione a origem do recurso para o credito adicional.">
+                                        <f:selectItems value="#{alteracaoORCControlador.origensSupl}"/>
+                                        <p:ajax event="valueChange" update=":formDeferirAlteracao"/>
+                                    </h:selectOneMenu>
+                                </p:column>
+
+                                <p:column headerText="Valor (R$)" style="text-align: right">
+                                    <h:outputText value="#{suplem.valor}"
+                                                  converter="#{alteracaoORCControlador.moneyConverter}"/>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="negrito"/>
+                                            <h:outputText id="totalSuplementacoes"
+                                                          value="#{alteracaoORCControlador.totalSuplementacoes()}"
+                                                          converter="#{alteracaoORCControlador.moneyConverter}"
+                                                          styleClass="negrito"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+
+                        <p:tab title="Anulações">
+
+                            <p:outputPanel
+                                rendered="#{alteracaoORCControlador.renderizarMensagemAnulacoesSemGrupoOrcamentorio()}">
+                                <div class="alert alert-block" align="center" style="padding: 6px; font-size: 13px">
+                                    Existem Anulações sem grupo orçamentário.
+                                </div>
+                            </p:outputPanel>
+
+                            <p:dataTable id="tabelaAnul"
+                                         value="#{alteracaoORCControlador.selecionado.anulacoesORCs}"
+                                         var="anulacao"
+                                         styleClass="mtop05"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>ANULAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{anulacao.fonteDespesaORC.despesaORC.provisaoPPADespesa.contaDeDespesa}"/>
+                                </p:column>
+                                <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{anulacao.fonteDespesaORC.provisaoPPAFonte.destinacaoDeRecursos}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Orçamentário" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{anulacao.fonteDespesaORC.grupoOrcamentario}"
+                                                  rendered="#{!anulacao.permiteAlteracaoGrupoOrcamentario}"/>
+
+                                    <h:panelGrid columns="2" rendered="#{anulacao.permiteAlteracaoGrupoOrcamentario}">
+                                        <p:autoComplete queryDelay="1000" id="grupoOrcAnulacao"
+                                                        size="70"
+                                                        completeMethod="#{alteracaoORCControlador.completarGrupoOrcamentario}"
+                                                        converter="#{alteracaoORCControlador.converterGrupoOrcamentario}"
+                                                        value="#{anulacao.fonteDespesaORC.grupoOrcamentario}"
+                                                        var="grupo"
+                                                        maxResults="10"
+                                                        itemValue="#{grupo.id}"
+                                                        itemLabel="#{grupo}"
+                                                        title="Selecione uma grupo orçamentário para anulação."/>
+                                    </h:panelGrid>
+                                </p:column>
+                                <p:column headerText="Tpo de Crédito" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{anulacao.tipoDespesaORC.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" style="text-align: right">
+                                    <h:outputText value="#{anulacao.valor}"
+                                                  converter="#{alteracaoORCControlador.moneyConverter}"/>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="negrito"/>
+                                            <h:outputText id="totalAnulacoes"
+                                                          value="#{alteracaoORCControlador.totalAnulacoes()}"
+                                                          converter="#{alteracaoORCControlador.moneyConverter}"
+                                                          styleClass="negrito"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+
+                        <p:tab title="Receita">
+                            <p:dataTable id="tabelaReceitas"
+                                         value="#{alteracaoORCControlador.selecionado.receitasAlteracoesORCs}"
+                                         var="receita"
+                                         styleClass="mtop03"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>RECEITAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Conta de Receita" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{receita.receitaLOA.contaDeReceita}"/>
+                                </p:column>
+                                <p:column headerText="Conta de Destinação de Recurso" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{receita.contaDeDestinacao}"/>
+                                </p:column>
+                                <p:column headerText="Origem do Recurso" style="width: 15%"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{receita.origemReceitaAlteracaoORC.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Alteração" style="width: 15%"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{receita.tipoAlteracaoORC.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" style="width: 10%; text-align: right">
+                                    <h:outputText value="#{receita.valor}"
+                                                  converter="#{alteracaoORCControlador.moneyConverter}"/>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right" class="negrito">
+                                            <h:outputText value="Total: "/>
+                                            <h:outputText value="#{alteracaoORCControlador.totalReceitas()}"
+                                                          converter="#{alteracaoORCControlador.moneyConverter}"
+                                                          styleClass="negrito"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+
+                            </p:dataTable>
+                        </p:tab>
+                    </p:tabView>
+
+                    <p:commandButton value="Deferir"
+                                     id="cbEfetivar"
+                                     actionListener="#{alteracaoORCControlador.deferirAlteracao}"
+                                     styleClass="mtop10 mrig05 prioritario padrao mtop10"
+                                     titledialogProgressBar="Clique para deferir a alteração orçamentária."
+                                     onstart="aguarde.show()"
+                                     update=":formDeferirAlteracao"
+                                     icon="ui-icon-deferir"/>
+
+                    <p:commandButton value="Fechar"
+                                     id="cbFechar"
+                                     update="formDeferirAlteracao"
+                                     actionListener="#{alteracaoORCControlador.cancelarDeferimento()}"
+                                     oncomplete="dialogDeferir.hide();aguarde.hide()"
+                                     styleClass="mtop10 mrig05 padrao mtop10"
+                                     title="Clique para fechar a janela."
+                                     icon="ui-icon-closethick"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true" widgetVar="confirmarSalvar" showHeader="false" style="max-width: 800px !important">
+            <h:form style="font-size: 12px;">
+                <div class="alert alert-block">
+                    <h4>Deseja Continuar?</h4>
+                    <div class="alinhamentoCentralizado">
+                        <h:panelGrid columns="2" style="width: 100%; margin-top: 30px;">
+                            <p:commandButton styleClass="operacao" icon="ui-icon-check"
+                                             value="Sim"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             ajax="false"
+                                             actionListener="#{alteracaoORCControlador.salvarAlteracoes}"
+                                             style="padding: 5px !important"/>
+
+                            <p:commandButton styleClass="operacao" icon="ui-icon-cancel"
+                                             style="padding: 5px !important" onclick="confirmaSalvar.hide()"
+                                             value="Não"/>
+                        </h:panelGrid>
+
+                    </div>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog id="dialogElementoDesp"
+                  modal="true"
+                  resizable="false"
+                  closable="false"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  widgetVar="dialogNovoElemento">
+
+            <h:form id="FormDeferirNovoElemento">
+                <p:panel header="Aprovar Elemento de Despesa" styleClass="mtop05 mbot05">
+
+                    <h:panelGrid columns="2" cellpadding="2">
+                        <fc:outputLabelObrigatorio value="Grupo Orçamentário: "/>
+                        <p:autoComplete queryDelay="1000" id="grupoOrc"
+                                        size="70"
+                                        completeMethod="#{alteracaoORCControlador.completarGrupoOrcamentario}"
+                                        converter="#{alteracaoORCControlador.converterGrupoOrcamentario}"
+                                        value="#{alteracaoORCControlador.grupoOrcamentarioSolicitacao}"
+                                        var="grupo"
+                                        maxResults="10"
+                                        itemValue="#{grupo.id}"
+                                        itemLabel="#{grupo}"
+                                        title="Selecione uma grupo orçamentário.">
+                            <p:ajax update="@this" event="itemSelect"/>
+                        </p:autoComplete>
+                    </h:panelGrid>
+
+
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     title="Clique para deferir(Aprovar a Solicitação) do novo elemento de despesa."
+                                     update=":Formulario:tabView:solicitacoes"
+                                     onstart="aguarde.show()"
+                                     styleClass="padrao mrig05 mtop20 prioritario"
+                                     oncomplete="aguarde.hide()"
+                                     process="@this"
+                                     actionListener="#{alteracaoORCControlador.aprovarSolicitacao()}"/>
+
+                    <p:commandButton value="Fechar"
+                                     id="btFecharNovoElem"
+                                     icon="ui-icon-closethick"
+                                     styleClass="padrao mtop20"
+                                     process="@this"
+                                     title="Clique para fechar a janela."
+                                     onclick="dialogNovoElemento.hide()"/>
+
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog widgetVar="dialogProgressBar"
+                  width="800"
+                  closable="false"
+                  showHeader="false"
+                  modal="true"
+                  hideEffect="clip"
+                  resizable="false"
+                  position="center"
+                  dynamic="true">
+            <h:form id="formDialogProgressBar">
+                <div class="alert alert-success centralizado mtop05" style="font-size: 13px">
+                    <strong>Aguarde, </strong> o deferimento da alteração orçamentária está sendo executado...
+                </div>
+
+                <p:panel style="text-align: center; width: 100%; border: 0px;"
+                         visible="#{alteracaoORCControlador.assistente.barraProgressoItens.calculando}"
+                         id="panelBarra">
+
+                    <div
+                        style="#{alteracaoORCControlador.assistente.barraProgressoItens.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mbot05"/>
+                    </div>
+
+                    <h:outputText
+                        style="font-size: 12px"
+                        value="#{alteracaoORCControlador.assistente.barraProgressoItens.mensagens}"
+                        escape="false"/>
+
+                    <br/> <br/>
+                    <h:outputText
+                        value="Processados: #{alteracaoORCControlador.assistente.barraProgressoItens.processados}
+                               de #{alteracaoORCControlador.assistente.barraProgressoItens.total}"
+                        styleClass="negrito"/>
+
+
+                    <br/>
+                    <div class="progress progress-striped active" id="barraProgresso">
+                        <div class="bar"
+                             style="width: #{alteracaoORCControlador.assistente.barraProgressoItens.porcentagemDoCalculo}%;">
+                            <h:outputText
+                                value="#{alteracaoORCControlador.assistente.barraProgressoItens.porcentagemDoCalculo}"
+                                styleClass="negrito">
+                                <f:convertNumber type="number" maxFractionDigits="2"/>
+                            </h:outputText>
+                            <h:outputText value="%"/>
+                        </div>
+                    </div>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>
+

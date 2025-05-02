@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:panel header="Importação de Atributos do Cadastro Imobiliário">
+                <p:remoteCommand name="rcAcompanharImportacao"
+                                 actionListener="#{importacaoAtributoCadastroImobiliarioControlador.acompanharImportacao()}"
+                                 update=":FormularioAcompanhamento"/>
+                <p:remoteCommand name="rcFinalizarImportacao"
+                                 actionListener="#{importacaoAtributoCadastroImobiliarioControlador.finalizarImportacao()}"/>
+
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Planilha: "/>
+                    <p:outputPanel>
+                        <p:fileUpload multiple="false"
+                                      cancelLabel="Cancelar"
+                                      label="Selecione a planilha"
+                                      uploadLabel="Upload Arquivo"
+                                      dragDropSupport="true"
+                                      process="@form"
+                                      update="@form"
+                                      onstart="aguarde.show()"
+                                      oncomplete="aguarde.hide()"
+                                      auto="true"
+                                      id="iBotaoUploadClassificacoes"
+                                      allowTypes="/(\.|\/)(xlsx|xls)$/"
+                                      fileUploadListener="#{importacaoAtributoCadastroImobiliarioControlador.selecionarPlanilha}"/>
+                        <h:outputText
+                            value="#{importacaoAtributoCadastroImobiliarioControlador.importacao.uploadedFile.fileName}"
+                            styleClass="negrito"
+                            rendered="#{importacaoAtributoCadastroImobiliarioControlador.importacao.uploadedFile ne null}"/>
+                    </p:outputPanel>
+
+                    <h:outputLabel value="Index Inscrição Cadastral: "/>
+                    <fc:inputInteiro
+                        style=""
+                        value="#{importacaoAtributoCadastroImobiliarioControlador.importacao.indexInscricaoCadastral}"/>
+                    <h:outputLabel value="Descartar Primeira Linha: "/>
+                    <p:selectBooleanCheckbox
+                        value="#{importacaoAtributoCadastroImobiliarioControlador.importacao.descartarPrimeiraLinha}"/>
+                </h:panelGrid>
+                <p:panel header="Atributo(s)" styleClass="mtop05">
+                    <h:panelGrid columns="2">
+                        <h:outputLabel value="Index: "/>
+                        <fc:inputInteiro
+                            style=""
+                            value="#{importacaoAtributoCadastroImobiliarioControlador.importacao.atributo.index}"/>
+                        <h:outputLabel value="Atributo: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        id="acAtributo"
+                                        value="#{importacaoAtributoCadastroImobiliarioControlador.importacao.atributo.atributo}"
+                                        styleClass="autoCompleteWp"
+                                        completeMethod="#{atributoControlador.completarAtributos}"
+                                        converter="#{atributoControlador.converterGenerico}"
+                                        onfocus="this.select();"
+                                        onclick="this.select();"
+                                        scrollHeight="200"
+                                        panelStyleClass="doidao"
+                                        dropdown="true"
+                                        var="objeto"
+                                        process="@this"
+                                        itemValue="#{objeto.id}"
+                                        itemLabel="#{objeto.grupoAtributo} - #{objeto.nome}"
+                                        maxResults="10"
+                                        size="70"/>
+                    </h:panelGrid>
+                    <p:commandButton value="Adicionar"
+                                     styleClass="operacao mtop02 mbot05"
+                                     icon="ui-icon-arrowthick-1-s"
+                                     actionListener="#{importacaoAtributoCadastroImobiliarioControlador.importacao.addAtributo()}"
+                                     onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                     process="@form" update="@form"/>
+                    <p:dataTable id="tableAtributos"
+                                 value="#{importacaoAtributoCadastroImobiliarioControlador.importacao.atributos}"
+                                 var="atributo">
+                        <p:column headerText="Index">
+                            #{atributo.index}
+                        </p:column>
+                        <p:column headerText="Identificação">
+                            #{atributo.atributo.grupoAtributo} - #{atributo.atributo.nome}
+                        </p:column>
+                        <p:column headerText="Ações" styleClass="centralizado" style="width: 100px;">
+                            <p:commandButton styleClass="wp-botao-tabela"
+                                             icon="ui-icon-trash"
+                                             actionListener="#{importacaoAtributoCadastroImobiliarioControlador.importacao.removeAtributo(atributo)}"
+                                             onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                             process="@this" update="tableAtributos"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+            </p:panel>
+            
+            <p:commandButton value="Iniciar Importação"
+                             styleClass="operacao prioritario mtop05"
+                             icon="ui-icon-check"
+                             actionListener="#{importacaoAtributoCadastroImobiliarioControlador.iniciarImportacao()}"
+                             onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                             process="@form" update="@form"/>
+        </h:form>
+
+        <div id="dialogAcompanhamento" class="modal hide fade">
+            <h:form id="FormularioAcompanhamento">
+                <div class="modal-body" style="text-align: center">
+                    <fc:acompanhamentoBarraProgresso
+                        assistenteBarraProgresso="#{importacaoAtributoCadastroImobiliarioControlador.assistenteBarraProgresso}"/>
+                </div>
+            </h:form>
+        </div>
+
+        <script type="text/javascript">
+            var interval;
+
+            function iniciarImportacao() {
+                openDialog(dialogAcompanhamento);
+                interval = setInterval(function () {
+                    rcAcompanharImportacao();
+                }, 1000);
+            }
+
+            function finalizarImportacao() {
+                clearInterval(interval);
+                closeDialog(dialogAcompanhamento);
+                rcFinalizarImportacao();
+            }
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{inventarioDeBensControlador}"
+                                origem="#{inventarioDeBensControlador.caminhoPadrao}novo/"/>
+
+            <p:panel header="Inventário de Bens Móveis">
+
+                <p:tabView>
+                    <p:tab title="Inventário">
+                        <h:panelGrid columns="2">
+
+                            <h:outputLabel value="Código: "/>
+                            <h:outputText value="#{inventarioDeBensControlador.selecionado.codigoOuAviso}"
+                                          styleClass="negrito"/>
+
+                            <h:outputLabel value="Data de Operação: "/>
+                            <h:outputText value="#{inventarioDeBensControlador.selecionado.programadoEm}"
+                                          styleClass="negrito"
+                                          converter="javax.faces.DateTime"/>
+
+                            <h:outputLabel value="Responsável: "/>
+                            <h:outputText
+                                value="#{inventarioDeBensControlador.selecionado.responsavel.pessoaFisica.nome}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Data de Abertura: "/>
+                            <h:outputText value="#{inventarioDeBensControlador.selecionado.dataAbertura}"
+                                          styleClass="negrito"
+                                          converter="javax.faces.DateTime">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                            </h:outputText>
+
+                            <h:outputLabel value="Data de Fechamento: "/>
+                            <h:outputText value="#{inventarioDeBensControlador.selecionado.dataFechamento}"
+                                          styleClass="negrito"
+                                          converter="javax.faces.DateTime">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                            </h:outputText>
+
+                            <fc:outputLabelObrigatorio value="Unidade Administrativa: " for="acUnidadeOrganizacional"/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="acUnidadeOrganizacional"
+                                            title="Informe a Unidade Administrativa."
+                                            disabled="#{!inventarioDeBensControlador.isOperacaoNovo()}"
+                                            value="#{inventarioDeBensControlador.hoAdministrativa}"
+                                            completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalPaiEFilhoOndeUsuarioLogadoEhGestorPatrimonio}"
+                                            var="unidade"
+                                            size="70"
+                                            dropdown="true"
+                                            panelStyle="max-height: 250px; max-width: 800px"
+                                            maxResults="50"
+                                            process="@this"
+                                            itemLabel="#{unidade}"
+                                            itemValue="#{unidade.id}"
+                                            converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                <p:ajax event="itemSelect"
+                                        listener="#{inventarioDeBensControlador.buscarUnidadesOrcamentarias()}"
+                                        process="@this orcamentariaAll"
+                                        update="orcamentariaAll"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"/>
+                            </p:autoComplete>
+
+                            <h:outputLabel value="Unidade Orçamentária: "/>
+                            <h:selectOneMenu
+                                disabled="#{!inventarioDeBensControlador.operacaoNovo}"
+                                value="#{inventarioDeBensControlador.hoOrcamentaria}"
+                                title="Selecione uma unidade orçamentária."
+                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                id="orcamentariaAll">
+                                <p:ajax event="valueChange"
+                                        process="@this"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"/>
+                                <f:selectItems
+                                    value="#{inventarioDeBensControlador.unidadesOrcamentarias}"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio for="descricao" value="Descrição:"/>
+                            <h:panelGrid columns="2"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea id="descricao"
+                                                 title="Digite a descrição da requisição de compra."
+                                                 value="#{inventarioDeBensControlador.selecionado.descricao}"
+                                                 maxlength="255"
+                                                 autoResize="false"
+                                                 scrollHeight="50"
+                                                 rows="5"
+                                                 cols="70"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-descricao"/>
+                                <h:outputText id="counter-descricao"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+                        <div class="centralizado">
+                            <br/>
+                            <p:outputPanel
+                                rendered="#{inventarioDeBensControlador.model eq null and !inventarioDeBensControlador.operacaoNovo}">
+                                Carregando bens do inventário...<br/>
+                                <h:graphicImage value="/img/ajaxloadingbar.gif"/>
+                            </p:outputPanel>
+                        </div>
+                        <br/>
+
+                        <p:outputPanel rendered="#{inventarioDeBensControlador.model ne null}">
+                            <p:dataTable id="tableencontrados"
+                                         rendered="#{!inventarioDeBensControlador.isOperacaoNovo()}"
+                                         value="#{inventarioDeBensControlador.model}"
+                                         var="item"
+                                         styleClass="mtop05"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rows="50"
+                                         rowsPerPageTemplate="50,100,200,300"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         paginator="true"
+                                         lazy="true"
+                                         emptyMessage="Nenhum bem encontrado.">
+                                <p:column style="width:16px">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Registro Patrimonial" style="width: 5%; text-align: left">
+                                    <h:outputText value="#{item.bem.identificacao}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" style="width: 25%; text-align: left">
+                                    <h:outputText value="#{item.bem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial" style="width: 23%; text-align: left">
+                                    <h:outputText value="#{item.estadoResultante.grupoBem}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária" style="width: 22%; text-align: left">
+                                    <h:outputText value="#{item.estadoResultante.detentoraOrcamentaria}"/>
+                                </p:column>
+                                <p:column headerText="Não Localizado" style="width: 5%; text-align: center">
+                                    <p:commandButton
+                                        icon="#{item.naoEncontrado ? 'ui-icon-check' : 'ui-icon-none'}"
+                                        actionListener="#{inventarioDeBensControlador.mudarItemEncontraro(item)}"
+                                        onclick="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        process="@this"
+                                        update="@this"
+                                        styleClass="icone-20"/>
+
+                                </p:column>
+                                <p:column headerText="A Transferir" style="width: 5%; text-align: center">
+                                    <p:commandButton
+                                        icon="#{item.transferir ? 'ui-icon-check' : 'ui-icon-none'}"
+                                        actionListener="#{inventarioDeBensControlador.mudarItemTransferir(item)}"
+                                        onclick="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        process="@this"
+                                        update="@this"
+                                        styleClass="icone-20"/>
+                                </p:column>
+
+                                <p:rowExpansion>
+                                    <p:dataTable id="op-comum"
+                                                 value="#{item}"
+                                                 var="evento"
+                                                 styleClass="mtop05 mlef20"
+                                                 rows="10"
+                                                 emptyMessage="Nenhum ajuste encontrado.">
+                                        <p:column headerText="Localização" style=" text-align: left;">
+                                            <h:outputText value="#{evento.estadoResultante.localizacao}"/>
+                                        </p:column>
+                                        <p:column headerText="Data de Aquisição" style=" text-align: center;">
+                                            <h:outputText value="#{evento.bem.dataAquisicao}"
+                                                          converter="javax.faces.DateTime"/>
+                                        </p:column>
+                                        <p:column headerText="Tipo de Aquisição" style=" text-align: left;">
+                                            <h:outputText
+                                                value="#{evento.estadoResultante.tipoAquisicaoBem.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Estado do Bem" style=" text-align: left;">
+                                            <h:outputText value="#{evento.estadoResultante.estadoBem.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Situação do Bem" style=" text-align: left;">
+                                            <h:outputText
+                                                value="#{evento.estadoResultante.situacaoConservacaoBem.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Marca" style=" text-align: left;">
+                                            <h:outputText value="#{evento.bem.marca}"/>
+                                        </p:column>
+                                        <p:column headerText="Modelo" style=" text-align: left;">
+                                            <h:outputText value="#{evento.bem.modelo}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor do Bem (R$)" style="text-align: right">
+                                            <h:outputText value="#{evento.estadoResultante.valorOriginal}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Inconsistências">
+                        <p:outputPanel id="outPutValidacao">
+                            <p:tab>
+                                <ad:inconsistencias-pesquisa-bens
+                                    inconsistencias="#{inventarioDeBensControlador.assistenteMovimentacao.mensagens}"/>
+                            </p:tab>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+
+                <p:outputPanel id="alert-mensagem">
+                    <ad:alerta-pesquisa-com-inconsistencias
+                        render="#{inventarioDeBensControlador.assistenteMovimentacao.hasInconsistencias()}"/>
+                </p:outputPanel>
+            </p:panel>
+
+            <p:commandButton value="Abertura de Inventário"
+                             onclick="aguarde.show();"
+                             icon="ui-icon-check"
+                             rendered="#{inventarioDeBensControlador.selecionado.isAbertura()}"
+                             actionListener="#{inventarioDeBensControlador.salvar()}"
+                             styleClass="operacao prioritario mtop10 mrig05"/>
+
+            <p:commandButton value="Salvar"
+                             onclick="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             icon="ui-icon-disk"
+                             rendered="#{inventarioDeBensControlador.selecionado.isSalvar()}"
+                             actionListener="#{inventarioDeBensControlador.salvar()}"
+                             styleClass="operacao mtop10 mlef05"/>
+
+            <p:commandButton value="Fechamento de Inventário"
+                             icon="ui-icon-check"
+                             onclick="aguarde.show()"
+                             update=":formDglFechamento"
+                             rendered="#{inventarioDeBensControlador.selecionado.isFechamento()}"
+                             actionListener="#{inventarioDeBensControlador.fechamento()}"
+                             styleClass="prioritario mtop10 mlef05 mrig05"/>
+
+            <fc:rodapePretty ocultarSalvar="true"
+                             controlador="#{inventarioDeBensControlador}"/>
+        </h:form>
+
+        <ad:barra-progresso-salvar-processo
+            header="#{inventarioDeBensControlador.descricaoProcesso}"
+            assistenteMovimentacao="#{inventarioDeBensControlador.assistenteMovimentacao}"
+            actionListenerAcompanhaFuture="#{inventarioDeBensControlador.consultarFutureSalvar()}"
+            actionListenerFinalizaFuture="#{inventarioDeBensControlador.finalizarFutureSalvar()}"/>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  showHeader="false"
+                  widgetVar="dlgFechamento"
+                  closable="false">
+            <h:form id="formDglFechamento">
+                <legend class="legenda">Fechamento de Inventário</legend>
+
+                <div class="alert alert-info">
+
+                    O inventário será fechado na data:
+                    <strong>
+                        <h:outputText value="#{inventarioDeBensControlador.selecionado.dataFechamento}">
+                            <f:convertDateTime type="both"/>
+                        </h:outputText>
+                    </strong>
+                    , Deseja continuar?
+                </div>
+
+                <div align="center">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     process="formDglFechamento"
+                                     styleClass="padrao mtop10 prioritario"
+                                     update="@none"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{inventarioDeBensControlador.salvar()}"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     styleClass="padrao mlef05 mtop10"
+                                     process="@this"
+                                     actionListener="#{inventarioDeBensControlador.cancelarFechamento()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide()"/>
+                </div>
+
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

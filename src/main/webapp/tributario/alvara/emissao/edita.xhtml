@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:f="http://java.sun.com/jsf/core">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:panel header="Emissão de DAM de Guia e Pagamento de Alvará de Localização e Funcionamento"
+                     id="panelCalculo">
+                <h:panelGrid columns="3" id="gridGeral">
+                    <fc:outputLabelObrigatorio value="Cadastro Econômico:"/>
+                    <fc:novoAutocompleteCadastroEconomico
+                        value="#{calculoAlvaraControlador.selecionado.cadastroEconomico}" id="cad"
+                        caminhoAtual="/alvara/emissao/" mostraBotaoNovo="false" mostraSituacoes="false"
+                        mostraBotaoEdita="false" permiteAlterarSituacoes="false"
+                        updateItemSelect=":Formulario:classificacao :Formulario:utilizacao :Formulario:tabelaValorDivida
+                                          :Formulario:panelClassificacaoLabel :Formulario:panelClassificacaoValue
+                                          :Formulario:panelAreaLabel :Formulario:panelAreaValue :Formulario:gridPesquisa"
+                        listenerItemSelect="#{calculoAlvaraControlador.preencherEnquadramentoFiscal()}"
+                        situacoesPossiveis="#{calculoAlvaraControlador.montarSituacoesDisponiveisCmc()}"
+                    />
+                    <p:commandButton icon="ui-icon-search" oncomplete="consultaGenerica.show()"
+                                     update=":dlgConsultaGenerica"/>
+
+                    <p:outputPanel id="panelClassificacaoLabel">
+                        <h:outputText value="Classificação da Atividade: "
+                                      rendered="#{calculoAlvaraControlador.selecionado.cadastroEconomico ne null}"/>
+                    </p:outputPanel>
+                    <p:outputPanel id="panelClassificacaoValue">
+                        <h:outputText id="classificacao"
+                                      rendered="#{calculoAlvaraControlador.selecionado.cadastroEconomico ne null}"
+                                      value="#{calculoAlvaraControlador.selecionado.cadastroEconomico.classificacaoAtividade.descricao}"
+                                      styleClass="negrito"/>
+                    </p:outputPanel>
+
+                    <p:spacer/>
+                    <p:outputPanel id="panelAreaLabel">
+                        <h:outputText value="Área de Utilização: "
+                                      rendered="#{calculoAlvaraControlador.selecionado.cadastroEconomico ne null}"/>
+                    </p:outputPanel>
+                    <p:outputPanel id="panelAreaValue">
+                        <h:outputText id="utilizacao"
+                                      rendered="#{calculoAlvaraControlador.selecionado.cadastroEconomico ne null}"
+                                      value="#{calculoAlvaraControlador.selecionado.cadastroEconomico.areaUtilizacao}"
+                                      styleClass="negrito">
+                            <f:convertNumber pattern="#,##0.00 m²"/>
+                        </h:outputText>
+                    </p:outputPanel>
+                    <p:spacer/>
+                    <h:outputText value="Tipo de Alvará: "/>
+                    <p:selectOneMenu value="#{calculoAlvaraControlador.tipoAlvara}" style="width: 255px">
+                        <f:selectItems value="#{calculoAlvaraControlador.buscarTiposAlvara()}"/>
+                    </p:selectOneMenu>
+                </h:panelGrid>
+
+                <h:panelGrid columns="2" id="gridPesquisa">
+                    <p:commandButton id="btPesquisa" icon="ui-icon-search" title="Pesquisar" value="Pesquisar"
+                                     update="Formulario:tabelaValorDivida" onstart="aguarde.show()"
+                                     process=":Formulario"
+                                     actionListener="#{calculoAlvaraControlador.carregarProcessosParaEmissaoAlvara()}"
+                                     styleClass="operacao prioritario"/>
+
+                        <fc:botaoTargetBlank disabled="#{calculoAlvaraControlador.selecionado.cadastroEconomico eq null}"
+                            actionListener="#{relatorioCadastroEconomicoControlador.gerarRelatorioEconomico(calculoAlvaraControlador.selecionado.cadastroEconomico)}"
+                            label="Emitir BCM" icon="ui-icon-document" id="btnBCM" title="Clique aqui para emitir o BCM."
+                            styleClass="mlef03" imprimeNoDialog="true"/>
+                </h:panelGrid>
+
+                <p:dataTable value="#{calculoAlvaraControlador.alvarasEmissao}" var="alvara"
+                             id="tabelaValorDivida" styleClass="mtop05"
+                             paginator="true" rows="10"
+                             rowStyleClass="#{!alvara.emitir? 'linhaFundoVermelho' : ''}"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Alvará(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             rowsPerPageTemplate="10,50,100" emptyMessage="Nenhum registro encontrado">
+                    <p:ajax event="page" onstart="aguarde.show();" oncomplete="aguarde.hide();" process="@this"
+                            update="@this"/>
+                    <p:column style="width: 1%" headerText="Itens">
+                        <p:rowToggler rendered="#{(!empty alvara.itens and !alvara.itens.get(0).isento)}"/>
+                    </p:column>
+                    <p:column headerText="Tipo Alvará" style="text-align: center">
+                        <h:outputText value="#{alvara.tipoAlvara.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Isento" style="text-align: center">
+                        <h:outputText value="#{(!empty alvara.itens and alvara.itens.get(0).isento) ? 'Sim' : 'Não'}"
+                                      styleClass="#{(!empty alvara.itens and alvara.itens.get(0).isento) ? 'vermelhonegrito' : ''}"/>
+                    </p:column>
+                    <p:column headerText="Exercício" style="text-align: center">
+                        <h:outputText value="#{alvara.ano}"/>
+                    </p:column>
+                    <p:column headerText="Data do Cálculo" sortBy="#{alvara.dataCalculo}"
+                              style="text-align: center">
+                        <h:outputText value="#{alvara.dataCalculo}">
+                            <f:convertDateTime parent="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Vencimento Alvará" style="text-align: center">
+                        <h:outputText value="#{alvara.vencimentoAlvara}">
+                            <f:convertDateTime parent="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Enviar DAMs RedeSim"
+                              rendered="#{alvara.pessoaJuridica ne null and alvara.pessoaJuridica}"
+                              style="text-align: center; width: 90px">
+                        <p:commandButton
+                            actionListener="#{calculoAlvaraControlador.enviarDAMParaRedeSim(alvara.id)}"
+                            disabled="#{(alvara.tipoAlvara ne 'LOCALIZACAO_FUNCIONAMENTO') or !calculoAlvaraControlador.canEmitirDamEmissao(alvara)}"
+                            title="Enviar dans para RedeSim" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                            styleClass="wp-botao-tabela" icon="ui-icon-arrowreturnthick-1-e"/>
+                    </p:column>
+                    <p:column headerText="Enviar Alvará RedeSim"
+                              rendered="#{alvara.pessoaJuridica ne null and alvara.pessoaJuridica}"
+                              style="text-align: center; width: 90px">
+                        <p:commandButton
+                            actionListener="#{calculoAlvaraControlador.enviarAlvaraParaRedeSim(alvara.id)}"
+                            rendered="#{!alvara.dispensaLicenciamento}"
+                            disabled="#{(alvara.tipoAlvara ne 'LOCALIZACAO_FUNCIONAMENTO') or calculoAlvaraControlador.desabilitarEmitirAlvara(alvara)}"
+                            title="Enviar alvará para RedeSim" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                            styleClass="wp-botao-tabela" icon="ui-icon-arrowreturnthick-1-e"/>
+
+                        <p:commandButton icon="ui-icon-arrowreturnthick-1-e"
+                                         title="Enviar Declaração de Dispensa de Licencimaneto para RedeSim"
+                                         styleClass="wp-botao-tabela"
+                                         onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                         update="@this" process="@this"
+                                         actionListener="#{calculoAlvaraControlador.enviarDeclaracaoDispensaLicenciamentoRedeSim(alvara)}"
+                                         rendered="#{alvara.dispensaLicenciamento}">
+                            <p:ajax event="change" process="@this" update="@this"/>
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Emitir DAM" style="text-align: center; width: 90px">
+                        <p:commandButton
+                            actionListener="#{calculoAlvaraControlador.imprimirDAM(alvara)}"
+                            disabled="#{!calculoAlvaraControlador.canEmitirDamEmissao(alvara)}"
+                            title="Emitir o DAM do Alvará" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                            styleClass="wp-botao-tabela" icon="ui-icon-print"/>
+                    </p:column>
+                    <p:column headerText="Emitir Alvará" style="text-align: center; width: 90px">
+                        <p:commandButton icon="ui-icon-print" title="Emitir o Alvará de #{alvara.tipoAlvara.descricaoSimples}"
+                                         styleClass="wp-botao-tabela"
+                                         onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                         update="@this" process="@this"
+                                         actionListener="#{calculoAlvaraControlador.prepararImpressaoAlvara(alvara)}"
+                                         rendered="#{!alvara.dispensaLicenciamento}"
+                                         disabled="#{calculoAlvaraControlador.desabilitarEmitirAlvara(alvara)}">
+                            <p:ajax event="change" process="@this" update="@this"/>
+                        </p:commandButton>
+
+                        <p:commandButton icon="ui-icon-info" title="Dívidas do Alvará"
+                                         styleClass="wp-botao-tabela"
+                                         onstart="aguarde.show()" oncomplete="aguarde.hide(); parcelasAlvara.show();"
+                                         update=":formularioParcelasAlvara"
+                                         actionListener="#{calculoAlvaraControlador.buscarParcelasEmissao(alvara)}"
+                                         rendered="#{alvara.emitir and !alvara.itens.get(0).isento}"/>
+
+                        <p:commandButton icon="ui-icon-print"
+                                         title="Emitir Dispensa de Licencimaneto"
+                                         styleClass="wp-botao-tabela"
+                                         onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                         update="@this" process="@this"
+                                         actionListener="#{calculoAlvaraControlador.imprimirDeclaracaoDispensaLicenciamento(alvara)}"
+                                         rendered="#{alvara.dispensaLicenciamento}">
+                            <p:ajax event="change" process="@this" update="@this"/>
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Recibos" style="text-align: center; width: 90px">
+                        <p:commandButton styleClass="wp-botao-tabela" icon="ui-icon-tag"
+                                         actionListener="#{calculoAlvaraControlador.selecionarCalculo(alvara)}"
+                                         process="@this"
+                                         update=":FormularioRecibo" title="Abrir listagem de recibos do alvará"
+                                         disabled="#{calculoAlvaraControlador.desabilitarEmitirAlvara(alvara)}"
+                                         onstart="aguarde.show()" oncomplete="aguarde.hide(); recibos.show()">
+                            <p:ajax event="change" process="@this" update="@this"/>
+                        </p:commandButton>
+                    </p:column>
+                    <p:rowExpansion>
+                        <p:panel style="border: none" styleClass="mtop05 mbot05">
+                            <p:dataTable emptyMessage="Nenhum registro encontrado"
+                                         style="text-align: center;"
+                                         value="#{alvara.itens}" var="calc">
+
+                                <p:column headerText="Valor (UFM)" sortBy="#{calc.valor}" style="text-align: right">
+                                    <h:outputText
+                                        value="#{converterRealUfm.converterToUFMParaExercicioSemMensagem(calc.valor, alvara.exercicio)}">
+                                        <f:convertNumber pattern="###,##0.0000"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" sortBy="#{calc.valor}" style="text-align: right">
+                                    <h:outputText value="#{calc.valor}" converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Vencimento" sortBy="#{calc.vencimento}"
+                                          style="text-align: center">
+                                    <h:outputText value="#{calc.vencimento}">
+                                        <f:convertDateTime parent="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:panel>
+                    </p:rowExpansion>
+
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+
+        <p:dialog header="Consulta do Cadastro" modal="true" widgetVar="consultaGenerica" width="900" height="500"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  id="dlgConsultaGenerica">
+            <h:form id="formularioConsultaDebito">
+                <fc:pesquisaGenerico id="lista" caminhoAtual="edita" nomeDaClasse="CadastroEconomico"
+                                     dialog="true" pretty="true"
+                                     iconmSelecionar="check-icon.png" novo="#{cadastroEconomicoControlador.novo()}"
+                                     selecionar="#{calculoAlvaraControlador.selecionarObjetoPesquisaGenerico}"
+                                     mostrarHistorico="false" mostrarBotaoNovo="false"
+                                     meuControlador="#{calculoAlvaraControlador.criarComponentePesquisa()}"
+                                     guardarNaSessao="false" pesquisaNoEnter="false"
+                                     updateSelecionarTabela=":Formulario"/>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Recibos do Alvará" modal="true" widgetVar="recibos" width="700"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  id="dlgRecibos" draggable="false" resizable="false">
+            <h:form id="FormularioRecibo">
+                <p:dataTable value="#{calculoAlvaraControlador.montarRecibos()}" var="rec"
+                             emptyMessage="Nenhum recibo gerado para esse Alvará." styleClass="mbot10">
+                    <p:column headerText="Número" style="text-align: center; width: 15%">
+                        <h:outputText value="#{rec.sequencia}/#{rec.alvara.exercicio.ano}"/>
+                    </p:column>
+                    <p:column headerText="Data/Hora" style="text-align: center; width: 30%">
+                        <h:outputText value="#{rec.dataImpressao}">
+                            <f:convertDateTime pattern="dd/MM/yyyy HH:mm"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Responsável" style="text-align: left; width: 35%">
+                        <h:outputText value="#{rec.nomeResposavel}"/>
+                    </p:column>
+                    <p:column headerText="Usuário" style="text-align: left; width: 20%">
+                        <h:outputText value="#{rec.usuarioSistema.login}"/>
+                    </p:column>
+                </p:dataTable>
+
+                <div style="text-align: center; width: 100%">
+                    <p:commandButton styleClass="operacao" onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide(); recibos.hide()" value="OK"
+                                     process="@this" update="@this"
+                                     icon="ui-icon-check"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Estornar Alvará" modal="true" widgetVar="estorno" width="700"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  id="dlgEstorno" draggable="false" resizable="false">
+            <h:form id="FormularioEstorno">
+                <p:panel header="Dados do Estorno do Alvará" styleClass="mbot05">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Usuário: "/>
+                        <h:outputText
+                            value="#{calculoAlvaraControlador.usuarioEstorno.nome}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Data/Hora: "/>
+                        <h:outputText value="#{calculoAlvaraControlador.dataEstorno}"
+                                      styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy hh:mm"/>
+                        </h:outputText>
+
+                        <h:outputText value="Motivo: "/>
+                        <p:inputTextarea value="#{calculoAlvaraControlador.motivoEstorno}"
+                                         autoResize="true" rows="5" maxlength="3000"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counterObsEstorno" cols="50">
+                        </p:inputTextarea>
+                        <p:spacer/>
+                        <h:outputText id="counterObsEstorno" styleClass="azul"/>
+                    </h:panelGrid>
+                </p:panel>
+
+                <div style="text-align: center; width: 100%">
+                    <p:commandButton styleClass="operacao" value="OK" icon="ui-icon-check"
+                                     actionListener="#{calculoAlvaraControlador.estornarCalculosAlvara()}"
+                                     onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                     update=":Formulario:tabViewGeral:panelParcelas"/>
+                    <p:commandButton styleClass="operacao" value="Fechar" icon="ui-icon-close"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide(); estorno.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Dívidas do Alvará" modal="true" widgetVar="parcelasAlvara"
+                  width="1000"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  id="dlgParcelasAlvara" resizable="false">
+            <h:form id="formularioParcelasAlvara">
+                <div style=" max-height: 500px; min-height: 200px; overflow: auto">
+                    <p:scrollPanel mode="native" style="max-height: 100%;">
+                        <p:dataTable id="tabelaParcelas"
+                                     emptyMessage="Nenhuma parcela encontrada"
+                                     var="parcela"
+                                     value="#{calculoAlvaraControlador.parcelas}"
+                                     rowKey="#{parcela.id}"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>PARCELA(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowIndexVar="rowlx"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="DAM" style="width: 8%;">
+                                <h:outputText
+                                    value="#{parcela.dam.numeroDAM}"/>
+                            </p:column>
+                            <p:column headerText="Dívida" style="width: 12%;">
+                                <h:outputText value="#{parcela.resultadoParcela.divida}"/>
+                            </p:column>
+                            <p:column headerText="Exercício" style="width: 5%; text-align: center;">
+                                <h:outputText value="#{parcela.resultadoParcela.exercicio}"/>
+                            </p:column>
+                            <p:column headerText="Tipo de Débito" style="width: 5%;">
+                                <h:outputText value="#{parcela.resultadoParcela.tipoDeDebito}"/>
+                            </p:column>
+                            <p:column headerText="Parcela" style="width: 2%; text-align: center;">
+                                <h:outputText value="#{parcela.resultadoParcela.parcela}"/>
+                            </p:column>
+                            <p:column headerText="SD" style="width: 2%; text-align: center;">
+                                <h:outputText value="#{parcela.resultadoParcela.sd}"/>
+                            </p:column>
+                            <p:column headerText="Vencimento" style="width: 5%; text-align: center;">
+                                <h:outputText value="#{parcela.resultadoParcela.vencimentoToString}"/>
+                            </p:column>
+                            <p:column headerText="Valor" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorOriginal}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Imposto" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorImposto}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Taxa" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorTaxa}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Desconto" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorDesconto}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Juros" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorJuros}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Multa" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorMulta}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Correcao" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorCorrecao}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Honorários" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorHonorarios}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Total" style="text-align: right">
+                                <h:outputText value="#{parcela.resultadoParcela.valorTotal}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Situação da Parcela">
+                                <h:outputText value="#{parcela.resultadoParcela.situacaoDescricaoEnum}"
+                                              title="cod. ${parcela.resultadoParcela.idParcela}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:scrollPanel>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Impressão de Alvará" modal="true" widgetVar="avisoDebitoAlvara" width="700"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  id="dgAvisoDebitoAlvara" draggable="false" resizable="false">
+            <h:form id="FormularioAviso">
+                <div class="alert" style="text-align: center">
+                    <strong>Esse cadastro econômico possui débitos referentes a emissão desse alvará!</strong>
+                </div>
+
+                <div style="text-align: center" class="mbot10">
+                    <strong>Deseja emitir mesmo assim?</strong>
+                </div>
+
+                <div style="text-align: center; width: 100%">
+                    <p:commandButton styleClass="operacao prioritario" value="Sim" icon="ui-icon-check"
+                                     actionListener="#{calculoAlvaraControlador.imprimirAlvara()}"
+                                     update="@this" process="@this"
+                                     oncomplete="avisoDebitoAlvara.hide();"/>
+                    <p:commandButton styleClass="operacao" value="Não" icon="ui-icon-close"
+                                     onstart="aguarde.show();" oncomplete="aguarde.hide(); avisoDebitoAlvara.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+
+</html>

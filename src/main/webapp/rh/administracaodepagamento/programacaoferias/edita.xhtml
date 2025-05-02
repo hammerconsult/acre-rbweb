@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+    >
+<ui:composition template="/corpo.xhtml">
+<ui:define name="body">
+<h:form id="Formulario">
+    <p:panel header="Programação Férias">
+        <h:panelGrid columns="2">
+            <h:outputLabel for="unidadeOrganizacional" value="Local de Trabalho:"/>
+            <p:autoComplete queryDelay="1000" id="unidadeOrganizacional" title="Digite a Hierarquia Organizacional"
+                            value="#{sugestaoFeriasControlador.hierarquiaOrganizacional}"
+                            completeMethod="#{sugestaoFeriasControlador.completaHierarquiaOrganizacional}"
+                            var="ho"
+                            maxResults="10"
+                            itemLabel="#{ho}"
+                            itemValue="#{ho.id}"
+                            forceSelection="true"
+                            size="70"
+                            converter="#{sugestaoFeriasControlador.converterHierarquiaOrganizacional}">
+                <p:ajax event="itemSelect" process="@this"/>
+            </p:autoComplete>
+
+            <h:outputText value="Servidor: "/>
+
+            <p:autoComplete queryDelay="1000" id="servidor" title="Digite o nome do servidor"
+                            value="#{sugestaoFeriasControlador.contratoFP}"
+                            completeMethod="#{sugestaoFeriasControlador.completaContratoFP}"
+                            var="servidor"
+                            itemLabel="#{servidor}"
+                            itemValue="#{servidor.id}"
+                            forceSelection="true"
+                            maxResults="10"
+                            size="70"
+                            converter="#{sugestaoFeriasControlador.converterContratoFP}">
+                <p:ajax event="itemSelect" update="Formulario:tabelaFerias"
+                        listener="#{sugestaoFeriasControlador.setaServidor}"/>
+            </p:autoComplete>
+
+
+            <h:outputText value="Situação das Férias:"/>
+            <h:selectOneMenu value="#{sugestaoFeriasControlador.situacaoFerias}"
+                             style="width: 110px;">
+                <f:selectItems value="#{consultaProgramacaoFeriasControlador.situacoesFerias()}"/>
+            </h:selectOneMenu>
+        </h:panelGrid>
+        <p:commandButton styleClass="mtop05 mrig05"
+                         style="height: 25px"
+                         icon="ui-icon-search"
+                         value="Filtrar"
+                         onstart="statusDialog.show();"
+                         oncomplete="statusDialog.hide();"
+                         actionListener="#{sugestaoFeriasControlador.filtrar}"
+                         update="@form">
+        </p:commandButton>
+
+        <p:dataTable paginator="true"
+                     styleClass="mtop05"
+                     id="tabelaFerias"
+                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                     rowIndexVar="rowIx"
+                     emptyMessage="Não foram localizados registros para serem apresentados"
+                     value="#{sugestaoFeriasControlador.listaSugestaoFerias}"
+                     rows="20"
+                     paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                     rowsPerPageTemplate="20,50,100"
+                     var="sugestao">
+
+            <p:column headerText="Programação" style="text-align: center; width: 60px!important;">
+                <p:commandButton icon="ui-icon-pencil"
+                                 process="@this"
+                                 update=":formDialogProgramacao"
+                                 title="Clique para programar as férias deste servidor."
+                                 actionListener="#{sugestaoFeriasControlador.selecionarSugestaoFerias}"
+                                 disabled="#{sugestao.periodoAquisitivoFL.status eq 'SEM_DIREITO'}"
+                                 onclick="aguarde.show();"
+                                 oncomplete="aguarde.hide();"
+                                 styleClass="icone-25 mrig05">
+                    <f:attribute name="sugestao" value="#{sugestao}"/>
+                </p:commandButton>
+
+                <p:commandButton icon="ui-icon-clear"
+                                 process="@this"
+                                 title="Clique para limpar (remover) a programação de férias deste servidor."
+                                 update=":Formulario:tabelaFerias"
+                                 disabled="#{sugestao.periodoAquisitivoFL.status eq 'SEM_DIREITO'}"
+                                 actionListener="#{sugestaoFeriasControlador.removerProgramacaoDeFerias}"
+                                 onclick="if (!confirm('Tem certeza que deseja limpar a programação de férias deste período aquisitivo?')) {return false; } else {aguarde.show();}"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="icone-25">
+                    <f:attribute name="sugestao" value="#{sugestao}"/>
+                </p:commandButton>
+            </p:column>
+
+            <p:column headerText="Aprovação" style="text-align: center; width: 50px!important;">
+                <p:commandButton icon="ui-icon-check"
+                                 process="@this"
+                                 rendered="#{!sugestao.estaAprovada()}"
+                                 title="Clique para aprovar as férias deste período aquisitivo."
+                                 actionListener="#{sugestaoFeriasControlador.aprovarSugestaoFerias}"
+                                 disabled="#{sugestao.periodoAquisitivoFL.status eq 'SEM_DIREITO'}"
+                                 update=":Formulario:tabelaFerias"
+                                 onclick="statusDialog.show();"
+                                 oncomplete="statusDialog.hide()"
+                                 styleClass="icone-25">
+                    <f:attribute name="sugestao" value="#{sugestao}"/>
+                </p:commandButton>
+
+                <p:commandButton icon="ui-icon-close"
+                                 id="btLimpar"
+                                 process="@this"
+                                 rendered="#{sugestao.estaAprovada()}"
+                                 disabled="#{sugestao.periodoAquisitivoFL.status eq 'SEM_DIREITO'}"
+                                 title="Clique para limpar (remover) a aprovação de férias deste período aquisitivo."
+                                 update=":Formulario:tabelaFerias"
+                                 actionListener="#{sugestaoFeriasControlador.removerAprovacaoDeFerias}"
+                                 onclick="if (!confirm('Tem certeza que deseja limpar a aprovação de férias desta programação?')) {return false; } else {statusDialog.show();}"
+                                 oncomplete="statusDialog.hide()"
+                                 styleClass="icone-25">
+                    <f:attribute name="sugestao" value="#{sugestao}"/>
+                </p:commandButton>
+            </p:column>
+
+            <p:column headerText="Matrícula" style="text-align: right; min-width: 75px;">
+                <h:outputText
+                        value="#{sugestao.periodoAquisitivoFL.contratoFP.matriculaFP.matricula} - #{sugestao.periodoAquisitivoFL.contratoFP.numero}"/>
+            </p:column>
+
+            <p:column headerText="Servidor">
+                <h:outputText value="#{sugestao.periodoAquisitivoFL.contratoFP.matriculaFP.pessoa.nome}"/>
+            </p:column>
+
+            <p:column headerText="P.A." style="text-align: center; min-width: 220px;">
+                <h:outputText value="#{sugestao.periodoAquisitivoFL.inicioVigencia}" style="font-size: 13px;">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+                <h:outputText value=" - "/>
+                <h:outputText value="#{sugestao.periodoAquisitivoFL.finalVigencia}" style="font-size: 13px;">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+                <h:outputText value=" - Saldo"/>
+                <h:outputText value="(#{sugestao.periodoAquisitivoFL.saldoDeDireitoToString})"/>
+            </p:column>
+
+            <p:column headerText="Férias" style="text-align: center;">
+                <h:outputText value="#{sugestao.dataInicio}"
+                              rendered="#{sugestao.dataInicio ne null}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+                <h:outputText value=" - " rendered="#{sugestao.dataInicio ne null}"/>
+                <h:outputText value="#{sugestao.dataFim}"
+                              rendered="#{sugestao.dataInicio ne null}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+
+                <h:outputText value="Não Programadas"
+                              rendered="#{sugestao eq null or sugestao.dataInicio eq null}"
+                              styleClass="azulnegrito"/>
+            </p:column>
+
+            <p:column headerText="Aprovado" style="text-align: center; font-size: 10px;">
+                <h:outputText value="Aprovada"
+                              rendered="#{sugestao.estaAprovada()}"
+                              styleClass="verdenegrito"/>
+
+                <h:outputText value="Não Aprovada"
+                              rendered="#{!sugestao.estaAprovada()}"
+                              styleClass="vermelhonegrito"/>
+            </p:column>
+
+            <p:column headerText="Status P.A." style="text-align: center; font-size: 10px;">
+                <h:outputText value="#{sugestao.periodoAquisitivoFL.status.descricao}"
+                              rendered="#{sugestao.periodoAquisitivoFL.status eq 'CONCEDIDO'}"
+                              styleClass="verdenegrito"/>
+
+                <h:outputText value="#{sugestao.periodoAquisitivoFL.status.descricao}"
+                              rendered="#{sugestao.periodoAquisitivoFL.status eq 'NAO_CONCEDIDO'}"
+                              styleClass="vermelhonegrito"/>
+
+                <h:outputText value="#{sugestao.periodoAquisitivoFL.status.descricao}"
+                              rendered="#{sugestao.periodoAquisitivoFL.status ne 'CONCEDIDO' and sugestao.periodoAquisitivoFL.status ne 'NAO_CONCEDIDO'}"
+                              styleClass="azulnegrito"/>
+            </p:column>
+
+            <p:column headerText="Dt. Aprovação" style="text-align: center;">
+                <h:outputText value="#{sugestao.aprovacaoFerias.dataAprovacao}" rendered="#{sugestao.estaAprovada()}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+            </p:column>
+
+            <p:column headerText="Abn. Pecun." style="text-align: center;">
+                <h:outputText value="Sim"
+                              rendered="#{sugestao.abonoPecunia eq true}"
+                              styleClass="verdenegrito"/>
+
+                <h:outputText value="Não"
+                              rendered="#{sugestao.abonoPecunia ne true}"
+                              styleClass="vermelhonegrito"/>
+            </p:column>
+
+            <p:column headerText="Dias Abn." style="text-align: center;">
+                <h:outputText value="#{sugestao.diasAbono}"/>
+            </p:column>
+        </p:dataTable>
+    </p:panel>
+</h:form>
+
+<p:dialog header="Programar Férias"
+          widgetVar="programacaoFerias"
+          width="400"
+          position="center"
+          style="position: fixed !important;"
+          modal="true"
+          resizable="false">
+    <h:form id="formDialogProgramacao">
+        <h:inputText style="width: 0px; height: 0px; float: left; border : solid #9AC0CD 1px;"/>
+
+        <div class="negrito alinhamentoCentralizado" style="background-color: #9AC0CD; z-index: 90000!important">
+            <h:outputText value="Período Aquisitivo" style="font-size: 14px;"/>
+        </div>
+
+        <div style="border : solid #9AC0CD 2px; text-align: center;" class="negrito">
+            <h:outputText
+                    value="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.periodoAquisitivoFL.inicioVigencia}"
+                    style="font-size: 14px;">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+            <h:outputText value=" - "/>
+            <h:outputText
+                    value="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.periodoAquisitivoFL.finalVigencia}"
+                    style="font-size: 14px;">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+            <h:outputText value=" - Saldo de Direito"/>
+            <h:outputText
+                    value="(#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.periodoAquisitivoFL.saldoDeDireitoToString})"/>
+        </div>
+
+        <style type="text/css">
+            .largura-campo{width: 80px;}
+        </style>
+
+        <h:panelGrid columns="2" styleClass="mtop10" columnClasses="largura-campo, none">
+            <fc:outputLabelObrigatorio value="Data Inicial:"
+                                       for="dataInicial"/>
+            <p:calendar onkeypress="mascara(this, Data)" maxlength="10"
+                        disabled="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.periodoAquisitivoFL.isStatusConcedido()}"
+                        title="Digite a data de Início"
+                        value="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.dataInicio}"
+                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                        id="dataInicial" size="10">
+                <p:ajax event="change"
+                        listener="#{sugestaoFeriasControlador.atribuirDataFinalFromChange}"
+                        process="@this"
+                        update="dataFinal"
+                        onstart="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                    />
+                <p:ajax event="dateSelect"
+                        listener="#{sugestaoFeriasControlador.atribuirDataFinalFromDateSelect}"
+                        process="@this"
+                        update="dataFinal"
+                        onstart="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                    />
+            </p:calendar>
+
+            <fc:outputLabelObrigatorio value="Data Final:"
+                                       for="dataFinal"/>
+            <p:calendar onkeypress="mascara(this, Data)" maxlength="10" title="Digite a data Final"
+                        value="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.dataFim}"
+                        disabled="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.periodoAquisitivoFL.isStatusConcedido()}"
+                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                        id="dataFinal" size="10">
+            </p:calendar>
+        </h:panelGrid>
+
+        <p:separator styleClass="mtop05 mbot05" />
+
+        <h:panelGrid columns="3" columnClasses="largura-campo, none, none">
+            <h:outputLabel value="Dias de Abono:"
+                           for="diasAbono"/>
+            <p:inputText style="text-align: right"
+                         title="Digite a quantidade de dias de abono"
+                         value="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.diasAbono}"
+                         id="diasAbono" maxlength="2" size="10">
+            </p:inputText>
+            <h:outputText value="(Se houver)" styleClass="azul"/>
+        </h:panelGrid>
+
+        <div align="center" class="mtop10">
+            <p:commandButton value="Confirmar"
+                             actionListener="#{sugestaoFeriasControlador.confirmarProgramacao()}"
+                             onclick="aguarde.show()"
+                             disabled="#{sugestaoFeriasControlador.sugestaoFeriasSelecionada.estaAprovada()}"
+                             oncomplete="aguarde.hide();"
+                             icon="ui-icon-check"
+                             styleClass="mrig05"/>
+            <p:commandButton value="Cancelar"
+                             process="@none"
+                             update="@none"
+                             id="btCancelar"
+                             onclick="aguarde.show(); programacaoFerias.hide()"
+                             oncomplete="aguarde.hide()"
+                             immediate="true"
+                             icon="ui-icon-cancel"/>
+        </div>
+    </h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>
+</html>

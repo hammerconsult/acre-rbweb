@@ -1,0 +1,1 @@
+update configempenho set tiporeconhecimento = 'SEM_RECONHECIMENTO_OBRIGACAO_ANTES_EMPENHO_DESPESA'

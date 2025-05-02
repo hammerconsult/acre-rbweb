@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{solicitacaoCotaFinanceiraControlador}"
+                                origem="#{solicitacaoCotaFinanceiraControlador.caminhoPadrao}novo/"/>
+            <p:panel header="Solicitação Financeira">
+
+                <p:remoteCommand name="limparContaFinanceira"
+                                 process="@this"
+                                 actionListener="#{solicitacaoCotaFinanceiraControlador.definirContasComoNull()}"
+                                 update=":Formulario:detalhesAutoCompleteContaFinanceira"/>
+
+                <p:remoteCommand name="limparContaDestinacao"
+                                 process="@this"
+                                 actionListener="#{solicitacaoCotaFinanceiraControlador.definirContaDestComoNull()}"
+                                 update=":Formulario:contaDestinacao"/>
+
+                <h:panelGrid columns="2" id="gridGeral">
+                    <h:outputText value="Número: "/>
+                    <h:outputText
+                        value="#{solicitacaoCotaFinanceiraControlador.selecionado.numero eq null ? 'Gerado pelo sistema' : solicitacaoCotaFinanceiraControlador.selecionado.numero}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Data: "/>
+                    <h:outputText value="#{solicitacaoCotaFinanceiraControlador.selecionado.dtSolicitacao}"
+                                  styleClass="negrito">
+                        <f:convertDateTime type="date"/>
+                    </h:outputText>
+
+                    <h:outputText value="Unidade Orçamentária: "/>
+                    <fc:codigo-descricao-hierarquia
+                        dataMovimento="#{solicitacaoCotaFinanceiraControlador.selecionado.dtSolicitacao}"
+                        tipoHierarquia="ORCAMENTARIA"
+                        unidadeOrganizacional="#{solicitacaoCotaFinanceiraControlador.selecionado.unidadeOrganizacional}"/>
+
+                    <h:outputText value="Situação: "/>
+                    <h:outputText value="#{solicitacaoCotaFinanceiraControlador.selecionado.status.descricao}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Dependência da Execução Orçamentária: "/>
+                    <h:selectOneMenu id="resultanteindependente"
+                                     disabled="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                     title="Selecione a Dependência da Execução Orçamentária da Solicitação Financeira"
+                                     value="#{solicitacaoCotaFinanceiraControlador.selecionado.resultanteIndependente}">
+                        <f:selectItems value="#{solicitacaoCotaFinanceiraControlador.valoresResultanteIndependente}"
+                                       var="ri"
+                                       itemLabel="#{ri.descricao}" itemValue="#{ri}"/>
+                        <p:ajax event="valueChange"
+                                process="@this"
+                                update=":Formulario:elementos :Formulario:valor"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide();setaFoco(':Formulario:subConta_input')"
+                                listener="#{solicitacaoCotaFinanceiraControlador.recuperarElementos()}"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Conta Bancária: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="autoCompleteContaBancaria"
+                                    size="70"
+                                    title="Informe uma conta bancária."
+                                    value="#{solicitacaoCotaFinanceiraControlador.contaBancariaEntidade}"
+                                    completeMethod="#{solicitacaoCotaFinanceiraControlador.completarContasBancarias}"
+                                    converter="#{contaBancariaEntidadeControlador.converterGenerico}"
+                                    disabled="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                    onclick="this.select();"
+                                    onkeyup="if(keyUpCampoVazio(this)){limparContaFinanceira();}"
+                                    var="cbe"
+                                    itemValue="#{cbe.id}"
+                                    itemLabel="#{cbe.toStringAutoComplete()}"
+                                    maxResults="10">
+                        <p:ajax event="itemSelect" process="@this" update=":Formulario:detalhesAutoCompleteContaFinanceira"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Conta Financeira: "/>
+                    <h:panelGrid id="detalhesAutoCompleteContaFinanceira" columns="3" cellpadding="0" cellspacing="0" >
+                        <p:autoComplete queryDelay="1000"
+                                        id="subConta"
+                                        size="70"
+                                        title="Informe uma conta financeira "
+                                        value="#{solicitacaoCotaFinanceiraControlador.selecionado.contaFinanceira}"
+                                        completeMethod="#{solicitacaoCotaFinanceiraControlador.completarSubContas}"
+                                        converter="#{contaFinanceiraControlador.converterGenerico}"
+                                        disabled="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                        onclick="this.select();"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparContaDestinacao();}"
+                                        var="subConta"
+                                        itemValue="#{subConta.id}"
+                                        itemLabel="#{subConta.toStringAutoCompleteContaFinanceira()}"
+                                        maxResults="10">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update=":Formulario:autoCompleteContaBancaria :Formulario:contaDestinacao :Formulario:detalhesAutoCompleteContaFinanceira"
+                                    process="@this"
+                                    listener="#{solicitacaoCotaFinanceiraControlador.definirContaBancaria()}"/>
+                        </p:autoComplete>
+                        <h:outputText value="Saldo: " styleClass="negrito mlef05"/>
+                        <h:outputText value="#{solicitacaoCotaFinanceiraControlador.valorSubConta}"
+                                      styleClass="negrito mlef02">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Conta de Destinação de Recurso: "/>
+                    <h:selectOneMenu id="contaDestinacao"
+                                     value="#{solicitacaoCotaFinanceiraControlador.selecionado.contaDeDestinacao}"
+                                     title="Selecione a Conta de Destinação de Recurso da Solicitação Financeira"
+                                     disabled="#{solicitacaoCotaFinanceiraControlador.selecionado.contaFinanceira eq null or solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                     converter="#{planoDeContasWizardControlador.converterConta}">
+                        <f:selectItems value="#{solicitacaoCotaFinanceiraControlador.contasDeDestinacaoPorSubConta}"/>
+                        <p:ajax event="change"
+                                listener="#{solicitacaoCotaFinanceiraControlador.atualizarFonteComContaDeDestinacao()}"
+                                update=":Formulario:detalhesAutoCompleteContaFinanceira"
+                                process="@this"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Histórico: "/>
+                    <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                        <p:inputTextarea id="historicoSolicitacao"
+                                         value="#{solicitacaoCotaFinanceiraControlador.selecionado.historicoSolicitacao}"
+                                         disabled="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                         title="Informe o campo histórico."
+                                         cols="70"
+                                         rows="3"
+                                         maxlength="255"
+                                         counter="counterHistorico"
+                                         counterTemplate=" {0} Caracteres Restantes."/>
+                        <h:outputText id="counterHistorico" styleClass="mlef05 azul"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Valor Solicitado: "/>
+                    <h:panelGrid id="valor" columns="1" cellspacing="0" cellpadding="0">
+                        <fc:inputMoeda id="valorSolicitado"
+                                       value="#{solicitacaoCotaFinanceiraControlador.selecionado.valorSolicitado}"
+                                       title="Informe o valor da Solicitação Financeira"
+                                       rendered="#{!solicitacaoCotaFinanceiraControlador.isResultanteExecucaoOrcamentaria()}"/>
+
+                        <h:outputText value="#{solicitacaoCotaFinanceiraControlador.selecionado.valorSolicitado}"
+                                      rendered="#{solicitacaoCotaFinanceiraControlador.isResultanteExecucaoOrcamentaria()}"
+                                      converter="moneyConverter"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:outputPanel id="elementos" styleClass="mtop10">
+                    <p:dataTable id="tabelaElementos"
+                                 value="#{solicitacaoCotaFinanceiraControlador.elementos}"
+                                 var="p"
+                                 rendered="#{solicitacaoCotaFinanceiraControlador.isResultanteExecucaoOrcamentaria()}"
+                                 rowKey="#{p.id}"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 styleClass="mtop10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>ELEMENTOS DE DESPESA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Ação" style="text-align: center; width: 8%">
+                            <p:commandButton actionListener="#{solicitacaoCotaFinanceiraControlador.removerElemento(p)}"
+                                             icon="ui-icon-check"
+                                             id="btnAdiciona"
+                                             disabled="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para remover este Elemento de Despesa"
+                                             update=":Formulario:tabelaElementos :Formulario:valor"
+                                             rendered="#{solicitacaoCotaFinanceiraControlador.elementoAdicionado(p)}"
+                                             styleClass="vinteLarguraVinteAltura botao_verde icone_branco"/>
+
+                            <p:commandButton
+                                actionListener="#{solicitacaoCotaFinanceiraControlador.adicionarElemento(p)}"
+                                icon="ui-icon-none"
+                                id="btnRemove"
+                                disabled="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                onclick="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                rendered="#{!solicitacaoCotaFinanceiraControlador.elementoAdicionado(p)}"
+                                title="Clique para adicionar este Elemento de Despesa"
+                                update=":Formulario:tabelaElementos"
+                                process="@this"
+                                styleClass="vinteLarguraVinteAltura botao_vermelho icone_branco"/>
+                        </p:column>
+
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <p:inputText id="valorSolicitado"
+                                         value="#{p.valor}"
+                                         size="20"
+                                         styleClass="alinhamentoDireita"
+                                         onkeydown="mascara(this, mvalor);"
+                                         converter="moneyConverter"
+                                         title="Informe o valor deste Elemento de Despesa"
+                                         disabled="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"
+                                         rendered="#{solicitacaoCotaFinanceiraControlador.elementoAdicionado(p)}">
+                                <p:ajax event="blur"
+                                        listener="#{solicitacaoCotaFinanceiraControlador.calculcarValorSolicitacao()}"
+                                        update=":Formulario:valor"
+                                        process="@this"/>
+                            </p:inputText>
+                        </p:column>
+                        <p:column headerText="Saldo Orçamentário (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{p.saldo}" converter="moneyConverter"/>
+                        </p:column>
+                        <p:column headerText="Projeto/Atividade"
+                                  filterMatchMode="contains"
+                                  filterBy="#{p.despesaORC.provisaoPPADespesa.subAcaoPPA.acaoPPA.toString()}"
+                                  sortBy="#{p.despesaORC.provisaoPPADespesa.subAcaoPPA.acaoPPA.toString()}"
+                                  style="text-align: center">
+                            <h:outputText value="#{p.despesaORC.provisaoPPADespesa.subAcaoPPA.acaoPPA.toString()}"/>
+                        </p:column>
+                        <p:column headerText="Conta"
+                                  filterMatchMode="contains"
+                                  filterBy="#{p.despesaORC.provisaoPPADespesa.contaDeDespesa}"
+                                  sortBy="#{p.despesaORC.provisaoPPADespesa.contaDeDespesa}">
+                            <h:outputText value="#{p.despesaORC.provisaoPPADespesa.contaDeDespesa}"/>
+                        </p:column>
+                        <p:column headerText="Código Reduzido"
+                                  filterMatchMode="contains"
+                                  filterBy="#{p.despesaORC.codigoReduzido}"
+                                  sortBy="#{p.despesaORC.codigoReduzido}"
+                                  style="text-align: center">
+                            <h:outputText value="#{p.despesaORC.codigoReduzido}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{solicitacaoCotaFinanceiraControlador}"
+                             desabilitaSalvar="#{solicitacaoCotaFinanceiraControlador.isRegistroEditavel()}"/>
+
+            <p:commandButton id="btnEnviarAprovar"
+                             value="Enviar para Aprovação"
+                             rendered="#{solicitacaoCotaFinanceiraControlador.isSolicitacaoSalvaAberta()}"
+                             icon="ui-icon-deferir"
+                             process="@this"
+                             actionListener="#{solicitacaoCotaFinanceiraControlador.enviarParaAnalise()}"
+                             styleClass="mtop10 mlef05"
+                             style="width: 150px;height: 30px;"
+                             onclick="if (!confirm('Tem certeza que deseja enviar a solicitacação para aprovação?')) {return false; } else {aguarde.show();}"
+                             title="Clique para enviar esta solicitação para aprovação."/>
+
+            <p:commandButton value="Cancelar Solicitação"
+                             id="btnCancelar"
+                             rendered="#{solicitacaoCotaFinanceiraControlador.isSolicitacaoSalvaAberta()}"
+                             actionListener="#{solicitacaoCotaFinanceiraControlador.prepararSolicitacaoParaCancelar()}"
+                             styleClass="mtop10 mlef05"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             update=":formCancelar"
+                             process="@this :Formulario:gridGeral :Formulario:elementos"
+                             style="width: 150px;height: 30px;"
+                             icon="ui-icon-circle-close"
+                             title="Clique para cancelar a solicitação."
+            />
+        </h:form>
+
+        <p:dialog widgetVar="dialogAprovacao"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formAprovacao">
+                <div align="center">
+                    <p:panel header="Enviar para Aprovação" styleClass="mtop05 mbot05">
+                        <br/>
+                        <h:outputText value="Deseja enviar para Aprovação?"/>
+
+                        <br/><br/><br/>
+                        <h:panelGrid columns="2">
+
+                            <p:commandButton id="botaoEnviar"
+                                             value="SIM"
+                                             process="@this"
+                                             icon="ui-icon-check"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{solicitacaoCotaFinanceiraControlador.enviarParaAnalise}"
+                                             styleClass="padrao mrig10"
+                                             title="Clique para enviar esta solicitação para aprovação."/>
+
+                            <p:commandButton value="NÃO"
+                                             icon="ui-icon-cancel"
+                                             styleClass="padrao"
+                                             process="@this"
+                                             onstart="aguarde.show()"
+                                             oncomplete="dialogAprovacao.hide();aguarde.hide()"
+                                             title="Clique para cancelar esta operação."
+                                             actionListener="#{solicitacaoCotaFinanceiraControlador.cancelarEnvioSolicitacaoAnalise}"/>
+                        </h:panelGrid>
+                    </p:panel>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogCancelar"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  showHeader="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formCancelar">
+                <p:panel header="Cancelar Solicitação" styleClass="mtop05">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio for="data" value="Data: "/>
+                        <p:calendar value="#{solicitacaoCotaFinanceiraControlador.selecionado.dataCancelamento}"
+                                    id="data"
+                                    title="Informe a data do cancelamento."
+                                    pattern="dd/MM/yyyy"
+                                    showOn="button"
+                                    maxlength="10"
+                                    size="12"
+                                    onkeypress="mascara(this, mdata)"
+                                    locale="pt_BR"
+                                    navigator="true"/>
+
+                        <fc:outputLabelObrigatorio value="Motivo: "/>
+                        <h:panelGrid columns="2" cellspacing="0" cellpadding="0">
+                            <p:inputTextarea id="motivo" title="Informe o Motivo do Cancelamento"
+                                             value="#{solicitacaoCotaFinanceiraControlador.selecionado.motivoCancelamento}"
+                                             cols="45"
+                                             rows="5"
+                                             maxlength="3000"
+                                             autoResize="true" counterTemplate="{0} Caracteres Restantes."
+                                             counter="counter"/>
+                            <h:outputText id="counter" styleClass="mlef05 azul"/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+                </p:panel>
+
+                <p:commandButton id="botaoStatus"
+                                 value="Confirmar"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="padrao mtop10 mrig05"
+                                 icon="ui-icon-check"
+                                 process="@this formCancelar"
+                                 actionListener="#{solicitacaoCotaFinanceiraControlador.cancelarSolicitacao()}"
+                                 title="Clique para cancelar a solicitação."/>
+
+                <p:commandButton value="Fechar"
+                                 icon="ui-icon-close"
+                                 onstart="aguarde.show()"
+                                 styleClass="padrao mtop10"
+                                 process="@this"
+                                 oncomplete="dialogCancelar.hide();aguarde.hide()"
+                                 actionListener="#{solicitacaoCotaFinanceiraControlador.cancelarCancelamento()}"
+                                 title="Clique para cancelar o envio da Solicitação para análise"/>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

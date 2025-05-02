@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function acompanhaGeracaoDam() {
+                gerando.show();
+                timer = setInterval(function () {
+                    rcAcompanhaGeracaoDam();
+                }, 1000);
+            }
+
+            function finalizaGeracaoDam() {
+                clearInterval(timer);
+                rcAtualizaFormulario();
+                gerando.hide();
+                download.show();
+            }
+        </script>
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty auditavel="#{true}" controlador="#{malaDiretaGeralControlador}"
+                                origem="#{malaDiretaGeralControlador.caminhoPadrao}"/>
+            <p:remoteCommand name="rcAcompanhaGeracaoDam"
+                             actionListener="#{malaDiretaGeralControlador.acompanharGeracaoDam()}"
+                             update=":formGeracao"/>
+            <p:remoteCommand process="@this" update="@form :formDownload" name="rcAtualizaFormulario"/>
+            <p:panel header="Mala Direta Geral">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Exercício:"/>
+                    <h:outputText value="#{malaDiretaGeralControlador.selecionado.exercicio}" styleClass="negrito"/>
+
+                </h:panelGrid>
+
+                <div
+                    class="alert #{malaDiretaGeralControlador.quantidadeCadastrosDaMalaDireta > 0 ? 'alert-info' : 'alert-error'} mtop10 mbot10">
+                    <h:panelGroup rendered="#{malaDiretaGeralControlador.quantidadeCadastrosDaMalaDireta > 0}">
+                        <table width="100%">
+                            <tr>
+                                <td width="50%" align="left" valign="middle">
+                                    <strong>Atenção!</strong>
+                                    Nessa Mala Direta
+                                    <h:outputText value="#{malaDiretaGeralControlador.quantidadeCadastrosDaMalaDireta}"
+                                                  styleClass="azulnegrito">
+                                        <f:convertNumber pattern="###,##0"/>
+                                    </h:outputText>
+                                    cadastros foram incluídos.
+                                </td>
+                                <td width="50%" align="right" valign="middle">
+                                    <p:commandButton actionListener="#{malaDiretaGeralControlador.imprimirDams()}"
+                                                     value="Imprimir Todos #{malaDiretaGeralControlador.selecionado.tipoMalaDireta.cobranca ? 'DAMs' : ''}" styleClass="operacao prioritario"
+                                                     icon="ui-icon-print"
+                                                     onclick="acompanhaGeracaoDam()"/>
+                                    <p:commandButton value="Imprimir Listagem de Cadastros"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide();"
+                                                     icon="ui-icon-print"
+                                                     actionListener="#{malaDiretaGeralControlador.imprimirCadastros()}"
+                                                     styleClass="operacao"/>
+
+                                    <p:commandButton value="Enviar Todos e-mails"
+                                                     onclick="enviaTodosEmail.show()"
+                                                     icon="ui-icon-mail-closed"
+                                                     styleClass="operacao"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </h:panelGroup>
+                    <h:panelGroup rendered="#{malaDiretaGeralControlador.quantidadeCadastrosDaMalaDireta eq 0}">
+                        <strong>Atenção!</strong>
+                        Nenhum cadastro incluído nessa Mala Direta.
+                    </h:panelGroup>
+                </div>
+
+                <h:outputLabel value="Pesquisar Por Cadastro:"
+                               rendered="#{malaDiretaGeralControlador.selecionado.tipoCadastro ne 'PESSOA'}"
+                               styleClass="negrito"/>
+                <h:panelGrid columns="3"
+                             rendered="#{malaDiretaGeralControlador.selecionado.tipoCadastro ne 'PESSOA'}">
+                    <h:outputLabel value="Inscrição Inicial: "/>
+                    <p:inputText value="#{malaDiretaGeralControlador.filtro.filtroImovel.inscricaoIncial}"
+                                 maxlength="15" size="16"/>
+                    <br/>
+                    <h:outputLabel value="Inscrição Final: "/>
+                    <p:inputText value="#{malaDiretaGeralControlador.filtro.filtroImovel.inscricaoFinal}"
+                                 maxlength="15" size="16"/>
+                    <p:commandButton value="Pesquisar"
+                                     icon="ui-icon-search"
+                                     styleClass="operacao"
+                                     title="Clique aqui para pesquisar os cadastros na mala direta de IPTU"
+                                     actionListener="#{malaDiretaGeralControlador.filtrarCadastros()}"
+                                     update="panel-cadastros"
+                                     onclick="aguarde.show()" oncomplete="aguarde.hide()"/>
+                </h:panelGrid>
+
+                <p:outputPanel id="panel-cadastros">
+                    <p:dataTable id="tabela-cadastros" styleClass="mtop10"
+                                 value="#{malaDiretaGeralControlador.itensMalaDireta}"
+                                 var="cadastro"
+                                 emptyMessage="Nenhum DAM gerado para essa Mala Direta.">
+                        <f:facet name="header">
+                            <h:panelGrid columns="3"
+                                         columnClasses="widthTrintaPorCento alinhamentoEsquerda, widthTrintaPorCento, widthTrintaPorCento alinhamentoDireita">
+                                <h:panelGroup>
+                                    <p:commandButton id="botaoQuantidade5"
+                                                     style="height: 25px;"
+                                                     styleClass="#{malaDiretaGeralControlador.quantidadePorPagina eq 5 ? 'botao-cabecalho-selecionado' : ''}"
+                                                     value="5"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-cadastros"
+                                                     actionListener="#{malaDiretaGeralControlador.alterarQuantidadeDeRegistrosDaTabela(5)}"/>
+                                    <p:commandButton id="botaoQuantidade10"
+                                                     style="height: 25px;"
+                                                     styleClass="#{malaDiretaGeralControlador.quantidadePorPagina eq 10 ? 'botao-cabecalho-selecionado' : ''}"
+                                                     value="10"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-cadastros"
+                                                     actionListener="#{malaDiretaGeralControlador.alterarQuantidadeDeRegistrosDaTabela(10)}"/>
+                                    <p:commandButton id="botaoQuantidade25"
+                                                     style="height: 25px;"
+                                                     styleClass="#{malaDiretaGeralControlador.quantidadePorPagina eq 25 ? 'botao-cabecalho-selecionado' : ''}"
+                                                     value="25"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-cadastros"
+                                                     actionListener="#{malaDiretaGeralControlador.alterarQuantidadeDeRegistrosDaTabela(25)}"/>
+                                    <p:commandButton id="botaoQuantidade50"
+                                                     style="height: 25px;"
+                                                     styleClass="#{malaDiretaGeralControlador.quantidadePorPagina eq 50 ? 'botao-cabecalho-selecionado' : ''}"
+                                                     value="50"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-cadastros"
+                                                     actionListener="#{malaDiretaGeralControlador.alterarQuantidadeDeRegistrosDaTabela(50)}"/>
+                                    <p:commandButton id="botaoQuantidade100"
+                                                     style="height: 25px;"
+                                                     styleClass="#{malaDiretaGeralControlador.quantidadePorPagina eq 100 ? 'botao-cabecalho-selecionado' : ''}"
+                                                     value="100"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-cadastros"
+                                                     actionListener="#{malaDiretaGeralControlador.alterarQuantidadeDeRegistrosDaTabela(100)}"/>
+                                </h:panelGroup>
+                                <h:panelGroup>
+                                    <p:commandButton id="botaoPaginaAnterior" style="height: 25px;"
+                                                     icon="ui-icon-seek-prev"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-cadastros"
+                                                     disabled="#{!malaDiretaGeralControlador.isPermitidoIrParaPaginaAnterior()}"
+                                                     actionListener="#{malaDiretaGeralControlador.irParaPaginaAnterior()}"/>
+                                    <p:commandButton id="botaoPaginaPosterior" style="height: 25px;"
+                                                     icon="ui-icon-seek-next"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-cadastros"
+                                                     disabled="#{!malaDiretaGeralControlador.isPermitidoIrParaPaginaPosterior()}"
+                                                     actionListener="#{malaDiretaGeralControlador.irParaPaginaPosterior()}"/>
+                                </h:panelGroup>
+                                <h:panelGroup>
+                                    <h:outputLabel value="Total de Registros: " styleClass="azul"
+                                                   style="font-weight: normal"/>
+                                    <h:outputText value="#{malaDiretaGeralControlador.quantidadeTotal}"
+                                                  styleClass="azulnegrito">
+                                        <f:convertNumber pattern="###,##0"/>
+                                    </h:outputText>
+                                </h:panelGroup>
+                            </h:panelGrid>
+                        </f:facet>
+                        <p:column headerText="Tipo da Mala">
+                            #{cadastro.malaDiretaGeral.tipoMalaDireta.descricao}
+                        </p:column>
+                        <p:column headerText="Cadastro">
+                            #{cadastro.descricao}
+                        </p:column>
+                        <p:column headerText="DAM" styleClass="centralizado"
+                                  rendered="#{malaDiretaGeralControlador.selecionado.tipoMalaDireta.cobranca}">
+                            #{cadastro.dam.numeroDAM}
+                        </p:column>
+                        <p:column headerText="Valor" styleClass="alinhamentoDireita"
+                                  rendered="#{malaDiretaGeralControlador.selecionado.tipoMalaDireta.cobranca}">
+                            <h:outputText value="#{cadastro.dam.valorTotal}">
+                                <f:convertNumber pattern="R$ ###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Imprimir" style="text-align: center; width: 30px">
+                            <p:commandButton
+                                icon="ui-icon-print"
+                                actionListener="#{malaDiretaGeralControlador.imprimirDam(cadastro)}"
+                                onclick="aguarde.show()" oncomplete="aguarde.hide()" styleClass="wp-botao-tabela"/>
+                        </p:column>
+                        <p:column headerText="Enviar Email" style="text-align: center; width: 30px">
+                            <p:commandButton
+                                icon="ui-icon-mail-closed"
+                                actionListener="#{malaDiretaGeralControlador.prepararEmail(cadastro)}"
+                                update=":formEnviaEmail"
+                                onclick="aguarde.show()" oncomplete="aguarde.hide(); enviaEmail.show()"
+                                styleClass="wp-botao-tabela"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapeVisualizarPretty controlador="#{malaDiretaGeralControlador}" mostrarEditar="false"
+                                       mostrarExcluir="false"/>
+
+        </h:form>
+        <p:dialog modal="true" widgetVar="gerando"
+                  style="position: fixed !important; z-index: 99999999 !important;"
+                  position="center"
+                  showHeader="false"
+                  draggable="false" closable="false" resizable="false">
+            <h:form id="formGeracao">
+                <center>
+                    <p:outputPanel>
+                        <h:outputText
+                            value="Gerando Impressão dos DAMs..."
+                            style="color: darkgray"/>
+                        <br/>
+                        <h:outputText
+                            value="#{malaDiretaGeralControlador.assistenteImpressaoMalaDireta.porcentagemExecucao > 0 ? malaDiretaGeralControlador.assistenteImpressaoMalaDireta.porcentagemExecucao : 'Aguarde...'}"
+                            style="color: darkgray"/>
+                        <h:outputText
+                            value="#{malaDiretaGeralControlador.assistenteImpressaoMalaDireta.porcentagemExecucao > 0 ? '%' : ''}"
+                            style="color: darkgray"/>
+                        <br/>
+                    </p:outputPanel>
+                    <h:graphicImage value="/img/ajaxloading.gif"/>
+                </center>
+            </h:form>
+        </p:dialog>
+        <p:dialog modal="true" width="800" id="dlgDownload" widgetVar="download" closable="false">
+            <div class="alert alert-info centralizado">
+                <strong>
+                    <h:outputText value="#{malaDiretaGeralControlador.quantidadeCadastrosDaMalaDireta}"
+                                  styleClass="azulnegrito">
+                        <f:convertNumber pattern="###,##0"/>
+                    </h:outputText>
+                    DAMs prontos para download!
+                </strong>
+                <br/><br/>
+                <h:form id="formDownload">
+                    <p:outputPanel id="botao">
+                        <p:commandButton id="downloadLink"
+                                         value="Download"
+                                         ajax="false"
+                                         icon="ui-icon-circle-arrow-s"
+                                         disabled="#{malaDiretaGeralControlador.fileDownload eq null}"
+                                         process="@form"
+                                         onclick="download.hide()"
+                                         styleClass="operacao prioritario">
+                            <p:fileDownload
+                                value="#{malaDiretaGeralControlador.fazerDownloadDoArquivo()}"/>
+                        </p:commandButton>
+                    </p:outputPanel>
+                </h:form>
+            </div>
+        </p:dialog>
+
+        <p:dialog modal="true" widgetVar="enviaEmail"
+                  style="position: fixed !important; z-index: 99999999 !important;"
+                  position="center"
+                  header="Confirme o e-mail do contribuinte"
+                  draggable="false" closable="false" resizable="false">
+            <h:form id="formEnviaEmail">
+                <center>
+                    <h:panelGrid columns="2">
+                        <h:outputLabel value="Email:"/>
+                        <p:inputText value="#{malaDiretaGeralControlador.email}" size="70"/>
+
+                        <p:commandButton
+                            icon="ui-icon-cancel"
+                            value="Cancelar"
+                            styleClass="operacao"
+                            onclick="enviaEmail.hide()"/>
+
+                        <p:commandButton
+                            icon="ui-icon-mail-closed"
+                            value="Enviar"
+                            styleClass="operacao"
+                            actionListener="#{malaDiretaGeralControlador.enviarEmail()}"
+                            onclick="aguarde.show()" oncomplete="aguarde.hide()"/>
+                    </h:panelGrid>
+
+                </center>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true" widgetVar="enviaTodosEmail"
+                  style="position: fixed !important; z-index: 99999999 !important;"
+                  position="center"
+                  header="Confirme o e-mail do contribuinte"
+                  draggable="false" closable="false" resizable="false">
+
+            <center>
+                <div class="alert alert-danger">
+                    <strong>Atenção!</strong><br/>
+                    Ao continuar com essa operação TODOS os contribuintes vinculados a essa mala direta que tem email informado em seu cadastro receberão a comunicação.
+                    <br/>
+                    <strong>Continue com a operação apenas se você tem certeza!</strong><br/>
+                </div>
+                <h:panelGrid columns="2">
+
+                    <p:commandButton
+                        icon="ui-icon-cancel"
+                        value="Cancelar"
+                        styleClass="operacao"
+                        onclick="enviaTodosEmail.hide()"/>
+
+                    <p:commandButton
+                        icon="ui-icon-mail-closed"
+                        value="Enviar"
+                        styleClass="operacao"
+                        actionListener="#{malaDiretaGeralControlador.enviarTodosEmails()}"
+                        onclick="aguarde.show()" oncomplete="aguarde.hide(); enviaTodosEmail.hide()"/>
+                </h:panelGrid>
+            </center>
+        </p:dialog>
+
+
+    </ui:define>
+</ui:composition>
+</html>

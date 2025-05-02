@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <div class="col-md-12 centralizado mbot10">
+                <h1>GRUPO PATRIMONIAL</h1>
+            </div>
+            <center>
+                <div class="btn-group mbot10">
+                    <button type="button" class="btn btn-primary" name="qtd"
+                            onclick="pesquisarGrupoBem(10)">TOP 10
+                    </button>
+                    <button type="button" class="btn btn-primary" name="qtd"
+                            onclick="pesquisarGrupoBem(20)">TOP 20
+                    </button>
+                    <button type="button" class="btn btn-primary" name="qtd"
+                            onclick="pesquisarGrupoBem(50)">TOP 50
+                    </button>
+            </div>
+            </center>
+            <div class="col-md-12 text-raleway painelGraficos" style="background-color: #eaeaea!important;">
+                <div class="col-md-4 painel-grafico grafico1">
+                    <div class="ibox">
+                        <div class="ibox-content">
+                            <div class="row" style="height: 100% !important;">
+                                <canvas id="chartGrupoBem"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12 centralizado mbot10">
+                <h1>BENS BAIXADOS</h1>
+            </div>
+            <center>
+                <div class="btn-group mbot10">
+                    <button type="button" class="btn btn-primary" name="qtd"
+                            onclick="pesquisarBaixaBens(10)">TOP 10
+                    </button>
+                    <button type="button" class="btn btn-primary" name="qtd"
+                            onclick="pesquisarBaixaBens(20)">TOP 20
+                    </button>
+                    <button type="button" class="btn btn-primary" name="qtd"
+                            onclick="pesquisarBaixaBens(50)">TOP 50
+                    </button>
+                </div>
+            </center>
+            <div class="col-md-12 text-raleway painelGraficos" style="background-color: #eaeaea!important;">
+                <div class="col-md-4 painel-grafico grafico2">
+                    <div class="ibox">
+                        <div class="ibox-content">
+                            <div class="row" style="height: 100% !important;">
+                                <canvas id="chartBensBaixados"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </h:form>
+
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/chart_js/dist/Chart.js"></script>
+
+        <script type="text/javascript">
+            var charGrupoBem = null;
+            var charBaixaBens = null;
+
+            window.onload = function () {
+                pesquisar(10)
+            };
+
+            function mudarPainelParaDoze() {
+                $(".painel-grafico").removeClass("col-md-4")
+            }
+
+            function pesquisar(quantidadeMax) {
+                pesquisarGrupoBem(quantidadeMax);
+                pesquisarBaixaBens(quantidadeMax);
+
+            }
+
+            function pesquisarGrupoBem(quantidadeMax) {
+                limparGrupoBem();
+                fixaPorcentagem();
+                realizarBuscarGrupobem(quantidadeMax);
+                mudarPainelParaDoze();
+            }
+
+            function pesquisarBaixaBens(quantidadeMax) {
+                limparBaixaBens();
+                fixaPorcentagem();
+                realizarBuscarBaixaBens(quantidadeMax);
+                mudarPainelParaDoze();
+
+            }
+
+            function limparGrupoBem() {
+                try {
+                    if (this.charGrupoBem != null) {
+                        this.charGrupoBem.destroy();
+                    }
+                } catch (exception_var_1) {
+                    console.log(exception_var_1)
+                }
+            }
+
+            function limparBaixaBens() {
+                try {
+                    if (this.charBaixaBens != null) {
+                        this.charBaixaBens.destroy();
+                    }
+                } catch (exception_var_1) {
+                    console.log(exception_var_1)
+                }
+            }
+
+            function fixaPorcentagem() {
+                // Show tooltips always even the stats are zero
+
+                Chart.pluginService.register({
+                    beforeRender: function (chart) {
+                        if (chart.config.options.showAllTooltips) {
+                            // create an array of tooltips
+                            // we can't use the chart tooltip because there is only one tooltip per chart
+                            chart.pluginTooltips = [];
+                            chart.config.data.datasets.forEach(function (dataset, i) {
+                                chart.getDatasetMeta(i).data.forEach(function (sector, j) {
+                                    chart.pluginTooltips.push(new Chart.Tooltip({
+                                        _chart: chart.chart,
+                                        _chartInstance: chart,
+                                        _data: chart.data,
+                                        _options: chart.options.tooltips,
+                                        _active: [sector]
+                                    }, chart));
+                                });
+                            });
+
+                            // turn off normal tooltips
+                            chart.options.tooltips.enabled = false;
+                        }
+                    },
+                    afterDraw: function (chart, easing) {
+                        if (chart.config.options.showAllTooltips) {
+                            // we don't want the permanent tooltips to animate, so don't do anything till the animation runs atleast once
+                            if (!chart.allTooltipsOnce) {
+                                if (easing !== 1)
+                                    return;
+                                chart.allTooltipsOnce = true;
+                            }
+
+                            // turn on tooltips
+                            chart.options.tooltips.enabled = true;
+                            Chart.helpers.each(chart.pluginTooltips, function (tooltip) {
+                                tooltip.initialize();
+                                tooltip.update();
+                                // we don't actually need this since we are not animating tooltips
+                                tooltip.pivot();
+                                tooltip.transition(easing).draw();
+                            });
+                            chart.options.tooltips.enabled = false;
+                        }
+                    }
+                });
+            }
+
+            function realizarBuscarGrupobem(quantidadeMax) {
+                aguarde.show();
+
+                var chartGrupoBem = document.getElementById("chartGrupoBem");
+                if (chartGrupoBem != null) {
+                    chartGrupoBem = chartGrupoBem.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/grupobem-hierarquia?quantidadeMax=' + quantidadeMax,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoGrupoBemPorHierarquia(chartGrupoBem, JSON.parse(retorno));
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+            }
+
+            function tratarRetornoGrupoBemPorHierarquia(chartGrupoBem, retorno) {
+                this.charGrupoBem = new Chart(chartGrupoBem, retorno);
+
+                retorno.options.tooltips = {
+
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorInteiroDashboard(retorno.data.datasets[t.datasetIndex].data[t.index]);
+                        }
+                    }
+                };
+                retorno.options.scales = {
+                    xAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorInteiroDashboard(value);
+                            }
+                        }
+                    }]
+                };
+
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom'
+                };
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+                retorno.options.title = {
+                    display: true,
+                    text: "Quantidade de Grupo Patrimonial por Unidade",
+                    fontSize: 20
+                };
+                aguarde.hide();
+            }
+
+            function realizarBuscarBaixaBens(quantidadeMax) {
+                aguarde.show();
+
+                var chartBensBaixados = document.getElementById("chartBensBaixados");
+                if (chartBensBaixados != null) {
+                    chartBensBaixados = chartBensBaixados.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/baixa-de-bens?quantidadeMax=' + quantidadeMax,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoBaixaBensPorHierarquia(chartBensBaixados, JSON.parse(retorno));
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+            }
+
+            function tratarRetornoBaixaBensPorHierarquia(chartBensBaixados, retorno) {
+                this.charBaixaBens = new Chart(chartBensBaixados, retorno);
+
+                retorno.options.tooltips = {
+
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorInteiroDashboard(retorno.data.datasets[t.datasetIndex].data[t.index]);
+                        }
+                    }
+                };
+                retorno.options.scales = {
+                    xAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorInteiroDashboard(value);
+                            }
+                        }
+                    }]
+                };
+
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom'
+                };
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+                retorno.options.title = {
+                    display: true,
+                    text: "Quantidade de Bens Baixados por Unidade",
+                    fontSize: 20
+                };
+                aguarde.hide();
+            }
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

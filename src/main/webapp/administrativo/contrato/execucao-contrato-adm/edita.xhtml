@@ -1,0 +1,1114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:fcc="http://java.sun.com/jsf/composite/components/contabil">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function scrollPanel() {
+                window.scrollTo(0, 500);
+            }
+        </script>
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="limparDadosContrato"
+                             process="@this"
+                             actionListener="#{execucaoContratoControlador.definirExecucaoContratoComoNull()}"
+                             update=":Formulario:tab-view-geral panelVerContrato"/>
+
+            <fc:cabecalhoPretty origem="#{execucaoContratoControlador.caminhoPadrao}listar/"
+                                controlador="#{execucaoContratoControlador}"/>
+
+            <p:panel header="Execução de Contrato">
+
+                <h:panelGrid columns="2" id="gridContrato">
+                    <fc:outputLabelObrigatorio value="Contrato: "/>
+                    <h:panelGrid columns="3">
+                        <p:autoComplete queryDelay="1000"
+                                        id="contrato"
+                                        size="70"
+                                        title="Informe um contrato"
+                                        value="#{execucaoContratoControlador.contrato}"
+                                        completeMethod="#{execucaoContratoControlador.completarContrato}"
+                                        converter="#{contratoAdmControlador.converterGenerico}"
+                                        disabled="#{execucaoContratoControlador.hasReservaDotacao()}"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px;max-width: 1000px"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparDadosContrato();}"
+                                        var="cont"
+                                        itemValue="#{cont.id}"
+                                        itemLabel="#{cont}">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide();scrollPanel()"
+                                    listener="#{execucaoContratoControlador.recuperarDadosContrato}"
+                                    update=":Formulario:tab-view-geral panelVerContrato"
+                                    process="@this"/>
+                        </p:autoComplete>
+
+                        <p:outputPanel id="panelVerContrato">
+                            <p:commandButton process="@none"
+                                             id="btnVerContrato"
+                                             icon="ui-icon-search"
+                                             disabled="#{execucaoContratoControlador.contrato eq null}"
+                                             update="@none"
+                                             onclick="window.open('#{request.contextPath}/contrato-adm/ver/#{execucaoContratoControlador.contrato.id}/','_blank');"/>
+                        </p:outputPanel>
+                    </h:panelGrid>
+
+                    <h:outputText value="Origem da Execução: "
+                                  rendered="#{execucaoContratoControlador.movimentoOrigemExecucaoSelecionado ne null}"/>
+                    <p:commandLink
+                        rendered="#{execucaoContratoControlador.movimentoOrigemExecucaoSelecionado ne null}"
+                        update="@none"
+                        onclick="window.open('#{request.contextPath}#{execucaoContratoControlador.caminhoMovimentoOrigemExecucao}','_blank');">
+                        <h:outputText
+                            styleClass="negrito"
+                            value="#{execucaoContratoControlador.movimentoOrigemExecucaoSelecionado.toString()}"/>
+                    </p:commandLink>
+                </h:panelGrid>
+
+                <p:tabView id="tab-view-geral" styleClass="mtop10">
+
+                    <p:tab title="Execução" id="tabExecucao">
+                        <p:wizard showNavBar="true"
+                                  backLabel="Voltar"
+                                  nextLabel="Próximo"
+                                  showStepStatus="true"
+                                  rendered="#{execucaoContratoControlador.contrato ne null}"
+                                  flowListener="#{execucaoContratoControlador.onFlowProcess}">
+                            <p:tab title="Dados da Execução" id="execucao">
+                                <p:panel id="panel-execucao">
+                                    <h:panelGrid cellpadding="2" cellspacing="2"
+                                                 id="gridExecucao"
+                                                 rendered="#{execucaoContratoControlador.contrato ne null}"
+                                                 columns="2">
+
+                                        <h:outputText value="Número: "/>
+                                        <h:outputText
+                                            value="#{execucaoContratoControlador.selecionado.numero}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Valor da Execução: "/>
+                                        <h:outputText
+                                            value="#{execucaoContratoControlador.selecionado.valor}"
+                                            styleClass="negrito"
+                                            converter="moneyConverter"/>
+
+                                        <fc:outputLabelObrigatorio value="Forma de Entrega: "/>
+                                        <h:panelGrid columns="3">
+                                            <h:selectOneMenu
+                                                disabled="#{execucaoContratoControlador.hasReservaDotacao()}"
+                                                value="#{execucaoContratoControlador.selecionado.formaEntrega}"
+                                                title="Informe a forma de entrega da execução.">
+                                                <f:selectItems
+                                                    value="#{execucaoContratoControlador.formasEntrega}"/>
+                                                <p:ajax event="change"
+                                                        process="@this"
+                                                        update="panel-execucao"/>
+                                            </h:selectOneMenu>
+
+                                            <p:outputPanel
+                                                rendered="#{execucaoContratoControlador.selecionado.formaEntrega.isParcelada()}">
+                                                <div class="label label-info"
+                                                     style="padding: 0.5%; margin-left: 5px; font-weight: normal">
+                                                    Permite empenho do tipo 'GLOBAL' ou 'ESTIMATIVO'
+                                                </div>
+                                            </p:outputPanel>
+
+                                            <p:outputPanel
+                                                rendered="#{execucaoContratoControlador.selecionado.formaEntrega.isUnica()}">
+                                                <div class="label label-info"
+                                                     style="padding: 0.5%; margin-left: 5px; font-weight: normal">
+                                                    Permite empenho do tipo 'ORDINÁRIO'
+                                                </div>
+                                            </p:outputPanel>
+                                        </h:panelGrid>
+
+                                        <fc:outputLabelObrigatorio value="Unidade Orçamentária: "/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        id="unidadeOrc"
+                                                        size="70"
+                                                        title="Informe uma hierarquia orçamentária."
+                                                        value="#{execucaoContratoControlador.selecionado.hierarquiaOrcamentaria}"
+                                                        completeMethod="#{execucaoContratoControlador.completarHierarquiaOrcamentaria}"
+                                                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                        disabled="#{execucaoContratoControlador.hasReservaDotacao()}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 1000px"
+                                                        var="hoOrc"
+                                                        itemValue="#{hoOrc.id}"
+                                                        itemLabel="#{hoOrc}">
+                                            <p:ajax event="itemSelect"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    process="@this"/>
+                                        </p:autoComplete>
+                                    </h:panelGrid>
+
+                                    <p:dataTable paginator="true"
+                                                 id="table-itens-execucao-qtde"
+                                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                 rowIndexVar="rowIx"
+                                                 styleClass="mtop05"
+                                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                                 value="#{execucaoContratoControlador.selecionado.itensQuantidade}"
+                                                 rendered="#{execucaoContratoControlador.hasItensExecucaoQuantidade()}"
+                                                 paginatorPosition="top"
+                                                 rows="10"
+                                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='negrito titulo-tabela mrig10'>ITENS EXECUÇÃO POR QUANTIDADE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                 rowsPerPageTemplate="10,25,50,100"
+                                                 var="itemExecQtde">
+                                        <p:column headerText="Remover" style="text-align: center; width: 5%">
+                                            <p:commandButton icon="ui-icon-trash"
+                                                             process="@this"
+                                                             disabled="#{execucaoContratoControlador.hasReservaDotacao()}"
+                                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                             oncomplete="aguarde.hide()"
+                                                             actionListener="#{execucaoContratoControlador.removerExecucaoContratoItemQuantidade(itemExecQtde)}"
+                                                             title="Clique para remover este registro."
+                                                             update=":Formulario:tab-view-geral:panel-execucao :Formulario:tab-view-geral:panelReservas"/>
+                                        </p:column>
+                                        <p:column headerText="Lote" style="text-align: left; width: 5%">
+                                            <h:outputText value="#{itemExecQtde.itemContrato.itemAdequado.numeroLote}"/>
+                                        </p:column>
+                                        <p:column headerText="Item" style="text-align: left; width: 40%">
+                                            <h:outputText value="#{itemExecQtde.itemContrato.numeroDescricao}"/>
+                                        </p:column>
+                                        <p:column
+                                            headerText="Grupo"
+                                            style="text-align: left; width: 50px; ">
+                                            <h:outputText
+                                                value="#{itemExecQtde.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa.grupo}"/>
+                                        </p:column>
+                                        <p:column
+                                            headerText="Conta" styleClass="alinhamentoEsquerda">
+                                            <ad:conta-desdobrada-por-grupo
+                                                styleClass="default"
+                                                grupoContaDespesa="#{itemExecQtde.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa}"/>
+                                        </p:column>
+                                        <p:column headerText="Qtde no Contrato"
+                                                  style="text-align: right;">
+                                            <fc:output-mascara-unidade-medida
+                                                tipoMascara="#{itemExecQtde.mascaraQuantidade}"
+                                                value="#{itemExecQtde.itemContrato.quantidadeTotalContrato}"/>
+                                        </p:column>
+                                        <p:column headerText="Qtde Disponível" style="text-align: right;">
+                                            <fc:output-mascara-unidade-medida
+                                                tipoMascara="#{itemExecQtde.mascaraQuantidade}"
+                                                value="#{itemExecQtde.quantidadeDisponivel}"/>
+                                        </p:column>
+                                        <p:column headerText="Qtde da Execução"
+                                                  style="text-align: right;">
+                                            <p:outputPanel id="qtde-utilizada">
+                                                <fc:input-mascara-unidade-medida
+                                                    tipoMascara="#{itemExecQtde.mascaraQuantidade}"
+                                                    size="15"
+                                                    value="#{itemExecQtde.quantidadeUtilizada}"
+                                                    disabled="#{execucaoContratoControlador.hasReservaDotacao()}"
+                                                    update=":Formulario:tab-view-geral:table-itens-execucao-qtde:valorTotalQtde
+                                                            :Formulario:tab-view-geral:table-itens-execucao-qtde:qtde-utilizada
+                                                            :Formulario:tab-view-geral:gridExecucao"
+                                                    process="@this"
+                                                    listener="#{execucaoContratoControlador.processarQuantidadeExecucaoContratoItem(itemExecQtde)}"/>
+                                            </p:outputPanel>
+                                        </p:column>
+                                        <p:column headerText="Valor Unitário (R$)" style="text-align: right;">
+                                            <fc:output-mascara-unidade-medida
+                                                tipoMascara="#{itemExecQtde.mascaraValorUnitario}"
+                                                value="#{itemExecQtde.valorUnitario}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor Total (R$)" style="text-align: right">
+                                            <p:outputPanel id="valorTotalQtde">
+                                                <h:outputText value="#{itemExecQtde.valorTotal}">
+                                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </p:outputPanel>
+                                        </p:column>
+                                    </p:dataTable>
+
+                                    <p:dataTable paginator="true"
+                                                 id="table-itens-execucao"
+                                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                 rowIndexVar="rowIx"
+                                                 styleClass="mtop20 mbot05"
+                                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                                 value="#{execucaoContratoControlador.selecionado.itensValor}"
+                                                 rendered="#{execucaoContratoControlador.hasItensExecucaoValor()}"
+                                                 rows="10"
+                                                 paginatorPosition="top"
+                                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='negrito titulo-tabela mrig10'>ITENS EXECUÇÃO POR VALOR&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                 rowsPerPageTemplate="10,25,50,100"
+                                                 var="itemExecValor">
+                                        <p:column headerText="Remover" style="text-align: center; width: 5%">
+                                            <p:commandButton icon="ui-icon-trash"
+                                                             process="@this"
+                                                             disabled="#{execucaoContratoControlador.hasReservaDotacao()}"
+                                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                             oncomplete="aguarde.hide()"
+                                                             actionListener="#{execucaoContratoControlador.removerExecucaoContratoItemValor(itemExecValor)}"
+                                                             title="Clique para remover este registro."
+                                                             update=":Formulario:tab-view-geral:panel-execucao :Formulario:tab-view-geral:panelReservas"/>
+                                        </p:column>
+                                        <p:column headerText="Lote" style="text-align: left; width: 5%">
+                                            <h:outputText
+                                                value="#{itemExecValor.itemContrato.itemAdequado.numeroLote}"/>
+                                        </p:column>
+                                        <p:column headerText="Item" style="text-align: left; width: 40%">
+                                            <h:outputText value="#{itemExecValor.itemContrato.numeroDescricao}"/>
+                                        </p:column>
+                                        <p:column
+                                            headerText="Grupo"
+                                            style="text-align: left; width: 50px; ">
+                                            <h:outputText
+                                                value="#{itemExecValor.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa.grupo}"/>
+                                        </p:column>
+                                        <p:column
+                                            headerText="Conta" styleClass="alinhamentoEsquerda">
+                                            <ad:conta-desdobrada-por-grupo
+                                                styleClass="default"
+                                                grupoContaDespesa="#{itemExecValor.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor no Contrato (R$)"
+                                                  style="text-align: right; width: 15%">
+                                            <h:outputText value="#{itemExecValor.itemContrato.valorTotal}"
+                                                          converter="moneyConverter">
+                                                <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor Disponível (R$)"
+                                                  style="text-align: right; width: 15%">
+                                            <h:outputText value="#{itemExecValor.valorDisponivel}">
+                                                <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor Total (R$)" style="text-align: right; width: 15%">
+                                            <p:outputPanel id="valorTotal">
+                                                <p:inputText title="Digite o valor"
+                                                             value="#{itemExecValor.valorTotal}"
+                                                             disabled="#{execucaoContratoControlador.hasReservaDotacao()}"
+                                                             maxlength="20"
+                                                             size="20"
+                                                             onkeypress="mascara(this, mvalor)"
+                                                             styleClass="alinhamentoDireita">
+                                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                    <p:ajax event="blur"
+                                                            update="@this :Formulario:tab-view-geral:gridExecucao"
+                                                            process="@this"
+                                                            listener="#{execucaoContratoControlador.processarValorTotalExecucaoContratoItem(itemExecValor)}"/>
+                                                </p:inputText>
+                                            </p:outputPanel>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:panel>
+                            </p:tab>
+
+                            <p:tab title="Dotação Orçamentária" id="dotacao">
+                                <p:panel id="panelReservas">
+                                    <p:dataTable value="#{execucaoContratoControlador.selecionado.reservas}"
+                                                 var="reserva">
+                                        <f:facet name="header">
+                                            <div align="center">
+                                                <h:outputText value="RESERVAS DE DOTAÇÃO"/>
+                                            </div>
+                                        </f:facet>
+                                        <p:column headerText="Remover" styleClass="alinhamentoCentralizado">
+                                            <p:commandButton icon="ui-icon-trash"
+                                                             process="@this"
+                                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                             oncomplete="aguarde.hide()"
+                                                             disabled="#{execucaoContratoControlador.hasExecucaoContratoTipoSelecionada()}"
+                                                             actionListener="#{execucaoContratoControlador.removerExecucaoContratoTipo(reserva)}"
+                                                             title="Clique para remover este registro."
+                                                             update=":Formulario:tab-view-geral:panelReservas :Formulario:tab-view-geral:gridExecucao"/>
+                                        </p:column>
+                                        <p:column
+                                            headerText="#{reserva.hasFontes() ? 'Editar Dotação' : 'Nova Dotação'}"
+                                            styleClass="alinhamentoCentralizado">
+                                            <p:commandButton
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                styleClass="#{reserva.hasFontes() ? 'prioritario' : ''}"
+                                                title="Clique para adicionar fonte de despesa a reserva da execução."
+                                                disabled="#{execucaoContratoControlador.hasExecucaoContratoTipoSelecionada()}"
+                                                actionListener="#{execucaoContratoControlador.novaDotacao(reserva)}"
+                                                icon="#{!reserva.hasFontes() ? 'ui-icon-circle-plus' : 'ui-icon-pencil'}"/>
+                                        </p:column>
+                                        <p:column headerText="Tipo de Objeto Compra" styleClass="alinhamentoEsquerda">
+                                            <h:outputText value="#{reserva.tipoObjetoCompra.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Classe Credor" styleClass="alinhamentoEsquerda">
+                                            <h:selectOneMenu value="#{reserva.classeCredor}"
+                                                             id="classeCredor"
+                                                             disabled="#{execucaoContratoControlador.hasExecucaoContratoTipoSelecionada()}"
+                                                             title="Informe a classe credor."
+                                                             converter="#{classeCredorControlador.converterGenerico}">
+                                                <f:selectItems
+                                                    value="#{execucaoContratoControlador.classesCredor}"
+                                                    var="cc"
+                                                    itemValue="#{cc.id}"
+                                                    itemLabel="#{cc}"/>
+                                                <p:ajax event="change"
+                                                        process="@this"/>
+                                            </h:selectOneMenu>
+                                        </p:column>
+                                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                            <h:outputText value="#{reserva.valor}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                            <f:facet name="footer">
+                                                <div align="right">
+                                                    <h:outputText
+                                                        styleClass="azulnegrito"
+                                                        value="#{execucaoContratoControlador.selecionado.valorTotalReservas}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </div>
+                                            </f:facet>
+                                        </p:column>
+                                    </p:dataTable>
+
+                                    <p:outputPanel
+                                        rendered="#{execucaoContratoControlador.execucaoContratoTipo ne null}">
+
+                                        <p:panel header="Dotação Orçamentária" id="panelDotacao" styleClass="mtop20">
+                                            <div id="scrollPanel">
+                                                <p:dataTable paginator="true"
+                                                             id="tabela-item-dot"
+                                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                             rowIndexVar="rowIx"
+                                                             styleClass="mtop02 mbot10"
+                                                             paginatorPosition="top"
+                                                             emptyMessage="Não foram localizados registros para serem apresentados"
+                                                             rendered="#{execucaoContratoControlador.hasExecucaoContratoTipoFonteSelecionada()}"
+                                                             value="#{execucaoContratoControlador.execucaoContratoTipoFonte.itens}"
+                                                             rows="10"
+                                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='negrito titulo-tabela mrig10'>ITENS DOTAÇÃO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                             rowsPerPageTemplate="10,25,50,100"
+                                                             var="itemDot">
+                                                    <p:column headerText="Remover"
+                                                              style="text-align: center; width: 50px;">
+                                                        <p:commandButton icon="ui-icon-trash"
+                                                                         process="@this"
+                                                                         onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                                         oncomplete="aguarde.hide()"
+                                                                         title="Clique para remover este registro."
+                                                                         actionListener="#{execucaoContratoControlador.removerItemDotacao(itemDot)}"
+                                                                         update=":Formulario:tab-view-geral:panelDotacao"/>
+                                                    </p:column>
+                                                    <p:column headerText="Número" style="text-align: center;">
+                                                        <h:outputText
+                                                            value="#{itemDot.execucaoContratoItem.itemContrato.itemAdequado.numeroItem}"/>
+                                                    </p:column>
+                                                    <p:column headerText="Descrição" style="text-align: left;">
+                                                        <h:outputText
+                                                            value="#{itemDot.execucaoContratoItem.itemContrato.itemAdequado.descricao}"/>
+                                                    </p:column>
+                                                    <c:if
+                                                        test="#{execucaoContratoControlador.isObjetoCompraConsumoOrPermanenteMovel()}">
+                                                        <p:column headerText="Grupo"
+                                                                  style="text-align: left;">
+                                                            <h:outputText
+                                                                value="#{itemDot.execucaoContratoItem.objetoCompra.grupoContaDespesa.grupo}"/>
+                                                        </p:column>
+                                                    </c:if>
+                                                    <p:column headerText="Valor na Execução (R$)"
+                                                              style="text-align: right">
+                                                        <h:outputText
+                                                            value="#{itemDot.execucaoContratoItem.valorTotal}">
+                                                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:column>
+                                                    <p:column headerText="Valor Reservado (R$)"
+                                                              style="text-align: right">
+                                                        <h:outputText value="#{itemDot.valorReservado}">
+                                                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:column>
+                                                    <p:column headerText="Valor Disponível (R$)"
+                                                              style="text-align: right">
+                                                        <h:outputText value="#{itemDot.valorDisponivel}">
+                                                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:column>
+                                                    <p:column headerText="Valor Total (R$)"
+                                                              style="text-align: right">
+                                                        <p:inputText title="Digite o valor"
+                                                                     value="#{itemDot.valorTotal}"
+                                                                     maxlength="20"
+                                                                     size="20"
+                                                                     id="valorTotalItemDotacao"
+                                                                     onkeypress="mascara(this, mvalor)"
+                                                                     styleClass="alinhamentoDireita">
+                                                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                            <p:ajax event="blur"
+                                                                    update=":Formulario:tab-view-geral:valorReserva valorTotalItemDotacao valorTotalItensDotValor"
+                                                                    process="@this"
+                                                                    onstart="aguarde.show()"
+                                                                    oncomplete="aguarde.hide()"
+                                                                    listener="#{execucaoContratoControlador.processarValorItemDotacao(itemDot)}"/>
+                                                        </p:inputText>
+                                                    </p:column>
+                                                    <f:facet name="footer">
+                                                        <div align="right">
+                                                            <h:outputText
+                                                                id="valorTotalItensDotValor"
+                                                                styleClass="azulnegrito"
+                                                                value="#{execucaoContratoControlador.execucaoContratoTipoFonte.valorTotalItemValor}">
+                                                                <f:convertNumber pattern="#,##0.00"/>
+                                                            </h:outputText>
+                                                        </div>
+                                                    </f:facet>
+                                                </p:dataTable>
+
+                                                <p:outputPanel
+                                                    rendered="#{execucaoContratoControlador.hasExecucaoContratoTipoFonteSelecionada()}">
+                                                    <c:if
+                                                        test="#{execucaoContratoControlador.podeReservarDotacao}">
+                                                        <fcc:consultar-despesa-orcamentaria-na-tela
+                                                            value="#{execucaoContratoControlador.execucaoContratoTipoFonte.despesaORC}"
+                                                            mostrarArvoreExpandida="true"
+                                                            styleElementoDespesa="margin-right: 75px"
+                                                            update=":Formulario:tab-view-geral:gridFonteDespesa :Formulario:tab-view-geral:gridFonte"
+                                                            actionListener="#{execucaoContratoControlador.limparCamposDespesa()}"
+                                                            unidadeAdministrativa="#{execucaoContratoControlador.contrato.unidadeAdministrativa.subordinada}"
+                                                            unidadeOrcamentaria="#{execucaoContratoControlador.selecionado.unidadeOrcamentaria}"
+                                                            subTipoObjetoCompra="#{execucaoContratoControlador.contrato.objetoAdequado.subTipoObjetoCompra}"
+                                                            tiposObjetoCompra="#{consultarDespesaOrcamentariaNaTelaControlador.tipoObjetoCompraPorDescricao(execucaoContratoControlador.execucaoContratoTipo.tipoObjetoCompra.name())}"/>
+
+                                                        <h:panelGrid columns="2" id="gridFonte">
+                                                            <fc:outputLabelObrigatorio
+                                                                value="Conta de Destinação de Recurso: "/>
+                                                            <h:selectOneMenu
+                                                                value="#{execucaoContratoControlador.execucaoContratoTipoFonte.fonteDespesaORC}"
+                                                                title="Informe a Classe da Pessoa."
+                                                                converter="#{execucaoContratoControlador.converterFonteDespesaORC}">
+                                                                <f:selectItems
+                                                                    value="#{execucaoContratoControlador.fonteDespesaOrcamentaria}"
+                                                                    var="fo"
+                                                                    itemValue="#{fo.id}"
+                                                                    itemLabel="#{fo.provisaoPPAFonte.destinacaoDeRecursos}"/>
+                                                                <p:ajax event="change"
+                                                                        process="@this"
+                                                                        update=":Formulario:tab-view-geral:gridFonteDespesa"
+                                                                        onstart="aguarde.show()"
+                                                                        oncomplete="aguarde.hide()"
+                                                                        listener="#{execucaoContratoControlador.buscarSaldoFonteDespesaORC()}"/>
+                                                            </h:selectOneMenu>
+                                                        </h:panelGrid>
+                                                    </c:if>
+
+                                                    <c:if
+                                                        test="#{!execucaoContratoControlador.podeReservarDotacao}">
+                                                        <p:outputPanel
+                                                            rendered="#{execucaoContratoControlador.reservarDiferencaNaExecucao}">
+                                                            <div class="alert alert-info" style="font-size: 12px"
+                                                                 align="center">
+                                                                O valor da execução está maior que o saldo reservado inicialmente para o contrato. Para complementar a reserva clique no botão 'Reservar a Diferença', para realizar a nova resernova reserva.
+                                                            </div>
+                                                        </p:outputPanel>
+
+                                                        <p:dataTable id="tabela-fontes-reservadas2"
+                                                                     value="#{execucaoContratoControlador.reservasLicitacao}"
+                                                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                                                     var="vo"
+                                                                     styleClass="mtop10 mbot10"
+                                                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                                     rowIndexVar="rowIx"
+                                                                     rowKey="#{vo.fonteDespesaORC}"
+                                                                     selection="#{execucaoContratoControlador.execucaoContratoTipoFonteSelecionada}">
+                                                            <f:facet name="header">
+                                                                Reservas de Dotação do Processo de Compra
+                                                            </f:facet>
+                                                            <p:column selectionMode="single"
+                                                                      disabledSelection="#{!vo.hasSaldoDisponivel()}"/>
+                                                            <p:column headerText="Fonte Despesa Orçamentária"
+                                                                      styleClass="alinhamentoEsquerda">
+                                                                <h:outputText value="#{vo.fonteDespesaORC}"/>
+                                                            </p:column>
+                                                            <p:column headerText="Vl Reservado (R$)"
+                                                                      styleClass="alinhamentoDireita">
+                                                                <h:outputText value="#{vo.valorReservado}">
+                                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                                </h:outputText>
+                                                            </p:column>
+                                                            <p:column headerText="Vl Estorno Reservado (R$)"
+                                                                      styleClass="alinhamentoDireita">
+                                                                <h:outputText value="#{vo.valorEstornoReservado}">
+                                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                                </h:outputText>
+                                                            </p:column>
+                                                            <p:column headerText="Vl Executado (R$)"
+                                                                      styleClass="alinhamentoDireita">
+                                                                <h:outputLabel value="#{vo.valorExecutado}">
+                                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                                </h:outputLabel>
+                                                            </p:column>
+                                                            <p:column headerText="Vl Estorno Executado (R$)"
+                                                                      styleClass="alinhamentoDireita">
+                                                                <h:outputLabel value="#{vo.valorEstornoExecutado}">
+                                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                                </h:outputLabel>
+                                                            </p:column>
+                                                            <p:column headerText="Saldo Disponível (R$)"
+                                                                      styleClass="alinhamentoDireita">
+                                                                <h:outputText value="#{vo.saldoDisponivel}">
+                                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                                </h:outputText>
+                                                            </p:column>
+                                                        </p:dataTable>
+                                                    </c:if>
+
+                                                    <h:panelGrid columns="2" id="gridFonteDespesa" cellpadding="3"
+                                                                 cellspacing="3">
+                                                        <h:outputLabel value="Saldo Fonte de Despesa (R$): "
+                                                                       rendered="#{execucaoContratoControlador.podeReservarDotacao}"/>
+                                                        <h:outputText
+                                                            id="opt-saldo"
+                                                            style="margin-left: 25px"
+                                                            rendered="#{execucaoContratoControlador.podeReservarDotacao}"
+                                                            value="#{execucaoContratoControlador.execucaoContratoTipoFonte.saldoFonteDespesaORC}"
+                                                            styleClass="negrito">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+
+                                                        <h:outputText value="Diferença a Reservar (R$)"
+                                                                      rendered="#{execucaoContratoControlador.execucaoContratoTipoFonte.hasValorReservaNaExecucao()}"/>
+                                                        <h:outputText
+                                                            style="margin-left: 25px"
+                                                            rendered="#{execucaoContratoControlador.execucaoContratoTipoFonte.hasValorReservaNaExecucao()}"
+                                                            value="#{execucaoContratoControlador.execucaoContratoTipoFonte.valorReservaExecucao}"
+                                                            styleClass="negrito">
+                                                            <f:convertNumber pattern="###,##0.00"/>
+                                                        </h:outputText>
+
+                                                        <h:outputText value="Valor da Reserva (R$): "
+                                                                      style="font-size: 14px"/>
+                                                        <h:outputText
+                                                            style="margin-left: 25px; font-size: 14px"
+                                                            id="valorReserva"
+                                                            styleClass="negrito"
+                                                            value="#{execucaoContratoControlador.execucaoContratoTipoFonte.valor}">
+                                                            <f:convertNumber pattern="###,##0.00"/>
+                                                        </h:outputText>
+                                                    </h:panelGrid>
+
+                                                    <p:commandButton value="Adicionar"
+                                                                     icon="ui-icon-check"
+                                                                     style="width: 110px"
+                                                                     styleClass="padrao mtop10 prioritario"
+                                                                     title="Clique para confirmar os itens para a fonte de despesa."
+                                                                     onstart="aguarde.show()"
+                                                                     oncomplete="aguarde.hide()"
+                                                                     process="@this :Formulario:tab-view-geral:panelReservas"
+                                                                     update=":Formulario:tab-view-geral:panelReservas"
+                                                                     rendered="#{!execucaoContratoControlador.reservarDiferencaNaExecucao}"
+                                                                     actionListener="#{execucaoContratoControlador.adicionarExecucaoContratoTipoFonte()}"/>
+
+                                                    <p:commandButton value="Reservar a Diferença"
+                                                                     icon="ui-icon-check"
+                                                                     styleClass="padrao mrig05 mtop10 prioritario"
+                                                                     process="@this :Formulario:tab-view-geral:panelReservas"
+                                                                     onclick="aguarde.show()"
+                                                                     oncomplete="aguarde.hide()"
+                                                                     rendered="#{execucaoContratoControlador.reservarDiferencaNaExecucao}"
+                                                                     actionListener="#{execucaoContratoControlador.reservarDiferencaFonteDoValorReservaInicial()}"/>
+
+                                                    <p:commandButton value="Confirmar"
+                                                                     style="width: 110px"
+                                                                     icon="ui-icon-arrowreturnthick-1-w"
+                                                                     styleClass="padrao mtop10 mlef05"
+                                                                     title="Clique para confirmar e voltar para lista de reservas de dotação."
+                                                                     onstart="aguarde.show()"
+                                                                     oncomplete="aguarde.hide()"
+                                                                     process="@this"
+                                                                     update=":Formulario:tab-view-geral:panelReservas"
+                                                                     actionListener="#{execucaoContratoControlador.confirmarExecucaoContratoTipo()}"/>
+                                                </p:outputPanel>
+                                            </div>
+                                        </p:panel>
+
+
+                                        <div style="padding: 5px" align="center" class="fundoAzul">
+                                            <h:outputText value="FONTES DA RESERVA DE DOTAÇÃO" style="color: white"/>
+                                        </div>
+                                        <p:dataTable id="tabela-fonte"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                                     value="#{execucaoContratoControlador.execucaoContratoTipo.fontes}"
+                                                     var="fonte">
+                                            <p:column headerText="Itens" style="width: 3%;"
+                                                      styleClass="alinhamentoCentralizado">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Remover"
+                                                      styleClass="width100 alinhamentoCentralizado">
+                                                <p:commandButton icon="ui-icon-trash"
+                                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                                 oncomplete="aguarde.hide()"
+                                                                 actionListener="#{execucaoContratoControlador.removerExecucaoContratoTipoFonte(fonte)}"
+                                                                 title="Clique para remover este registro."
+                                                                 process=":Formulario:tab-view-geral:panelReservas"
+                                                                 update=":Formulario:tab-view-geral:panelReservas"/>
+                                            </p:column>
+                                            <p:column headerText="Dotação Orçamentária"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{fonte.fonteDespesaORC}"/>
+                                                <f:facet name="footer">
+                                                    <div align="right">
+                                                        <h:outputText
+                                                            styleClass="negrito"
+                                                            value="Total Reservado"/>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+                                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita"
+                                                      style="width: 10%">
+                                                <h:outputText value="#{fonte.valor}">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                                <f:facet name="footer">
+                                                    <div align="right">
+                                                        <h:outputText
+                                                            styleClass="negrito"
+                                                            value="#{execucaoContratoControlador.execucaoContratoTipo.valorTotalReservado}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+                                            <p:rowExpansion>
+                                                <p:dataTable paginator="true"
+                                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                             rowIndexVar="rowIx"
+                                                             styleClass="mtop02 mbot10 mlef50"
+                                                             emptyMessage="Não foram localizados registros para serem apresentados"
+                                                             rendered="#{fonte.hasItens()}"
+                                                             value="#{fonte.itens}"
+                                                             paginatorPosition="top"
+                                                             rows="10"
+                                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='negrito titulo-tabela mrig10'>ITENS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                             rowsPerPageTemplate="10,25,50,100"
+                                                             var="itemFonte">
+                                                    <p:column headerText="Item" style="text-align: left;">
+                                                        <h:outputText
+                                                            value="#{itemFonte.execucaoContratoItem.itemContrato.numeroDescricao}"/>
+                                                    </p:column>
+                                                    <c:if
+                                                        test="#{execucaoContratoControlador.isObjetoCompraConsumoOrPermanenteMovel()}">
+                                                        <p:column headerText="Grupo"
+                                                                  style="text-align: left;">
+                                                            <h:outputText
+                                                                value="#{itemFonte.execucaoContratoItem.objetoCompra.grupoContaDespesa.grupo}"/>
+                                                        </p:column>
+                                                        <p:column headerText="Conta"
+                                                                  style="text-align: left;">
+                                                            <ad:conta-desdobrada-por-grupo
+                                                                styleClass="default"
+                                                                grupoContaDespesa="#{itemFonte.execucaoContratoItem.objetoCompra.grupoContaDespesa}"/>
+                                                        </p:column>
+                                                    </c:if>
+                                                    <p:column headerText="Valor Total (R$)"
+                                                              style="text-align: right; width: 10%">
+                                                        <h:outputText value="#{itemFonte.valorTotal}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                        <f:facet name="footer">
+                                                            <div align="right">
+                                                                <h:outputText
+                                                                    styleClass="azulnegrito"
+                                                                    value="#{fonte.valorTotalItemValor}">
+                                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                                </h:outputText>
+                                                            </div>
+                                                        </f:facet>
+                                                    </p:column>
+                                                </p:dataTable>
+                                            </p:rowExpansion>
+                                        </p:dataTable>
+                                    </p:outputPanel>
+                                </p:panel>
+                            </p:tab>
+
+                            <p:tab
+                                title="Solicitação de Empenho"
+                                id="agrupador">
+                                <p:outputPanel id="panelAgrupador">
+                                    <p:panel>
+                                        <div style="padding: 5px" align="center" class="fundoAzul">
+                                            <h:outputText value="AGRUPADORES SOLICITAÇÃO DE EMPENHO"
+                                                          style="color: white"/>
+                                        </div>
+                                        <p:dataTable
+                                            emptyMessage="Não foram localizados registros para serem apresentados"
+                                            value="#{execucaoContratoControlador.agrupadoresSolicitacaoEmpenho}"
+                                            var="agrup">
+                                            <p:column headerText="Itens" style="width: 3%;"
+                                                      styleClass="alinhamentoCentralizado">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Sol. Empenho" style="width: 3%;"
+                                                      styleClass="alinhamentoCentralizado">
+                                                <ad:detalhes-solicitacao-empenho
+                                                    id="componenteDetalhesSolicitacao"
+                                                    update=":Formulario:tab-view-geral:panelAgrupador"
+                                                    solicitacaoEmpenho="#{agrup.solicitacaoEmpenho}"/>
+                                            </p:column>
+                                            <p:column headerText="Dotação Orçamentária"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{agrup.fonteDespesaORC}"/>
+                                            </p:column>
+                                            <p:column headerText="Tipo"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{agrup.tipoObjetoCompra.descricao}"/>
+                                            </p:column>
+                                            <p:column
+                                                headerText="Grupo"
+                                                styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{agrup.grupoMaterial}"/>
+                                                <h:outputText value="#{agrup.grupoBem}"/>
+                                            </p:column>
+                                            <p:column headerText="Conta de Despesa"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{agrup.contaDesdobrada}"/>
+                                            </p:column>
+                                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita"
+                                                      style="width: 10%">
+                                                <h:outputText value="#{agrup.valor}">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                                <f:facet name="footer">
+                                                    <div align="right">
+                                                        <h:outputText
+                                                            styleClass="azulnegrito"
+                                                            value="#{execucaoContratoControlador.valorTotalAgrupador}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+                                            <p:rowExpansion>
+                                                <p:outputPanel rendered="#{empty agrup.itensDotacaoExecucao}">
+                                                    <div class="alert alert-block" align="center"
+                                                         style="font-size: 13px;padding: 5px">
+                                                        <strong>Atenção! </strong> Os itens são criados no agrupador, para contratos do tipo material de consumo e permanente móvel.
+                                                    </div>
+                                                </p:outputPanel>
+
+                                                <p:dataTable paginator="true"
+                                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                             rowIndexVar="rowIx"
+                                                             rendered="#{!empty agrup.itensDotacaoExecucao}"
+                                                             styleClass="mtop02 mbot10 mlef50"
+                                                             paginatorPosition="top"
+                                                             emptyMessage="Não foram localizados registros para serem apresentados"
+                                                             value="#{agrup.itensDotacaoExecucao}"
+                                                             rows="10"
+                                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                             rowsPerPageTemplate="10,25,50,100"
+                                                             var="itemAgrup">
+                                                    <p:column headerText="Item" style="text-align: left;">
+                                                        <h:outputText
+                                                            value="#{itemAgrup.execucaoContratoItem.itemContrato.numeroDescricao}"/>
+                                                    </p:column>
+                                                    <p:column headerText="Quantidade"
+                                                              style="text-align: right; width: 10%">
+                                                        <fc:output-mascara-unidade-medida
+                                                            tipoMascara="#{itemAgrup.execucaoContratoItem.mascaraQuantidade}"
+                                                            value="#{itemAgrup.quantidade}"/>
+                                                    </p:column>
+                                                    <p:column headerText="Valor Unitário (R$)"
+                                                              style="text-align: right; width: 10%">
+                                                        <fc:output-mascara-unidade-medida
+                                                            tipoMascara="#{itemAgrup.execucaoContratoItem.mascaraValorUnitario}"
+                                                            value="#{itemAgrup.valorUnitario}"/>
+                                                    </p:column>
+                                                    <p:column headerText="Valor Total (R$)"
+                                                              style="text-align: right; width: 10%">
+                                                        <h:outputText value="#{itemAgrup.valorTotal}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:column>
+                                                </p:dataTable>
+                                            </p:rowExpansion>
+                                        </p:dataTable>
+                                    </p:panel>
+                                </p:outputPanel>
+                            </p:tab>
+                        </p:wizard>
+                    </p:tab>
+
+                    <p:tab title="Dados do Contrato">
+                        <p:outputPanel id="panelDadosContrato">
+                            <ad:detalhes-contrato contrato="#{execucaoContratoControlador.contrato}"
+                                                  rendered="#{execucaoContratoControlador.contrato ne null}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <p:outputPanel id="panelAnexos">
+                            <fc:filesUploadWP
+                                selecionado="#{execucaoContratoControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             styleClass="operacao mtop10 prioritario"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para salvar as execuções."
+                             actionListener="#{execucaoContratoControlador.salvarExecucoes()}"
+                             icon="ui-icon-disk"/>
+
+            <p:commandButton value="Cancelar"
+                             styleClass="operacao mlef05 mtop10"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar esta operação."
+                             actionListener="#{execucaoContratoControlador.cancelar()}"
+                             icon="ui-icon-cancel"/>
+        </h:form>
+
+        <p:dialog showHeader="false"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  width="1100"
+                  resizable="false"
+                  widgetVar="itensExecucao"
+                  closable="false">
+            <h:form id="form-itens-execucao">
+                <legend
+                    class="legenda">Itens da Execução
+                    <p:commandButton icon="ui-icon-close"
+                                     title="Clique para fechar."
+                                     process="@this"
+                                     style="float: right !important;"
+                                     styleClass="mtop10 botao-transparente"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();itensExecucao.hide();"/>
+                </legend>
+
+                <p:dataTable id="tabelaItensExecucao"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             style="overflow: scroll; max-height: 400px; width: auto"
+                             styleClass="mtop10"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{execucaoContratoControlador.selecionado.itens}"
+                             var="itemExec">
+                    <p:column headerText="Item" style="text-align: left;">
+                        <h:outputText value="#{itemExec.itemContrato.numeroDescricao}"/>
+                    </p:column>
+                    <c:if test="#{execucaoContratoControlador.isControlePorQuantidade()}">
+                        <p:column headerText="Qtde no Contrato"
+                                  style="text-align: right;">
+                            <h:outputText value="#{itemExec.itemContrato.quantidadeTotalContrato}">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Qtde Disponível" style="text-align: right;">
+                            <h:outputText value="#{itemExec.quantidadeDisponivel}">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Qtde da Execução"
+                                  style="text-align: right;">
+                            <h:outputText value="#{itemExec.quantidadeUtilizada}">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor Unitário (R$)" style="text-align: right;">
+                            <h:outputText value="#{itemExec.valorUnitario}">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputText>
+
+                        </p:column>
+                    </c:if>
+                    <c:if
+                        test="#{!execucaoContratoControlador.isControlePorQuantidade()}">
+                        <p:column headerText="Valor no Contrato (R$)"
+                                  style="text-align: right; width: 15%">
+                            <h:outputText value="#{itemExec.itemContrato.valorTotal}"
+                                          converter="moneyConverter">
+                                <f:convertNumber type="currency" pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor Disponível (R$)" style="text-align: right; width: 15%">
+                            <h:outputText value="#{itemExec.valorDisponivel}">
+                                <f:convertNumber type="currency" pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </c:if>
+                    <p:column headerText="Valor Total (R$)" style="text-align: right; width: 15%">
+                        <h:outputText value="#{itemExec.valorTotal}"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog showHeader="false"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dlgFinalizarProcesso"
+                  closable="false">
+            <h:form id="formFinalizarProcesso">
+                <legend class="legenda">
+                    Finalizar Processo
+                </legend>
+
+                <div align="center">
+                    <div class="alert alert-success">
+                        <strong>Operação Realizada com Sucesso!</strong> Contrato teve suas execuções lançadas com sucesso.
+                    </div>
+
+                    <p:commandButton icon="ui-icon-eye"
+                                     title="Clique para redirecionar para contrato."
+                                     process="@this"
+                                     value="Visualizar Execução"
+                                     actionListener="#{execucaoContratoControlador.redicionarParaVer()}"
+                                     styleClass="mtop20 padrao"
+                                     style="width: 180px"
+                                     onclick="aguarde.show();"/>
+
+                    <p:commandButton icon="ui-icon-circle-plus"
+                                     title="Clique para cadastrar uma nova execução."
+                                     process="@this"
+                                     value="Nova Execução"
+                                     actionListener="#{execucaoContratoControlador.lancarNovaExecucao()}"
+                                     update=":Formulario"
+                                     styleClass="mtop20 mlef05 padrao"
+                                     style="width: 180px"
+                                     onclick="aguarde.show();"/>
+
+
+                    <p:commandButton icon="ui-icon-categorias"
+                                     title="Clique para redirecionar para lista de execuções."
+                                     process="@this"
+                                     value="Lista de Execuções"
+                                     actionListener="#{execucaoContratoControlador.cancelar()}"
+                                     styleClass="mtop20 padrao mlef05"
+                                     style="width: 180px"
+                                     onclick="aguarde.show();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  width="1000"
+                  resizable="false"
+                  widgetVar="dlgOrigemExecucao"
+                  closable="false">
+            <h:form id="formOrigemExecucao">
+                <legend class="legenda">
+                    Saldos Disponíveis para Execução
+                </legend>
+
+                <div class="alert alert-info" align="center" style="font-size: 13px">
+                    Selecione o saldo disponível para execução do contrato a partir de um movimento de origem.
+                </div>
+
+                <p:dataTable emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{execucaoContratoControlador.movimentosOrigemExecucao}"
+                             selection="#{execucaoContratoControlador.movimentoOrigemExecucaoSelecionado}"
+                             var="saldoOrig"
+                             style="overflow: scroll; max-height: 400px; width: auto"
+                             rowKey="#{saldoOrig.criadoEm}">
+                    <p:column selectionMode="single" style="width:35px;"/>
+                    <p:column headerText="Item" styleClass="alinhamentoCentralizado" style="width: 7px">
+                        <p:rowToggler/>
+                    </p:column>
+                    <p:column headerText="Origem" style="text-align: left;">
+                        <h:outputText value="#{saldoOrig.origem.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Operação" style="text-align: left;">
+                        <h:outputText value="#{saldoOrig.operacao.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Movimento" style="text-align: left;">
+                        <h:outputText value="#{saldoOrig.descricaoMovimento}"/>
+                    </p:column>
+                    <p:column headerText="Saldo (R$)" style="text-align: right;">
+                        <h:outputText value="#{saldoOrig.saldo}">
+                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:rowExpansion>
+                        <p:dataTable emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{saldoOrig.itensSaldo}"
+                                     styleClass="mlef50 mbot20"
+                                     var="itemSaldo"
+                                     style="overflow: scroll; max-height: 300px; width: auto"
+                                     rowKey="#{itemSaldo.id}">
+                            <p:column headerText="Lote" style="text-align: left;">
+                                <h:outputText
+                                    value="#{itemSaldo.itemContrato.itemAdequado.numeroLote}"/>
+                            </p:column>
+                            <p:column headerText="Item" style="text-align: left;">
+                                <h:outputText
+                                    value="#{itemSaldo.itemContrato.itemAdequado.numeroItem}"/>
+                            </p:column>
+                            <p:column headerText="Objeto de Compra" style="text-align: left;">
+                                <h:outputText
+                                    value="#{itemSaldo.itemContrato.itemAdequado.objetoCompra}"/>
+                            </p:column>
+                            <p:column headerText="Saldo (R$)" style="text-align: right">
+                                <h:outputText value="#{itemSaldo.saldoValor}">
+                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:rowExpansion>
+                </p:dataTable>
+
+                <div style="text-align: center" class="mtop05">
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     process="@this :formOrigemExecucao"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{execucaoContratoControlador.confirmarOrigemExecucaoContrato()}"
+                                     styleClass="mtop05 prioritario"/>
+
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     process="@this :formOrigemExecucao"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{execucaoContratoControlador.cancelarOrigemExecucaoContrato()}"
+                                     styleClass="mtop05 mlef05 padrao"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>
+

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:poll autoStart="false"
+                    widgetVar="pollGeracao"
+                    process="@this" update=":FormularioGeracao"
+                    listener="#{lancamentoTaxaAlvaraVigenteLoteControlador.acompanharGeracao()}"/>
+
+            <p:poll autoStart="false"
+                    widgetVar="pollEnvioDAMs"
+                    process="@this" update=":FormularioGeracao"
+                    listener="#{lancamentoTaxaAlvaraVigenteLoteControlador.acompanharEnvioDAMs()}"/>
+
+            <p:poll widgetVar="pollBuscarCadastros"
+                    autoStart="false"
+                    listener="#{lancamentoTaxaAlvaraVigenteLoteControlador.acompanharBuscaCadastros()}"/>
+
+            <p:panel header="Lançamento de Taxas de Alvará Vigêntes em Lote">
+                <p:panel header="Filtros">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Exercício: "/>
+                        <p:inputMask id="exercicio"
+                                     mask="9999"
+                                     size="10"
+                                     converter="#{exercicioControlador.converterExercicio}"
+                                     value="#{lancamentoTaxaAlvaraVigenteLoteControlador.exercicio}"
+                                     maxlength="4"
+                                     title="Informe o exercício.">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:inputMask>
+
+                        <h:outputText value="Grau de Risco: "/>
+                        <h:selectOneMenu id="grauDeRisco"
+                                         value="#{lancamentoTaxaAlvaraVigenteLoteControlador.grauDeRisco}">
+                            <f:selectItems value="#{lancamentoTaxaAlvaraVigenteLoteControlador.grausDeRisco}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Cadastro Econômico: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        value="#{lancamentoTaxaAlvaraVigenteLoteControlador.cadastroEconomico}"
+                                        var="cadastro"
+                                        dropdown="true"
+                                        itemLabel="#{cadastro}" process="@this"
+                                        itemValue="#{cadastro.id}"
+                                        completeMethod="#{lancamentoTaxaAlvaraVigenteLoteControlador.buscarCadastrosEconomicos}"
+                                        converter="#{cadastroEconomicoControlador.converterGenerico}"
+                                        id="acCadastroEconomico"
+                                        size="80"/>
+
+                        <h:outputText value="Tipo de Cálculo: "/>
+                        <p:selectOneRadio id="tipoCalculo"
+                                          disabled="#{!empty lancamentoTaxaAlvaraVigenteLoteControlador.cadastros}"
+                                          title="Informe o tipo de Cálculo"
+                                          value="#{lancamentoTaxaAlvaraVigenteLoteControlador.tipoCalculoLoteAlvara}">
+                            <f:selectItems value="#{lancamentoTaxaAlvaraVigenteLoteControlador.tiposDeCalculos}"
+                                           var="tipo"
+                                           itemLabel="#{tipo.descricao}"
+                                           itemValue="#{tipo}"/>
+                        </p:selectOneRadio>
+                    </h:panelGrid>
+                </p:panel>
+                <p:commandButton value="Buscar Cadastros"
+                                 icon="ui-icon-search"
+                                 title="Clique para buscar os cadastros para geração das taxas."
+                                 styleClass="operacao mtop10 mbot10"
+                                 onclick="aguarde.show()"
+                                 process="@form"
+                                 update="@form"
+                                 actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.buscarCadastros()}"/>
+
+                <p:commandButton value="Gerar Taxas"
+                                 icon="ui-icon-check"
+                                 title="Clique para gerar as taxas de alvará para os cadastros selecionados."
+                                 styleClass="operacao prioritario mlef03 mtop10 mbot10"
+                                 actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.gerarTaxas()}"/>
+
+                <p:commandButton value="Limpar Filtros"
+                                 icon="ui-icon-clear"
+                                 styleClass="operacao mlef03 mtop10 mbot10"
+                                 update="@form"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.novo()}"/>
+
+                <p:commandButton
+                    value="#{lancamentoTaxaAlvaraVigenteLoteControlador.todosCadastrosDaPaginaAdicionados() ? 'Desmarcar Pagina' : 'Selecionar Pagina'}"
+                    icon="ui-icon-check"
+                    id="selecionarPagina"
+                    styleClass="operacao mlef03 mtop10 mbot10"
+                    onstart="aguarde.show()"
+                    oncomplete="aguarde.hide()"
+                    update=":Formulario"
+                    actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.selecionarOuDesmarcarTodosPorPagina()}"/>
+
+                <div class="ui-datatable-header ui-widget-header ui-corner-top">
+                    <p:commandButton value="10"
+                                     rendered="#{lancamentoTaxaAlvaraVigenteLoteControlador.cadastros.size() ne 0}"
+                                     styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${lancamentoTaxaAlvaraVigenteLoteControlador.rowsTable eq 10 ? 'botao-cabecalho-selecionado': ''}"
+                                     actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.setRowsTable(10)}"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     update=":Formulario">
+                    </p:commandButton>
+                    <p:commandButton value="25"
+                                     styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${lancamentoTaxaAlvaraVigenteLoteControlador.rowsTable eq 25 ? 'botao-cabecalho-selecionado': ''}"
+                                     actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.setRowsTable(25)}"
+                                     onstart="aguarde.show()"
+                                     rendered="#{lancamentoTaxaAlvaraVigenteLoteControlador.cadastros.size() ne 0}"
+                                     oncomplete="aguarde.hide()"
+                                     update=":Formulario">
+                    </p:commandButton>
+                    <p:commandButton value="50"
+                                     styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${lancamentoTaxaAlvaraVigenteLoteControlador.rowsTable eq 50 ? 'botao-cabecalho-selecionado': ''}"
+                                     actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.setRowsTable(50)}"
+                                     onstart="aguarde.show()"
+                                     rendered="#{lancamentoTaxaAlvaraVigenteLoteControlador.cadastros.size() ne 0}"
+                                     oncomplete="aguarde.hide()"
+                                     update=":Formulario">
+                    </p:commandButton>
+                </div>
+                <p:dataTable id="tabelaCadastros"
+                             var="cadastro"
+                             value="#{lancamentoTaxaAlvaraVigenteLoteControlador.cadastros}"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             paginator="true"
+                             paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}">
+                    <p:ajax event="page" process="@this"
+                            listener="#{lancamentoTaxaAlvaraVigenteLoteControlador.changePage}"/>
+
+                    <p:column style="width: 100px;" styleClass="alinhamentoCentralizado">
+                        <f:facet name="header">
+                            <p:commandButton value="Desmarcar Todos"
+                                             rendered="#{lancamentoTaxaAlvaraVigenteLoteControlador.todosCadastrosAdicionados()}"
+                                             actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.todosCadastros(false)}"
+                                             process="@this" update=":Formulario"/>
+
+                            <p:commandButton icon="ui-icon-check"
+                                             value="Selecionar Todos"
+                                             rendered="#{!lancamentoTaxaAlvaraVigenteLoteControlador.todosCadastrosAdicionados()}"
+                                             actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.todosCadastros(true)}"
+                                             process="@this" update=":Formulario"/>
+                        </f:facet>
+                        <p:commandButton icon="ui-icon-check"
+                                         styleClass="vinteLarguraVinteAltura"
+                                         rendered="#{lancamentoTaxaAlvaraVigenteLoteControlador.hasCadastroAdicionado(cadastro)}"
+                                         actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.removerCadastro(cadastro)}"
+                                         process="@this" update=":Formulario"/>
+                        <p:commandButton icon="ui-icon-none"
+                                         styleClass="vinteLarguraVinteAltura"
+                                         rendered="#{!lancamentoTaxaAlvaraVigenteLoteControlador.hasCadastroAdicionado(cadastro)}"
+                                         actionListener="#{lancamentoTaxaAlvaraVigenteLoteControlador.adicionarCadastro(cadastro)}"
+                                         process="@this" update=":Formulario"/>
+                    </p:column>
+                    <p:column headerText="Inscrição Cadastral" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{cadastro.inscricaoCadastral}"/>
+                    </p:column>
+                    <p:column headerText="CPF/CNPJ" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{cadastro.pessoa.cpf_Cnpj}"/>
+                    </p:column>
+                    <p:column headerText="Nome/Razão Social" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{cadastro.pessoa.nome}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+
+        <div id="dialogGeracao" class="modal hide fade">
+            <h:form id="FormularioGeracao">
+                <div class="modal-body" id="modal-body-sem-sessao" style="text-align: center">
+                    <fc:acompanhamentoBarraProgresso
+                        assistenteBarraProgresso="#{lancamentoTaxaAlvaraVigenteLoteControlador.assistenteBarraProgresso}"/>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

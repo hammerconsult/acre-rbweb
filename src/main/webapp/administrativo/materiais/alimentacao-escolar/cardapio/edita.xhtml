@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:o="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <style type="text/css">
+            .ui-datatable th div.ui-dt-c, .ui-datatable .ui-datatable-data td div.ui-dt-c, .ui-datatable .ui-datatable-data-empty td div.ui-dt-c, .ui-datatable tfoot td div.ui-dt-c {
+                padding: 4px 10px;
+                overflow: visible;
+            }
+
+            .ui-datatable .ui-datatable-data td, .ui-datatable .ui-datatable-data-empty td {
+                overflow: visible;
+            }
+        </style>
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{cardapioControlador}"
+                                origem="#{cardapioControlador.caminhoPadrao}novo/"/>
+
+            <p:remoteCommand name="limparDadosHierarquiaAdm"
+                             process="@this"
+                             update=":Formulario:tab-geral:op-ho-orc :Formulario:tab-geral:ip-ho-orc"
+                             actionListener="#{cardapioControlador.limparDadosHierarquiaAdm()}"/>
+
+            <p:panel header="Cadastro de Cardápio" id="panelPrincipal">
+                <p:tabView id="tab-geral">
+                    <p:tab id="tab-dados-gerais" title="Dados Gerais">
+                        <h:panelGrid columns="2" id="gridDadosGerais">
+                            <h:outputLabel value="Número: "/>
+                            <h:outputText
+                                value="#{cardapioControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar' : cardapioControlador.selecionado.numero}"
+                                styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="Situação: "/>
+                            <h:selectOneMenu
+                                value="#{cardapioControlador.selecionado.situacaoCardapio}"
+                                id="situacao">
+                                <f:selectItems value="#{cardapioControlador.situacoes}"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio value="Data: "/>
+                            <p:calendar onkeypress="mascara(this, mdata)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        autocomplete="off"
+                                        title="Selecione a data de cadastro."
+                                        value="#{cardapioControlador.selecionado.dataCadastro}"
+                                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                        size="10">
+                                <p:ajax event="dateSelect" update="@this" process="@this"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"/>
+                            </p:calendar>
+
+                            <fc:outputLabelObrigatorio value="Programa de Alimentação: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            title="Informe o programa de alimentação que deseja pesquisar."
+                                            value="#{cardapioControlador.selecionado.programaAlimentacao}"
+                                            completeMethod="#{cardapioControlador.completarProgramaAlimentacao}"
+                                            converter="#{programaAlimentacaoControlador.converterGenerico}"
+                                            var="prog"
+                                            maxResults="50"
+                                            panelStyle="max-height: 250px;max-width: 700px"
+                                            dropdown="true"
+                                            itemValue="#{prog.id}"
+                                            itemLabel="#{prog}"
+                                            size="70">
+                                <p:ajax event="itemSelect"
+                                        listener="#{cardapioControlador.atribuirTextoFormatadoDescricao()}"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"
+                                        process="gridDadosGerais"
+                                        update="gridDadosGerais descricao"/>
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Unidade Administrativa: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="unidade"
+                                            title="Informe a unidade administrativa."
+                                            value="#{cardapioControlador.hierarquiaAdministrativa}"
+                                            completeMethod="#{cardapioControlador.completarHierarquiasAdministrativas}"
+                                            converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                            var="hoAdm"
+                                            itemLabel="#{hoAdm}"
+                                            itemValue="#{hoAdm.id}"
+                                            dropdown="true"
+                                            onkeyup="if(keyUpCampoVazio(this)){limparDadosHierarquiaAdm()}"
+                                            panelStyle="max-height: 250px;max-width: 700px"
+                                            maxResults="50"
+                                            size="70">
+                                <p:ajax event="itemSelect"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"
+                                        listener="#{cardapioControlador.atribuirTextoFormatadoDescricao()}"
+                                        process="gridDadosGerais"
+                                        update=":Formulario:tab-geral:op-ho-orc :Formulario:tab-geral:ip-ho-orc descricao"/>
+                            </p:autoComplete>
+
+                            <p:outputPanel id="op-ho-orc">
+                                <fc:outputLabelObrigatorio
+                                    rendered="#{cardapioControlador.hierarquiaAdministrativa ne null}"
+                                    value="Unidade Orçamentária: "/>
+                            </p:outputPanel>
+
+                            <p:outputPanel id="ip-ho-orc">
+                                <p:autoComplete rendered="#{cardapioControlador.hierarquiaAdministrativa ne null}"
+                                                queryDelay="1000"
+                                                id="unidadeOrc"
+                                                title="Informe a unidade orçamentária."
+                                                value="#{cardapioControlador.hierarquiaOrcamentaria}"
+                                                completeMethod="#{cardapioControlador.completarHierarquiasOrcamentarias}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                var="hoOrc"
+                                                itemLabel="#{hoOrc}"
+                                                itemValue="#{hoOrc.id}"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 700px"
+                                                maxResults="10"
+                                                size="70">
+                                    <p:ajax event="itemSelect"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"
+                                            listener="#{cardapioControlador.atribuirTextoFormatadoDescricao()}"
+                                            process="gridDadosGerais"
+                                            update="descricao"/>
+                                </p:autoComplete>
+                            </p:outputPanel>
+
+                            <fc:outputLabelObrigatorio value="Nutricionista Responsável: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            title="Informe o responsável que deseja pesquisar."
+                                            value="#{cardapioControlador.selecionado.nutricionista}"
+                                            completeMethod="#{cardapioControlador.completarNutricionista}"
+                                            converter="#{pessoaFisicaControlador.converterPessoaFisica}"
+                                            var="c"
+                                            maxResults="50"
+                                            panelStyle="max-height: 230px;max-width: 700px"
+                                            dropdown="true"
+                                            itemValue="#{c.id}"
+                                            itemLabel="#{c.nome} - #{c.siglaConselhoOrdem} #{c.numDoc}"
+                                            size="70">
+                                <p:ajax event="itemSelect"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"
+                                        listener="#{cardapioControlador.listenerNutricionista()}"
+                                        process="gridDadosGerais"
+                                        update="descricao"/>
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Data Inicial: "/>
+                            <p:calendar onkeypress="mascara(this, mdata)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        autocomplete="off"
+                                        disabled="#{not empty cardapioControlador.diasPorSemana}"
+                                        title="Selecione a data inicial."
+                                        value="#{cardapioControlador.selecionado.dataInicial}"
+                                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                        size="10">
+                                <p:ajax event="dateSelect"
+                                        listener="#{cardapioControlador.atribuirTextoFormatadoDescricao()}"
+                                        update="@this descricao"
+                                        process="@this gridDadosGerais descricao"
+                                        onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                            </p:calendar>
+
+                            <fc:outputLabelObrigatorio value="Data Final: "/>
+                            <p:calendar onkeypress="mascara(this, mdata)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        autocomplete="off"
+                                        disabled="#{not empty cardapioControlador.diasPorSemana}"
+                                        title="Selecione a data final."
+                                        value="#{cardapioControlador.selecionado.dataFinal}"
+                                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                        size="10">
+                                <p:ajax event="dateSelect"
+                                        listener="#{cardapioControlador.atribuirTextoFormatadoDescricao()}"
+                                        update="@this descricao"
+                                        process="@this gridDadosGerais descricao"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"/>
+                            </p:calendar>
+
+                            <h:outputText value="Incluir Sábados: "
+                                          rendered="#{cardapioControlador.operacaoNovo}"/>
+                            <p:selectBooleanCheckbox value="#{cardapioControlador.sabadoIncluso}"
+                                                     disabled="#{not empty cardapioControlador.diasPorSemana}"
+                                                     rendered="#{cardapioControlador.operacaoNovo}">
+                                <p:ajax update="@this" process="@this"/>
+                            </p:selectBooleanCheckbox>
+
+                            <h:outputText value="Incluir Feriados: "
+                                          rendered="#{cardapioControlador.operacaoNovo}"/>
+                            <p:selectBooleanCheckbox value="#{cardapioControlador.feriadoIncluso}"
+                                                     disabled="#{not empty cardapioControlador.diasPorSemana}"
+                                                     rendered="#{cardapioControlador.operacaoNovo}">
+                                <p:ajax update="@this" process="@this"/>
+                            </p:selectBooleanCheckbox>
+
+                            <fc:outputLabelObrigatorio value="Descrição: "/>
+                            <h:panelGrid columns="2"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea title="Digite a descrição."
+                                                 value="#{cardapioControlador.selecionado.descricao}"
+                                                 id="descricao"
+                                                 cols="68"
+                                                 rows="5"
+                                                 maxlength="3000"
+                                                 autoResize="true"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-descricao"/>
+                                <h:outputText id="counter-descricao"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+
+                            <h:outputLabel value="Observação: "/>
+                            <p:editor id="obsCardapio"
+                                      width="800"
+                                      height="200"
+                                      value="#{cardapioControlador.selecionado.observacao}"/>
+                        </h:panelGrid>
+                    </p:tab>
+
+                    <p:tab id="tab-agenda" title="Agenda">
+                        <p:outputPanel id="pn-agenda">
+                            <p:remoteCommand name="atualizarTabelaNutricional"
+                                             update="pn-agenda"/>
+
+                            <p:commandButton value="Criar Agenda"
+                                             styleClass="padrao"
+                                             style="margin-bottom: 10px"
+                                             icon="ui-icon-plus"
+                                             title="Clique aqui para criar uma nova agenda."
+                                             actionListener="#{cardapioControlador.criarAgenda()}"
+                                             rendered="#{cardapioControlador.diaAgenda eq null and !cardapioControlador.operacaoEditar}"
+                                             process="@this gridDadosGerais pn-agenda"
+                                             update="pn-agenda :Formulario:tab-geral:gridDadosGerais"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide();"/>
+
+                            <ui:repeat value="#{cardapioControlador.semanas}" var="semana" varStatus="index"
+                                       id="idRepeat">
+                                    <table class="mtop20" id="tableSemana#{index.index}" style="width: 100%">
+                                        <thead>
+                                        <tr>
+                                            <th style="background: dimgrey; border-color: dimgrey;">
+                                            <span
+                                                style="color: #F5F5F5; font-weight: bold">SEMANA #{index.index +1}</span>
+                                            </th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr>
+                                            <td style="border-color: dimgrey;">
+                                                <p:dataTable value="#{cardapioControlador.diasPorSemana[semana]}"
+                                                             var="dia"
+                                                             rowIndexVar="indexTableAgenda"
+                                                             id="tableAgenda-#{index.index}">
+                                                    <p:column headerText="Ações"
+                                                              style="width:5%; text-align: center">
+                                                        <p:commandButton icon="ui-icon-trash"
+                                                                         title="Clique aqui para remover um dia da semana da agenda."
+                                                                         actionListener="#{cardapioControlador.removerDiaSemana(semana, dia)}"
+                                                                         process="@this"
+                                                                         update=":Formulario:tab-geral:pn-agenda"
+                                                                         onclick="aguarde.show()"
+                                                                         oncomplete="aguarde.hide(); "/>
+                                                    </p:column>
+                                                    <p:column headerText="Dia da Semana" id="diaSemana"
+                                                              styleClass="#{cardapioControlador.isDiaSemanaFeriado(dia) ? 'fundo-amarelo-claro' : ''}"
+                                                              style="text-align: center; width: 100px">
+                                                        <h:panelGrid columns="1" style="width: 100px">
+                                                            <h:outputText value="#{dia.diaSemana}">
+                                                                <f:convertDateTime pattern="EEEE"/>
+                                                            </h:outputText>
+
+                                                            <h:outputText value="#{dia.diaSemana}">
+                                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                            </h:outputText>
+
+                                                            <br/>
+                                                            <h:outputText
+                                                                styleClass="negrito"
+                                                                style="font-size: 13px"
+                                                                value="#{cardapioControlador.mapDiaFeriado[dia.diaSemana]}"
+                                                                rendered="#{cardapioControlador.isDiaSemanaFeriado(dia)}"/>
+                                                        </h:panelGrid>
+                                                    </p:column>
+
+                                                    <p:column headerText="Refeições"
+                                                              style="text-align: left">
+                                                        <p:dataTable id="tableRefeicoes"
+                                                                     value="#{dia.refeicoes}"
+                                                                     var="refeicao"
+                                                                     emptyMessage="Nenhuma refeição adicionada.">
+
+                                                            <p:column headerText="Refeição"
+                                                                      style="text-align: left">
+                                                                <p:autoComplete queryDelay="1000"
+                                                                                title="Informe a refeição que deseja pesquisar."
+                                                                                value="#{refeicao.refeicao}"
+                                                                                completeMethod="#{cardapioControlador.completarRefeicoes}"
+                                                                                converter="#{refeicaoControlador.converterGenerico}"
+                                                                                var="c"
+                                                                                id="completeRefeicao"
+                                                                                maxResults="50"
+                                                                                panelStyle="max-height: 230px;max-width: 700px"
+                                                                                dropdown="true"
+                                                                                itemValue="#{c.id}"
+                                                                                itemLabel="#{c.descricaoSimplificada}"
+                                                                                size="42">
+                                                                    <p:ajax event="itemSelect"
+                                                                            listener="#{cardapioControlador.copiarMateriais(refeicao)}"
+                                                                            process="@this"
+                                                                            oncomplete="atualizarTabelaNutricional()"/>
+                                                                </p:autoComplete>
+
+                                                                <fc:visualizarCampos objeto="#{refeicao.refeicao}"
+                                                                                     showHeader="#{false}"
+                                                                                     styleClass="icone-30 mlef05"/>
+                                                            </p:column>
+
+                                                            <p:column headerText="Horário"
+                                                                      style="text-align: left;">
+                                                                <p:calendar value="#{refeicao.horario}"
+                                                                            id="horario-refeicao"
+                                                                            pattern="HH:mm"
+                                                                            timeOnly="true"
+                                                                            onkeypress="mascara(this,mhoraminuto)"
+                                                                            size="5"
+                                                                            showOn="button">
+                                                                    <p:ajax update="@none"
+                                                                            process="@this horario-refeicao"/>
+                                                                </p:calendar>
+                                                            </p:column>
+
+                                                            <p:column headerText="Observação"
+                                                                      style="text-align: left;">
+                                                                <p:inputText value="#{refeicao.observacao}">
+                                                                    <p:ajax event="blur"
+                                                                            update="@this"
+                                                                            process="@this"
+                                                                            onstart="aguarde.show();"
+                                                                            oncomplete="aguarde.hide();"/>
+                                                                </p:inputText>
+                                                            </p:column>
+
+                                                            <p:column headerText="Materiais"
+                                                                      style="width: 5%; text-align: center">
+                                                                <p:commandButton icon="ui-icon-categorias"
+                                                                                 title="Clique aqui para ver os materiais."
+                                                                                 process="@this"
+                                                                                 onclick="aguarde.show()"
+                                                                                 actionListener="#{cardapioControlador.recuperarMateriaisRefeicaoDialog(refeicao)}"
+                                                                                 oncomplete="aguarde.hide();"/>
+                                                            </p:column>
+
+                                                            <p:column headerText="Nutricional"
+                                                                      style="width: 5%; text-align: center;">
+                                                                <p:commandButton icon="ui-icon-clipboard"
+                                                                                 title="Clique aqui para ver o valor nutricional."
+                                                                                 process="@this"
+                                                                                 onclick="aguarde.show()"
+                                                                                 actionListener="#{cardapioControlador.recuperarValorNutricionalRefeicaoDialog(refeicao)}"
+                                                                                 oncomplete="aguarde.hide();"/>
+                                                            </p:column>
+
+                                                            <p:column headerText="Remover"
+                                                                      style="width:5%; text-align: center">
+                                                                <p:commandButton icon="ui-icon-trash"
+                                                                                 title="Clique aqui para remover uma refeição."
+                                                                                 actionListener="#{cardapioControlador.removerRefeicao(dia, refeicao)}"
+                                                                                 process="@this"
+                                                                                 update="tableRefeicoes"
+                                                                                 onclick="aguarde.show()"
+                                                                                 oncomplete="aguarde.hide(); atualizarTabelaNutricional()"/>
+                                                            </p:column>
+                                                        </p:dataTable>
+
+                                                        <div style="display: flex; align-self: flex-start">
+                                                            <p:commandButton value="Adicionar Refeição"
+                                                                             styleClass="prioritario mtop05 mbot05"
+                                                                             icon="ui-icon-plus"
+                                                                             title="Clique aqui para adicionar uma refeição."
+                                                                             disabled="#{cardapioControlador.isDiaSemanaFeriado(dia)}"
+                                                                             actionListener="#{cardapioControlador.addRefeicao(dia)}"
+                                                                             process="@this"
+                                                                             update="tableRefeicoes"
+                                                                             onclick="aguarde.show()"
+                                                                             oncomplete="aguarde.hide();"/>
+                                                        </div>
+                                                    </p:column>
+
+                                                    <f:facet name="footer">
+                                                        <ad:tabela-composicao-nutricional
+                                                            composicaoNutricional="#{cardapioControlador.mapComposicaoNutricionalPorSemana[semana]}"/>
+                                                    </f:facet>
+                                                </p:dataTable>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                            </ui:repeat>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+            <fc:rodapePretty controlador="#{cardapioControlador}"/>
+        </h:form>
+
+        <p:dialog header="Materiais"
+                  modal="true"
+                  width="1000"
+                  height="450"
+                  dynamic="true"
+                  closable="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgMateriais">
+            <h:form id="formDlgMateriais">
+
+                <h:panelGrid columns="3" id="gridMaterial" styleClass="mtop10">
+                    <h:outputText value="Material: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="material"
+                                    title="Informe o material."
+                                    value="#{cardapioControlador.material}"
+                                    completeMethod="#{materialControlador.completarMaterialDeferidoInativoPorDescricaoECodigo}"
+                                    converter="#{materialControlador.converterGenerico}"
+                                    var="material"
+                                    maxResults="100"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px; max-width: 800px"
+                                    size="70"
+                                    process="@this"
+                                    itemLabel="#{material}"
+                                    itemValue="#{material.id}">
+                        <p:ajax event="itemSelect" update="@this" process="@this" onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </p:autoComplete>
+                    <p:commandButton process="@this "
+                                     update=":formDlgMateriais:tabelaFiltrosMaterial :formDlgMateriais:gridMaterial"
+                                     onclick="aguarde.show();"
+                                     title="Clique aqui para adicionar um material."
+                                     icon="ui-icon-arrowthickstop-1-s"
+                                     styleClass="icone-30"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{cardapioControlador.adicionarNovoMaterial()}"/>
+                </h:panelGrid>
+
+                <p:dataTable id="tabelaFiltrosMaterial"
+                             emptyMessage="Nenhum material encontrado."
+                             value="#{cardapioControlador.refeicaoSelecionada.materiais}"
+                             var="mat"
+                             paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop02"
+                             style="overflow: scroll; max-height: 400px"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100">
+                    <p:column headerText="Remover"
+                              style="width:5%; text-align: center">
+                        <p:commandButton icon="ui-icon-trash"
+                                         id="buttonRemoverMat"
+                                         title="Clique aqui para remover uma refeição."
+                                         actionListener="#{cardapioControlador.removerMaterial(mat)}"
+                                         process="@this"
+                                         update=":formDlgMateriais:tabelaFiltrosMaterial"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"/>
+                    </p:column>
+                    <p:column headerText="Material" styleClass="alinhamentoEsquerda">
+                        <h:outputText title="#{mat.material.descricaoComplementar}"
+                                      value="#{mat.material}"/>
+                    </p:column>
+                    <p:column headerText="Grupo Material" styleClass="alinhamentoEsquerda">
+                        <h:outputText title="#{mat.material.grupo}"
+                                      value="#{mat.material.grupo}"/>
+                    </p:column>
+                    <p:column headerText="Unid. Medida" styleClass="alinhamentoCentralizado">
+                        <h:outputText title="#{mat.material.unidadeMedida.sigla}"
+                                      value="#{mat.material.unidadeMedida}"/>
+                    </p:column>
+                    <p:column headerText="Contr. de Lote" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{mat.material.requerLote}"/>
+                    </p:column>
+                </p:dataTable>
+
+                <div align="center">
+                    <p:commandButton process="@this"
+                                     title="Clique aqui para confirmar os materiais adicionados."
+                                     icon="ui-icon-check"
+                                     styleClass="prioritario mtop10"
+                                     value="Confirmar"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgMateriais.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Valor Nutricional"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  closable="false"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgValorNutri">
+            <h:form id="formDlgValorNutri">
+                <p:dataTable id="tabelaValorNutri"
+                             emptyMessage="Nenhuma informação encontrada."
+                             value="#{cardapioControlador}"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop02">
+
+                    <p:column headerText="Energia (KCAL)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.energiaKCAL}"/>
+                    </p:column>
+                    <p:column headerText="CHO (g)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.CHOg}"/>
+                    </p:column>
+                    <p:column headerText="PTN (g)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.PTNg}"/>
+                    </p:column>
+                    <p:column headerText="LPD (g)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.LPDg}"/>
+                    </p:column>
+                    <p:column headerText="FIBRAS (g)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.FIBRASg}"/>
+                    </p:column>
+                    <p:column headerText="VIT A (mcg)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.VITAmcg}"/>
+                    </p:column>
+                    <p:column headerText="VIT C(mg)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.VITCmcg}"/>
+                    </p:column>
+                    <p:column headerText="Ca(mg)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.CAmg}"/>
+                    </p:column>
+                    <p:column headerText="Fe (mg)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.FEmg}"/>
+                    </p:column>
+                    <p:column headerText="Zn (mg)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.ZNmg}"/>
+                    </p:column>
+                    <p:column headerText="Na (mg)" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{cardapioControlador.refeicaoSelecionada.refeicao.composicaoNutricional.NAmg}"/>
+                    </p:column>
+                </p:dataTable>
+
+                <div style="text-align: center; margin-top: 10px">
+                    <p:commandButton value="Fechar"
+                                     process="@this"
+                                     onclick="aguarde.show();"
+                                     icon="ui-icon-cancel"
+                                     styleClass="padrao mrig05"
+                                     oncomplete="aguarde.hide();"
+                                     actionListener="#{cardapioControlador.fecharDialog()}"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

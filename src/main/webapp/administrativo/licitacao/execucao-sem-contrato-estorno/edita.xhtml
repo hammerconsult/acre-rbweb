@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="limparCamposExecucao"
+                             process="@this"
+                             actionListener="#{execucaoProcessoEstornoControlador.limparDadosExecucao()}"
+                             update=":Formulario:panel-solicitacao :Formulario:panelVerExecucao
+                                     :Formulario:op-fornecedor :Formulario:ip-fornecedor"/>
+
+            <fc:cabecalhoPretty origem="#{execucaoProcessoEstornoControlador.caminhoPadrao}listar/"
+                                controlador="#{execucaoProcessoEstornoControlador}"/>
+
+            <p:panel header="Estorno de Execução Sem Contrato" id="panelGeral">
+                <h:panelGrid columns="2" id="gridGeral" styleClass="mtop05">
+                    <h:outputText value="Número: "/>
+                    <h:outputText
+                        value="#{execucaoProcessoEstornoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar' : execucaoProcessoEstornoControlador.selecionado.numero}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Data de Lançamento: "/>
+                    <h:outputText value="#{execucaoProcessoEstornoControlador.selecionado.dataLancamento}"
+                                  styleClass="negrito">
+                        <f:convertDateTime type="date"/>
+                    </h:outputText>
+
+                    <h:outputText value="Valor Total: "/>
+                    <h:outputText
+                        id="valorTotalEstorno"
+                        value="#{execucaoProcessoEstornoControlador.selecionado.valor}"
+                        styleClass="negrito">
+                        <f:convertNumber type="currency"/>
+                    </h:outputText>
+
+                    <fc:outputLabelObrigatorio value="Execução Sem Processo: "/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000"
+                                        id="acExecucao"
+                                        size="70"
+                                        title="Selecione uma execução sem processo."
+                                        value="#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso}"
+                                        completeMethod="#{execucaoProcessoEstornoControlador.completarExecucao}"
+                                        converter="#{execucaoProcessoControlador.converterGenerico}"
+                                        disabled="#{execucaoProcessoEstornoControlador.hasEstornosLancados()}"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px;max-width: 1000px"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparCamposExecucao();}"
+                                        var="ex"
+                                        itemValue="#{ex.id}"
+                                        itemLabel="Execução #{ex}">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{execucaoProcessoEstornoControlador.recuperarDadosExecucao()}"
+                                    update=":Formulario:panel-solicitacao :Formulario:panelVerExecucao
+                                            :Formulario:op-fornecedor :Formulario:ip-fornecedor"
+                                    process="@this"/>
+                        </p:autoComplete>
+
+                        <co:botao_informacao descricao="
+                                  &lt;b>Busca todas as execuções. Filtros: &lt;/b>
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano da Ata Registro de Preço.
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano da Dispensa de Licitação.
+                                  &lt;br/&gt; &bull;
+                                  Nome/Razão Social do Fornecedor.
+                                  &lt;br/&gt; &bull;
+                                  Cpf/Cnpj do Fornecedor.
+                                  &lt;br/&gt; &bull;
+                                  Valor da Execução." styleClass="mlef05"/>
+
+                        <p:outputPanel id="panelVerExecucao">
+                            <p:commandButton process="@none"
+                                             icon="ui-icon-search"
+                                             title="Clique para visualizar a execução do sem contrato em nova aba."
+                                             styleClass="mlef05"
+                                             disabled="#{!execucaoProcessoEstornoControlador.hasExecucaoSelecionada()}"
+                                             update="@none"
+                                             onclick="window.open('#{request.contextPath}/execucao-sem-contrato/ver/#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso.id}/','_blank');"/>
+
+                            <p:commandButton icon="ui-icon-categorias"
+                                             process="@this"
+                                             update=":form-itens-execucao"
+                                             disabled="#{!execucaoProcessoEstornoControlador.hasExecucaoSelecionada()}"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide(); dlgItensExecucao.show()"
+                                             title="Clique para visualizar os destalhes desta execução."
+                                             styleClass="mlef05"/>
+
+                            <p:commandButton icon="ui-icon-atualizar"
+                                             value="Recarregar Solicitações"
+                                             title="Clique para recarregar a lista de solicitações."
+                                             process="@this"
+                                             update=":Formulario:panel-solicitacao"
+                                             disabled="#{!execucaoProcessoEstornoControlador.hasExecucaoSelecionada()}"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{execucaoProcessoEstornoControlador.criarSolicitacaoEstornoEmpenhoVo()}"
+                                             styleClass="mlef05 operacao"/>
+                        </p:outputPanel>
+                    </h:panelGroup>
+
+                    <p:outputPanel id="op-fornecedor">
+                        <h:outputText value="Fornecedor: "
+                                      rendered="#{execucaoProcessoEstornoControlador.hasExecucaoSelecionada()}"/>
+                    </p:outputPanel>
+                    <p:outputPanel id="ip-fornecedor">
+                        <h:outputText
+                            rendered="#{execucaoProcessoEstornoControlador.hasExecucaoSelecionada()}"
+                            value="#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso.fornecedor}"
+                            styleClass="negrito"/>
+                    </p:outputPanel>
+                </h:panelGrid>
+
+                <p:fieldset legend="Solicitações de Empenho" styleClass="mtop10"
+                            id="panel-solicitacao">
+
+                    <p:outputPanel rendered="#{execucaoProcessoEstornoControlador.hasExecucaoSelecionada()}">
+                        <table class="table table-condensed" id="tabela">
+                            <tr>
+                                <th class="alinhamentoCentralizado" style="width: 1%">#</th>
+                                <th class="alinhamentoCentralizado" style="width: 60%">SOLICITAÇÃO DE EMPENHO</th>
+                                <th class="alinhamentoCentralizado">EMPENHO</th>
+                            </tr>
+                            <ui:repeat value="#{execucaoProcessoEstornoControlador.solicitacoesEmpenhoVo}"
+                                       var="exEmp">
+                                <tr>
+                                    <td class="alinhamentoCentralizado" style="vertical-align: top">
+                                        <p:commandButton icon="ui-icon-none"
+                                                         process="@this"
+                                                         update=":Formulario:panel-solicitacao"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         rendered="#{!exEmp.selecionado}"
+                                                         disabled="#{exEmp.bloqueado}"
+                                                         actionListener="#{execucaoProcessoEstornoControlador.selecionarSolicitacaoEmpenhoVo(exEmp)}"
+                                                         styleClass="icone-20"/>
+
+                                        <p:commandButton icon="ui-icon-check"
+                                                         update=":Formulario:panel-solicitacao"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         process="@this"
+                                                         rendered="#{exEmp.selecionado}"
+                                                         disabled="#{exEmp.bloqueado}"
+                                                         actionListener="#{execucaoProcessoEstornoControlador.desselecionarSolicitacaoEmpenhoVo(exEmp)}"
+                                                         styleClass="icone-20"/>
+                                    </td>
+                                    <td style="vertical-align: top">
+                                        <table class="table table-bordered" style="width: 100%">
+                                            <tr class="fundo-amarelo-claro">
+                                                <th class="alinhamentoEsquerda" style="width: 30%">Dotação</th>
+                                                <th class="alinhamentoCentralizado">Data</th>
+                                                <th class="alinhamentoEsquerda">Categoria</th>
+                                                <th class="alinhamentoDireita">Valor (R$)</th>
+                                                <th class="alinhamentoDireita">Saldo (R$)</th>
+                                            </tr>
+
+                                            <tr>
+                                                <td class="alinhamentoEsquerda">
+                                                    <h:outputText
+                                                        value="#{exEmp.solicitacaoEmpenho.fonteDespesaORC}"/>
+                                                </td>
+                                                <td class="alinhamentoCentralizado">
+                                                    <h:outputText
+                                                        value="#{exEmp.solicitacaoEmpenho.dataSolicitacao}">
+                                                        <f:convertDateTime type="date"/>
+                                                    </h:outputText>
+                                                </td>
+                                                <td class="alinhamentoEsquerda">
+                                                    <h:outputText value="#{exEmp.categoria.descricao}"/>
+                                                </td>
+                                                <td class="alinhamentoDireita">
+                                                    <h:outputText value="#{exEmp.solicitacaoEmpenho.valor}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </td>
+                                                <td class="alinhamentoDireita">
+                                                    <h:outputText value="#{exEmp.saldo}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+
+                                    <td style="vertical-align: top;">
+                                        <div class="thumbnail fundo-cinza-padrao"
+                                             align="center"
+                                             style="vertical-align: middle; display: #{exEmp.isTipoEstornoSolicitacaoEmpenho() ? 'block' : 'none'}">
+                                            Empenho não Executado
+                                        </div>
+
+                                        <div style="display: #{exEmp.isTipoEstornoEmpenho() ? 'block' : 'none'}">
+                                            <table class="table table-bordered"
+                                                   style="width: 100%">
+                                                <tr class="fundo-cinza-padrao">
+                                                    <th class="alinhamentoEsquerda">Número</th>
+                                                    <th class="alinhamentoDireita">Valor</th>
+                                                    <th class="alinhamentoDireita">Saldo</th>
+                                                </tr>
+                                                <tr>
+                                                    <td class="alinhamentoEsquerda">
+                                                        <h:outputText
+                                                            value="#{exEmp.empenho.numero}/#{exEmp.empenho.exercicio.ano}"/>
+                                                    </td>
+                                                    <td class="alinhamentoDireita">
+                                                        <h:outputText value="#{exEmp.empenho.valor}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </td>
+                                                    <td class="alinhamentoDireita">
+                                                        <h:outputText value="#{exEmp.saldo}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td colspan="8">
+                                        <p:dataTable paginator="true"
+                                                     id="tabelaItens"
+                                                     rendered="#{exEmp.selecionado}"
+                                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                     rowIndexVar="rowIx"
+                                                     styleClass="mbot50"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                                     value="#{exEmp.itens}"
+                                                     rows="10"
+                                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO ESTORNO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                     rowsPerPageTemplate="10,25,50,100"
+                                                     var="itemEst">
+                                            <f:facet name="header">
+                                                <p:outputPanel id="panelValorTotalItens"
+                                                               rendered="#{exEmp.selecionado}">
+                                                    <div style="float: left; font-weight: bold; padding: 5px"
+                                                         class="mtop05 alert alert-success">
+                                                        Saldo #{exEmp.isTipoEstornoEmpenho() ? 'do Empenho' : 'da Solicitação de Empenho'}:
+                                                        <h:outputText
+                                                            value="#{execucaoProcessoEstornoControlador.solicitacaoEmpenhoEstornoVo.saldo}">
+                                                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </div>
+
+                                                    <div style="float: right; font-weight: bold; padding: 5px"
+                                                         class="mtop05 alert alert-success">
+                                                        Valor Total dos Itens Selecionados:
+                                                        <h:outputText
+                                                            value="#{execucaoProcessoEstornoControlador.valorTotalItensSelecionado}">
+                                                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </div>
+                                                </p:outputPanel>
+                                            </f:facet>
+                                            <p:column headerText="Item" style="text-align: left;">
+                                                <h:outputText
+                                                    value="#{itemEst.execucaoProcessoItem.numeroDescricao}"/>
+                                            </p:column>
+                                            <p:column headerText="Vl em Execução" style="text-align: right;">
+                                                <h:outputText
+                                                    value="#{itemEst.valorEmExecucao}">
+                                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Vl Est. Execução" style="text-align: right;">
+                                                <h:outputText value="#{itemEst.valorEstornadoExecucao}">
+                                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Vl em Requisição" style="text-align: right;">
+                                                <h:outputText value="#{itemEst.valorEmRequisicao}">
+                                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Vl Est. Requisição"
+                                                      style="text-align: right;">
+                                                <h:outputText value="#{itemEst.valorEstornoRequisicao}">
+                                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Saldo a Estornar" style="text-align: right;">
+                                                <p:outputPanel id="saldoDisponivel">
+                                                    <h:outputText value="#{itemEst.saldoDisponivel}">
+                                                        <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </p:outputPanel>
+                                            </p:column>
+                                            <p:column headerText="Quantidade"
+                                                      style="text-align: right;">
+                                                <p:outputPanel id="quantidadeItem">
+                                                    <p:inputText title="Digite o valor"
+                                                                 value="#{itemEst.quantidade}"
+                                                                 size="15"
+                                                                 converter="#{unidadeMedidaControlador.getConverterMascaraUnidadeMedida(itemEst.execucaoProcessoItem.mascaraQuantidade.mascara)}"
+                                                                 onkeypress="mascaraMonetariaDinamica(this, 20, '#{itemEst.execucaoProcessoItem.mascaraQuantidade.quantidadeCasasDecimais}', false)"
+                                                                 disabled="#{!itemEst.isTipoControleQuantidade() or exEmp.isTipoEstornoSolicitacaoEmpenho()}"
+                                                                 styleClass="alinhamentoDireita">
+                                                        <p:ajax event="blur"
+                                                                update="quantidadeItem valorTotalItem panelValorTotalItens"
+                                                                process="@this"
+                                                                listener="#{execucaoProcessoEstornoControlador.processarQuantidadeItem(itemEst)}"/>
+                                                    </p:inputText>
+                                                </p:outputPanel>
+                                            </p:column>
+                                            <p:column headerText="Vl Unitário" style="text-align: right;">
+                                                <p:outputPanel id="vlUnitario">
+                                                    <fc:output-mascara-unidade-medida
+                                                        value="#{itemEst.valorUnitario}"
+                                                        tipoMascara="#{itemEst.execucaoProcessoItem.mascaraValorUnitario}"/>
+                                                </p:outputPanel>
+                                            </p:column>
+                                            <p:column headerText="Valor Total" style="text-align: right;">
+                                                <p:outputPanel id="valorTotalItem">
+                                                    <p:inputText title="Digite o valor"
+                                                                 value="#{itemEst.valorTotal}"
+                                                                 size="15"
+                                                                 disabled="#{!itemEst.isTipoControleValor() or exEmp.isTipoEstornoSolicitacaoEmpenho()}"
+                                                                 onkeypress="mascara(this, mvalor)"
+                                                                 styleClass="alinhamentoDireita">
+                                                        <p:ajax event="blur"
+                                                                update="@this quantidadeItem panelValorTotalItens :Formulario:gridGeral"
+                                                                process="@this"
+                                                                listener="#{execucaoProcessoEstornoControlador.processarValorTotalItem(itemEst)}"/>
+                                                        <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                    </p:inputText>
+                                                </p:outputPanel>
+                                            </p:column>
+                                            <f:facet name="footer">
+                                                <p:commandButton icon="ui-icon-check"
+                                                                 value="Adicionar Solicitação"
+                                                                 process="@this :Formulario:panel-solicitacao"
+                                                                 onstart="aguarde.show()"
+                                                                 oncomplete="aguarde.hide()"
+                                                                 actionListener="#{execucaoProcessoEstornoControlador.confirmarEmpenho()}"
+                                                                 styleClass="mtop05 prioritario"/>
+                                            </f:facet>
+                                        </p:dataTable>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                        </table>
+                    </p:outputPanel>
+                </p:fieldset>
+
+
+                <p:outputPanel id="panel-estornos">
+                    <p:dataTable paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop10"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{execucaoProcessoEstornoControlador.selecionado.estornosEmpenho}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Solicitações de Estornos da Execução&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="est">
+                        <p:columnGroup type="header">
+                            <p:row>
+                                <p:column rowspan="2" headerText="Remover"/>
+                                <p:column rowspan="2" headerText="Itens" style="border: 1px solid darkgray !important"/>
+                                <p:column colspan="2" headerText="Solicitações de Estorno"
+                                          styleClass="negrito alinhamentoCentralizado"
+                                          style="border: 1px solid darkgray !important"/>
+                                <p:column colspan="4" headerText="Dados da Solicitação de Empenho"
+                                          style="border: 1px solid darkgray !important"
+                                          styleClass="negrito"/>
+                                <p:column rowspan="2" headerText="Valor (R$)"
+                                          style="border: 1px solid darkgray !important"/>
+                            </p:row>
+
+                            <p:row>
+                                <p:column headerText="Empenho"/>
+                                <p:column headerText="Nº Empenho"/>
+                                <p:column headerText="Data"/>
+                                <p:column headerText="Categoria"/>
+                                <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda"/>
+                                <p:column headerText="Dotação Orçamentária" styleClass="alinhamentoEsquerda"/>
+                            </p:row>
+                        </p:columnGroup>
+
+                        <p:column headerText="Remover" style="text-align: center; width: 50px;">
+                            <p:commandButton icon="ui-icon-trash"
+                                             process="@this"
+                                             update=":Formulario:panel-estornos :Formulario:gridGeral :Formulario:panel-solicitacao"
+                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{execucaoProcessoEstornoControlador.removerExecucaoProcessoEmpenhoEstorno(est)}"
+                                             title="Clique para remover este registro."/>
+                        </p:column>
+                        <p:column headerText="Itens">
+                            <p:commandButton icon="ui-icon-categorias"
+                                             process="@this"
+                                             update=":form-itens-estorno"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide();dlgItensEstorno.show()"
+                                             actionListener="#{execucaoProcessoEstornoControlador.selecionarEstornoExecucao(est)}"
+                                             title="Clique para selecionar liquidação."/>
+                        </p:column>
+                        <p:column headerText="Sol. Estorno Empenho" style="text-align: center">
+                            <ad:detalhes-solicitacao-empenho-estorno
+                                id="componenteDetalhesSolicitacao"
+                                update=":Formulario:panel-estornos"
+                                solicitacaoEmpenhoEstorno="#{est.solicitacaoEmpenhoEstorno}"/>
+                        </p:column>
+                        <p:column headerText="Número" style="text-align: left;">
+                            <h:outputText value="#{est.solicitacaoEmpenhoEstorno.numero}"/>
+                        </p:column>
+                        <p:column headerText="Data" style="text-align: center;">
+                            <h:outputText value="#{est.solicitacaoEmpenhoEstorno.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Categoria" style="text-align: right;">
+                            <h:outputText
+                                value="#{est.solicitacaoEmpenhoEstorno.categoria.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Fornecedor" style="text-align: left;">
+                            <h:outputText value="#{est.solicitacaoEmpenhoEstorno.solicitacaoEmpenho.fornecedor}"/>
+                        </p:column>
+                        <p:column headerText="Dotação Orçamentária" style="text-align: left;">
+                            <h:outputText value="#{est.solicitacaoEmpenhoEstorno.solicitacaoEmpenho.fonteDespesaORC}"/>
+                        </p:column>
+                        <p:column headerText="Valor do Estorno (R$)" style="text-align: right;">
+                            <h:outputText value="#{est.valor}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{execucaoProcessoEstornoControlador}"/>
+        </h:form>
+
+        <p:dialog showHeader="false"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  width="1000"
+                  resizable="false"
+                  widgetVar="dlgItensExecucao"
+                  closable="false">
+            <h:form id="form-itens-execucao">
+                <legend
+                    class="legenda">Detalhes da Execução
+                    <p:commandButton icon="ui-icon-close"
+                                     title="Clique para fechar."
+                                     process="@this"
+                                     style="float: right !important;"
+                                     styleClass="mtop10 icone-20"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgItensExecucao.hide();"/>
+                </legend>
+
+                <h:panelGrid
+                    columns="2">
+                    <h:outputText value="Número: "/>
+                    <h:outputText
+                        value="#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso.numero}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Data: "/>
+                    <h:outputText
+                        value="#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso.dataLancamento}"
+                        styleClass="negrito">
+                        <f:convertDateTime type="date"/>
+                    </h:outputText>
+
+                    <h:outputText value="Forma de Entrega: "/>
+                    <h:outputText
+                        value="#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso.formaEntrega.descricao}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Valor da Execução: "/>
+                    <h:outputText
+                        value="#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso.valor}"
+                        styleClass="negrito"
+                        converter="moneyConverter"/>
+                </h:panelGrid>
+
+
+                <p:dataTable id="tabelaItensExecucao"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             style="overflow: scroll; max-height: 350px; width: auto"
+                             styleClass="mtop10"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{execucaoProcessoEstornoControlador.itensExecucao}"
+                             var="itemExec">
+                    <p:column headerText="Item" style="text-align: left;">
+                        <h:outputText value="#{itemExec.numeroDescricao}"/>
+                    </p:column>
+                    <p:column headerText="Unid. Med." style="text-align: left;">
+                        <h:outputText value="#{itemExec.itemProcessoCompra.itemSolicitacaoMaterial.unidadeMedida}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" style="text-align: right;">
+                        <fc:output-mascara-unidade-medida
+                            value="#{itemExec.quantidade}"
+                            tipoMascara="#{itemExec.mascaraQuantidade}"/>
+                    </p:column>
+                    <p:column headerText="Valor Unitário (R$)" style="text-align: right;">
+                        <fc:output-mascara-unidade-medida
+                            value="#{itemExec.valorUnitario}"
+                            tipoMascara="#{itemExec.mascaraValorUnitario}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" style="text-align: right;">
+                        <h:outputText value="#{itemExec.valorTotal}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{execucaoProcessoEstornoControlador.selecionado.execucaoProcesso.valorTotalItensExecucao}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog showHeader="false"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  width="1000"
+                  resizable="false"
+                  widgetVar="dlgItensEstorno"
+                  closable="false">
+
+            <h:form id="form-itens-estorno">
+                <legend class="legenda mbot05">Detalhes dos Itens do Estorno da Execução
+                    <p:commandButton icon="ui-icon-close"
+                                     title="Clique para fechar."
+                                     process="@this"
+                                     style="float: right !important;"
+                                     styleClass="mtop10 icone-20"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgItensEstorno.hide();"/>
+                </legend>
+
+                <p:dataTable
+                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                    rowIndexVar="rowIx"
+                    style="overflow: scroll; max-height: 300px; width: auto"
+                    emptyMessage="Não foram localizados registros para serem apresentados"
+                    value="#{execucaoProcessoEstornoControlador.execucaoProcessoEstornoSelecionado.itens}"
+                    rowKey="#{itemExecEst}"
+                    var="itemExecEst">
+                    <p:column headerText="Item" style="text-align: left;">
+                        <h:outputText value="#{itemExecEst.execucaoProcessoItem.numeroDescricao}"/>
+                    </p:column>
+                    <p:column headerText="Unid. Med." style="text-align: left;">
+                        <h:outputText
+                            value="#{itemExecEst.execucaoProcessoItem.itemProcessoCompra.itemSolicitacaoMaterial.unidadeMedida}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" style="text-align: right;">
+                        <fc:output-mascara-unidade-medida
+                            value="#{itemExecEst.quantidade}"
+                            tipoMascara="#{itemExecEst.execucaoProcessoItem.mascaraQuantidade}"/>
+                    </p:column>
+                    <p:column headerText="Valor Unitário (R$)" style="text-align: right;">
+                        <fc:output-mascara-unidade-medida
+                            value="#{itemExecEst.valorUnitario}"
+                            tipoMascara="#{itemExecEst.execucaoProcessoItem.mascaraValorUnitario}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" style="text-align: right;">
+                        <h:outputText value="#{itemExecEst.valorTotal}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{execucaoProcessoEstornoControlador.execucaoProcessoEstornoSelecionado.valorTotalItens}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

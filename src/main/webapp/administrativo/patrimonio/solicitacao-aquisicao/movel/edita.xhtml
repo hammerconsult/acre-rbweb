@@ -1,0 +1,1016 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:adm="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:f="http://java.sun.com/jsf/core">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            function acompanharSalvar() {
+                timer = setInterval(function () {
+                    rcAtualizaCompFutures();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timer);
+                rcFinalizaFutureSalvar();
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{solicitacaoAquisicaoControlador.consultarFutureSalvar}"
+                name="rcAtualizaCompFutures"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                update=":FormularioSalvar"
+                actionListener="#{solicitacaoAquisicaoControlador.finalizarProcesssoSalvar}"
+                name="rcFinalizaFutureSalvar"/>
+
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{solicitacaoAquisicaoControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                onstart="aguarde.show()"
+                oncomplete="aguarde.hide()"
+                actionListener="#{solicitacaoAquisicaoControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand name="limparDadosRequiscao"
+                             process="@this"
+                             update=":Formulario:tabViewPrincipal:panelPrincipal :Formulario:tabViewPrincipal:outDadosDocumento"
+                             actionListener="#{solicitacaoAquisicaoControlador.limparDadosRequiscao()}"/>
+
+            <fc:cabecalhoPretty controlador="#{solicitacaoAquisicaoControlador}"
+                                origem="#{solicitacaoAquisicaoControlador.caminhoPadrao}listar"/>
+
+            <p:panel header="Solicitação de Aquisição de Bens Móveis">
+                <p:tabView dynamic="true" id="tabViewPrincipal" styleClass="mtop05">
+                    <p:tab title="Dados da Solicitação">
+                        <p:outputPanel id="panelPrincipal">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Situação:"/>
+                                <h:outputLabel value="#{solicitacaoAquisicaoControlador.selecionado.situacao.descricao}"
+                                               styleClass="negrito"
+                                               id="situacao"/>
+
+                                <h:outputLabel value="Número:"/>
+                                <h:outputLabel
+                                    value="#{solicitacaoAquisicaoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar' : solicitacaoAquisicaoControlador.selecionado.numero}"
+                                    styleClass="negrito"
+                                    id="numero"/>
+
+                                <h:outputLabel value="Data:"/>
+                                <h:outputLabel value="#{solicitacaoAquisicaoControlador.selecionado.dataSolicitacao}"
+                                               styleClass="negrito">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputLabel>
+
+                                <h:outputLabel value="Usuário:"/>
+                                <h:outputLabel
+                                    value="#{solicitacaoAquisicaoControlador.selecionado.usuario.pessoaFisica.nome}"
+                                    styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Requisição de Compra:"/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="requisicao"
+                                                title="Informe a requisição de compra"
+                                                value="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra}"
+                                                completeMethod="#{solicitacaoAquisicaoControlador.buscarRequisicaoDeCompra}"
+                                                var="req"
+                                                disabled="#{solicitacaoAquisicaoControlador.isOperacaoEditar()}"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 700px"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosRequiscao()}"
+                                                itemLabel="#{req.toStringAutoComplete()}"
+                                                itemValue="#{req.id}"
+                                                size="70"
+                                                converter="#{requisicaoDeCompraControlador.converterGenerico}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            listener="#{solicitacaoAquisicaoControlador.listenerRequisicaoCompra()}"
+                                            update=":Formulario:tabViewPrincipal:panelPrincipal
+                                                    :Formulario:tabViewPrincipal:outDadosDocumento"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();setaFoco('Formulario:tabViewPrincipal:requisicao_input')"/>
+                                </p:autoComplete>
+
+                                <h:outputText for="descricao" value="Descrição da Requisição:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="descricao"
+                                                     value="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra.descricao}"
+                                                     maxlength="255"
+                                                     readonly="true"
+                                                     cols="70"
+                                                     autoResize="false"
+                                                     scrollHeight="50"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-descricao"
+                                                     style="text-transform: uppercase"/>
+                                    <h:outputText id="counter-descricao"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+
+                                <h:outputText for="logalDeEntrega" value="Local da Entrega:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="logalDeEntrega"
+                                                     readonly="true"
+                                                     title="O local de entrega."
+                                                     value="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra.localEntrega}"
+                                                     maxlength="255"
+                                                     autoResize="false"
+                                                     scrollHeight="50"
+                                                     cols="70"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-logalDeEntrega"
+                                                     style="text-transform: uppercase"/>
+                                    <h:outputText id="counter-logalDeEntrega"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+
+                                <h:outputText
+                                    rendered="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra ne null}"
+                                    value="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra.tipoRequisicao.descricao}: "/>
+                                <h:commandLink
+                                    styleClass="link-redirecionar"
+                                    target="_blank"
+                                    rendered="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra ne null}"
+                                    actionListener="#{requisicaoDeCompraControlador.redirecionarParaTipoRequisicao(solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra)}"
+                                    title="Clique para visualizar este registro em nova aba.">
+                                    <h:outputText styleClass="negrito"
+                                                  value="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra.descricaoProcesso}"/>
+                                </h:commandLink>
+
+                                <h:outputText value="Execução do Contrato:"
+                                              rendered="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra.isTipoContrato()}"/>
+                                <adm:requisicao-compra-execucao
+                                    rendered="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra.isTipoContrato()}"
+                                    idRequisicao="#{solicitacaoAquisicaoControlador.selecionado.requisicaoDeCompra.id}"/>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Documento Fiscal" id="tabDadosDocumento">
+                        <p:outputPanel id="outDadosDocumento">
+
+                            <p:commandButton styleClass="mtop10"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update=":Formulario:tabViewPrincipal:outDadosDocumento"
+                                             process="@this :Formulario:tabViewPrincipal:panelPrincipal"
+                                             actionListener="#{solicitacaoAquisicaoControlador.novoDocumento()}"
+                                             rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao eq null}"
+                                             icon="ui-icon-plus"
+                                             value="Novo Documento"/>
+
+                            <h:panelGrid columns="2" id="gridDadosDoc"
+                                         rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}">
+                                <fc:outputLabelObrigatorio value="Tipo do Documento:"/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="tipodocumentofiscal"
+                                                title="Informe o código ou descrição do tipo."
+                                                value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.tipoDocumentoFiscal}"
+                                                completeMethod="#{solicitacaoAquisicaoControlador.completarTipoDocumentoFiscal}"
+                                                var="tipo"
+                                                process="@this"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 700px"
+                                                itemLabel="#{tipo}"
+                                                itemValue="#{tipo.id}"
+                                                size="70"
+                                                converter="#{tipoDocumentoFiscalControlador.converterGenerico}">
+                                    <p:ajax update="chave"
+                                            process="@this"
+                                            event="itemSelect"/>
+                                </p:autoComplete>
+
+                                <h:panelGroup id="chave">
+                                    <fc:outputLabelObrigatorio value="Chave de Acesso: "
+                                                               rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal ne null and solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.tipoDocumentoFiscal.obrigarChaveDeAcesso}"/>
+                                    <h:outputLabel value="Chave de Acesso: "
+                                                   rendered="#{!solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.tipoDocumentoFiscal.obrigarChaveDeAcesso}"/>
+                                </h:panelGroup>
+                                <p:inputText maxlength="44"
+                                             size="45"
+                                             value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.chaveDeAcesso}"
+                                             title="Informe o número da chave de acesso"/>
+
+                                <fc:outputLabelObrigatorio value="Data de Emissão:"/>
+                                <p:calendar onkeypress="mascara(this, mdata)"
+                                            maxlength="10"
+                                            style="text-align: right"
+                                            autocomplete="off"
+                                            showOn="button"
+                                            title="Digite a data do documento."
+                                            value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.dataDocto}"
+                                            locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                            size="15"/>
+
+                                <fc:outputLabelObrigatorio value="Data de Atesto:"/>
+                                <p:calendar onkeypress="mascara(this, mdata)"
+                                            maxlength="10"
+                                            style="text-align: right"
+                                            autocomplete="off"
+                                            showOn="button"
+                                            title="Digite a data de atesto."
+                                            value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.dataAtesto}"
+                                            locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                            size="15"/>
+
+                                <fc:outputLabelObrigatorio value="Número:"/>
+                                <p:inputText
+                                    value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.numero}"/>
+
+                                <h:outputText value="Série:"/>
+                                <p:inputText
+                                    value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.serie}"/>
+
+                                <h:outputText value="UF:"/>
+                                <p:selectOneMenu title="Informe a UF do Documento Fiscal"
+                                                 style="width: 60px;"
+                                                 converter="#{uFControlador.converterGenerico}"
+                                                 value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.uf}">
+                                    <f:selectItems value="#{uFControlador.listaSelectItemUf}"/>
+                                </p:selectOneMenu>
+
+                                <h:outputLabel value="Valor Total:"/>
+                                <h:panelGroup>
+                                    <p:inputText id="valortotal"
+                                                 styleClass="negrito alinhamentoDireita"
+                                                 value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.documentoFiscal.total}"
+                                                 onkeydown="mascaraPonto(this);">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </p:inputText>
+
+                                    <p:commandButton styleClass="mlef05 prioritario"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide();dlgDistribuirItem.show()"
+                                                     update=":formDlgDistribuirItem"
+                                                     process="@this"
+                                                     rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}"
+                                                     icon="ui-icon-check"
+                                                     value="Distribuir Itens"/>
+                                </h:panelGroup>
+                            </h:panelGrid>
+
+                            <p:dataTable paginator="true"
+                                         id="tabela-itens"
+                                         style="overflow: scroll; width: auto"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.itens}"
+                                         rows="5"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Itens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="5,15,50,100"
+                                         var="item">
+
+                                <p:column style="width: 5%" styleClass="alinhamentoCentralizado">
+                                    <f:facet name="header">
+                                        <p:commandButton icon="ui-icon-none"
+                                                         process="@this"
+                                                         rendered="#{!solicitacaoAquisicaoControlador.isTodosItensSelecionados()}"
+                                                         update="tabela-itens :Formulario:tabViewPrincipal:totalItensSelecionado"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         actionListener="#{solicitacaoAquisicaoControlador.selecionarTodosItens()}"
+                                                         styleClass="icone-20"/>
+
+                                        <p:commandButton icon="ui-icon-check"
+                                                         process="@this"
+                                                         onclick="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         rendered="#{solicitacaoAquisicaoControlador.isTodosItensSelecionados()}"
+                                                         update="tabela-itens :Formulario:tabViewPrincipal:totalItensSelecionado"
+                                                         actionListener="#{solicitacaoAquisicaoControlador.desselecionarTodosItens()}"
+                                                         styleClass="icone-20"/>
+                                    </f:facet>
+                                    <p:commandButton icon="ui-icon-none"
+                                                     process="@this tabela-itens"
+                                                     update="tabela-itens :Formulario:tabViewPrincipal:totalItensSelecionado"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     rendered="#{!item.selecionado}"
+                                                     actionListener="#{solicitacaoAquisicaoControlador.selecionarItem(item)}"
+                                                     styleClass="icone-20"/>
+
+                                    <p:commandButton icon="ui-icon-check"
+                                                     update="tabela-itens :Formulario:tabViewPrincipal:totalItensSelecionado"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this tabela-itens"
+                                                     rendered="#{item.selecionado}"
+                                                     actionListener="#{solicitacaoAquisicaoControlador.desselecionarItem(item)}"
+                                                     styleClass="icone-20"/>
+                                </p:column>
+
+                                <p:column headerText="Qtde Documento" styleClass="alinhamentoCentralizado">
+                                    <p:inputText value="#{item.itemDoctoFiscalLiquidacao.quantidade}"
+                                                 size="10"
+                                                 onclick="this.select()"
+                                                 styleClass="negrito">
+                                        <f:convertNumber type="number" integerOnly="true"/>
+                                        <p:ajax event="blur"
+                                                update="tabela-itens :Formulario:tabViewPrincipal:totalItensSelecionado"
+                                                process=":Formulario:tabViewPrincipal:outDadosDocumento"/>
+                                    </p:inputText>
+                                </p:column>
+                                <p:column headerText="Qtde Restante" style="text-align: center;">
+                                    <h:outputText
+                                        value="#{item.quantidadeDisponivel}"/>
+                                </p:column>
+                                <p:column headerText="Produto Licitado"
+                                          style="text-align: left;">
+
+                                    <adm:especificacao-objeto-compra
+                                        especificacao="#{item.itemRequisicaoDeCompra.descricaoComplementar}"
+                                        styleClass="icone-20"/>
+
+                                    <h:outputText
+                                        styleClass="mlef05"
+                                        value="#{item.itemRequisicaoDeCompra.objetoCompra.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Produto Entregue"
+                                          style="text-align: left;">
+                                    <p:inputTextarea id="produtoentregue"
+                                                     onkeydown="desabilitarBotaoEnter(event)"
+                                                     title="Informe uma descrição do produto caso ele seja diferente do produto licitado."
+                                                     value="#{item.produtoEntregue}"
+                                                     maxlength="255"/>
+                                </p:column>
+                                <p:column headerText="Marca" style="text-align: left;">
+                                    <h:outputText
+                                        value="#{item.itemRequisicaoDeCompra.itemContrato.itemAdequado.marca}"/>
+                                </p:column>
+                                <p:column headerText="Modelo" style="text-align: left;">
+                                    <h:outputText
+                                        value="#{item.itemRequisicaoDeCompra.itemContrato.itemAdequado.modelo}"/>
+                                </p:column>
+                                <p:column headerText="Unid. Med." style="text-align: center;">
+                                    <h:outputText
+                                        value="#{item.itemRequisicaoDeCompra.unidadeMedida}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial"
+                                          style="text-align: left;">
+                                    <h:outputText
+                                        value="#{item.itemRequisicaoDeCompra.objetoCompra.grupoContaDespesa.grupo}"/>
+                                </p:column>
+                                <p:column headerText="Vl Unit (R$)" style="text-align: right;">
+                                    <h:outputText
+                                        value="#{item.itemRequisicaoDeCompra.valorUnitario}"
+                                        converter="converterBigDecimalCasasDecimais"/>
+                                </p:column>
+                                <p:column headerText="Segurado?" style="text-align: center; width: 3%">
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update=":formSeguradora"
+                                                     process="@this :Formulario:tabViewPrincipal:outDadosDocumento"
+                                                     title="Clique para adicionar uma nova seguradora."
+                                                     actionListener="#{solicitacaoAquisicaoControlador.novaSeguradora(item)}"
+                                                     rendered="#{item.seguradora eq null}"
+                                                     icon="ui-icon-plus"/>
+
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura prioritario"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update=":formSeguradora"
+                                                     process="@this :Formulario:tabViewPrincipal:outDadosDocumento"
+                                                     title="Clique para visualizar/editar a seguradora."
+                                                     actionListener="#{solicitacaoAquisicaoControlador.editarSeguradora(item)}"
+                                                     rendered="#{item.seguradora ne null}"
+                                                     icon="ui-icon-pencil"/>
+                                </p:column>
+
+                                <p:column headerText="Garantia?" style="text-align: center; width: 3%">
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update=":formGarantia"
+                                                     process="@this :Formulario:tabViewPrincipal:outDadosDocumento"
+                                                     title="Clique para adicionar uma nova garantia."
+                                                     actionListener="#{solicitacaoAquisicaoControlador.novaGarantia(item)}"
+                                                     rendered="#{item.garantia eq null}"
+                                                     icon="ui-icon-plus"/>
+
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura prioritario"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update=":formGarantia"
+                                                     process="@this :Formulario:tabViewPrincipal:outDadosDocumento"
+                                                     title="Clique para visualizar a garantia."
+                                                     actionListener="#{solicitacaoAquisicaoControlador.editarGarantia(item)}"
+                                                     rendered="#{item.garantia ne null}"
+                                                     icon="ui-icon-pencil"/>
+                                </p:column>
+                            </p:dataTable>
+                            <div align="center" class="alert alert-info negrito"
+                                 style="padding: 5px; font-size: 14px;
+                                 display: #{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null ? 'block' : 'none'}">
+                                <h:outputText value="Valor Total dos Itens: "/>
+                                <h:outputText
+                                    id="totalItensSelecionado"
+                                    value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.valorTotalItensSelecionados}">
+                                    styleClass="negrito">
+                                    <f:convertNumber type="currency"/>
+                                </h:outputText>
+                            </div>
+
+
+                            <p:commandButton styleClass="mtop10 mbot20 padrao prioritario"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update=":Formulario:tabViewPrincipal:outDadosDocumento"
+                                             process="@this :Formulario:tabViewPrincipal:outDadosDocumento"
+                                             title="Clique para confirmar documento fiscal."
+                                             actionListener="#{solicitacaoAquisicaoControlador.adicionarDocumento()}"
+                                             rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}"
+                                             icon="ui-icon-check"
+                                             value="Confirmar"/>
+
+                            <p:commandButton styleClass="mtop10 mbot20 padrao mlef05"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update=":Formulario:tabViewPrincipal:outDadosDocumento"
+                                             title="Clique para cancelar a operação."
+                                             process="@this"
+                                             actionListener="#{solicitacaoAquisicaoControlador.cancelarDocumento()}"
+                                             rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}"
+                                             icon="ui-icon-cancel"
+                                             value="Cancelar"/>
+
+                            <p:dataTable paginator="true"
+                                         id="tabela-documentos"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rendered="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao eq null}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{solicitacaoAquisicaoControlador.selecionado.documentosFiscais}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Documentos Adicionados&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="doc">
+
+                                <p:column headerText="Ações" style="text-align: center">
+                                    <p:commandButton icon="ui-icon-search"
+                                                     process="@this"
+                                                     onclick="dialogInfoItensDocumento.show();aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     update=":formVerItens"
+                                                     disabled="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}"
+                                                     title="Visualizar os itens do documento fiscal selecionados"
+                                                     actionListener="#{solicitacaoAquisicaoControlador.visualizarItensDoDocumento(doc)}"
+                                                     styleClass="mrig05"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     process="@this"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este documento fiscal?')) {return false; } else {aguarde.show();}"
+                                                     disabled="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}"
+                                                     oncomplete="aguarde.hide()"
+                                                     update="tabela-documentos"
+                                                     title="Clique para remover este documento"
+                                                     actionListener="#{solicitacaoAquisicaoControlador.removerDocumento(doc)}"
+                                                     styleClass="mrig05"/>
+
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     process="@this"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     disabled="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao ne null}"
+                                                     update="@form"
+                                                     title="Clique para remover este documento"
+                                                     actionListener="#{solicitacaoAquisicaoControlador.editarDocumento(doc)}"
+                                                     styleClass="mrig05 prioritario"/>
+                                </p:column>
+                                <p:column headerText="Tipo do Documento" style="text-align: left">
+                                    <h:outputText
+                                        value="#{doc.documentoFiscal.tipoDocumentoFiscal.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{doc.documentoFiscal.dataDocto}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Data de Atesto" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{doc.documentoFiscal.dataAtesto}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Número" style="text-align: left">
+                                    <h:outputText value="#{doc.documentoFiscal.numero}"/>
+                                </p:column>
+                                <p:column headerText="Série" style="text-align: left">
+                                    <h:outputText value="#{doc.documentoFiscal.serie}"/>
+                                </p:column>
+                                <p:column headerText="UF" style="width:2%; text-align: left">
+                                    <h:outputText value="#{doc.documentoFiscal.uf}"/>
+                                </p:column>
+                                <p:column headerText="Valor Total (R$)" style="text-align: right">
+                                    <h:outputText value="#{doc.documentoFiscal.total}"
+                                                  converter="moneyConverter"/>
+                                </p:column>
+                                <p:columnGroup id="totalDoc" type="footer">
+                                    <p:row>
+                                        <p:column styleClass="azulnegrito" colspan="7" style="text-align:right"
+                                                  footerText="Valor Total dos Documentos"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{solicitacaoAquisicaoControlador.formatarValor(solicitacaoAquisicaoControlador.selecionado.valorTotalDocumento)}"/>
+                                    </p:row>
+                                </p:columnGroup>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <p:outputPanel id="panel-anexo">
+                            <fc:filesUploadWP selecionado="#{solicitacaoAquisicaoControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton icon="ui-icon-disk"
+                             value="Salvar"
+                             actionListener="#{solicitacaoAquisicaoControlador.salvar()}"
+                             onclick="aguarde.show();"
+                             process=":Formulario"
+                             title="Clique para salvar este registro."
+                             styleClass="operacao prioritario mtop10"/>
+
+            <p:commandButton icon="ui-icon-cancel"
+                             value="Cancelar"
+                             actionListener="#{solicitacaoAquisicaoControlador.cancelar()}"
+                             onclick="aguarde.show();"
+                             title="Clique para cancelar a operação."
+                             styleClass="operacao mlef05 mtop10"/>
+
+        </h:form>
+
+        <p:dialog header="Itens do Documento"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  width="1200"
+                  height="420"
+                  closable="false"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dialogInfoItensDocumento">
+            <h:form id="formVerItens">
+                <p:dataTable paginator="true"
+                             id="tabela-itens_info"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             style="overflow: scroll; max-height: 600px;width: auto"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.itens}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Itens do Documento Fiscal&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="itemDocto">
+                    <p:column headerText="Prod. Licitado" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{itemDocto.itemRequisicaoDeCompra.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Prod. Entregue"
+                              style="text-align: left;">
+                        <h:outputText
+                            value="#{itemDocto.produtoEntregue}"/>
+                    </p:column>
+                    <p:column headerText="Marca" style="text-align: left;">
+                        <h:outputText
+                            value="#{itemDocto.itemRequisicaoDeCompra.itemContrato.itemAdequado.marca}"/>
+                    </p:column>
+                    <p:column headerText="Modelo" style="text-align: left;">
+                        <h:outputText
+                            value="#{itemDocto.itemRequisicaoDeCompra.itemContrato.itemAdequado.modelo}"/>
+                    </p:column>
+                    <p:column headerText="Unid. Med." style="text-align: center;">
+                        <h:outputText
+                            value="#{itemDocto.itemRequisicaoDeCompra.unidadeMedida}"/>
+                    </p:column>
+                    <p:column headerText="Grupo"
+                              style="text-align: left;">
+                        <h:outputText
+                            value="#{itemDocto.itemRequisicaoDeCompra.objetoCompra.grupoContaDespesa.grupo}"/>
+                    </p:column>
+                    <p:column headerText="Segurado" style="text-align: center; width: 5%">
+                        <p:commandButton icon="ui-icon-search"
+                                         title="visualizar a seguradora do item."
+                                         onclick="aguarde.show();"
+                                         process="@this"
+                                         update=":formSeguradora"
+                                         oncomplete="aguarde.hide();dlgDetalhesSeguradora.show()"
+                                         actionListener="#{solicitacaoAquisicaoControlador.selecionarItemDoctoItemAquisicao(itemDocto)}"/>
+                    </p:column>
+                    <p:column headerText="Garantia" style="text-align: center; width: 5%">
+                        <p:commandButton icon="ui-icon-search"
+                                         title="visualizar a garantia do item."
+                                         process="@this"
+                                         update=":formGarantia"
+                                         onclick="aguarde.show();"
+                                         oncomplete="aguarde.hide();dlgDetalhesGarantia.show()"
+                                         actionListener="#{solicitacaoAquisicaoControlador.selecionarItemDoctoItemAquisicao(itemDocto)}"/>
+                    </p:column>
+                    <p:column headerText="Qtde Total" style="text-align: right;">
+                        <h:outputText
+                            value="#{itemDocto.itemRequisicaoDeCompra.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Qtde Documento" style="text-align: right;">
+                        <h:outputText value="#{itemDocto.itemDoctoFiscalLiquidacao.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Vl Unit. (R$)"
+                              style="text-align: right;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoFiscalLiquidacao.valorUnitario}"
+                            converter="converterBigDecimalCasasDecimais"/>
+                        <f:facet name="footer">
+                            <h:outputText value="Valor Total (R$)" styleClass="negrito"/>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Vl Total (R$)"
+                              style="text-align: right;">
+                        <h:outputText
+                            value="#{itemDocto.itemDoctoFiscalLiquidacao.valorTotal}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{solicitacaoAquisicaoControlador.doctoFiscalSolicitacao.valorTotal}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+
+                <div align="center">
+                    <p:commandButton icon="ui-icon-close"
+                                     value="Fechar"
+                                     actionListener="#{solicitacaoAquisicaoControlador.cancelarDocumento()}"
+                                     onclick="aguarde.show();"
+                                     process="@this"
+                                     update="@none"
+                                     oncomplete="aguarde.hide(); dialogInfoItensDocumento.hide();"
+                                     styleClass="padrao mtop10"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Seguradora do Item"
+                  modal="true"
+                  dynamic="true"
+                  closable="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dglSeguradora">
+
+            <h:form id="formSeguradora">
+                <adm:seguradora
+                    seguradora="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.seguradora}"
+                    caminhoAtual="#{solicitacaoAquisicaoControlador.caminhoPadrao}"
+                    camposObrigatorios="true"/>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     actionListener="#{solicitacaoAquisicaoControlador.adicionarSeguradora()}"
+                                     update=":Formulario:tabViewPrincipal:tabela-itens"
+                                     process=":formSeguradora"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="padrao mrig05 mtop10 prioritario"/>
+
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     actionListener="#{solicitacaoAquisicaoControlador.cancelarSeguradora()}"
+                                     onclick="aguarde.show();"
+                                     process="@this"
+                                     update=":Formulario:tabViewPrincipal:tabela-itens"
+                                     oncomplete="aguarde.hide(); dglSeguradora.hide();"
+                                     styleClass="padrao mtop10"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog header="Seguradora do Item"
+                  modal="true"
+                  dynamic="true"
+                  closable="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgDetalhesSeguradora">
+            <h:form id="formDetalhesSeguradora">
+                <adm:seguradora
+                    rendered="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.seguradora ne null}"
+                    seguradora="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.seguradora}"
+                    caminhoAtual="#{solicitacaoAquisicaoControlador.caminhoPadrao}"
+                    somenteVisualizar="true"
+                />
+
+                <p:outputPanel
+                    rendered="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.seguradora eq null}">
+                    <div align="center" class="alert alert-success mtop05" style="font-size: 13px">
+                        O Item
+                        <strong>#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.itemRequisicaoDeCompra.numero}</strong> não possui uma seguradora.
+                    </div>
+                </p:outputPanel>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     actionListener="#{solicitacaoAquisicaoControlador.cancelarSeguradora()}"
+                                     onclick="aguarde.show();"
+                                     process="@this"
+                                     update="@none"
+                                     oncomplete="aguarde.hide(); dlgDetalhesSeguradora.hide();"
+                                     styleClass="padrao mtop10"/>
+
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Garantia do Item"
+                  modal="true"
+                  closable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dglGarantia">
+            <h:form id="formGarantia">
+
+                <legend class="legenda">Nova / Editar Garantia</legend>
+
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Descrição: " for="descricaoGarantia"/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea title="Digite a descrição da garantia."
+                                         value="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.garantia.descricao}"
+                                         id="descricaoGarantia"
+                                         cols="67"
+                                         rows="4"
+                                         maxlength="3000"
+                                         autoResize="false"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter-descricao-garantia"/>
+                        <h:outputText id="counter-descricao-garantia"
+                                      style="color: #497692"
+                                      styleClass="mlef05"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Data de Vencimento: "
+                                               for="vencimentoGarantia"/>
+                    <fc:calendar
+                        value="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.garantia.dataVencimento}"
+                        id="vencimentoGarantia"
+                        size="12"/>
+                </h:panelGrid>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     title="clique para confirmar essa garantia para o item."
+                                     update=":Formulario:tabViewPrincipal:tabela-itens"
+                                     process=":formGarantia"
+                                     actionListener="#{solicitacaoAquisicaoControlador.adicionarGarantia()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="padrao mtop10 mrig05 prioritario"/>
+
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     title="clique para cancelar a adições dessa garantia ao item."
+                                     actionListener="#{solicitacaoAquisicaoControlador.cancelarGarantia()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide(); dglGarantia.hide();"
+                                     update=":Formulario:tabViewPrincipal:tabela-itens"
+                                     process="@this"
+                                     styleClass="padrao mtop10 mrig05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog header="Garantia do Item"
+                  modal="true"
+                  closable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgDetalhesGarantia">
+            <h:form id="formDetalhesGarantia">
+
+                <legend class="legenda">Detalhes da Garantia</legend>
+
+                <h:panelGrid columns="2"
+                             rendered="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.garantia ne null}">
+                    <h:outputLabel value="Descrição: "/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea title="Digite a descrição da garantia."
+                                         value="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.garantia.descricao}"
+                                         cols="67"
+                                         rows="4"
+                                         styleClass="negrito"
+                                         readonly="true"
+                                         maxlength="3000"
+                                         autoResize="false"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter-detalhesGarantia"/>
+                        <h:outputText id="counter-detalhesGarantia"
+                                      style="color: #497692"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+
+                    <h:outputLabel value="Data de Vencimento: "/>
+                    <h:outputText
+                        value="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.garantia.dataVencimento}"
+                        converter="javax.faces.DateTime"
+                        styleClass="negrito"/>
+                </h:panelGrid>
+
+                <p:outputPanel
+                    rendered="#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.garantia eq null}">
+                    <div align="center" class="alert alert-success mtop05" style="font-size: 13px">
+                        O item
+                        <strong>#{solicitacaoAquisicaoControlador.itemDoctoSolicitacao.itemRequisicaoDeCompra.numero}</strong> não possui uma garantia.
+                    </div>
+                </p:outputPanel>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     title="clique para cancelar a adições dessa garantia ao item."
+                                     actionListener="#{solicitacaoAquisicaoControlador.cancelarGarantia()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgDetalhesGarantia.hide();"
+                                     process="@this"
+                                     styleClass="padrao mtop10 mrig05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  closable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgDistribuirItem">
+            <h:form id="formDlgDistribuirItem">
+                <div class="alert alert-warning">
+                    Ao confirmar, o sistema irá distribuir os itens no documento fiscal selecionado, adicionando quantidade (1) para cada item.<br/>
+                    Permitindo assim, uma descrição do
+                    <strong>'Produto Entregue'</strong> para cada item, sem a necessidade de criar vários documentos fiscais.
+                </div>
+
+                <div style="text-align: center">
+                    <p:commandButton styleClass="mtop10 prioritario"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     update=":Formulario:tabViewPrincipal:tabela-itens
+                                             :Formulario:tabViewPrincipal:valortotal
+                                             :Formulario:tabViewPrincipal:totalItensSelecionado"
+                                     process="@this"
+                                     title="Clique para confirmar documento fiscal."
+                                     actionListener="#{solicitacaoAquisicaoControlador.distribuirItensNoDocumentoFiscal()}"
+                                     icon="ui-icon-check"
+                                     value="Confirmar"/>
+
+                    <p:commandButton styleClass="mtop10 mlef05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dlgDistribuirItem.hide()"
+                                     process="@this"
+                                     icon="ui-icon-cancel"
+                                     value="Cancelar"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Solicitação de Aquisição de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{solicitacaoAquisicaoControlador.assistenteMovimentacao.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{solicitacaoAquisicaoControlador.assistenteMovimentacao.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{solicitacaoAquisicaoControlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{solicitacaoAquisicaoControlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{solicitacaoAquisicaoControlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{solicitacaoAquisicaoControlador.assistenteMovimentacao.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{solicitacaoAquisicaoControlador.assistenteMovimentacao.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Buscando Dados para Edição</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"/>
+                        <br/><br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,3 @@
+update hierarquiaorganizacional set tipohierarquia='OUTROS' where tipohierarquia is null ;
+update hierarquiaorganizacional x set (x.iniciovigencia,x.fimvigencia) = (select '01/01/'||e.ano, '31/12/'||e.ano from exercicio e where e.id=x.exercicio_id); 
+update hierarquiaorganizacional x set x.hierarquiaorc_id=(select HO.id from exercicio e  INNER JOIN HIERARQUIAORGANIZACIONAL HO ON HO.EXERCICIO_ID=E.ID AND HO.TIPOHIERARQUIAORGANIZACIONAL='ORCAMENTARIA' AND ho.indicedono=3 and ho.superior_id is null and codigo like('01.001.001.0%' ) where e.id=x.exercicio_id ) where x.tipohierarquiaorganizacional ='ADMINISTRATIVA';

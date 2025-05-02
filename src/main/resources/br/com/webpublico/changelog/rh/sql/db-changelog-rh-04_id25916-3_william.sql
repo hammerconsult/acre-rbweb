@@ -1,0 +1,13 @@
+insert into GrauDeParentesco values (hibernate_sequence.nextval, 1000, 'Companheiro(a) com o (a) qual tenha filho ou vive há mais de 5 (cinco) anos ou possua Declaração de União Estável', '02', 1);
+update GrauDeParentesco set CODIGOESOCIAL = '01', ATIVO = 1 where id = 174969694;
+update GrauDeParentesco set CODIGOESOCIAL = '03', ATIVO = 1, DESCRICAO = 'Filho(a) ou enteado(a)' where id = 174969695;
+insert into GrauDeParentesco values (hibernate_sequence.nextval, 1001, 'Filho(a) ou enteado(a), universitário(a) ou cursando escola técnica de 2º grau', '04', 1);
+update GrauDeParentesco set CODIGOESOCIAL = '06', DESCRICAO = 'Irmão(a), neto(a), ou bisneto(a) sem arrimo dos pais, do(a) qual detenha a guarda judicial', ATIVO = 1 where id = 174969699;
+insert into GrauDeParentesco values (hibernate_sequence.nextval, 1002, 'Irmão(a), neto(a), ou bisneto(a) sem arrimo dos pais, universitário(a) ou cursando escola técnica de 2º grau, do(a) qual detenha a guarda judicial', '07', 1);
+insert into GrauDeParentesco values (hibernate_sequence.nextval, 1003, 'Pais, avós e bisavós', '09', 1);
+insert into GrauDeParentesco values (hibernate_sequence.nextval, 1004, 'Menor pobre do qual detenha a guarda judicial', '10', 1);
+insert into GrauDeParentesco values (hibernate_sequence.nextval, 1005, 'A pessoa absolutamente incapaz, da qual seja tutor ou curador', '11', 1);
+update GRAUDEPARENTESCO set CODIGOESOCIAL = '12', ativo = 1 where id = 174969702;
+update GRAUDEPARENTESCO set CODIGOESOCIAL = '99', ativo = 1, DESCRICAO = 'Agregado/Outros' where id = 6189972;
+update GRAUDEPARENTESCO set DESCRICAO = 'Cônjugue' where id  = 174969694;
+update GRAUDEPARENTESCO set DESCRICAO = 'Ex-cônjugue' where id  = 174969702;

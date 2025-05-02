@@ -1,0 +1,1253 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparCampoLocalEstoque"
+                             process="@this"
+                             update="@this"
+                             actionListener="#{entradaMaterialCompraControlador.definirLocalEstoqueComoNull()}"/>
+            <fc:cabecalhoPretty id="cpCabecalhoPretty"
+                                origem="#{entradaMaterialCompraControlador.caminhoPadrao}listar/"
+                                controlador="#{entradaMaterialCompraControlador}"/>
+
+            <p:panel header="Entrada de Material por Compra">
+                <p:tabView id="tab-view-geral" styleClass="mtop05">
+                    <p:tab title="Entrada">
+                        <p:outputPanel id="panel-dados-entrada">
+                            <h:panelGrid columns="2">
+
+                                <h:outputText value="Número:"/>
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.selecionado.id eq null ? 'O número é gerado automaticamente ao salvar' : entradaMaterialCompraControlador.selecionado.numero}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Data:"/>
+                                <h:outputText value="#{entradaMaterialCompraControlador.selecionado.dataEntrada}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputText value="Situação:"/>
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.selecionado.situacao.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Responsável:"/>
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.selecionado.responsavel.nome}"
+                                    styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Requisição de Compra: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="requisicaoCompra"
+                                                title="Informe a requisição de compra."
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 700px"
+                                                disabled="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra ne null}"
+                                                value="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra}"
+                                                completeMethod="#{entradaMaterialCompraControlador.completarRequisicaoBensDeEstoque}"
+                                                converter="#{requisicaoDeCompraControlador.converterGenerico}"
+                                                var="req"
+                                                itemLabel="#{req.toStringAutoComplete()}"
+                                                itemValue="#{req.id}"
+                                                maxResults="50"
+                                                size="70">
+                                    <p:ajax event="itemSelect"
+                                            listener="#{entradaMaterialCompraControlador.preencherItensEntrada()}"
+                                            process="@this"
+                                            update=":Formulario:tab-view-geral"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </p:autoComplete>
+
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.tipoRequisicao.descricao}"
+                                    rendered="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra ne null}"/>
+                                <h:commandLink
+                                    styleClass="link-redirecionar"
+                                    target="_blank"
+                                    rendered="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra ne null}"
+                                    actionListener="#{requisicaoDeCompraControlador.redirecionarParaTipoRequisicao(entradaMaterialCompraControlador.selecionado.requisicaoDeCompra)}"
+                                    title="Clique para visualizar este registro em nova aba.">
+                                    <h:outputText styleClass="negrito"
+                                                  value="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.descricaoProcesso}"/>
+                                </h:commandLink>
+
+                                <h:outputText value="Execução:"
+                                              rendered="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra ne null and !entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.isTipoReconhecimentoDivida()}"/>
+                                <ad:requisicao-compra-execucao
+                                    rendered="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra ne null and !entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.isTipoReconhecimentoDivida()}"
+                                    idRequisicao="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.id}"/>
+
+                                <fc:outputLabelObrigatorio value="Unidade Administrativa:" for="undSelecionada"/>
+                                <h:panelGroup>
+                                    <p:autoComplete id="undSelecionada"
+                                                    value="#{entradaMaterialCompraControlador.hierarquiaAdministrativa}"
+                                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                    var="ho"
+                                                    size="70"
+                                                    dropdown="true"
+                                                    panelStyle="max-height: 250px; max-width: 700px"
+                                                    itemValue="#{ho}"
+                                                    itemLabel="#{ho}"
+                                                    maxResults="50"
+                                                    disabled="#{entradaMaterialCompraControlador.isIntegracaoCardapio()}"
+                                                    completeMethod="#{entradaMaterialCompraControlador.completarHierarquiaOrganizacionalLocalEstoque}">
+                                        <p:ajax event="itemSelect"
+                                                process="@this"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                listener="#{entradaMaterialCompraControlador.listenerUnidadeAdm()}"
+                                                update=":Formulario:tab-view-geral:tabela-item-entrada"/>
+                                    </p:autoComplete>
+
+                                    <co:botao_informacao
+                                        descricao="Busca as unidades vinculadas ao local de estoque do órgão da unidade administrativa do contrato."/>
+                                </h:panelGroup>
+
+                                <fc:outputLabelObrigatorio value="Tipo de Ingresso:"/>
+                                <fc:autoComplete
+                                    id="tipoIngresso"
+                                    title="Informe o tipo de ingresso."
+                                    value="#{entradaMaterialCompraControlador.selecionado.tipoIngresso}"
+                                    completeMethod="#{entradaMaterialCompraControlador.completarTipoIngressoCompra}"
+                                    converter="#{tipoIngressoControlador.converterGenerico}"/>
+
+                                <fc:outputLabelObrigatorio value="Histórico: "/>
+                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                    <p:inputTextarea id="historico"
+                                                     value="#{entradaMaterialCompraControlador.selecionado.historico}"
+                                                     cols="70"
+                                                     maxlength="255"
+                                                     autoResize="true"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter"
+                                                     title="Informe o histórico."/>
+                                    <h:outputText id="counter" styleClass="mlef05 cinzaEscuro"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+
+                            <p:dataTable paginator="true"
+                                         id="tabela-item-entrada"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rocwIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{entradaMaterialCompraControlador.selecionado.itens}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DA ENTRADA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="em">
+                                <p:column headerText="Item" style="width: 1%">
+                                    #{rocwIx+1}
+                                </p:column>
+                                <p:column headerText="Doc"
+                                          styleClass="alinhamentoCentralizado" style="width: 3%;">
+                                    <p:commandButton icon="ui-icon-search"
+                                                     styleClass="icone-20"
+                                                     title="Clique para visualizar o(s) documento(s) que contém este item."
+                                                     update=":formItensDocItemEnt"
+                                                     process="@this :Formulario:tab-view-geral:tabela-item-entrada"
+                                                     onclick="aguarde.show();"
+                                                     oncomplete="aguarde.hide(); dlgItemDocItemEnt.show();"
+                                                     actionListener="#{entradaMaterialCompraControlador.setItemEntradaMaterial(em)}"/>
+                                </p:column>
+                                <p:column headerText="Material" style="text-align: left">
+                                    <h:outputText
+                                        title="#{em.itemCompraMaterial.itemRequisicaoDeCompra.descricaoComplementar}"
+                                        styleClass="negrito"
+                                        style="color: grey; font-size: 11px; vertical-align: top !important;"
+                                        value="Objeto: #{em.itemCompraMaterial.itemRequisicaoDeCompra.objetoCompra.codigoDescricaoCurta}"/>
+                                    <br/>
+
+                                    <h:panelGrid columns="2"
+                                                 rendered="#{entradaMaterialCompraControlador.hasMaterialCadastrado(em)}">
+                                        <h:selectOneMenu
+                                            id="material"
+                                            style="width: 300px"
+                                            value="#{em.material}"
+                                            rendered="#{entradaMaterialCompraControlador.hasMaterialCadastrado(em)}"
+                                            title="#{em.material.descricao}"
+                                            converter="#{materialControlador.converterGenerico}">
+                                            <f:selectItems
+                                                value="#{entradaMaterialCompraControlador.getMateriais(em)}"/>
+                                            <p:ajax event="change"
+                                                    process="@this :Formulario:tab-view-geral:tabela-item-entrada"
+                                                    listener="#{entradaMaterialCompraControlador.validarAssociativa(em)}"
+                                                    update="material editar-material panel-controle-lote unidMed :Formulario:tab-view-geral:tabela-item-entrada"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"/>
+                                        </h:selectOneMenu>
+                                    </h:panelGrid>
+
+                                    <p:outputPanel id="editar-material">
+                                        <p:commandLink onstart="aguarde.show();"
+                                                       oncomplete="aguarde.hide();"
+                                                       style="color: grey;"
+                                                       title="Clique para cadastrar um novo material."
+                                                       actionListener="#{entradaMaterialCompraControlador.novoMaterial(em)}"
+                                                       process="@this">
+                                            <i class="fa fa-plus-circle verdeescuro" style="font-size: 14px"/>
+                                            Novo Material
+                                        </p:commandLink>
+
+                                        <p:commandLink
+                                            styleClass="mlef10"
+                                            style="color: grey;"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"
+                                            title="Clique para editar o material."
+                                            rendered="#{entradaMaterialCompraControlador.hasMaterialCadastrado(em) and em.material ne null}"
+                                            actionListener="#{entradaMaterialCompraControlador.editarMaterial(em)}"
+                                            process="@this">
+                                            <i class="fa fa-pencil azulnegrito" style="font-size: 14px"/>
+                                            Editar Material
+                                        </p:commandLink>
+                                    </p:outputPanel>
+
+                                    <h:panelGrid columns="2" style="margin-top: 15px"
+                                                 rendered="#{em.material ne null and !em.material.statusMaterial.isDeferido()}">
+                                        <p:outputPanel id="icone-material">
+                                            <i class="#{em.material.statusMaterial.isAguardando() ? 'fa fa-exclamation-triangle amarelo mlef03' : 'fa fa-exclamation-triangle vermelho-escuro mlef03'}"
+                                               style="font-size: 14px"/>
+                                            <h:outputText
+                                                value=" Pendência: material encontra-se '#{em.material.statusMaterial.descricao}'. #{em.material.ultimaEfetivacao.observacao ne null ? ' Observação: '.concat(em.material.ultimaEfetivacao.observacao) : ''}"/>
+                                        </p:outputPanel>
+                                    </h:panelGrid>
+                                </p:column>
+                                <p:column headerText="Local de Estoque"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:selectOneMenu id="local-estoque"
+                                                     style="max-width: 120px"
+                                                     value="#{em.localEstoqueOrcamentario.localEstoque}"
+                                                     title="#{em.localEstoqueOrcamentario.localEstoque.tipoEstoque.descricao}"
+                                                     converter="#{localEstoqueControlador.converterGenerico}">
+                                        <f:selectItems
+                                            value="#{entradaMaterialCompraControlador.locaisEstoqueAdm}"/>
+                                        <p:ajax event="valueChange"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"
+                                                update=":Formulario:tab-view-geral:tabela-item-entrada"
+                                                process="@this"/>
+                                    </h:selectOneMenu>
+                                </p:column>
+                                <p:column styleClass="alinhamentoEsquerda">
+                                    <f:facet name="header">
+                                        <h:outputText value="Unid. Orçamentária"/>
+                                        <co:botao_informacao
+                                            styleClass="botao-transparente vinteLarguraVinteAltura mlef05"
+                                            descricao="Serão apresentadas somente unidades orçamentárias vinculadas a unidade administrativa do local de estoque selecionado."/>
+                                    </f:facet>
+                                    <h:selectOneMenu id="unidade-orcamentaria"
+                                                     style="max-width: 200px"
+                                                     value="#{em.localEstoqueOrcamentario.unidadeOrcamentaria}"
+                                                     converter="#{unidadeOrganizacionalControlador.converterGenerico}">
+                                        <f:selectItems
+                                            value="#{entradaMaterialCompraControlador.selectItensHierarquiasOrcamentarias}"/>
+                                        <p:ajax event="valueChange" process="@this" update="unidade-orcamentaria"/>
+                                    </h:selectOneMenu>
+                                </p:column>
+                                <p:column headerText="Unid. Med." styleClass="alinhamentoEsquerda">
+                                    <h:outputText id="unidMed"
+                                                  value="#{em.material ne null ? em.material.unidadeMedida.sigla : em.itemCompraMaterial.itemRequisicaoDeCompra.unidadeMedida.sigla}"/>
+                                </p:column>
+                                <p:column headerText="Lote" styleClass="alinhamentoEsquerda">
+                                    <p:outputPanel id="panel-controle-lote">
+                                        <h:outputLabel value="Não requer lote." rendered="#{!em.requerLote()}"/>
+                                        <h:selectOneMenu id="loteDoacao"
+                                                         title="#{em.localEstoque}"
+                                                         style="max-width: 150px"
+                                                         value="#{em.loteMaterial}"
+                                                         rendered="#{em.requerLote()}"
+                                                         converter="#{loteMaterialControlador.converterGenerico}">
+                                            <f:selectItems
+                                                value="#{entradaMaterialCompraControlador.getLotesMateriais(em.material)}"/>
+                                        </h:selectOneMenu>
+                                    </p:outputPanel>
+                                </p:column>
+                                <p:column headerText="Qtde"
+                                          style="vertical-align: #{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.isLicitacaoMaiorDesconto()
+                                                                   and !em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade() ? 'top' : ''}"
+                                          styleClass="alinhamentoDireita">
+                                    <fc:output-mascara-unidade-medida
+                                        tipoMascara="#{em.itemCompraMaterial.itemRequisicaoDeCompra.unidadeMedida.mascaraQuantidade}"
+                                        value="#{em.quantidade}"/>
+                                </p:column>
+                                <p:column headerText="Vl Unit (R$)"
+                                          rendered="#{!entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.isLicitacaoMaiorDesconto()}"
+                                          styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{em.itemCompraMaterial.itemRequisicaoDeCompra.valorUnitario}">
+                                        <f:convertNumber pattern="#,##0.0000"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Vl Unit (R$)"
+                                          rendered="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.isLicitacaoMaiorDesconto()}"
+                                          style="vertical-align: #{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade() ? 'top' : ''}"
+                                          styleClass="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{em.itemCompraMaterial.itemRequisicaoDeCompra.valorUnitarioDesdobrado}">
+                                        <f:convertNumber pattern="#,##0.0000"/>
+                                    </h:outputText>
+
+                                    <br style="display: #{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade() ? 'block' : 'none'}"/>
+                                    <h:outputText
+                                        style="color: grey; font-size: 11px"
+                                        rendered="#{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade()}"
+                                        value="Vl Desconto "/>
+
+                                    <h:outputText
+                                        style="color: grey; font-size: 11px"
+                                        styleClass="negrito mlef05"
+                                        rendered="#{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade()}"
+                                        value="#{em.itemCompraMaterial.itemRequisicaoDeCompra.valorDescontoUnitario}"
+                                        converter="converterBigDecimalCasasDecimais"/>
+
+                                    <br style="display: #{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade() ? 'block' : 'none'}"/>
+                                    <h:outputText
+                                        style="color: grey; font-size: 11px"
+                                        rendered="#{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade()}"
+                                        value="Vl Unit. c/ Desc "/>
+
+                                    <h:outputText
+                                        style="color: grey; font-size: 11px"
+                                        styleClass="negrito mlef05"
+                                        rendered="#{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade()}"
+                                        value="#{em.valorUnitario}" converter="converterBigDecimalCasasDecimais"/>
+                                </p:column>
+                                <p:column headerText="Vl Desc (R$)"
+                                          style="vertical-align: #{!em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade() ? 'top' : ''}"
+                                          rendered="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.isLicitacaoMaiorDesconto()}"
+                                          styleClass="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{em.itemCompraMaterial.itemRequisicaoDeCompra.valorDescontoTotal}"
+                                        converter="converterBigDecimalCasasDecimais"/>
+                                </p:column>
+                                <p:column headerText="Vl Total (R$)"
+                                          style="vertical-align: #{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra.isLicitacaoMaiorDesconto()
+                                                                   and !em.itemCompraMaterial.itemRequisicaoDeCompra.isControleQuantidade() ? 'top' : ''}"
+                                          styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{em.valorTotal}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <f:facet name="footer">
+                                    <div style="text-align: right; font-size: 13px;">
+                                        <h:outputText value="Total Geral R$ " styleClass="negrito"/>
+                                        <h:outputText
+                                            value="#{entradaMaterialCompraControlador.selecionado.valorTotalEntrada}"
+                                            styleClass="negrito"
+                                            id="total-entrada-rodape">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Documento Fiscal">
+                        <p:outputPanel id="panel-documento-fiscal">
+                            <p:commandButton value="Novo Documento"
+                                             icon="ui-icon-circle-plus"
+                                             onclick="aguarde.show()"
+                                             id="novo-documento"
+                                             rendered="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra eq null}"
+                                             oncomplete="aguarde.hide();"
+                                             title="Clique para adicionar um novo documento fiscal."
+                                             actionListener="#{entradaMaterialCompraControlador.novoDocumentoFiscal()}"
+                                             process="@this"
+                                             update=":Formulario:tab-view-geral:panel-documento-fiscal"/>
+
+                            <ad:input-documento-fiscal
+                                requisicaoCompra="#{entradaMaterialCompraControlador.selecionado.requisicaoDeCompra}"
+                                documentoFiscal="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra.doctoFiscalLiquidacao}"
+                                rendered="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra ne null}"/>
+
+                            <p:commandButton icon="ui-icon-check"
+                                             value="Confirmar"
+                                             title="Clique para confirmar."
+                                             actionListener="#{entradaMaterialCompraControlador.adicionarDocumentoFiscalVerificandoDuplicidade()}"
+                                             rendered="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra ne null}"
+                                             process=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                             update=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                             onclick="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             styleClass="padrao mrig05 mtop10"/>
+
+                            <p:commandButton icon="ui-icon-cancel"
+                                             process="@this"
+                                             update=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                             actionListener="#{entradaMaterialCompraControlador.cancelarDocumentoFiscal()}"
+                                             rendered="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra ne null}"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             value="Cancelar"
+                                             title="Clique para cancelar esta operação."
+                                             styleClass="padrao mtop10"/>
+
+                            <p:dataTable paginator="true"
+                                         id="tabela-documento-fiscal"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{entradaMaterialCompraControlador.selecionado.documentosFiscais}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>DOCUMENTOS FISCAIS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="doc">
+                                <p:ajax event="rowToggle"
+                                        listener="#{entradaMaterialCompraControlador.buscarEmpenhosDocumentoFiscal(doc)}"
+                                        update="tabela-documento-fiscal panel-empenho"/>
+
+                                <p:column headerText="Ações"
+                                          rendered="#{!entradaMaterialCompraControlador.isVisualizar()}"
+                                          style="text-align: center; width: 10%">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     title="Clique para alterar este registro."
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this"
+                                                     actionListener="#{entradaMaterialCompraControlador.selecionarDocumentoFiscal(doc)}"
+                                                     update=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                                     styleClass="mrig05"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     process="@this"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{entradaMaterialCompraControlador.removerDocumentoFiscal(doc)}"
+                                                     title="Clique para remover este registro."
+                                                     update="tabela-documento-fiscal"
+                                                     styleClass="mrig05"/>
+                                </p:column>
+                                <p:column headerText="Empenhos" styleClass="alinhamentoEsquerda">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Itens"
+                                          styleClass="alinhamentoCentralizado" style="width: 10%">
+                                    <p:commandButton icon="ui-icon-categorias"
+                                                     process="@this"
+                                                     update=":form-itens-documento-fiscal"
+                                                     onclick="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     actionListener="#{entradaMaterialCompraControlador.carregarItensDocumentoFiscal(doc)}"
+                                                     title="Clique para informar a quantidade dos itens vinculados a este documento."
+                                                     styleClass="mrig05 prioritario"/>
+
+                                    <p:commandButton icon="ui-icon-search"
+                                                     title="Clique para visualizar o(s) item(ns) deste documento."
+                                                     update=":form-visualiza-itens-documento-fiscal"
+                                                     process="@this"
+                                                     onclick="aguarde.show();"
+                                                     oncomplete="aguarde.hide(); dialogVisualizarItemDocumentoFiscal.show();"
+                                                     actionListener="#{entradaMaterialCompraControlador.selecionarDocumentoFiscal(doc)}"/>
+                                </p:column>
+                                <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                    <p:commandLink title="Clique para visualizar a(s) liquidação(ões)."
+                                                   update=":form-liquidacoes"
+                                                   process="@this"
+                                                   onclick="aguarde.show();"
+                                                   rendered="#{entradaMaterialCompraControlador.operacaoEditar}"
+                                                   oncomplete="aguarde.hide(); dialogLiquidacoes.show();"
+                                                   actionListener="#{entradaMaterialCompraControlador.buscarLiquidacoesVOPorDocumentoFiscalEntrada(doc.doctoFiscalLiquidacao)}">
+                                        <h:outputText value="#{doc.situacao.descricao}"/>
+                                    </p:commandLink>
+                                    <h:outputText rendered="#{entradaMaterialCompraControlador.operacaoNovo}"
+                                                  value="#{doc.situacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Documento" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{doc.doctoFiscalLiquidacao.tipoDocumentoFiscal.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado"
+                                          style="width: 140px;">
+                                    <h:outputText value="#{doc.doctoFiscalLiquidacao.dataDocto}">
+                                        <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Data do Atesto" styleClass="alinhamentoCentralizado"
+                                          style="width: 140px;">
+                                    <h:outputText value="#{doc.doctoFiscalLiquidacao.dataAtesto}">
+                                        <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Número" styleClass="alinhamentoDireita" style="width: 80px;">
+                                    <h:outputText value="#{doc.doctoFiscalLiquidacao.numero}"/>
+                                </p:column>
+                                <p:column headerText="Série" styleClass="alinhamentoEsquerda" style="width: 80px;">
+                                    <h:outputText value="#{doc.doctoFiscalLiquidacao.serie}"/>
+                                </p:column>
+                                <p:column headerText="UF" styleClass="alinhamentoEsquerda" style="width: 40px;">
+                                    <h:outputText value="#{doc.doctoFiscalLiquidacao.uf}"/>
+                                </p:column>
+                                <p:column headerText="Valor Total" styleClass="alinhamentoDireita"
+                                          style="width: 120px;">
+                                    <h:outputText value="#{doc.valorTotalDocumento}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+
+                                <p:rowExpansion>
+                                    <p:outputPanel id="panel-empenho">
+                                        <ad:empenho-documento-fiscal
+                                            instanciaComponente="#{entradaMaterialCompraControlador.componenteEmpDocto}"/>
+                                    </p:outputPanel>
+                                </p:rowExpansion>
+
+                                <f:facet name="footer">
+                                    <div style="text-align: right">
+                                        <h:outputText value="Total: " styleClass="negrito"/>
+                                        <h:outputText
+                                            value="#{entradaMaterialCompraControlador.selecionado.valorTotalDocumento}"
+                                            styleClass="negrito"
+                                            id="total-documento-rodape">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:dataTable>
+
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Guias de Distribuição"
+                           rendered="#{entradaMaterialCompraControlador.isIntegracaoCardapio()}">
+                        <div class="alert alert-info mbot10" style="padding: 5px" align="center">
+                            Transferência do local de estoque:
+                            <strong>#{entradaMaterialCompraControlador.localEstoque}</strong><br/>
+                            Para os locais de estoque relacionados nas guias de distribuição
+                        </div>
+
+                        <p:dataTable
+                            emptyMessage="Não foram localizados registros para serem apresentados"
+                            value="#{entradaMaterialCompraControlador.guiasDistribuicaoVo}"
+                            var="guia">
+                            <f:facet name="header">
+                                Guias de Distribuição - Requisição Material para Transferência
+                            </f:facet>
+                            <p:column headerText="Detalhes"
+                                      style="width: 3%"
+                                      styleClass="alinhamentoCentralizado">
+                                <p:rowToggler/>
+                            </p:column>
+                            <p:column headerText="Ações"
+                                      style="width: 10%"
+                                      styleClass="alinhamentoCentralizado">
+                                <p:commandButton
+                                    icon="ui-icon-print"
+                                    onclick="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    styleClass="icone-25"
+                                    actionListener="#{requisicaoMaterialControlador.gerarRelatorioRequisicao(guia.requisicaoMaterial)}"
+                                    title="Clique para imprimir a requisição de material."/>
+
+                                <p:commandButton process="@this"
+                                                 value="Visualizar"
+                                                 icon="ui-icon-search"
+                                                 styleClass="mlef05 icone-25"
+                                                 update="@none"
+                                                 onclick="window.open('#{request.contextPath}/requisicao-de-material/ver/#{guia.requisicaoMaterial.id}/','_blank');"/>
+                            </p:column>
+                            <p:column headerText="Número"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{guia.requisicaoMaterial.numero}"/>
+                            </p:column>
+                            <p:column headerText="Data"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{guia.requisicaoMaterial.dataRequisicao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Situação"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{guia.requisicaoMaterial.tipoSituacaoRequisicao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Local de Estoque"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{guia.requisicaoMaterial.localEstoqueDestino.codigoDescricao}"/>
+                            </p:column>
+                            <p:column headerText="Endereço"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{guia.enderecoCompleto}"/>
+                            </p:column>
+
+                            <p:rowExpansion>
+                                <div class="thumbnail mlef30 mrig10 mtop10 mbot20">
+                                    <div class="alert alert-info" style="padding: 4px" align="center">
+                                        Requisição Material
+                                    </div>
+                                    <h:panelGrid columns="2" style="width: 80%">
+                                        <h:outputText value="Tipo da Requisição: "/>
+                                        <h:outputText styleClass="negrito"
+                                                      value="${guia.requisicaoMaterial.tipoRequisicao.descricao}"/>
+
+                                        <h:outputText value="Situação: "/>
+                                        <h:outputText
+                                            value="${guia.requisicaoMaterial.tipoSituacaoRequisicao.descricao}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Data da Requisição: "/>
+                                        <h:outputText value="#{guia.requisicaoMaterial.dataRequisicao}"
+                                                      styleClass="negrito">
+                                            <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+
+                                        <h:outputLabel value="Requerente e Autorizador: "/>
+                                        <h:outputText styleClass="negrito"
+                                                      value="#{guia.requisicaoMaterial.requerenteEAutorizador.pessoaFisica.nome}"/>
+
+                                        <h:outputText value="Descrição:"/>
+                                        <h:panelGrid columns="3">
+                                            <p:inputTextarea value="#{guia.requisicaoMaterial.descricao}"
+                                                             maxlength="3000"
+                                                             autoResize="false"
+                                                             scrollHeight="50"
+                                                             rows="5"
+                                                             cols="60"
+                                                             counterTemplate="{0} Caracteres Restantes."
+                                                             counter="counter-descricao"/>
+                                            <h:outputText id="counter-descricao"
+                                                          style="color: #497692"
+                                                          styleClass="mlef05"/>
+                                        </h:panelGrid>
+
+                                        <h:outputText value="Unidade Administrativa Requerente:"/>
+                                        <fc:codigo-descricao-hierarquia
+                                            unidadeOrganizacional="#{guia.requisicaoMaterial.unidadeRequerente}"
+                                            dataMovimento="#{guia.requisicaoMaterial.dataRequisicao}"
+                                            tipoHierarquia="ADMINISTRATIVA"/>
+
+                                        <h:outputText value="Local de Estoque de Origem:"/>
+                                        <h:outputText value="#{guia.requisicaoMaterial.localEstoqueOrigem}"
+                                                      styleClass="negrito"/>
+
+                                        <h:outputText value="Local de Estoque de Destino:"/>
+                                        <h:outputText value="#{guia.requisicaoMaterial.localEstoqueDestino}"
+                                                      styleClass="negrito"/>
+                                    </h:panelGrid>
+
+                                    <p:dataTable value="#{guia.itens}"
+                                                 styleClass="table-hover"
+                                                 var="itemReq"
+                                                 rowKey="#{itemReq.id}"
+                                                 paginator="true"
+                                                 rows="10"
+                                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela'> Itens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                                 rowIndexVar="rowlx">
+                                        <p:column headerText="Material"
+                                                  styleClass="alinhamentoEsquerda">
+                                            <h:outputText
+                                                value="#{itemReq.itemRequisicaoMaterial.materialRequisitado}"/>
+                                        </p:column>
+                                        <p:column headerText="Unid. Med."
+                                                  styleClass="alinhamentoEsquerda">
+                                            <h:outputText
+                                                value="#{itemReq.itemRequisicaoMaterial.materialRequisitado.unidadeMedida.sigla}"/>
+                                        </p:column>
+                                        <p:column headerText="Quantidade" styleClass="alinhamentoDireita">
+                                            <fc:output-mascara-unidade-medida
+                                                tipoMascara="#{itemReq.itemRequisicaoMaterial.materialRequisitado.unidadeMedida.mascaraQuantidade}"
+                                                value="#{itemReq.itemRequisicaoMaterial.quantidade}"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </div>
+                            </p:rowExpansion>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty id="rpRodapePretty" controlador="#{entradaMaterialCompraControlador}"/>
+        </h:form>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dialogMaterial"
+                  closable="false"
+                  width="950"
+                  height="430">
+            <h:form id="form-material">
+                <p:panel id="panelMaterial"
+                         header="#{entradaMaterialCompraControlador.materialVO.material.id eq null ? 'Novo Material' : 'Editar Material'}">
+
+                    <p:tabView id="tabViewEditarMaterial">
+                        <p:tab title="Material">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Código: "/>
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.materialVO.material.id eq null ? 'O código é gerado automaticamente ao salvar' :entradaMaterialCompraControlador.materialVO.material.codigo}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Objeto de Compra: "/>
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.materialVO.material.objetoCompra}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Grupo Material: "/>
+                                <h:outputText value="#{entradaMaterialCompraControlador.materialVO.material.grupo}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Derivação/Componente: "
+                                              rendered="#{entradaMaterialCompraControlador.materialVO.material.derivacaoComponente ne null}"/>
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.materialVO.material.derivacaoComponente.descricaoDerivacaoComponente}"
+                                    rendered="#{entradaMaterialCompraControlador.materialVO.material.derivacaoComponente ne null}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Descrição Comp. do Processo: "/>
+                                <p:inputTextarea
+                                    value="#{entradaMaterialCompraControlador.itemEntradaMaterial.itemCompraMaterial.itemRequisicaoDeCompra.descricaoComplementar}"
+                                    readonly="true"
+                                    scrollHeight="50"
+                                    rows="4"
+                                    cols="70"
+                                    autoResize="true"/>
+
+                                <fc:outputLabelObrigatorio value="Descrição: "/>
+                                <h:panelGrid columns="1" cellpadding="0" cellspacing="0">
+                                    <p:inputTextarea title="Informe o campo descrição."
+                                                     value="#{entradaMaterialCompraControlador.materialVO.material.descricao}"
+                                                     disabled="#{entradaMaterialCompraControlador.materialVO.movimentadoEstoque}"
+                                                     rows="4"
+                                                     cols="70"
+                                                     maxlength="255"
+                                                     counter="counterDescMat"
+                                                     counterTemplate="{0} Caracteres restantes."
+                                                     autoResize="true"/>
+                                    <h:outputText id="counterDescMat"
+                                                  styleClass="mlef05 azul"/>
+                                </h:panelGrid>
+
+                                <h:outputText for="descricaoComplementar"
+                                              value="Descrição Complementar: "/>
+                                <h:panelGrid cellspacing="0" cellpadding="0" columns="1">
+                                    <p:inputTextarea title="Digite a descrição do Material complementar"
+                                                     maxlength="3000"
+                                                     value="#{entradaMaterialCompraControlador.materialVO.material.descricaoComplementar}"
+                                                     id="descricaoComplementar"
+                                                     counterTemplate="{0} Caracteres Restantes"
+                                                     counter="counterDescricao"
+                                                     cols="70"/>
+                                    <h:outputText id="counterDescricao" styleClass="mlef05 azul"/>
+                                </h:panelGrid>
+
+                                <fc:outputLabelObrigatorio for="unidadeMedida" value="Unidade de Medida: "/>
+                                <h:panelGrid columns="2">
+                                    <h:selectOneMenu title="Selecione uma Unidade de Medida"
+                                                     value="#{entradaMaterialCompraControlador.materialVO.material.unidadeMedida}"
+                                                     id="unidadeMedida"
+                                                     converter="#{unidadeMedidaControlador.converterGenerico}"
+                                                     styleClass="mrig05">
+                                        <f:selectItems
+                                            value="#{unidadeMedidaControlador.unidadesMedida}"/>
+                                        <p:ajax event="change" process="@this" update="avisoUnidadeMedida"/>
+                                    </h:selectOneMenu>
+                                    <h:outputText id="avisoUnidadeMedida"
+                                                  value="#{entradaMaterialCompraControlador.itemEntradaMaterial.itemCompraMaterial.itemRequisicaoDeCompra.unidadeMedida.id eq entradaMaterialCompraControlador.materialVO.material.unidadeMedida.id ? '' :'*Unidade de Medida selecionada diverge do&lt;br/&gt; objeto de compra utilizado na requisição'}"
+                                                  escape="false"/>
+                                </h:panelGrid>
+
+                                <h:outputText value="Perecibilidade: "/>
+                                <h:selectOneMenu title="Selecione uma perecibilidade."
+                                                 value="#{entradaMaterialCompraControlador.materialVO.material.perecibilidade}"
+                                                 id="perecibilidade">
+                                    <f:selectItems value="#{materialControlador.perecibilidades}"/>
+                                </h:selectOneMenu>
+
+                                <h:outputLabel for="marca" value="Marca: "/>
+                                <h:panelGroup>
+                                    <p:autoComplete queryDelay="1000"
+                                                    id="marca"
+                                                    completeMethod="#{marcaControlador.completarMarcaTipoMaterialConsumo}"
+                                                    var="marca"
+                                                    dropdown="true"
+                                                    panelStyle="max-height: 250px;max-width: 700px"
+                                                    maxResults="50"
+                                                    converter="#{marcaControlador.converterGenerico}"
+                                                    itemLabel="#{marca.descricao}"
+                                                    itemValue="#{marca.id}"
+                                                    size="65"
+                                                    value="#{entradaMaterialCompraControlador.materialVO.material.marca}"
+                                                    title="Informe a Marca"
+                                                    styleClass="mrig05">
+                                        <p:ajax event="itemSelect" update="modelo" process="@this"/>
+                                    </p:autoComplete>
+
+                                    <p:commandButton process="@none"
+                                                     id="bt-nova-marca"
+                                                     icon="ui-icon-plus"
+                                                     styleClass="mrig05"
+                                                     update="@none"
+                                                     onclick="window.open('#{request.contextPath}/marca/novo/','_blank');"/>
+                                </h:panelGroup>
+
+                                <h:outputLabel for="modelo" value="Modelo: "/>
+                                <h:panelGroup>
+                                    <p:autoComplete queryDelay="1000"
+                                                    id="modelo"
+                                                    completeMethod="#{entradaMaterialCompraControlador.completarModelo}"
+                                                    var="mo"
+                                                    dropdown="true"
+                                                    panelStyle="max-height: 250px;max-width: 700px"
+                                                    maxResults="50"
+                                                    converter="#{modeloControlador.converterGenerico}"
+                                                    forceSelection="true"
+                                                    itemLabel="#{mo.descricao}" itemValue="#{mo.id}"
+                                                    size="65"
+                                                    process="@this"
+                                                    value="#{entradaMaterialCompraControlador.materialVO.material.modelo}"
+                                                    title="Informe o modelo"
+                                                    styleClass="mrig05"/>
+
+                                    <p:commandButton process="@none"
+                                                     id="bt-novo-modelo"
+                                                     icon="ui-icon-plus"
+                                                     styleClass="mrig05"
+                                                     update="@none"
+                                                     onclick="window.open('#{request.contextPath}/modelo/novo/','_blank');"/>
+                                </h:panelGroup>
+
+                                <h:outputText value="Controle de Lote: "/>
+                                <h:selectBooleanCheckbox title="Controle de lote do Material"
+                                                         disabled="#{entradaMaterialCompraControlador.materialVO.movimentadoEstoque}"
+                                                         value="#{entradaMaterialCompraControlador.materialVO.material.controleDeLote}"
+                                                         id="controleDeLote"/>
+
+                                <h:outputText value="Material Médico-Hospitalar: "/>
+                                <h:selectBooleanCheckbox title="Material Médico-Hospitalar"
+                                                         disabled="#{entradaMaterialCompraControlador.materialVO.movimentadoEstoque}"
+                                                         value="#{entradaMaterialCompraControlador.materialVO.material.medicoHospitalar}"
+                                                         id="medico"/>
+
+                                <h:outputText value="Situação: "/>
+                                <h:outputText
+                                    value="#{entradaMaterialCompraControlador.materialVO.material.statusMaterial.descricao}"
+                                    styleClass="negrito"/>
+                            </h:panelGrid>
+
+                        </p:tab>
+                        <p:tab title="Ocorrências">
+                            <p:dataTable
+                                id="tabela"
+                                emptyMessage="Não foram localizados registros para serem apresentados."
+                                value="#{entradaMaterialCompraControlador.materialVO.material.efetivacoes}"
+                                var="efetivacao"
+                                styleClass="mtop05"
+                                rowIndexVar="rowIx"
+                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                rows="10"
+                                rowsPerPageTemplate="10,20,30,50"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Efetivações&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                paginator="true">
+                                <p:column headerText="Data e Hora" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{efetivacao.dataRegistro}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy HH:mm"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Unidade Organizacional" styleClass="alinhamentoEsquerda">
+                                    <fc:codigo-descricao-hierarquia
+                                        styleClass="normal"
+                                        dataMovimento="#{efetivacao.dataRegistro}"
+                                        tipoHierarquia="ADMINISTRATIVA"
+                                        unidadeOrganizacional="#{efetivacao.unidadeAdministrativa}"/>
+                                </p:column>
+                                <p:column headerText="Responsável" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{efetivacao.usuarioSistema.nome}"/>
+                                </p:column>
+                                <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{efetivacao.situacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Observação" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{efetivacao.observacao}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+                    </p:tabView>
+                    <hr/>
+                    <div class="alinhamentoCentralizado">
+                        <p:commandButton value="Confirmar"
+                                         icon="ui-icon-check"
+                                         actionListener="#{entradaMaterialCompraControlador.confirmarMaterial()}"
+                                         update=":Formulario:tab-view-geral:tabela-item-entrada"
+                                         process=":form-material"
+                                         title="Clique para confirmar o material."
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide();"
+                                         styleClass="padrao prioritario mrig05"/>
+
+                        <p:commandButton value="Cancelar"
+                                         icon="ui-icon-cancel"
+                                         process="@this"
+                                         update="@none"
+                                         actionListener="#{entradaMaterialCompraControlador.cancelarMaterial()}"
+                                         title="Clique para cancelar a operação"
+                                         onclick="aguarde.show(); dialogMaterial.hide()"
+                                         oncomplete="aguarde.hide();"
+                                         styleClass="padrao"/>
+                    </div>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog header="Informar Itens do Documento Fiscal"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  width="1000"
+                  max-height="450"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="itensDocumentoFiscal"
+                  closable="false">
+            <h:form id="form-itens-documento-fiscal">
+
+                <br/>
+                <h:outputText value="Documento Fiscal Selecionado: "
+                              style="font-size: 13px;"
+                              styleClass="azul"/>
+                <h:outputText
+                    value="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra.doctoFiscalLiquidacao}"
+                    styleClass="azulnegrito"
+                    style="font-size: 13px;"/>
+
+                <p:dataTable id="table-itens-doc"
+                             paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             value="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra.itens}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO DOCUMENTO FISCAL&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="itemdoc">
+                    <p:column headerText="Nº Item" styleClass="alinhamentoCentralizado" style="width: 5%">
+                        #{rowIx +1}
+                    </p:column>
+                    <p:column headerText="Material" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{itemdoc.itemEntradaMaterial.material.codigoDescricaoCurta}"/>
+                    </p:column>
+                    <p:column headerText="Qtde Requisitada" styleClass="alinhamentoDireita" style="width: 15px;">
+                        <fc:output-mascara-unidade-medida value="#{itemdoc.itemEntradaMaterial.quantidade}"
+                                                          tipoMascara="#{itemdoc.itemEntradaMaterial.material.mascaraQuantidade}"/>
+                    </p:column>
+                    <p:column headerText="Qtde Disponível" styleClass="alinhamentoDireita" style="width: 15px;">
+                        <p:outputPanel id="qtde-disponivel">
+                            <fc:output-mascara-unidade-medida
+                                value="#{entradaMaterialCompraControlador.getQuantidadeDisponivelAtual(itemdoc)}"
+                                tipoMascara="#{itemdoc.itemEntradaMaterial.material.mascaraQuantidade}"/>
+                        </p:outputPanel>
+                    </p:column>
+                    <p:column headerText="Qtde Documento" styleClass="alinhamentoDireita" style="width: 15px;">
+                        <fc:input-mascara-unidade-medida value="#{itemdoc.quantidade}"
+                                                         size="10"
+                                                         listener="#{entradaMaterialCompraControlador.atualizarQuantidadeDisponivelDoItem(itemdoc)}"
+                                                         update="@this :form-itens-documento-fiscal:table-itens-doc:qtde-disponivel
+                                                                :form-itens-documento-fiscal:table-itens-doc:vl-total-doc"
+                                                         tipoMascara="#{itemdoc.itemEntradaMaterial.material.mascaraQuantidade}"/>
+                    </p:column>
+                    <p:column headerText="Valor Unitário (R$)" styleClass="alinhamentoDireita" style="width: 35px;">
+                        <h:outputText value="#{itemdoc.valorUnitario}">
+                            <f:convertNumber pattern="#,##0.0000"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" styleClass="alinhamentoDireita" style="width: 35px;">
+                        <h:outputText value="#{itemdoc.valorTotal}" id="vl-total-doc">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+
+                <div style="text-align: center" class="mtop10">
+
+                    <div class="pull-left">
+                        <p:commandButton value="Confirmar"
+                                         title="Clique para confirmar os itens informados."
+                                         icon="ui-icon-check"
+                                         process="@this"
+                                         rendered="#{!entradaMaterialCompraControlador.isVisualizar()}"
+                                         styleClass="prioritario mrig05"
+                                         update=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                         actionListener="#{entradaMaterialCompraControlador.confirmarItensDocumento()}"
+                                         onclick="aguarde.show();"
+                                         oncomplete="aguarde.hide(); itensDocumentoFiscal.hide();"/>
+
+                        <p:commandButton value="Cancelar"
+                                         title="Clique para cancelar."
+                                         icon="ui-icon-cancel"
+                                         process="@this"
+                                         styleClass="padrao mrig05"
+                                         update=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                         onclick="if (!confirm('Ao cancelar todos os itens lançados serão cancelados do documento fiscal, deseja continuar?')) {return false; } else {aguarde.show();}"
+                                         oncomplete="aguarde.hide(); itensDocumentoFiscal.hide();"
+                                         actionListener="#{entradaMaterialCompraControlador.cancelarItensDoDocumento()}"/>
+
+                    </div>
+
+                    <div class="pull-right">
+                        <p:commandButton value="Limpar Quantidade Distribuida"
+                                         title="Clique limpar as quantidades distribuídas nos itens da nota."
+                                         icon="ui-icon-transferthick-e-w"
+                                         process="@this"
+                                         styleClass="padrao"
+                                         update=":form-itens-documento-fiscal:table-itens-doc"
+                                         actionListener="#{entradaMaterialCompraControlador.limparQuantidadeDistribuidasItens()}"
+                                         onclick="aguarde.show();"
+                                         oncomplete="aguarde.hide()"/>
+                    </div>
+
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Visualizar Itens do Documento Fiscal"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  width="1000"
+                  max-height="450"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  resizable="true"
+                  widgetVar="dialogVisualizarItemDocumentoFiscal"
+                  closable="true">
+            <h:form id="form-visualiza-itens-documento-fiscal">
+
+                <br/>
+                <h:outputText value="Documento Fiscal Selecionado: "
+                              style="font-size: 13px;"
+                              styleClass="azul"/>
+                <h:outputText
+                    value="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra.doctoFiscalLiquidacao}"
+                    styleClass="azulnegrito"
+                    style="font-size: 13px;"/>
+                <p:dataTable id="table-visualizar-itens-documento-fiscal"
+                             paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             value="#{entradaMaterialCompraControlador.doctoFiscalEntradaCompra.itens}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO DOCUMENTO FISCAL&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="itemDocVer">
+
+                    <p:column headerText="Material" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{itemDocVer.itemEntradaMaterial.material}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" styleClass="alinhamentoDireita" style="width: 15px;">
+                        <fc:output-mascara-unidade-medida value="#{itemDocVer.quantidade}"
+                                                          tipoMascara="#{itemDocVer.itemEntradaMaterial.material.mascaraQuantidade}"/>
+                    </p:column>
+                    <p:column headerText="Valor Unitário" styleClass="alinhamentoDireita" style="width: 35px;">
+                        <h:outputText value="#{itemDocVer.valorUnitario}">
+                            <f:convertNumber pattern="#,##0.0000"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor Total" styleClass="alinhamentoDireita" style="width: 35px;">
+                        <h:outputText value="#{itemDocVer.valorTotal}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  minWidth="600"
+                  header="DOCUMENTOS LANÇADOS PARA ESTE ITEM"
+                  widgetVar="dlgItemDocItemEnt"
+                  closable="true">
+            <h:form id="formItensDocItemEnt">
+
+                <h:outputText value="Item Entrada Selecionado: "
+                              style="font-size: 13px;"
+                              styleClass="azul"/>
+                <h:outputText value="#{entradaMaterialCompraControlador.itemEntradaMaterial}"
+                              styleClass="azulnegrito"
+                              style="font-size: 13px;"/>
+
+
+                <p:dataTable id="table-documentos-item-entrada"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop10"
+                             style="max-height: 400px; overflow-y: scroll"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             value="#{entradaMaterialCompraControlador.itensDoctoItemEntrada}"
+                             var="doctoEntrada">
+                    <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{doctoEntrada.doctoFiscalEntradaCompra.doctoFiscalLiquidacao.dataDocto}">
+                            <f:convertDateTime type="date"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Data do Atesto" styleClass="alinhamentoCentralizado">
+                        <h:outputText
+                            value="#{doctoEntrada.doctoFiscalEntradaCompra.doctoFiscalLiquidacao.dataAtesto}">
+                            <f:convertDateTime type="date"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{doctoEntrada.doctoFiscalEntradaCompra.doctoFiscalLiquidacao.numero}"/>
+                    </p:column>
+                    <p:column headerText="Série" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{doctoEntrada.doctoFiscalEntradaCompra.doctoFiscalLiquidacao.serie}"/>
+                    </p:column>
+                    <p:column headerText="Tipo do Documento" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{doctoEntrada.doctoFiscalEntradaCompra.doctoFiscalLiquidacao.tipoDocumentoFiscal}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{doctoEntrada.itemEntradaMaterial.material.unidadeMedida.mascaraQuantidade}"
+                            value="#{doctoEntrada.quantidade}"/>
+                        <f:facet name="footer">
+                            <div style="text-align: right">
+                                <h:outputText value="Total: " styleClass="negrito"/>
+                                <fc:output-mascara-unidade-medida
+                                    tipoMascara="#{entradaMaterialCompraControlador.itemEntradaMaterial.material.unidadeMedida.mascaraQuantidade}"
+                                    value="#{entradaMaterialCompraControlador.quantidadeTotalItemDoc}"/>
+                            </div>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  showHeader="false"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dlgValidacaoDocumento"
+                  closable="false">
+            <h:form id="formValidacaoDocumento">
+                <table class="table-bordered">
+                    <tr>
+                        <td>
+                            <div class="alert alert-block" style="font-size: 13px; padding: 5px; font-weight: bold">
+                                <div class="ui-messages-warn-icon mrig10"/>
+                                Alerta!
+                            </div>
+                        </td>
+                    </tr>
+
+                    <ui:repeat value="#{entradaMaterialCompraControlador.mensagemDocumentosDuplicados}" var="msg">
+                        <tr>
+                            <td>
+                                <div style="font-size: 14px; padding: 5px; max-width: 380px" class="mlef20">
+                                    <h:outputText value="#{msg}" escape="false"/>
+                                </div>
+                            </td>
+
+                        </tr>
+                    </ui:repeat>
+                </table>
+
+                <div style="text-align: center">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     process="@this :Formulario:tab-view-geral:panel-documento-fiscal"
+                                     styleClass="mrig05 padrao mtop20 prioritario"
+                                     title="Clique para adicionar o documento"
+                                     update=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgValidacaoDocumento.hide();"
+                                     actionListener="#{entradaMaterialCompraControlador.adicionarDocumentoFiscal()}"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     title="Clique para cancelar"
+                                     process="@this"
+                                     update=":Formulario:tab-view-geral:panel-documento-fiscal"
+                                     styleClass="padrao mtop20"
+                                     onclick="aguarde.show();"
+                                     actionListener="#{entradaMaterialCompraControlador.cancelarDocumentoFiscal()}"
+                                     oncomplete="aguarde.hide();dlgValidacaoDocumento.hide();"/>
+
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  draggable="true"
+                  closable="false"
+                  width="1000"
+                  style="position: fixed !important; "
+                  widgetVar="dialogLiquidacoes">
+            <h:form id="form-liquidacoes">
+                <p:dataTable id="tabelaLiquidacoes"
+                             value="#{entradaMaterialCompraControlador.liquidacoesVO}"
+                             var="liqVo"
+                             rowKey="#{liqVo.idLiquidacao}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+                    <p:column headerText="Liquidação" styleClass="alinhamentoEsquerda">
+                        <a href="#{request.contextPath}/#{liqVo.categoriaOrcamentaria eq 'NORMAL' ? 'liquidacao' : 'liquidacao/resto-a-pagar'}/ver/#{liqVo.idLiquidacao}/"
+                           target="_blank" style="font-weight: bold !important; color: #275971;">
+                            <h:outputText value="#{liqVo.liquidacao}" styleClass="azulnegrito"/>
+                        </a>
+                    </p:column>
+                    <p:column headerText="Estorno" styleClass="alinhamentoEsquerda">
+                        <a href="#{request.contextPath}/#{liqVo.categoriaOrcamentaria eq 'NORMAL' ? 'liquidacao-estorno' : 'liquidacao-estorno/resto-a-pagar'}/ver/#{liqVo.idEstorno}/"
+                           target="_blank" style="font-weight: bold !important; color: #275971;">
+                            <h:outputText value="#{liqVo.estorno}" styleClass="azulnegrito"/>
+                        </a>
+                    </p:column>
+                </p:dataTable>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Fechar"
+                                     title="Clique para fechar janela"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dialogLiquidacoes.hide();"
+                                     process="@this"
+                                     styleClass="padrao mtop10 mrig05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

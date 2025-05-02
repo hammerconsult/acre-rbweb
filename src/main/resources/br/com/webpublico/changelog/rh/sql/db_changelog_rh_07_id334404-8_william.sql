@@ -1,0 +1,9 @@
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2013), (select id from CONFIGURACAORH), '7C2DE7J');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2014), (select id from CONFIGURACAORH), 'F8UCL6S');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2015), (select id from CONFIGURACAORH), 'M1LB5V2');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2016), (select id from CONFIGURACAORH), 'P49VS72');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2017), (select id from CONFIGURACAORH), 'P49VS72');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2018), (select id from CONFIGURACAORH), 'Q84FV63');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2019), (select id from CONFIGURACAORH), 'T17BS45');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2020), (select id from CONFIGURACAORH), 'AT65HD8');
+insert into dirfcodigo values (HIBERNATE_SEQUENCE.NEXTVAL, (select id from exercicio where ano = 2021), (select id from CONFIGURACAORH), 'VR4QLM8');

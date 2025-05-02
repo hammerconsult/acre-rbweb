@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{loteEfetivacaoCessaoControlador}"
+                                auditavel="#{true}"
+                                origem="#{loteEfetivacaoCessaoControlador.caminhoPadrao}ver/#{loteEfetivacaoCessaoControlador.selecionado.id}/"/>
+
+            <p:panel header="Detalhes da Efetivação de Cessão">
+                <p:tabView styleClass="mtop05">
+                    <p:tab title="Cessão">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Número:"/>
+                            <h:outputText styleClass="negrito"
+                                          value="#{loteEfetivacaoCessaoControlador.selecionado.numero}"/>
+
+                            <h:outputText value="Data da Efetivação"/>
+                            <h:outputText value="#{loteEfetivacaoCessaoControlador.selecionado.dataEfetivacao}"
+                                          styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:ss"/>
+                            </h:outputText>
+
+                            <h:outputLabel value="Tipo de Cessão:"/>
+                            <h:outputText styleClass="negrito"
+                                          value="#{loteEfetivacaoCessaoControlador.selecionado.tipoCessao.descricao}"/>
+
+                            <h:outputText value="Responsável:"/>
+                            <h:outputText styleClass="negrito"
+                                          value="#{loteEfetivacaoCessaoControlador.selecionado.responsavel.pessoaFisica.nome}"/>
+
+                            <h:outputLabel
+                                value="Unidade Administrativa de #{loteEfetivacaoCessaoControlador.selecionado.isInterno() ? 'Destino' : 'Origem'}:"/>
+                            <fc:codigo-descricao-hierarquia
+                                dataMovimento="#{loteEfetivacaoCessaoControlador.selecionado.dataEfetivacao}"
+                                tipoHierarquia="ADMINISTRATIVA"
+                                unidadeOrganizacional="#{loteEfetivacaoCessaoControlador.selecionado.unidadeOrganizacional}"/>
+                        </h:panelGrid>
+                        <p:separator/>
+
+                        <p:dataTable emptyMessage="Nenhuma cessão encontrada."
+                                     value="#{loteEfetivacaoCessaoControlador.lotesEncontrados}"
+                                     styleClass="mtop05"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     rows="100"
+                                     rowsPerPageTemplate="100,200,300"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Cessões Efetivadas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     paginator="true"
+                                     var="lote">
+
+                            <p:column style="width: 5%;" headerText="Cessão" styleClass="alinhamentoCentralizado">
+                                <p:commandButton icon="ui-icon-search"
+                                                 update=":form-cessao"
+                                                 title="Clique para visualizar detalhes da cessão."
+                                                 process="@this"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{loteEfetivacaoCessaoControlador.atribuirLoteSelecionado(lote)}"/>
+                            </p:column>
+                            <p:column headerText="Número"
+                                      style="width: 10%; text-align: center;">
+                                <h:outputText value="#{lote.codigo}"/>
+                            </p:column>
+                            <p:column headerText="Unidade de Origem" style="text-align: left;">
+                                <fc:codigo-descricao-hierarquia
+                                    styleClass="defalut"
+                                    unidadeOrganizacional="#{lote.unidadeOrigem}"
+                                    tipoHierarquia="ADMINISTRATIVA"
+                                    dataMovimento="#{lote.dataHoraCriacao}"/>
+                            </p:column>
+                            <p:column
+                                headerText="Unidade de Destino #{loteEfetivacaoCessaoControlador.selecionado.tipoCessao.descricao}"
+                                style="text-align: left;">
+                                <fc:codigo-descricao-hierarquia
+                                    styleClass="defalut"
+                                    unidadeOrganizacional="#{lote.unidadeDestino}"
+                                    tipoHierarquia="ORCAMENTARIA"
+                                    rendered="#{lote.isInterno()}"
+                                    dataMovimento="#{lote.dataHoraCriacao}"/>
+
+                                <h:outputText value="#{lote.unidadeExterna}"
+                                              rendered="#{lote.isExterno()}"/>
+                            </p:column>
+                            <p:column headerText="Situação" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{lote.situacaoLoteCessao.descricao}" disabled="true"/>
+                            </p:column>
+                            <p:column style="width: 12%; text-align: center;">
+                                <p:commandButton icon="ui-icon-newwin"
+                                                 onstart="aguarde.show();"
+                                                 value="Motivo Recusa"
+                                                 onsuccess="aguarde.hide();dlgRecusa.show()"
+                                                 rendered="#{lote.foiRecusado()}"
+                                                 actionListener="#{loteEfetivacaoCessaoControlador.atribuirLoteSelecionadoMotivo(lote)}"
+                                                 update=":form-motivo"/>
+
+                                <p:commandButton value="Termo de Cessão"
+                                                 icon="ui-icon-print"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 styleClass="padrao"
+                                                 rendered="#{lote.foiAceita()}"
+                                                 actionListener="#{loteEfetivacaoCessaoControlador.imprimirTermoDeCessao(lote)}"
+                                                 title="Clique para gerar o Relatório"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <fc:filesUploadWP selecionado="#{loteEfetivacaoCessaoControlador.selecionado}"
+                                          isTelaEditar="false"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapeVisualizarPretty controlador="#{loteEfetivacaoCessaoControlador}"
+                                       mostrarEditar="false"
+                                       mostrarExcluir="false"/>
+        </h:form>
+
+        <p:dialog id="dlg-bens"
+                  widgetVar="dlgInfoCessao"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  max-height="500"
+                  width="800"
+                  header=""
+                  closable="true"
+                  style="position: fixed !important;"
+                  resizable="false">
+            <h:form id="form-cessao">
+
+                <h:outputText value="Detalhes da Cessão:" style="font-size: 13px" styleClass="mtop10"/>
+                <h:outputText value="#{loteEfetivacaoCessaoControlador.loteSelecionado}"
+                              style="font-size: 13px"
+                              styleClass="azul"/>
+
+                <hr class="mbo02"/>
+                <p:tabView id="tabViewCessao">
+                    <p:tab title="Dados da Cessão" id="outPutDadosCessao">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Data:"/>
+                            <h:outputText
+                                value="#{loteEfetivacaoCessaoControlador.loteSelecionado.dataHoraCriacao}"
+                                styleClass="negrito" readonly="true">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                            </h:outputText>
+
+                            <h:outputLabel for="codigo" value="Código:"/>
+                            <h:outputText id="codigo"
+                                          value="#{loteEfetivacaoCessaoControlador.loteSelecionado.codigo}"
+                                          styleClass="negrito" readonly="true" size="20"/>
+
+                            <h:outputLabel value="Prazo Inicial:"/>
+                            <h:outputText
+                                value="#{loteEfetivacaoCessaoControlador.loteSelecionado.ultimoPrazoCessao.inicioDoPrazo}"
+                                readonly="true" styleClass="negrito">
+                                <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputLabel value="Prazo Final:"/>
+                            <h:outputText
+                                value="#{loteEfetivacaoCessaoControlador.loteSelecionado.ultimoPrazoCessao.fimDoPrazo}"
+                                readonly="true" styleClass="negrito">
+                                <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputLabel for="descricao" value="Descrição:"/>
+                            <h:outputText value="#{loteEfetivacaoCessaoControlador.loteSelecionado.descricao}"
+                                          id="descricao" styleClass="negrito">
+                            </h:outputText>
+
+                            <h:outputLabel value="Responsável pelo Envio:"/>
+                            <h:outputText styleClass="negrito"
+                                          value="#{loteEfetivacaoCessaoControlador.loteSelecionado.responsavelPeloEnvio.nome}"/>
+
+                            <h:outputLabel rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"
+                                           value="Responsável pelo Recebimento:"/>
+                            <h:outputText id="recebimento" styleClass="negrito"
+                                          rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"
+                                          value="#{loteEfetivacaoCessaoControlador.loteSelecionado.responsavelPeloRecebimento.nome}"/>
+
+                            <h:outputLabel rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"
+                                           value="Responsável do Destino Externo:"/>
+                            <h:outputText id="recebimentoExterno" styleClass="negrito"
+                                          rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"
+                                          value="#{loteEfetivacaoCessaoControlador.loteSelecionado.responsavelExterno}"/>
+
+                            <h:outputLabel value="Unidade Administrativa de Origem:"/>
+                            <fc:codigo-descricao-hierarquia
+                                unidadeOrganizacional="#{loteEfetivacaoCessaoControlador.loteSelecionado.unidadeOrigem}"
+                                tipoHierarquia="ADMINISTRATIVA"
+                                dataMovimento="#{loteEfetivacaoCessaoControlador.loteSelecionado.dataHoraCriacao}"/>
+
+                            <h:outputLabel rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"
+                                           value="Unidade Administrativa de Destino:"/>
+                            <fc:codigo-descricao-hierarquia
+                                unidadeOrganizacional="#{loteEfetivacaoCessaoControlador.loteSelecionado.unidadeDestino}"
+                                tipoHierarquia="ADMINISTRATIVA"
+                                rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"
+                                dataMovimento="#{loteEfetivacaoCessaoControlador.loteSelecionado.dataHoraCriacao}"/>
+
+                            <h:outputLabel for="destinoExterno"
+                                           rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"
+                                           value="Destino Externo: "/>
+                            <h:outputText id="destinoExterno" styleClass="negrito"
+                                          rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"
+                                          value="#{loteEfetivacaoCessaoControlador.loteSelecionado.unidadeExterna}"/>
+
+                            <h:outputLabel for="tipobem"
+                                           value="Tipo de Bem da Operação:"/>
+                            <h:outputText id="tipobem" styleClass="negrito"
+                                          value="#{loteEfetivacaoCessaoControlador.loteSelecionado.tipoBem.descricao}"/>
+
+                        </h:panelGrid>
+                    </p:tab>
+
+                    <p:tab title="#{loteEfetivacaoCessaoControlador.loteSelecionado.etiquetaAbaBem()}"
+                           id="outPanelBens">
+                        <p:dataTable id="tablebens"
+                                     value="#{loteEfetivacaoCessaoControlador.loteSelecionado.listaDeCessoes}"
+                                     style="overflow: scroll;  width: auto; max-height: 350px;"
+                                     var="ce"
+                                     styleClass="mtop05"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}">
+                            <p:column headerText="Registro Patrimonial" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{ce.bem.identificacao}"/>
+                            </p:column>
+                            <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{ce.bem.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Unidade Administrativa" styleClass="alinhamentoEsquerda">
+                                <fc:codigo-descricao-hierarquia
+                                    unidadeOrganizacional="#{ce.estadoResultante.detentoraAdministrativa}"
+                                    tipoHierarquia="ADMINISTRATIVA"
+                                    styleClass="default"
+                                    dataMovimento="#{loteEfetivacaoCessaoControlador.loteSelecionado.dataHoraCriacao}"/>
+                            </p:column>
+                            <p:column headerText="Estado" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{ce.estadoResultante.estadoBem.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor do Bem (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{ce.estadoResultante.valorOriginal}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog id="dlgMotivo"
+                  widgetVar="dlgRecusa"
+                  styleClass="false"
+                  modal="true"
+                  closable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false">
+            <h:form id="form-motivo">
+                <p:panel header="Motivo da Recusa da Cessão" styleClass="mtop05 mbot05">
+                    <h:panelGrid id="gridmotivorecusa" columns="2">
+                        <h:outputLabel value="Cessão:"/>
+                        <h:outputText value="#{loteEfetivacaoCessaoControlador.loteSelecionado}"
+                                      styleClass="negrito"/>
+
+                        <h:outputLabel value="Unidade Administrativa de Origem:"/>
+                        <fc:codigo-descricao-hierarquia
+                            unidadeOrganizacional="#{loteEfetivacaoCessaoControlador.loteSelecionado.unidadeOrigem}"
+                            tipoHierarquia="ADMINISTRATIVA"
+                            dataMovimento="#{loteEfetivacaoCessaoControlador.loteSelecionado.dataHoraCriacao}"/>
+
+                        <h:outputLabel value="Responsável de Origem:"/>
+                        <h:outputText
+                            value="#{loteEfetivacaoCessaoControlador.loteSelecionado.responsavelPeloEnvio}"
+                            styleClass="negrito"/>
+
+                        <h:outputLabel rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"
+                                       value="Unidade Administrativa de Destino:"/>
+                        <fc:codigo-descricao-hierarquia
+                            unidadeOrganizacional="#{loteEfetivacaoCessaoControlador.loteSelecionado.unidadeDestino}"
+                            tipoHierarquia="ADMINISTRATIVA"
+                            rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"
+                            dataMovimento="#{loteEfetivacaoCessaoControlador.loteSelecionado.dataHoraCriacao}"/>
+
+                        <h:outputLabel
+                            rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"
+                            value="Destino Externo: "/>
+                        <h:outputText styleClass="negrito"
+                                      rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"
+                                      value="#{loteEfetivacaoCessaoControlador.loteSelecionado.unidadeExterna}"/>
+
+                        <h:outputLabel value="Responsável de Destino:"
+                                       rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"/>
+                        <h:outputText
+                            value="#{loteEfetivacaoCessaoControlador.loteSelecionado.responsavelPeloRecebimento}"
+                            rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isInterno()}"
+                            styleClass="negrito"/>
+
+                        <h:outputLabel value="Responsável do Destino Externo:"
+                                       rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"/>
+                        <h:outputText
+                            value="#{loteEfetivacaoCessaoControlador.loteSelecionado.responsavelExterno}"
+                            rendered="#{loteEfetivacaoCessaoControlador.loteSelecionado.isExterno()}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Motivo:"/>
+                        <h:panelGrid columns="2" cellspacing="0" cellpadding="0">
+                            <p:inputTextarea value="#{loteEfetivacaoCessaoControlador.loteSelecionado.motivoRecusa}"
+                                             id="motivo"
+                                             rows="5"
+                                             readonly="true"
+                                             scrollHeight="5"
+                                             autoResize="false"
+                                             counterTemplate="{0} Caracteres Restantes."
+                                             counter="counter"
+                                             maxlength="255"
+                                             cols="70">
+                                <p:ajax event="blur" process="motivo" update="motivo"/>
+                            </p:inputTextarea>
+                            <h:outputText id="counter" styleClass="azul mlef05"/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+                </p:panel>
+
+                <div style="text-align: center;">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-close"
+                                     styleClass="padrao mlef05 mtop10"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dlgRecusa.hide()"
+                                     title="Clique para cancelar a operação."
+                                     process="@this"
+                                     update="@none"/>
+                </div>
+
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

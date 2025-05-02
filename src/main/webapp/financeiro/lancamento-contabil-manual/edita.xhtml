@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:wp="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{lancamentoContabilManualControlador}"
+                                origem="#{lancamentoContabilManualControlador.caminhoPadrao}listar/"/>
+
+            <p:panel id="panelPrincipal" header="Cadastro de Lançamento Contábil Manual">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Número: "/>
+                    <p:inputText id="numero"
+                                 value="#{lancamentoContabilManualControlador.selecionado.numero}"
+                                 disabled="#{lancamentoContabilManualControlador.isOperacaoEditar()}"
+                                 readonly="true"
+                                 title="Número do lançamento gerado automaticamente pelo sistema" size="21">
+                        <p:watermark value="Gerado automaticamente" for="numero"/>
+                    </p:inputText>
+
+                    <h:outputText for="data" value="Data: "/>
+                    <h:outputText id="data" value="#{lancamentoContabilManualControlador.selecionado.data}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                    <fc:outputLabelObrigatorio value="Unidade Organizacional: "/>
+                    <wp:codigo-descricao-hierarquia
+                        unidadeOrganizacional="#{lancamentoContabilManualControlador.selecionado.unidadeOrganizacional}"
+                        dataMovimento="#{lancamentoContabilManualControlador.selecionado.data}"
+                        tipoHierarquia="ORCAMENTARIA"/>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Lançamento: "/>
+                    <h:selectOneMenu value="#{lancamentoContabilManualControlador.selecionado.tipoLancamento}"
+                                     title="Selecione o tipo de lançamento."
+                                     disabled="#{lancamentoContabilManualControlador.operacaoEditar}">
+                        <f:selectItems value="#{lancamentoContabilManualControlador.tipoLancamento}"/>
+                        <p:ajax event="valueChange" update="autocompletEventoContabil" process="@this"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Tipo de Evento Contábil: "/>
+                    <h:outputText
+                        value="#{lancamentoContabilManualControlador.selecionado.tipoEventoContabil.descricao}"
+                        styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Contabilização: "
+                                               rendered="#{lancamentoContabilManualControlador.configuracaoContabil.permitirTipoLancamentoManual}"/>
+                    <p:selectManyCheckbox id="idTipoPrestacao"
+                                          rendered="#{lancamentoContabilManualControlador.configuracaoContabil.permitirTipoLancamentoManual}"
+                                          value="#{lancamentoContabilManualControlador.tiposSelecionados}"
+                                          disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                          layout="lineDirection">
+                        <f:selectItems value="#{lancamentoContabilManualControlador.tiposPrestacoes}"
+                                       var="tipop" itemLabel="&lt;b>#{tipop.descricao}&lt;/b>" itemValue="#{tipop.name()}"/>
+                    </p:selectManyCheckbox>
+
+                    <fc:outputLabelObrigatorio value="Evento Contábil: "/>
+                    <co:visualizarEventoContabil evento="#{lancamentoContabilManualControlador.selecionado.eventoContabil}"
+                                                 rendered="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                                 parametroEvento="#{lancamentoContabilManualControlador.getParametroEvento()}"/>
+
+                    <h:panelGroup rendered="#{lancamentoContabilManualControlador.operacaoNovo}">
+                        <p:autoComplete queryDelay="1000"
+                                        id="autocompletEventoContabil"
+                                        disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                        value="#{lancamentoContabilManualControlador.selecionado.eventoContabil}"
+                                        completeMethod="#{lancamentoContabilManualControlador.buscarEventoContabil}"
+                                        converter="#{eventoContabilControlador.converterGenerico}"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px"
+                                        maxlength="30"
+                                        size="70"
+                                        var="ev"
+                                        itemValue="#{ev.id}"
+                                        itemLabel="#{ev}"
+                                        title="Selecione o evento contábil.">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    process="@this" update="tabelaContas idCamposAdicionais"
+                                    listener="#{lancamentoContabilManualControlador.selecionarEventoContabil}"/>
+                        </p:autoComplete>
+
+                        <h:commandLink actionListener="#{lancamentoContabilManualControlador.redirecionarParaEventoContabil()}">
+                            <p:button icon="ui-icon-circle-plus"
+                                      title="Clique para adicionar um novo registro"
+                                      style="min-height: 30px;"
+                                      styleClass="negrito"/>
+                        </h:commandLink>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio for="valor" value="Valor: "/>
+                    <p:inputText id="valor"
+                                 value="#{lancamentoContabilManualControlador.selecionado.valor}"
+                                 onkeypress="mascaraMonetaria(this)"
+                                 disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                 converter="moneyConverter"
+                                 size="20"/>
+                </h:panelGrid>
+
+                <p:fieldset legend="Informações complementares" id="idCamposAdicionais">
+                    <h:panelGrid columns="2" id="gridCamposAdicionais">
+                        <fc:outputLabelObrigatorio value="Credor: "
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('CREDOR')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.pessoa}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarCredores}"
+                                         converter="#{pessoaContabilControlador.converterGenerico}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('CREDOR')}"
+                                         id="pessoa"/>
+
+                        <h:outputText value="Conta de Receita:"
+                                      rendered="#{!lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('RECEITA_ORCAMENTARIA')}"/>
+                        <fc:outputLabelObrigatorio value="Conta de Receita:"
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('RECEITA_ORCAMENTARIA')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.contaReceita}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarContaReceita}"
+                                         converter="#{planoDeContasWizardControlador.converterConta}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         id="receita"/>
+
+                        <h:outputText value="Conta de Despesa:"
+                                      rendered="#{!lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <fc:outputLabelObrigatorio value="Conta de Despesa:"
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.contaDespesa}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarContasDespesa}"
+                                         converter="#{planoDeContasWizardControlador.converterConta}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         id="despesa"/>
+
+                        <h:outputText value="Função:"
+                                      rendered="#{!lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <fc:outputLabelObrigatorio value="Função:"
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.funcao}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarFuncoes}"
+                                         converter="#{funcaoControlador.converterGenerico}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         id="funcao"/>
+
+                        <h:outputText value="Subfunção:"
+                                      rendered="#{!lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <fc:outputLabelObrigatorio value="Subfunção:"
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.subFuncao}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarSubFuncoes}"
+                                         converter="#{subFuncaoControlador.converterGenerico}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         id="subfuncao"/>
+
+                        <fc:outputLabelObrigatorio value="Programa PPA:"
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.programaPPA}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarProgramas}"
+                                         converter="#{programaPPAControlador.converterGenerico}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"
+                                         update=":Formulario:acaoppa"
+                                         id="programa"/>
+
+                        <fc:outputLabelObrigatorio value="Projeto Atividade:"
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.acaoPPA}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarAcoesPPAs}"
+                                         converter="#{projetoAtividadeControlador.converterGenerico}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"
+                                         id="acaoppa"/>
+
+                        <h:outputText value="Extensão da Fonte de Recurso:"
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.extensaoFonteRecurso}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarExtensoes}"
+                                         converter="#{extensaoFonteRecursoControlador.converterGenerico}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('DOTACAO')}"
+                                         id="extensao"/>
+
+                        <fc:outputLabelObrigatorio value="Conta Financeira: "
+                                                   rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('MOVIMENTACAO_FINANCEIRA')}"/>
+                        <wp:autoComplete value="#{lancamentoContabilManualControlador.selecionado.subConta}"
+                                         completeMethod="#{lancamentoContabilManualControlador.buscarContasFinanceiras}"
+                                         converter="#{contaFinanceiraControlador.converterGenerico}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                         rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('MOVIMENTACAO_FINANCEIRA')}"
+                                         id="subconta"/>
+
+                        <h:outputText value="Tipo de Documento: "
+                                      rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('MOVIMENTACAO_FINANCEIRA')}"/>
+                        <h:selectOneMenu id="tipodoc"
+                                         value="#{lancamentoContabilManualControlador.selecionado.tipoDocPagto}"
+                                         title="Selecione um tipo de documento do pagamento."
+                                         rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('MOVIMENTACAO_FINANCEIRA')}"
+                                         disabled="#{lancamentoContabilManualControlador.operacaoEditar}">
+                            <f:selectItems value="#{lancamentoContabilManualControlador.tiposDoctosPagamentos}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Número do Documento: "
+                                      rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('MOVIMENTACAO_FINANCEIRA')}"/>
+                        <p:inputText id="numerodoc" size="20"
+                                     value="#{lancamentoContabilManualControlador.selecionado.numeroDocumentoFinanceiro}"
+                                     rendered="#{lancamentoContabilManualControlador.canRenderizarCampoQuandoPCM('MOVIMENTACAO_FINANCEIRA')}"
+                                     title="Informe o número do documento financeiro.">
+                            <f:convertNumber integerOnly="true"/>
+                        </p:inputText>
+
+                        <h:outputText value="Ano de inscrição:"/>
+                        <p:inputText value="#{lancamentoContabilManualControlador.selecionado.exercicioResto}"
+                                     maxlength="4"
+                                     id="exercicio"
+                                     size="4"
+                                     disabled="#{lancamentoContabilManualControlador.operacaoEditar}"
+                                     converter="#{exercicioControlador.converterExercicio}"/>
+                    </h:panelGrid>
+                </p:fieldset>
+
+                <p:outputPanel id="panelHistorico">
+                    <co:historico-contabil
+                        historico="#{lancamentoContabilManualControlador.selecionado.complementoHistorico}"
+                        controlador="#{lancamentoContabilManualControlador}"/>
+                </p:outputPanel>
+
+                <p:dataTable id="tabelaContas"
+                             value="#{lancamentoContabilManualControlador.selecionado.contas}"
+                             var="conta"
+                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginator="true"
+                             styleClass="mtop02"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>Contas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+                    <p:column headerText="Ações"
+                              style="width: 5%"
+                              rendered="#{lancamentoContabilManualControlador.operacaoNovo}"
+                              styleClass="alinhamentoCentralizado">
+                        <p:commandButton onstart="aguarde.show()"
+                                         icon="ui-icon-plus"
+                                         styleClass="icone-25"
+                                         process="@this"
+                                         update="@this :formAtualizarConta"
+                                         oncomplete="aguarde.hide();dlgAtualizarConta.show()"
+                                         actionListener="#{lancamentoContabilManualControlador.editarConta(conta)}"
+                                         title="Clique para ver detalhes dos movimentos do item do contrato."/>
+                    </p:column>
+                    <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{conta.contaContabil}"/>
+                    </p:column>
+                    <p:column headerText="Conta De Destinação" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{conta.contaDeDestinacao}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Lançamento" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{conta.tipo}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+            <fc:rodapePretty controlador="#{lancamentoContabilManualControlador}"/>
+        </h:form>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  width="1200"
+                  resizable="false"
+                  closable="false"
+                  widgetVar="dlgAtualizarConta">
+            <h:form id="formAtualizarConta">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Tipo: "/>
+                    <h:outputText value="#{lancamentoContabilManualControlador.conta.tipo.name()}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Conta: "
+                                  rendered="#{lancamentoContabilManualControlador.conta.contaSintetica eq null}"/>
+                    <h:outputText value="#{lancamentoContabilManualControlador.conta.contaContabil}"
+                                  rendered="#{lancamentoContabilManualControlador.conta.contaSintetica eq null}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Conta: "
+                                               rendered="#{lancamentoContabilManualControlador.conta.contaSintetica ne null}"/>
+                    <h:panelGroup rendered="#{lancamentoContabilManualControlador.conta.contaSintetica ne null}">
+                        <p:autoComplete id="contaContabil"
+                                        queryDelay="1000"
+                                        title="Selecione uma conta contábil analítica filha de #{lancamentoContabilManualControlador.conta.contaSintetica}"
+                                        value="#{lancamentoContabilManualControlador.conta.contaContabil}"
+                                        completeMethod="#{lancamentoContabilManualControlador.completarContasContabeis}"
+                                        converter="#{planoDeContasWizardControlador.converterConta}"
+                                        onfocus="this.select();"
+                                        onclick="this.select();"
+                                        scrollHeight="200"
+                                        size="70"
+                                        dropdown="true"
+                                        var="cc"
+                                        process="@this"
+                                        itemValue="#{cc.id}"
+                                        itemLabel="#{cc}"/>
+                        <p:watermark value="#{lancamentoContabilManualControlador.conta.contaSintetica}"
+                                     for="contaContabil"/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Conta de Destinação: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    value="#{lancamentoContabilManualControlador.conta.contaDeDestinacao}"
+                                    completeMethod="#{lancamentoContabilManualControlador.completarContasDeDestinacao}"
+                                    converter="#{planoDeContasWizardControlador.converterConta}"
+                                    onfocus="this.select();"
+                                    onclick="this.select();"
+                                    scrollHeight="200"
+                                    panelStyle="max-width: 800px"
+                                    dropdown="true"
+                                    size="70"
+                                    var="cdd"
+                                    process="@this"
+                                    itemValue="#{cdd.id}"
+                                    itemLabel="#{cdd}"/>
+                </h:panelGrid>
+                <div style="text-align: center;">
+                    <p:commandButton
+                        value="Confirmar"
+                        icon="ui-icon-check"
+                        styleClass="operacao mtop05"
+                        actionListener="#{lancamentoContabilManualControlador.adicionarConta()}"
+                        update=":Formulario:tabelaContas"
+                        process=":formAtualizarConta"
+                        onclick="aguarde.show()"
+                        oncomplete="aguarde.hide();dlgAtualizarConta.hide();"/>
+
+                    <p:commandButton
+                        icon="ui-icon-cancel"
+                        value="Cancelar"
+                        actionListener="#{lancamentoContabilManualControlador.cancelarConta()}"
+                        onclick="dlgAtualizarConta.hide()"
+                        process="@none"
+                        update="@this"
+                        styleClass="padrao mtop05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

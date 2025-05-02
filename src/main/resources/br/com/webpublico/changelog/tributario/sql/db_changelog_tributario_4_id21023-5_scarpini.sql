@@ -1,0 +1,1 @@
+update ENQUADRAMENTOFISCAL set TIPOENQUADRAMENTOFISCAL = 'PADRÃO' where fimVigencia is null;

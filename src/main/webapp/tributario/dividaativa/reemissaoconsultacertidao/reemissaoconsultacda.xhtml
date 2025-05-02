@@ -1,0 +1,846 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+    >
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <link rel="stylesheet"
+              href="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/codemirror.css"/>
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/codemirror.js"/>
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/util/simple-hint.js"/>
+        <link rel="stylesheet"
+              href="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/util/simple-hint.css"/>
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/lib/util/javascript-hint.js"/>
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/code_edit/mode/javascript/javascript.js"/>
+        <style type="text/css">
+            .CodeMirror-scroll {
+                height: auto;
+                overflow-y: hidden;
+                overflow-x: auto;
+                border: 1px solid silver;
+
+            }
+            .CodeMirror-lines {
+                max-width: 800px !important;
+            }
+        </style>
+
+        <fc:aguarde widgetVar="statusDialog"/>
+        <script type="text/javascript">
+            var timer;
+
+            function iniciaEnvio() {
+                timer = setInterval(function () {
+                    posEnvio();
+                }, 1000);
+
+            }
+
+            function terminaEnvio() {
+                clearInterval(timer);
+                acabouEnvio();
+            }
+
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="posEnvio"
+                             actionListener="#{consultaCertidaoDividaAtivaControlador.consultaEnvio}"/>
+            <p:remoteCommand name="acabouEnvio"
+                             update="@form"
+                             process="@form"
+                             oncomplete="dialogEnviar.hide();aguarde.hide();"
+                             actionListener="#{consultaCertidaoDividaAtivaControlador.filtrar()}"/>
+
+            <br/>
+            <p:panel header="Consulta e Reemissão de CDA - Certidão de Dívida Ativa" id="dados">
+                <div class="alert alert-danger centralizado"
+                     style="display: #{consultaCertidaoDividaAtivaControlador.exiteCDAComProblemaDeComunicacao ? 'block' : 'none'}">
+                    <strong>Atenção!</strong><br/>
+                    Existem CDAs que não foram comunicadas à procuradoria por falta de dados cadastrais ou retornaram
+                    alguma inconsistência no momento da integração. <br/>
+                    <p:commandButton icon="ui-icon-print"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.imprimirCDAComFalha()}"
+                                     styleClass="operacao mtop05"
+                                     process="@this"
+                                     onclick="aguarde.show()"
+                                     value="Visualizar"/>
+                </div>
+                <p:panel header="Filtros" styleClass="mtop05">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Tipo de Cadastro: "/>
+                        <h:selectOneMenu id="tipoCadastro"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.tipoCadastroTributario}">
+                            <f:selectItems value="#{consultaCertidaoDividaAtivaControlador.tiposDeCadastroTributario}"/>
+                            <p:ajax update=":Formulario:panelTipoCadastro Formulario:tipoDivida"
+                                    event="change"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{consultaCertidaoDividaAtivaControlador.limpaCadastro()}"/>
+                        </h:selectOneMenu>
+                        <h:outputText value="Dívida: "/>
+                        <h:selectOneMenu converter="#{consultaCertidaoDividaAtivaControlador.dividaConverter}"
+                                         id="tipoDivida"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.divida}">
+                            <f:selectItems value="#{consultaCertidaoDividaAtivaControlador.tiposDeDividas}"/>
+                        </h:selectOneMenu>
+                        <h:outputText value="Situacão da Certidão: "/>
+                        <h:selectOneMenu
+                            id="tipoSituacao"
+                            value="#{consultaCertidaoDividaAtivaControlador.filtros.situacaoCertidao}">
+                            <f:selectItems value="#{consultaCertidaoDividaAtivaControlador.situacoesDaCertidao}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Situacão Judicial: "/>
+                        <h:selectOneMenu
+                            id="tipoSituacaoJudicial"
+                            value="#{consultaCertidaoDividaAtivaControlador.filtros.situacaoJudicial}">
+                            <f:selectItems value="#{consultaCertidaoDividaAtivaControlador.situacoesJudiciais}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Número CDA:"/>
+                        <h:panelGroup>
+                            <p:inputText value="#{consultaCertidaoDividaAtivaControlador.filtros.numeroCdaInicial}"
+                                         size="12" maxlength="12"/>
+                            <h:outputText value="a" styleClass="mlef05 mrig05"/>
+                            <p:inputText value="#{consultaCertidaoDividaAtivaControlador.filtros.numeroCdaFinal}"
+                                         size="12" maxlength="12"/>
+                        </h:panelGroup>
+
+                        <h:outputText value="Exercício da CDA:"/>
+                        <h:panelGroup>
+                            <p:inputMask mask="9999"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.exercicioInicial}"
+                                         converter="#{consultaCertidaoDividaAtivaControlador.converterExercicio}" size="12"/>
+                            <h:outputText value="a" styleClass="mlef05 mrig05"/>
+                            <p:inputMask mask="9999"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.exercicioFinal}"
+                                         converter="#{consultaCertidaoDividaAtivaControlador.converterExercicio}" size="12"/>
+                        </h:panelGroup>
+
+                        <h:outputText value="Número de CDA Legada:"/>
+                        <h:panelGroup>
+                            <p:inputText value="#{consultaCertidaoDividaAtivaControlador.filtros.numeroLegadoInicial}"
+                                         size="12"
+                                         maxlength="6"/>
+                            <h:outputText value="a" styleClass="mlef05 mrig05"/>
+                            <p:inputText value="#{consultaCertidaoDividaAtivaControlador.filtros.numeroLegadoFinal}"
+                                         size="12"
+                                         maxlength="6"/>
+                        </h:panelGroup>
+
+                        <h:outputText value="Exercício da CDA Legada:"/>
+                        <h:panelGroup>
+                            <p:inputMask mask="9999"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.exercicioCdaLegadaInicial}"
+                                         converter="#{consultaCertidaoDividaAtivaControlador.converterExercicio}" size="12"/>
+                            <h:outputText value="a" styleClass="mlef05 mrig05"/>
+                            <p:inputMask mask="9999"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.exercicioCdaLegadaFinal}"
+                                         converter="#{consultaCertidaoDividaAtivaControlador.converterExercicio}" size="12"/>
+                        </h:panelGroup>
+
+                        <h:outputText value="Exercício da Dívida:"/>
+                        <h:panelGroup>
+                            <p:inputMask mask="9999"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.exercicioInicialDivida}"
+                                         converter="#{consultaCertidaoDividaAtivaControlador.converterExercicio}" size="12"/>
+                            <h:outputText value="a" styleClass="mlef05 mrig05"/>
+                            <p:inputMask mask="9999"
+                                         value="#{consultaCertidaoDividaAtivaControlador.filtros.exercicioFinalDivida}"
+                                         converter="#{consultaCertidaoDividaAtivaControlador.converterExercicio}" size="12"/>
+                        </h:panelGroup>
+
+                        <h:outputText value="Número do Processo Judicial:"/>
+                        <p:inputText value="#{consultaCertidaoDividaAtivaControlador.filtros.processoJudicial}"
+                                     size="30"
+                                     maxlength="25"/>
+                    </h:panelGrid>
+                </p:panel>
+
+                <p:panel id="panelTipoCadastro" style="border : none;">
+                    <h:panelGrid columns="4" id="panelCadastro"
+                                 rendered="#{consultaCertidaoDividaAtivaControlador.filtros.tipoCadastroTributario ne 'PESSOA' and consultaCertidaoDividaAtivaControlador.filtros.tipoCadastroTributario ne null}">
+                        <h:outputText value="Cadastro Inicial: " style="padding-left: 26px;"/>
+                        <p:inputText value="#{consultaCertidaoDividaAtivaControlador.filtros.cadastroInicial}"
+                                     size="25"
+                                     maxlength="18"
+                                     title="Informe o Cadastro">
+                            <p:ajax event="blur" update="cadFinal"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{consultaCertidaoDividaAtivaControlador.copiarCadastroInicialParaCadastroFinal()}"/>
+                        </p:inputText>
+                        <h:outputText value="Cadastro Final: " style="padding-left: 26px;"
+                                      rendered="#{consultaCertidaoDividaAtivaControlador.filtros.tipoCadastroTributario ne 'PESSOA' and consultaCertidaoDividaAtivaControlador.filtros.tipoCadastroTributario ne null}"/>
+                        <p:inputText id="cadFinal"
+                                     value="#{consultaCertidaoDividaAtivaControlador.filtros.cadastroFinal}"
+                                     size="25"
+                                     maxlength="18"
+                                     title="Informe o Cadastro">
+                        </p:inputText>
+                    </h:panelGrid>
+
+                    <p:panel id="pnContribuinte" style="border: none"
+                             rendered="#{consultaCertidaoDividaAtivaControlador.filtros.tipoCadastroTributario == 'PESSOA'}">
+                        <fc:autocompletePessoa id="contribuinte"
+                                               value="#{consultaCertidaoDividaAtivaControlador.filtros.pessoa}"
+                                               label="Contribuinte: "
+                                               habilitaBotaoNovaPF="false"
+                                               habilitaBotaoNovaPJ="false"
+                                               watermark="TODOS"
+                                               caminhoAtual="/tributario/dividaativa/certidaodividaativa/cancelarcda"/>
+                    </p:panel>
+                </p:panel>
+
+                <div style="text-align: center">
+                    <p:commandButton icon="ui-icon-search"
+                                     id="pesquisar"
+                                     value="Pesquisar"
+                                     title="Pesquisar todas as CDA(s)"
+                                     onstart="statusDialog.show()"
+                                     oncomplete="statusDialog.hide();"
+                                     update="@form"
+                                     process="@form"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.filtrar()}"
+                                     styleClass="operacao prioritario"/>
+                    <p:spacer width="5"/>
+                    <p:commandButton icon="ui-icon-document"
+                                     id="novo"
+                                     value="Nova Pesquisa"
+                                     title="Clique para realizar nova pesquisa"
+                                     onstart="statusDialog.show()"
+                                     oncomplete="statusDialog.hide();"
+                                     update="@form"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.novo()}"
+                                     styleClass="operacao"/>
+                    <p:spacer width="5"/>
+                    <p:commandButton value="Emitir Demonstrativo de Débitos" styleClass="operacao"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()" icon="ui-icon-print"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.imprimirConsultaDebito()}"/>
+
+                    <p:spacer width="5"/>
+
+                    <p:commandButton icon="ui-icon-signal-diag"
+                                     id="alterar"
+                                     value="Enviar CDA's Selecionadas à Procuradoria"
+                                     title="Enviar CDA's Selecionadas."
+                                     onstart="statusDialog.show()"
+                                     oncomplete="statusDialog.hide();"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.validaCertidoesSelecionadas}"
+                                     styleClass="operacao"/>
+
+                    <p:spacer width="5"/>
+
+                    <p:commandButton value="Imprimir Certidões Selecionadas" styleClass="operacao"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()" icon="ui-icon-print"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.emitirVariasCertidoes()}"/>
+                </div>
+
+                <div style="overflow: scroll;  width: auto; height: auto;">
+                    <p:dataTable paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 rowsPerPageTemplate="10,50,100"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 lazy="true"
+                                 styleClass="mtop10"
+                                 value="#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtivaDataModel}"
+                                 var="certidao"
+                                 id="tabela"
+                                 emptyMessage="Nenhuma certidão encontrada."
+                                 rowKey="#{certidao}"
+                                 selection="#{consultaCertidaoDividaAtivaControlador.certidoesSelecionadas}">
+                        <p:column style="text-align: center;width: 15px">
+                            <p:rowToggler/>
+                        </p:column>
+                        <p:column selectionMode="multiple"/>
+                        <p:column headerText="Nº da Certidão" style="text-align: center;">
+                            <h:outputText value="#{certidao.numero}/#{certidao.exercicio}"/>
+                        </p:column>
+                        <p:column headerText="Cadastro" style="text-align: center;">
+                            <h:outputText
+                                value="#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtivaFacade.retornaInscricaoDoCadastro(certidao.cadastro)}"/>
+                        </p:column>
+                        <p:column headerText="Nome/Razão Social" style="text-align: left;">
+                            <h:outputText value="#{certidao.pessoa.nome}"/>
+                        </p:column>
+                        <p:column headerText="CPF/CNPJ" style="text-align: center;">
+                            <h:outputText value="#{certidao.pessoa.cpf_Cnpj}"/>
+                        </p:column>
+                        <p:column headerText="Data de Geração" style="text-align: center;">
+                            <h:outputText value="#{certidao.dataCertidao eq null ? '   -   ':certidao.dataCertidao}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor Atualizado(R$)" style="text-align: right;">
+                            <p:commandLink
+                                value="#{consultaCertidaoDividaAtivaControlador.valorDaCertidao(certidao)}"
+                                actionListener="#{consultaCertidaoDividaAtivaControlador.recuperaCertidao(certidao)}"
+                                update=":formDetalhesValores"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide(); dialogDetalhamentoValorCDA.show()">
+                            </p:commandLink>
+                        </p:column>
+                        <p:column headerText="Situação" style="text-align: center;">
+                            <h:outputText value="#{certidao.situacaoCertidaoDA.descricao}"/>
+                            <p:spacer width="5" rendered="#{certidao.situacaoCertidaoDA.isPeticionada()}"/>
+                            <p:commandButton id="btPeticao" icon="ui-icon-info" title="Ver Dados da Petição"
+                                             update=":formPeticao"
+                                             rendered="#{certidao.situacaoCertidaoDA.isPeticionada()}"
+                                             oncomplete="dadospeticao.show()"
+                                             actionListener="#{consultaCertidaoDividaAtivaControlador.atribuiPeticao(certidao)}"/>
+                        </p:column>
+                        <p:column headerText="Situação Judicial" style="text-align: center;">
+                            <h:outputText value="#{certidao.situacaoJudicial.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Nº(s). Legado(s)" style="text-align: center;">
+                            <h:outputText value="#{consultaCertidaoDividaAtivaControlador.certidoesLegadas(certidao)}"
+                                          escape="false"/>
+                        </p:column>
+                        <p:column headerText="Processo Ajuizamento" style="text-align: left">
+                            <h:outputText
+                                value="#{consultaCertidaoDividaAtivaControlador.numeroProcessoAjuizamento(certidao)}"/>
+                        </p:column>
+                        <p:column headerText="Envio à Procuradoria" style="text-align: center">
+                            <p:commandLink
+                                value="#{consultaCertidaoDividaAtivaControlador.enviarAProcuradoria(certidao)}"
+                                actionListener="#{consultaCertidaoDividaAtivaControlador.recuperaCertidao(certidao)}"
+                                update=":formDetalhesEnvio"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide();dialogDetalhesEnvio.show()"
+                                />
+
+                        </p:column>
+                        <p:column headerText="Emitir" style="text-align: center;width: 50px">
+                            <p:commandButton title="Emitir a Certidão" onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             rendered="#{certidao.documentoOficial eq null}"
+                                             actionListener="#{certidaoDividaAtivaControlador.emitirCertidao(certidao, true)}"
+                                             icon="ui-icon-print"/>
+
+                            <p:commandButton title="Emitir a Certidão" onclick="gerarNovoDocumento.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update=":Formulario_gerarNovoDocumento"
+                                             actionListener="#{certidaoDividaAtivaControlador.atribuirCertidaoSelecionada(certidao)}"
+                                             rendered="#{certidao.documentoOficial ne null}"
+                                             icon="ui-icon-print"/>
+                        </p:column>
+                        <p:rowExpansion>
+                            <p:dataTable
+                                value="#{consultaCertidaoDividaAtivaControlador.itensCertidaoDaConsulta(certidao)}"
+                                var="item">
+                                <p:column headerText="Inscrição" style="text-align: left">
+                                    <h:outputText value="#{item.numero}/#{item.ano}"/>
+                                </p:column>
+                                <p:column headerText="Situação" style="text-align: left">
+                                    <h:outputText value="#{item.situacaoItemInscricao}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Cadastro" style="text-align: left">
+                                    <h:outputText value="#{item.tipoCadastroTributario.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Origem da Dívida" style="text-align: left">
+                                    <h:outputText value="#{item.descricaoDivida}"/>
+                                </p:column>
+                                <p:column headerText="Número do Livro" style="text-align: right">
+                                    <h:outputText value="#{item.numeroLivro}"/>
+                                </p:column>
+                                <p:column headerText="Página do Livro" style="text-align: right">
+                                    <h:outputText value="#{item.paginaLivro}"/>
+                                </p:column>
+                                <p:column headerText="Linha do Livro" style="text-align: right">
+                                    <h:outputText value="#{item.linhaLivro}"/>
+                                </p:column>
+                                <p:column headerText="Auto de Infração" style="text-align: right">
+                                    <h:outputText
+                                        value="#{consultaCertidaoDividaAtivaControlador.numeroDoAutoInfracao(item.idItemInscricaoDividaAtiva)}"/>
+                                </p:column>
+                                <p:column headerText="Desvincular CDA" styleClass="centralizado"
+                                          rendered="#{consultaCertidaoDividaAtivaControlador.renderizarBtnDesvincularCDA(certidao)}">
+                                    <p:commandButton id="btnDesnvincularCda"
+                                                     title="Clique para desvincular este débito e gerar uma nova cda."
+                                                     icon="ui-icon-transferthick-e-w"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide();dlgDesvincularCda.show()"
+                                                     process="@this"
+                                                     update=":formDesvincularCda"
+                                                     actionListener="#{consultaCertidaoDividaAtivaControlador.iniciarProcessoDesvincularCDA(certidao, item)}"/>
+
+                                </p:column>
+                                <p:column headerText="Parcelas" style="text-align: center;">
+                                    <p:commandButton id="basic" oncomplete="aguarde.hide(), dlg1.show();"
+                                                     update=":formParcelas" icon="ui-icon-search"
+                                                     actionListener="#{consultaCertidaoDividaAtivaControlador.buscarParcelasItemInscricaoDividaAtiva(item.idItemInscricaoDividaAtiva, certidao)}"
+                                                     onclick="aguarde.show()"/>
+
+                                </p:column>
+                            </p:dataTable>
+                            <p:panel visible="#{certidao.semLivro}">
+                                <div class="alert alert-warn " style="text-align: center">
+                                    <strong>Atenção!</strong> Existem débito nessa CDA que ainda não foram incorporados a um Livro de Dívida Ativa.
+                                    Clique
+                                    <a href="#{facesContext.externalContext.requestContextPath}/livro-de-divida-ativa/gerar-por-cda/#{item.idItemInscricaoDividaAtiva}">
+                                        [aqui]
+                                    </a> para realizar essa incorporação.
+                                </div>
+                            </p:panel>
+                        </p:rowExpansion>
+                    </p:dataTable>
+                </div>
+            </p:panel>
+        </h:form>
+
+
+        <p:dialog id="basicDialog"
+                  header="Parcelas Originais"
+                  style="position: fixed !important;"
+                  position="center"
+                  width="900"
+                  height="450"
+                  widgetVar="dlg1"
+                  modal="true">
+            <h:form id="formParcelas">
+                <p:panel header="CDA Desvinculada" styleClass="mbot05"
+                         rendered="#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.usuarioDesvinculacao ne null}">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Data:"/>
+                        <h:outputText value="#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.dataDesvinculacao}"
+                            styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText value="Usuário:"/>
+                        <h:outputText value="#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.usuarioDesvinculacao.nome}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Motivo:"/>
+                        <h:outputText value="#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.motivoDesvinculacao}"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+                </p:panel>
+
+                <fc:mostrarParcelas
+                    parcelas="#{consultaCertidaoDividaAtivaControlador.parcelasItemInscricaoDividaAtiva}"
+                    mostraCadastro="false"/>
+                <br/>
+
+                <div style="width: 100%; text-align: center">
+                    <p:commandButton id="btFechar"
+                                     value="Fechar"
+                                     title="Clique para fechar."
+                                     icon="ui-icon-close"
+                                     styleClass="operacao"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();dlg1.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dialogPeticao" header="Petição"
+                  style="position: fixed !important;"
+                  position="center"
+                  widgetVar="dadospeticao" modal="true" width="600">
+            <div id="div-info-peticao"
+                 class="div-info-tabela"
+                 style="overflow-y: auto; overflow-x: hidden;">
+                <h:form id="formPeticao">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Número: "/>
+                        <h:outputText value="#{consultaCertidaoDividaAtivaControlador.peticao.codigo}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Exercício: "/>
+                        <h:outputText value="#{consultaCertidaoDividaAtivaControlador.peticao.exercicio.ano}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Data: "/>
+                        <h:outputText value="#{consultaCertidaoDividaAtivaControlador.peticao.dataEmissao}"
+                                      styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText value="Situação: "/>
+                        <h:outputText
+                            value="#{consultaCertidaoDividaAtivaControlador.peticao.situacaoPeticao.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Vara Cível: "/>
+                        <h:outputText value="#{consultaCertidaoDividaAtivaControlador.peticao.varaCivel}"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+                    <br/>
+                    <p:commandButton id="btFecharDlg" value="Fechar" icon="ui-icon-close"
+                                     onclick="dadospeticao.hide()"/>
+                </h:form>
+            </div>
+        </p:dialog>
+
+        <p:dialog id="idDialogEnviar"
+                  widgetVar="dialogEnviar"
+                  style="text-align: center"
+                  showHeader="false"
+                  resizable="false"
+                  modal="true"
+                  width="700">
+            <div class="alert alert-warn">
+                <strong>Atenção!</strong> Ao continuar as certidões selecionadas serão enviadas ao sistema da procuradoria, esse envio não é reversível.
+            </div>
+            <h:form>
+                <div id="enviaCDAbotoes" class="mtop10">
+                    <p:commandButton
+                        oncomplete="iniciaEnvio()"
+                        actionListener="#{consultaCertidaoDividaAtivaControlador.enviarCertidoes}"
+                        icon="ui-icon-check"
+                        value="Enviar"
+                        onclick="aguarde.show()"
+                        styleClass="operacao prioritario mrig05"/>
+
+                    <p:commandButton
+                        onclick="aguarde.show()"
+                        oncomplete="aguarde.hide();dialogEnviar.hide()"
+                        icon="ui-icon-cancel"
+                        value="Cancelar"
+                        styleClass="operacao"/>
+                    <br/>
+                </div>
+            </h:form>
+
+        </p:dialog>
+
+        <p:dialog id="idDetalhesEnvio"
+                  widgetVar="dialogDetalhesEnvio"
+                  header="Log de envio de CDA à procuradoria"
+                  dynamic="false"
+                  position="center"
+                  closable="false"
+                  style="position: fixed !important;"
+                  onShow="redimensionarLadosDialog(this.id);"
+                  resizable="false"
+                  draggable="true">
+
+            <h:form id="formDetalhesEnvio">
+                <legend class="legenda">
+                    Comunicações da CDA #{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.numero}/#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.exercicio}
+                </legend>
+                <div style="text-align: left !important; font-size: 12px !important; max-height: 400px; overflow-y: auto">
+
+                    <table class="table">
+                        <ui:repeat varStatus="index"
+                            value="#{consultaCertidaoDividaAtivaControlador.comunicacoesCDA}"
+                            var="comunicacao">
+                            <tr style="color: #{comunicacao.codigoResposta == '00' ? '#387038' : '#c09853'}">
+                                <td>
+                                    #{comunicacao.dataComunicacaoToString}
+                                </td>
+                                <td>
+                                    <strong>  #{comunicacao.tipoComunicacao.descricao}</strong>
+                                </td>
+                                <td>
+                                    #{comunicacao.codigoResposta}: #{comunicacao.descricaoResposta}.
+                                </td>
+                                <td>
+                                    <a data-toggle="collapse" href="#linha#{index.index}">
+                                        <i class="icon-th-list"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="4">
+                                    <div id="linha#{index.index}" class="collapse out" style="font-size: 9px; overflow: auto;">
+                                        <textarea style="width: 50%; height: 300px;" readonly="true" id="code#{index.index}"
+                                                  name="code">#{comunicacao.xml}</textarea>
+                                        <script>
+                                            var editor = CodeMirror.fromTextArea(document.getElementById('code#{index.index}'), {
+                                                lineNumbers: true,
+                                                mode: "javascript",
+                                                readOnly: true
+                                            });
+                                        </script>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ui:repeat>
+
+                    </table>
+                </div>
+
+            </h:form>
+
+            <div style="text-align: center">
+                <p:commandButton value="Ok"
+                                 title="Clique para fechar a visualização das comunicações."
+                                 icon="ui-icon-check"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide();dialogDetalhesEnvio.hide()"
+                                 styleClass="operacao mtop10"/>
+            </div>
+        </p:dialog>
+
+        <p:dialog id="idDetalhesValores"
+                  widgetVar="dialogDetalhamentoValorCDA"
+                  header="Detalhes do Valor Atualizado da CDA"
+                  dynamic="false"
+                  position="center"
+                  closable="false"
+                  style="position: fixed !important;"
+                  onShow="redimensionarLadosDialog(this.id);"
+                  resizable="false"
+                  draggable="true">
+
+            <h:form id="formDetalhesValores">
+                <legend class="legenda">
+                    Detalhes do Valor da CDA #{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.numero}/#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.exercicio}
+                </legend>
+                <div style="text-align: left !important; font-size: 12px !important; max-height: 500px; overflow-y: auto">
+
+                    <table class="table">
+                        <ui:repeat
+                            value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.detalhamento}"
+                            var="detalhe">
+                            <tr style="color: #387038}">
+                                <td>
+                                    #{detalhe}
+                                </td>
+                            </tr>
+                        </ui:repeat>
+                    </table>
+                    <br/>
+                    <table class="table">
+                        <tr>
+                            <th style="text-align:left">Tributo</th>
+                            <th style="text-align:left">Parcela</th>
+                            <th style="text-align:right">Valor</th>
+                            <th style="text-align:right">Juros</th>
+                            <th style="text-align:right">Multa</th>
+                            <th style="text-align:right">Correção</th>
+                            <th style="text-align:right">Honorários</th>
+                            <th style="text-align:right">Total</th>
+                        </tr>
+                        <ui:repeat
+                            value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.composicao}"
+                            var="composicao">
+
+                            <tr style="color: #387038}">
+                                <td style="text-align:left"><h:outputText value="#{composicao.tipoTributo.descricao}"/></td>
+                                <td style="text-align:left"><h:outputText value="#{composicao.resultadoParcela.referencia}"
+                                                  title="#{composicao.resultadoParcela.vencimentoToString}"/></td>
+                                <td style="text-align:right"><h:outputText value="#{composicao.valorTributo}"
+                                                  converter="converterBigDecimal2Casas"/></td>
+                                <td style="text-align:right"><h:outputText value="#{composicao.valorJuros}"
+                                                  converter="converterBigDecimal2Casas"/></td>
+                                <td style="text-align:right"><h:outputText value="#{composicao.valorMulta}"
+                                                  converter="converterBigDecimal2Casas"/></td>
+                                <td style="text-align:right"><h:outputText value="#{composicao.valorCorrecao}"
+                                                  converter="converterBigDecimal2Casas"/></td>
+                                <td style="text-align:right"><h:outputText value="#{composicao.valorHonorarios}"
+                                                  converter="converterBigDecimal2Casas"/></td>
+                                <td style="text-align:right" class="negrito"><h:outputText value="#{composicao.valorTotal}"
+                                                                  converter="converterBigDecimal2Casas"/></td>
+                            </tr>
+
+                        </ui:repeat>
+                        <tr class="negrito">
+                            <td></td>
+                            <td></td>
+                            <td style="text-align:right"><h:outputText converter="converterBigDecimal2Casas"
+                                              value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.getValorTotalComposicao('IMPOSTO')}"/>
+                            </td>
+                            <td style="text-align:right"><h:outputText converter="converterBigDecimal2Casas"
+                                              value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.getValorTotalComposicao('MULTA')}"/>
+                            </td>
+                            <td style="text-align:right"><h:outputText converter="converterBigDecimal2Casas"
+                                              value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.getValorTotalComposicao('JUROS')}"/>
+                            </td>
+                            <td style="text-align:right"><h:outputText converter="converterBigDecimal2Casas"
+                                              value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.getValorTotalComposicao('CORRECAO')}"/>
+                            </td>
+                            <td style="text-align:right"><h:outputText converter="converterBigDecimal2Casas"
+                                              value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.getValorTotalComposicao('HONORARIOS')}"/>
+                            </td>
+                            <td style="text-align:right"><h:outputText converter="converterBigDecimal2Casas"
+                                              value="#{consultaCertidaoDividaAtivaControlador.detalhamentoValoresCda.getValorTotalComposicao(null)}"/>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+            </h:form>
+
+            <div style="text-align: center">
+                <p:commandButton value="Ok"
+                                 title="Clique para fechar a visualização dos detalhes."
+                                 icon="ui-icon-check" process="@this"
+                                 oncomplete="dialogDetalhamentoValorCDA.hide()"
+                                 styleClass="operacao mtop10"/>
+            </div>
+        </p:dialog>
+
+        <p:dialog widgetVar="dlgDesvincularCda"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  showHeader="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important">
+            <h:form id="formDesvincularCda">
+                <div align="center">
+                    <p:panel styleClass="mbot05 mtop05" header="Desvincular CDA">
+                        <div class="alert alert-block mtop05">
+                            <strong>Atenção!</strong> Ao continuar, o débito da CDA #{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.numero}/#{consultaCertidaoDividaAtivaControlador.certidaoDividaAtiva.exercicio.ano}
+                            será transferido para a nova CDA. Esse processo é irreversível.
+
+                        </div>
+                        <table style="width: 100%; ">
+                            <tr>
+                                <td style="width: 47%">
+                                    <p:dataTable id="original" var="original"
+                                                 value="#{consultaCertidaoDividaAtivaControlador.legadasOriginais}"
+                                                 emptyMessage="A Certidão selecionada não possui nenhuma CDA Legada"
+                                                 selection="#{consultaCertidaoDividaAtivaControlador.legadaSelecionada}">
+                                        <f:facet name="header">
+                                            CDA(s) Legadas Originais
+                                        </f:facet>
+                                        <p:column style="width: 2px">
+                                            <p:commandButton icon="ui-icon-trash" actionListener="#{consultaCertidaoDividaAtivaControlador.removerCDALegadaDaListaOriginal(original)}"
+                                                             update="@form" onclick="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                        </p:column>
+                                        <p:column >
+                                            <h:outputText value="#{original.numeroLegadoFormatado}"/>
+                                        </p:column>
+                                        <p:column style="width: 2px">
+                                            <p:commandButton icon="ui-icon-arrowthick-1-e" actionListener="#{consultaCertidaoDividaAtivaControlador.transferirCDALegada(original, true)}"
+                                                    update="@form" onclick="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                        </p:column>
+                                    </p:dataTable>
+
+                                </td>
+                                <td style="width: 5%;">
+                                    <p:commandButton styleClass="mbot05" icon="ui-icon-seek-next" actionListener="#{consultaCertidaoDividaAtivaControlador.transferirTodasCDAsLegadas()}"
+                                                     disabled="#{consultaCertidaoDividaAtivaControlador.desabilitarTransferirTodosCasoListaOriginaisFazia()}"
+                                                     onclick="aguarde.show();" oncomplete="aguarde.hide();" update="@form"/>
+                                    <p:commandButton icon="ui-icon-seek-prev" actionListener="#{consultaCertidaoDividaAtivaControlador.desfazerTransferenciaTodasCDAsLegadas()}"
+                                                     disabled="#{consultaCertidaoDividaAtivaControlador.desabilitarVoltarTodosCasoListaTransferenciaFazia()}"
+                                                     onclick="aguarde.show();" oncomplete="aguarde.hide();" update="@form"/>
+                                </td>
+                                <td style="width: 47%">
+                                    <p:dataTable id="transferir" var="transferir"
+                                                 value="#{consultaCertidaoDividaAtivaControlador.legadasTransferir}"
+                                                 emptyMessage="Selecione as CDA(s) Legadas que deseja transferir">
+                                        <f:facet name="header">
+                                            CDA(s) Legadas à Transferir
+                                        </f:facet>
+                                        <p:column style="width: 2px">
+                                            <p:commandButton icon="ui-icon-arrowthick-1-w" actionListener="#{consultaCertidaoDividaAtivaControlador.desfazerTransferenciaCDALegada(transferir)}"
+                                                             onclick="aguarde.show();" oncomplete="aguarde.hide();" update="@form"/>
+                                        </p:column>
+                                        <p:column>
+                                            <h:outputText value="#{transferir.numeroLegadoFormatado}"/>
+                                        </p:column>
+                                        <p:column style="width: 2px">
+                                            <p:commandButton icon="ui-icon-trash" actionListener="#{consultaCertidaoDividaAtivaControlador.removerCDALegadaDaListaTransferencia(transferir)}"
+                                                             update="@form" onclick="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h:panelGrid columns="2" styleClass="mtop05">
+                            <h:outputText value="Usuário: "/>
+                            <h:outputText
+                                    value="#{consultaCertidaoDividaAtivaControlador.cdaDesvinculada.usuarioDesvinculacao.pessoaFisica}"
+                                    styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="Data: "/>
+                            <p:calendar title="Informe a data da desvinculação da cda."
+                                        id="dataDesvinculacao"
+                                        size="10"
+                                        showOn="button"
+                                        pattern="dd/MM/yyyy"
+                                        value="#{consultaCertidaoDividaAtivaControlador.cdaDesvinculada.dataDesvinculacao}"/>
+
+                            <fc:outputLabelObrigatorio value="Exercício: "/>
+                            <p:inputText size="10"
+                                         value="#{consultaCertidaoDividaAtivaControlador.cdaDesvinculada.exercicio}"
+                                         converter="#{exercicioControlador.converterExercicio}"
+                                         maxlength="4"/>
+
+                            <fc:outputLabelObrigatorio value="Motivo: "/>
+                            <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                <p:inputTextarea id="motivo"
+                                                 title="Informe o motivo da desvinculação da cda."
+                                                 value="#{consultaCertidaoDividaAtivaControlador.cdaDesvinculada.motivoDesvinculacao}"
+                                                 rows="4"
+                                                 cols="50"
+                                                 maxlength="255"
+                                                 autoResize="true" counterTemplate="{0} Caracteres Restantes"
+                                                 counter="counterMotivo"/>
+                                <h:outputText id="counterMotivo" styleClass="mlef05 azul"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </p:panel>
+
+                    <p:commandButton id="btnConfirmaDesnvincularCda"
+                                     value="Confirmar"
+                                     title="Clique para confirmar a desvinculação da cda."
+                                     icon="ui-icon-check"
+                                     styleClass="operacao prioritario mtop05"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.desvincularCDA()}"/>
+
+                    <p:commandButton id="btnCancelarDesnvincularCda"
+                                     value="Cancelar"
+                                     title="Clique para cancelar esta operação."
+                                     icon="ui-icon-cancel"
+                                     styleClass="operacao mlef05 mtop05"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@this"
+                                     update="@none"
+                                     actionListener="#{consultaCertidaoDividaAtivaControlador.cancelarDesvincularCDA()}"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="gerarNovoDocumento" id="dialogGerarNovoDocumento" header="Emitir Documento da Certidão de Dívida Ativa"
+                  modal="true" resizable="false" dynamic="true" position="center" style="position: fixed !important">
+            <h:form id="Formulario_gerarNovoDocumento">
+                <div class="alert centralizado">
+                    <strong>
+                        Atenção!
+                    </strong>
+                    Já existe um Documento de Certidão de Dívida Ativa gerado e emitido para essa CDA na data de #{certidaoDividaAtivaControlador.dataCertidaoSelecionada}
+                    <br/>
+                    <br/>
+                    <h:panelGrid columns="3" style="width: 100%">
+                        <fc:botaoTargetBlank actionListener="#{certidaoDividaAtivaControlador.emitirCertidao(certidaoDividaAtivaControlador.certidaoSelecionada, true)}"
+                                             label="Gerar Novo Documento"
+                                             imprimeNoDialog="true"
+                                             styleClass="operacao prioritario"/>
+                        <fc:botaoTargetBlank actionListener="#{certidaoDividaAtivaControlador.emitirCertidao(certidaoDividaAtivaControlador.certidaoSelecionada, false)}"
+                                             label="Imprimir Documento Existente"
+                                             imprimeNoDialog="true"
+                                             styleClass="operacao prioritario"/>
+                        <p:commandButton icon="ui-icon-cancel"
+                                         styleClass="operacao"
+                                         value="Cancelar"
+                                         onclick="gerarNovoDocumento.hide()"/>
+                    </h:panelGrid>
+                </div>
+            </h:form>
+
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

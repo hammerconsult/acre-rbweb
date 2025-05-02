@@ -1,0 +1,1 @@
+update RegistroEventoRetencaoReinf set valorTotalBaseCalculo = valorTotalLiquido where valorTotalBaseCalculo is null

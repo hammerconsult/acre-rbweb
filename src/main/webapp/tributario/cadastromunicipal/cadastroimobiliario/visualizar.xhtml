@@ -1,0 +1,1575 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:c="http://java.sun.com/jsp/jstl/core">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <style type="text/css">
+            .ui-datatable table table * {
+                border: none !important;
+            }
+        </style>
+        <h:outputScript library="js" name="mapa.js"/>
+        <h:outputScript library="js" name="leaflet.js"/>
+        <script type="text/javascript"
+                src="http://sit.riobranco.ac.gov.br/mapa.js?key=34KEzpj7iTKK654_qdZ0Bn7mHI807ljqgLoiKAA"
+                charset="utf-8">
+        </script>
+
+        <script type="text/javascript">
+            var timer;
+
+            function iniciaSit() {
+                dialogSit.show();
+                timer = setInterval(function () {
+                    posSit();
+                }, 1000);
+            }
+
+            function terminaSit() {
+                clearInterval(timer);
+                $('.botaoFimProcesso').css('display', 'block');
+                $('.barraProgresso').css('display', 'none');
+                $('.msgProgresso').html('Finalizado!');
+                $('.atualizando').html('Cadastro atualizado com sucesso');
+                $('.percentual').css('display', 'none');
+                $('#mensagemFim').removeClass('alert-info');
+                $('#mensagemFim').addClass('alert-success');
+            }
+        </script>
+
+
+        <p:dialog modal="true" width="800" id="dlgSit" widgetVar="dialogSit" closable="false">
+
+            <div class="alert alert-info centralizado" id="mensagemFim">
+                <h:form id="formBarra">
+                    <strong class="msgProgresso">
+                        Sincronizando...
+                    </strong><br/><br/>
+                    <div class="alinhamentoCentralizado">
+                        <span class="atualizando"> Atualizando ...</span>
+                        <br/>
+                        <h:outputText value="#{cadastroImobiliarioControlador.assistenteSit.porcentagemDoCalculo}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText> <span class="percentual">%</span>
+                    </div>
+                    <div class="progress progress-striped active barraProgresso">
+                        <div class="bar"
+                             style="width: #{cadastroImobiliarioControlador.assistenteSit.porcentagemDoCalculo}%;"></div>
+                    </div>
+                </h:form>
+
+                <div class="botaoFimProcesso mtop10" style="display: none">
+                    <p:commandButton
+                        update=":Formulario"
+                        oncomplete="dialogSit.hide()"
+                        actionListener="#{cadastroImobiliarioControlador.ver()}"
+                        value="Continuar"
+                        styleClass="operacao"
+                        icon="ui-icon-check"/>
+
+                </div>
+            </div>
+        </p:dialog>
+
+        <h:form id="Formulario">
+
+
+            <p:remoteCommand name="posSit" actionListener="#{cadastroImobiliarioControlador.consultarAssisteSit()}"
+                             update=":formBarra"/>
+
+            <fc:cabecalhoPretty auditavel="true" origem="#{cadastroImobiliarioControlador.caminhoPadrao}listar/"
+                                controlador="#{cadastroImobiliarioControlador}"/>
+
+            <div class="centralizado">
+                <p:commandButton value="Sincronizar com SIT" icon="ui-icon-refresh"
+                                 rendered="#{cadastroImobiliarioControlador.idRevisao eq null}"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{cadastroImobiliarioControlador.sincronizarDadosComSIT}"/>
+            </div>
+            <p:outputPanel rendered="#{cadastroImobiliarioControlador.imovelPenhorado}"
+                           style="text-align: center !important">
+                <div
+                    class="#{cadastroImobiliarioControlador.imovelBloqueado ? 'ui-messages-error':'ui-messages-warn'} ui-corner-all textomedio">
+                    <div
+                        class="#{cadastroImobiliarioControlador.imovelBloqueado ? 'ui-messages-error-icon':'ui-messages-warn-icon'} margem-direita-cinco-pixels"/>
+                    <h:outputText value="Atenção! "
+                                  styleClass="#{cadastroImobiliarioControlador.imovelBloqueado ? 'ui-messages-error-summary': 'ui-messages-warn-summary'}"/>
+                    <h:outputText
+                        value="Este imóvel encontra-se penhorado #{cadastroImobiliarioControlador.imovelBloqueado ? 'e bloqueado. Não é permitido alteração ou exclusão.':''}"
+                        styleClass="#{cadastroImobiliarioControlador.imovelBloqueado? 'ui-messages-error-detail': 'ui-messages-warn-detail'}"/>
+                    <br/><h:outputText
+                    value="Processo nº #{cadastroImobiliarioControlador.ultimaPenhora.numeroProcesso}, em data de #{cadastroImobiliarioControlador.ultimaPenhora.dataPenhora}, pelo Autor #{cadastroImobiliarioControlador.ultimaPenhora.autor.nome}."
+                    styleClass="#{cadastroImobiliarioControlador.imovelBloqueado? 'ui-messages-error-detail': 'ui-messages-warn-detail'}"/><br/>
+                    <h:outputText
+                        value="#{cadastroImobiliarioControlador.ultimaPenhora.bloqueio? 'Com ':'Sem '}Bloqueio."
+                        styleClass="#{cadastroImobiliarioControlador.imovelBloqueado? 'ui-messages-error-detail': 'ui-messages-warn-detail'}"/>
+                </div>
+            </p:outputPanel>
+
+            <br/>
+            <c:if test="#{cadastroImobiliarioControlador.idRevisao ne null}">
+                <div class="alert alert-success centralizado">
+                    Você está visualizando os dados retroativos do Cadastro Imobiliário
+                    <b>#{cadastroImobiliarioControlador.selecionado.inscricaoCadastral}</b>.
+                    Esses dados refletem as informações na data de
+                    <h:outputLabel value="#{cadastroImobiliarioControlador.dataRetroativa}" styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputLabel> e revisão <b>#{cadastroImobiliarioControlador.idRevisao}</b>.
+                </div>
+                <br/>
+            </c:if>
+
+            <p:panel header="Cadastro Imobiliário" id="painel-geral">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Situação: "/>
+                            <h:panelGroup>
+                                <h:outputText
+                                    value="#{cadastroImobiliarioControlador.selecionado.ativo eq false? 'INATIVO':'ATIVO'}"
+                                    styleClass="#{cadastroImobiliarioControlador.selecionado.ativo eq false? 'vermelhonegrito':'azulnegrito'}"/>
+
+                                <h:outputText
+                                    value="#{cadastroImobiliarioControlador.selecionado.imune ? 'IMUNE':' '}"
+                                    styleClass="#{cadastroImobiliarioControlador.selecionado.imune? 'amarelonegrito':' '}"/>
+
+                            </h:panelGroup>
+                            <h:outputText value="Sincronização: "/>
+                            <h:panelGroup>
+                                <fc:botaoInformacao id="infoSincronizacao"
+                                                    resumo="Erro"
+                                                    icon="ui-icon-close"
+                                                    detalhes="#{cadastroImobiliarioControlador.integracaoSit.mensagem}"
+                                                    rendered="#{cadastroImobiliarioControlador.integracaoSit.sucesso eq false}"
+                                                    gravidade="error"/>
+
+                                <p:commandLink actionListener="#{cadastroImobiliarioControlador.carregarHistoricoSit()}"
+                                               onclick="aguarde.show()" oncomplete="aguarde.hide(); historicoSit.show()"
+                                               rendered="#{cadastroImobiliarioControlador.integracaoSit != null}">
+                                    <h:outputText value="#{cadastroImobiliarioControlador.descricaoSincronizacao}"
+                                                  styleClass="#{cadastroImobiliarioControlador.integracaoSit.sucesso eq false? 'vermelhonegrito':'azulnegrito'}"/>
+                                </p:commandLink>
+                            </h:panelGroup>
+                            <h:outputText value="Código: "/>
+                            <h:outputText value="#{cadastroImobiliarioControlador.selecionado.codigo}"
+                                          styleClass="negrito"/>
+                            <h:outputText value="Inscrição Cadastral: "/>
+                            <h:outputText value="#{cadastroImobiliarioControlador.selecionado.inscricaoCadastral}"
+                                          styleClass="negrito"/>
+                            <h:outputText value="Área Total Construída (m²): "/>
+                            <h:outputText value="#{cadastroImobiliarioControlador.selecionado.areaTotalConstruida}"
+                                          styleClass="negrito">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </h:panelGrid>
+                        <fc:atributosGenericos atributos="#{cadastroImobiliarioControlador.selecionado.atributos}"
+                                               classe="${sistemaControlador.classeCadastroImobiliario}"/>
+                    </div>
+                    <div class="col-md-3">
+                        <fc:eventoCalculadoBci cadastroImobiliario="#{cadastroImobiliarioControlador.selecionado}"/>
+                    </div>
+                    <div class="col-md-5">
+                        <p:panel header="Mapa">
+                            <div id="mapa"
+                                 style="width: 100%; height: 350px; margin-top: -20px; text-align: center; vertical-align: top">
+                            </div>
+                            <div style="width: 100%; text-align: center;" class="centralizado">
+
+                                <h:graphicImage value="/img/ajaxloadingbar.gif" width="50"
+                                                styleClass="mtop05" id="aguarde-mapa"/>
+                                <br/>
+                                <p:commandLink actionListener="#{cadastroImobiliarioControlador.verInscricaoMapa}"
+                                               value="Centralizar Lote"
+                                               id="botao-ver-mapa"
+                                               icon="ui-icon-search" styleClass="operacao"/>
+                                <h:inputHidden id="coordenadasSit"
+                                               value="#{cadastroImobiliarioControlador.selecionado.coordenadasSIT}"
+                                />
+                                <p:remoteCommand process="@form"
+                                                 name="atualizarCoordenadasDoSit"
+                                                 actionListener="#{cadastroImobiliarioControlador.atualizarCoordenadasDoSit()}"/>
+                            </div>
+                        </p:panel>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div id="aoooooORenatim">
+
+                    </div>
+                </div>
+
+
+                <br/>
+                <p:tabView dynamic="true" id="tabView">
+                    <p:ajax event="tabChange" listener="#{cadastroImobiliarioControlador.alterarTabs}"
+                            onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                    <p:tab title="Lote">
+                        <p:panel header="Lote">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <h:panelGrid columns="2">
+                                        <h:outputText value="Setor: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.setor}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Quadra: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.quadra.descricao}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Lote (Município): "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.codigoLote}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Loteamento: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.quadra.loteamento.nome}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Lote (Loteamento): "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.descricaoLoteamento}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Zona Fiscal: "/>
+                                        <h:outputText value="#{cadastroImobiliarioControlador.selecionado.lote.zonaFiscal.codigo}"
+                                                      title="#{cadastroImobiliarioControlador.selecionado.lote.zonaFiscal.valorUnitarioTerreno}"
+                                                      styleClass="azulnegrito"/>
+                                        <h:outputText value="Zona Ambiental: "/>
+                                        <h:outputText value="#{cadastroImobiliarioControlador.selecionado.lote.zona.sigla}"
+                                                      title="#{cadastroImobiliarioControlador.selecionado.lote.zona}"
+                                                      styleClass="azulnegrito"/>
+                                        <h:outputText value="Área do Terreno (m²): "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.areaLote}"
+                                            styleClass="azulnegrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                        <h:outputText value="Código Anterior: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.codigoAnterior}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Tipo Logradouro: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.logradouro.tipoLogradouro.descricao}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Logradouro: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.testadaPrincipal.face.logradouroBairro.logradouro.nome}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Número: "/>
+                                        <h:outputText value="#{cadastroImobiliarioControlador.selecionado.numero}"
+                                                      styleClass="azulnegrito"/>
+                                        <h:outputText value="Complemento (Lote): "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.complemento}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Complemento (BCI): "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.complementoEndereco}"
+                                            size="100"
+                                            maxlength="100"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="Bairro: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.testadaPrincipal.face.logradouroBairro.bairro}"
+                                            styleClass="azulnegrito"/>
+                                        <h:outputText value="CEP: "/>
+                                        <h:outputText
+                                            value="#{cadastroImobiliarioControlador.selecionado.lote.testadaPrincipal.face.logradouroBairro.cep}"
+                                            styleClass="azulnegrito"/>
+                                    </h:panelGrid>
+                                </div>
+                                <div class="col-md-3">
+                                    <fc:vizualizaAtributosGenericos
+                                        atributos="#{cadastroImobiliarioControlador.selecionado.lote.atributos}"
+                                        classe="${sistemaControlador.classeLote}"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <div style="overflow-x: auto;">
+                                        <p:dataTable id="panelTestadasLote"
+                                                     value="#{cadastroImobiliarioControlador.selecionado.lote.testadas}"
+                                                     rowStyleClass="#{testada.principal?'negrito':null}"
+                                                     var="testada">
+                                            <p:column headerText="Expandir">
+                                                <p:rowToggler/>
+                                            </p:column>
+                                            <p:column headerText="Código da Face">
+                                                <h:outputText value="#{testada.face.codigoFace}"/>
+                                            </p:column>
+                                            <p:column headerText="Lado">
+                                                <h:outputText value="#{testada.face.lado}"/>
+                                            </p:column>
+                                            <p:column headerText="Face">
+                                                <h:outputText value="#{testada.face.logradouroBairro.logradouro}"/>
+                                            </p:column>
+                                            <p:column headerText="Largura (m)">
+                                                <h:outputText value="#{testada.face.largura}">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Testada (m)">
+                                                <h:outputText value="#{testada.tamanho}">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Principal">
+                                                <h:outputText value="#{testada.principalString}"/>
+                                            </p:column>
+                                            <p:rowExpansion>
+                                                <p:dataTable
+                                                    value="#{cadastroImobiliarioControlador.servicosUrbanos(testada.face)}"
+                                                    var="servico">
+                                                    <f:facet name="header">
+                                                        <h:outputText value="Serviços Urbanos"/>
+                                                    </f:facet>
+                                                    <p:column headerText="Código">
+                                                        <h:outputText value="#{servico.servicoUrbano.codigo}"/>
+                                                    </p:column>
+                                                    <p:column headerText="Descrição">
+                                                        <h:outputText value="#{servico.servicoUrbano.nome}"/>
+                                                    </p:column>
+                                                </p:dataTable>
+                                            </p:rowExpansion>
+                                        </p:dataTable>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </p:panel>
+                    </p:tab>
+                    <p:tab title="Proprietário(s) na Prefeitura">
+                        <p:tabView>
+                            <p:tab title="Proprietário(s) Atual(ais)">
+                                <p:outputPanel id="pProprietarios">
+                                    <p:message for="proprietarioTabela"/>
+                                    <p:dataTable id="proprietarioTabela"
+                                                 value="#{cadastroImobiliarioControlador.propriedades}"
+                                                 var="c">
+                                        <p:column headerText="Expandir">
+                                            <p:rowToggler/>
+                                        </p:column>
+                                        <p:column headerText="Proprietário">
+                                            <h:outputText value="#{c.pessoa.nome}"
+                                                          title="Clique para ver os detalhes do proprietário"/>
+                                        </p:column>
+                                        <p:column headerText="CPF/CNPJ">
+                                            <h:outputText value="#{c.pessoa.cpf_Cnpj}"/>
+                                        </p:column>
+                                        <p:column headerText="Proporção (%)" style="text-align: right;">
+                                            <h:outputText value="#{c.proporcao}">
+                                                <f:convertNumber pattern="#,##0.00" maxFractionDigits="15"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Tipo de Proprietário">
+                                            <h:outputText value="#{c.tipoProprietario.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Início da Vigência">
+                                            <h:outputText value="#{c.inicioVigencia}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Final da Vigência">
+                                            <h:outputText value="#{c.finalVigencia}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:rowExpansion>
+                                            <p:dataTable
+                                                value="#{cadastroImobiliarioControlador.enderecosPropriedade(c.pessoa)}"
+                                                var="ender">
+                                                <p:column headerText="Endereço(s)">
+                                                    <h:outputText escape="false"
+                                                                  value="&lt;b&gt;#{ender.tipoEndereco.descricao}&lt;/b&gt;, #{ender.logradouro}, #{ender.numero}, #{ender.complemento}, #{ender.bairro}, #{ender.localidade}, #{ender.uf}"/>
+                                                </p:column>
+                                            </p:dataTable>
+                                        </p:rowExpansion>
+                                        <f:facet name="footer">
+                                            <h:outputText value="Proporção Total:"/>
+                                            <p:spacer width="3px"/>
+                                            <h:outputText value="#{cadastroImobiliarioControlador.somaProporcoes}"
+                                                          style="color:#{cadastroImobiliarioControlador.somaProporcoes eq 100 ? 'seagreen':'tomato'}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                            <p:spacer width="2px"/>
+                                            <h:outputText value="%"
+                                                          style="color:#{cadastroImobiliarioControlador.somaProporcoes eq 100 ? 'seagreen':'tomato'}"/>
+                                        </f:facet>
+                                    </p:dataTable>
+                                </p:outputPanel>
+                            </p:tab>
+                            <p:tab title="Proprietário(s) Anterior(es)">
+                                <p:dataTable id="historicoProprietariosTable"
+                                             value="#{cadastroImobiliarioControlador.propriedadesHistorico}"
+                                             var="c"
+                                             emptyMessage="Nenhum proprietário anterior">
+                                    <p:column headerText="Proprietário">
+                                        <h:outputText value="#{c.pessoa.nome}"
+                                                      title="Clique para ver os detalhes do proprietário"/>
+                                    </p:column>
+                                    <p:column headerText="CPF/CNPJ">
+                                        <h:outputText value="#{c.pessoa.cpf_Cnpj}"/>
+                                    </p:column>
+                                    <p:column headerText="Proporção (%)">
+                                        <h:outputText value="#{c.proporcao}">
+                                            <f:convertNumber pattern="#,##0.00" maxFractionDigits="15"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Proprietário">
+                                        <h:outputText value="#{c.tipoProprietario.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Início da Vigência">
+                                        <h:outputText value="#{c.inicioVigencia}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Final da Vigência">
+                                        <h:outputText value="#{c.finalVigencia}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:tab>
+                        </p:tabView>
+                    </p:tab>
+                    <p:tab title="Proprietário(s) no Cartório">
+                        <p:dataTable id="proprietarioCartorioTabela"
+                                     value="#{cadastroImobiliarioControlador.propriedadesCartorio}" var="c"
+                                     emptyMessage="Nenhum proprietário encontrado.">
+                            <p:column headerText="Expandir">
+                                <p:rowToggler/>
+                            </p:column>
+                            <p:column headerText="Proprietário">
+                                <h:outputText value="#{c.pessoa.nome}"
+                                              title="Clique para ver os detalhes do proprietário"/>
+                            </p:column>
+                            <p:column headerText="CPF/CNPJ">
+                                <h:outputText value="#{c.pessoa.cpf_Cnpj}"/>
+                            </p:column>
+                            <p:column headerText="Proporção (%)" style="text-align: right;">
+                                <h:outputText value="#{c.proporcao}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Tipo de Proprietário">
+                                <h:outputText value="#{c.tipoProprietario.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Início da Vigência">
+                                <h:outputText value="#{c.inicioVigencia}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Final da Vigência">
+                                <h:outputText value="#{c.finalVigencia}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:rowExpansion>
+                                <p:dataTable value="#{cadastroImobiliarioControlador.enderecosPropriedade(c.pessoa)}"
+                                             var="ender">
+                                    <p:column headerText="Endereço(s)">
+                                        <h:outputText escape="false"
+                                                      value="&lt;b&gt;#{ender.tipoEndereco.descricao}&lt;/b&gt;, #{ender.logradouro}, #{ender.numero}, #{ender.complemento}, #{ender.bairro}, #{ender.localidade}, #{ender.uf}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:rowExpansion>
+                            <f:facet name="footer">
+                                <h:outputText value="Proporção Total:"/>
+                                <p:spacer width="3px"/>
+                                <h:outputText value="#{cadastroImobiliarioControlador.somaProporcoesCartorio}"
+                                              style="color:#{cadastroImobiliarioControlador.somaProporcoesCartorio eq 100 ? 'seagreen':'tomato'}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <p:spacer width="2px"/>
+                                <h:outputText value="%"
+                                              style="color:#{cadastroImobiliarioControlador.somaProporcoesCartorio eq 100 ? 'seagreen':'tomato'}"/>
+                            </f:facet>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="Compromissários">
+                        <p:tabView>
+                            <p:tab title="Compromissário(s) Atual(ais)">
+                                <p:outputPanel>
+                                    <p:dataTable value="#{cadastroImobiliarioControlador.compromissarios}"
+                                                 var="compromissario"
+                                                 emptyMessage="Nenhum compromissário encontrado.">
+                                        <p:column headerText="Compromissário" style="text-align: left">
+                                            <h:outputText value="#{compromissario.compromissario}"/>
+                                        </p:column>
+                                        <p:column headerText="Proporção" style="text-align: center">
+                                            <h:outputText value="#{compromissario.proporcao}"
+                                                          converter="porcentagemConverter"/>
+                                        </p:column>
+                                        <p:column headerText="Início de Vigência" style="text-align: center">
+                                            <h:outputText value="#{compromissario.inicioVigencia}"
+                                                          converter="javax.faces.DateTime"/>
+                                        </p:column>
+                                        <p:column headerText="Fim de Vigência" style="text-align: center">
+                                            <h:outputText value="#{compromissario.fimVigencia}"
+                                                          converter="javax.faces.DateTime"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:outputPanel>
+                            </p:tab>
+                            <p:tab title="Compromissário(s) Anterior(es)">
+                                <p:dataTable value="#{cadastroImobiliarioControlador.compromissariosHistorico}"
+                                             var="compromissario"
+                                             emptyMessage="Nenhum compromissário encontrado.">
+                                    <p:column headerText="Compromissário" style="text-align: left">
+                                        <h:outputText value="#{compromissario.compromissario}"/>
+                                    </p:column>
+                                    <p:column headerText="Proporção" style="text-align: center">
+                                        <h:outputText value="#{compromissario.proporcao}"
+                                                      converter="porcentagemConverter"/>
+                                    </p:column>
+                                    <p:column headerText="Início de Vigência" style="text-align: center">
+                                        <h:outputText value="#{compromissario.inicioVigencia}"
+                                                      converter="javax.faces.DateTime"/>
+                                    </p:column>
+                                    <p:column headerText="Fim de Vigência" style="text-align: center">
+                                        <h:outputText value="#{compromissario.fimVigencia}"
+                                                      converter="javax.faces.DateTime"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:tab>
+                        </p:tabView>
+                    </p:tab>
+                    <p:tab title="Construções">
+                        <p:panel header="Construção" id="painelContrucao">
+                            <p:dataTable id="construcaoTabela"
+                                         value="#{cadastroImobiliarioControlador.selecionado.construcoesAtivas}"
+                                         var="c"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'even-row' : 'odd-row'}"
+                                         rowIndexVar="rowIx"
+                                         emptyMessage="Nenhuma construção adicionada">
+                                <p:column headerText="Expandir">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Englobado">
+                                    <p:cellEditor>
+                                        <f:facet name="input">
+                                            <p:inputText value="#{c.englobado}"/>
+                                        </f:facet>
+                                        <f:facet name="output">
+                                            <h:outputText value="#{c.englobado != null? c.englobado: 'Não Englobado'}"/>
+                                        </f:facet>
+                                    </p:cellEditor>
+                                </p:column>
+                                <p:column headerText="Código">
+                                    <p:cellEditor>
+                                        <f:facet name="input">
+                                            <p:inputText value="#{c.codigo}"/>
+                                        </f:facet>
+                                        <f:facet name="output">
+                                            <h:outputText value="#{c.codigo}"/>
+                                        </f:facet>
+                                    </p:cellEditor>
+                                </p:column>
+                                <p:column headerText="Descrição">
+                                    <p:cellEditor>
+                                        <f:facet name="input">
+                                            <p:inputText value="#{c.descricao}"/>
+                                        </f:facet>
+                                        <f:facet name="output">
+                                            <h:outputText value="#{c.descricao}"/>
+                                        </f:facet>
+                                    </p:cellEditor>
+                                </p:column>
+                                <p:column headerText="Área (m²)">
+                                    <p:cellEditor>
+                                        <f:facet name="input">
+                                            <p:inputText value="#{c.areaConstruida}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </p:inputText>
+                                        </f:facet>
+                                        <f:facet name="output">
+                                            <h:outputText value="#{c.areaConstruida}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </f:facet>
+                                    </p:cellEditor>
+                                    <f:facet name="footer">
+                                        <h:outputText value="Total (m²): "/>
+                                        <h:outputText
+                                            id="areaTotal"
+                                            value="#{cadastroImobiliarioControlador.somaAreas}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </f:facet>
+                                </p:column>
+                                <p:column headerText="Nº de Pavimentos" style="text-align: right">
+                                    <h:outputText value="#{c.quantidadePavimentos}"/>
+                                </p:column>
+
+                                <p:rowExpansion>
+                                    <h:panelGrid columns="2" styleClass="verticalAlignTop">
+                                        <p:panel id="panelDadosConstrucao" styleClass="mbot05 mlef05"
+                                                 header="Dados da Construção">
+                                            <h:panelGrid columns="2"
+                                                         columnClasses="alinhamentoEsquerda, alinhamentoEsquerda">
+                                                <h:outputText value="Nº do Habite-se: "/>
+                                                <h:outputText value="#{c.habitese}" id="habitese"
+                                                              styleClass="negrito mlef05"/>
+
+                                                <h:outputText value="Data do Habite-se: "/>
+                                                <h:outputText value="#{c.dataHabitese}" id="dataHabitese"
+                                                              styleClass="negrito mlef05">
+                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Nº do Documento: "/>
+                                                <h:outputText value="#{c.numeroProtocolo}" id="numeroProtocolo"
+                                                              styleClass="negrito mlef05"/>
+
+                                                <h:outputText value="Tipo de Documento: "/>
+                                                <h:outputText value="#{c.tipoProtocolo}" id="tipoProtocolo"
+                                                              styleClass="negrito mlef05"/>
+
+                                                <h:outputText value="Data do Documento: "/>
+                                                <h:outputText value="#{c.dataProtocolo}" id="dataProtocolo"
+                                                              styleClass="negrito mlef05">
+                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Folha do Documento: "/>
+                                                <h:outputText value="#{c.folhaDocumento}" id="folhaDocumento"
+                                                              styleClass="negrito mlef05"/>
+
+                                                <h:outputText value="Livro do Documento: "/>
+                                                <h:outputText value="#{c.livroDocumento}" id="livroDocumento"
+                                                              styleClass="negrito mlef05"/>
+
+                                                <h:outputText value="Nº do Alvará: "/>
+                                                <h:outputText value="#{c.numeroAlvara}" id="numeroAlvara"
+                                                              styleClass="negrito mlef05"/>
+
+                                                <h:outputText value="Tipo de Alvará: "/>
+                                                <h:outputText value="#{c.tipoAlvara}" id="tipoAlvara"
+                                                              styleClass="negrito mlef05"/>
+
+                                                <h:outputText value="Data do Alvará: "/>
+                                                <h:outputText value="#{c.dataAlvara}" id="dataAlvara"
+                                                              styleClass="negrito mlef05">
+                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                </h:outputText>
+                                            </h:panelGrid>
+                                        </p:panel>
+                                        <p:panel id="panelAtributosConstrucao" styleClass="mbot05 mlef05 mrig05"
+                                                 header="Atributos da Construção #{c.descricao}">
+                                            <fc:vizualizaAtributosGenericos
+                                                classe="${sistemaControlador.classeConstrucao}"
+                                                atributos="#{c.atributos}"/>
+                                        </p:panel>
+                                        <p:panel id="panelEventosConstrucao" styleClass="mbot05 mlef05 mrig05"
+                                                 header="Eventos de Cálculo da Construção #{c.descricao}">
+                                            <fc:eventoCalculadoConstrucao construcao="#{c}"/>
+                                        </p:panel>
+                                        <p:spacer/>
+                                    </h:panelGrid>
+
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:panel>
+                    </p:tab>
+                    <p:tab id="tabInscricao" title="Inscrições Anteriores">
+                        <p:dataTable id="inscricaoAnteriores"
+                                     value="#{cadastroImobiliarioControlador.selecionado.inscricoesAnterioes}"
+                                     emptyMessage="Nenhuma inscrição anterior"
+                                     var="inscricao">
+                            <p:column headerText="Inscrição Anterior">
+                                <h:outputText value="#{inscricao.inscricaoAnterior}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab id="tabIsencao" title="Isenções">
+                        <p:scrollPanel mode="native">
+                            <p:dataTable value="#{cadastroImobiliarioControlador.selecionado.isencoes}"
+                                         style="text-align: center;"
+                                         rowStyleClass="#{cadastroImobiliarioControlador.isencaoEfetivada(isencao) and isencao.isAtivo() ? 'fundo-amarelo-padrao' : ''}"
+                                         var="isencao"
+                                         emptyMessage="Nenhuma isenção foi adicionada a este Cadastro Imobiliário">
+                                <f:facet name="header">
+                                    <h:outputText value="Isenções"/>
+                                </f:facet>
+                                <p:column headerText="Código Processo">
+                                    <h:outputText value="#{isencao.processoIsencaoIPTU.numeroProcessoComExercicio}"/>
+                                </p:column>
+                                <p:column headerText="Sequência">
+                                    <h:outputText value="#{isencao.sequencia}"/>
+                                </p:column>
+                                <p:column headerText="Início Vigência">
+                                    <h:outputText value="#{isencao.inicioVigencia}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Final Vigência">
+                                    <h:outputText value="#{isencao.finalVigencia}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Tipo Lançamento">
+                                    <h:outputText value="#{isencao.tipoLancamentoIsencao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="%">
+                                    <h:outputText value="#{isencao.percentual}"/>
+                                </p:column>
+                                <p:column headerText="Data Lançamento">
+                                    <h:outputText value="#{isencao.processoIsencaoIPTU.dataLancamento}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Exercício Referência">
+                                    <h:outputText value="#{isencao.processoIsencaoIPTU.exercicioReferencia}"/>
+                                </p:column>
+                                <p:column headerText="Categoria">
+                                    <h:outputText value="#{isencao.processoIsencaoIPTU.categoriaIsencaoIPTU}"/>
+                                </p:column>
+                                <p:column headerText="Situação">
+                                    <h:outputText value="${isencao.situacao.descricao}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:scrollPanel>
+                    </p:tab>
+                    <p:tab id="tabMatricula" title="Matrícula">
+                        <p:selectOneRadio id="options"
+                                          value="#{cadastroImobiliarioControlador.selecionado.tipoMatricula}"
+                                          disabled="true">
+                            <f:selectItem itemLabel="1-Averbação da Escritura"
+                                          itemValue="#{cadastroImobiliarioControlador.tipoDeAverbacao}"/>
+                            <f:selectItem itemLabel="2-Título Definitivo de Posse"
+                                          itemValue="#{cadastroImobiliarioControlador.tipoDePosse}"/>
+                        </p:selectOneRadio>
+                        <p:panel rendered="#{cadastroImobiliarioControlador.renderizaPanelMatricula}">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Cartório: "/>
+                                <h:outputText value="#{cadastroImobiliarioControlador.selecionado.cartorio}"
+                                              styleClass="negrito"/>
+                                <h:outputText value="Número da Matrícula: "
+                                              rendered="#{cadastroImobiliarioControlador.renderizaAverbacao}"/>
+                                <h:outputText
+                                    value="#{cadastroImobiliarioControlador.selecionado.matriculaRegistro}"
+                                    styleClass="negrito"
+                                    rendered="#{cadastroImobiliarioControlador.renderizaAverbacao}"/>
+                                <h:outputText value="Número do Título: "
+                                              rendered="#{cadastroImobiliarioControlador.renderizaAverbacao eq false}"/>
+                                <h:outputText value="#{cadastroImobiliarioControlador.selecionado.numeroDoTitulo}"
+                                              styleClass="negrito"
+                                              rendered="#{cadastroImobiliarioControlador.renderizaAverbacao eq false}"/>
+                                <h:outputText value="Número do Livro: "/>
+                                <h:outputText value="#{cadastroImobiliarioControlador.selecionado.livroRegistro}"
+                                              styleClass="negrito"/>
+                                <h:outputText value="Número da Folha de Registro: "/>
+                                <h:outputText value="#{cadastroImobiliarioControlador.selecionado.folhaRegistro}"
+                                              styleClass="negrito"/>
+                                <h:outputText value="Data do Registro: "
+                                              rendered="#{cadastroImobiliarioControlador.renderizaAverbacao}"/>
+                                <h:outputText value="#{cadastroImobiliarioControlador.selecionado.dataRegistro}"
+                                              styleClass="negrito"
+                                              rendered="#{cadastroImobiliarioControlador.renderizaAverbacao}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value="Data do Título: "
+                                              rendered="#{cadastroImobiliarioControlador.renderizaAverbacao eq false}"/>
+                                <h:outputText value="#{cadastroImobiliarioControlador.selecionado.dataTitulo}"
+                                              styleClass="negrito"
+                                              rendered="#{cadastroImobiliarioControlador.renderizaAverbacao eq false}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value="Lei: "/>
+                                <h:outputText
+                                    value="#{cadastroImobiliarioControlador.selecionado.atoLegalIsencao.nome}"
+                                    styleClass="negrito"/>
+                                <h:outputText value="Processo / Protocolo: "/>
+                                <h:outputText
+                                    value="#{cadastroImobiliarioControlador.selecionado.processo.numero} - #{cadastroImobiliarioControlador.selecionado.processo.ano} - #{cadastroImobiliarioControlador.selecionado.processo.assunto} - #{cadastroImobiliarioControlador.selecionado.processo.pessoa}"
+                                    styleClass="negrito"/>
+                            </h:panelGrid>
+                        </p:panel>
+                    </p:tab>
+                    <p:tab title="Arquivos" id="tabArquivos">
+                        <p:dataTable id="fileUpload2"
+                                     value="#{cadastroImobiliarioControlador.selecionado.arquivos}" var="arquivos"
+                                     emptyMessage="Nenhum arquivo adicionado.">
+                            <f:facet name="header">
+                                <h:outputText value="Arquivos Salvos"/>
+                            </f:facet>
+                            <p:column headerText="Nome">
+                                <a target="_blank"
+                                   href='${facesContext.externalContext.requestContextPath}/arquivos/#{arquivos.nome}?id=#{arquivos.id}'><h:outputText
+                                    value="#{arquivos.nome}"/></a>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="Histórico" id="tabHistorico">
+                        <p:dataTable id="tableHistorico" value="#{cadastroImobiliarioControlador.listaHistoricos}"
+                                     var="historico"
+                                     paginator="true" rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     rowsPerPageTemplate="10,50,100"
+                                     widgetVar="tabela"
+                                     emptyMessage="Nenhum histórico foi encontrado para este imóvel">
+                            <f:facet name="header">
+                                <p:outputPanel>
+                                    <h:outputText value="Busca: "/>
+                                    <h:inputText id="globalFilter" onkeyup="tabela.filter()" size="70"/>
+                                </p:outputPanel>
+                            </f:facet>
+                            <p:column headerText="Expandir">
+                                <p:rowToggler/>
+                            </p:column>
+                            <p:column headerText="Digitador" sortBy="#{historico.digitador.login}"
+                                      filterBy="#{historico.digitador.login}">
+                                <h:outputText value="#{historico.digitador.login}"/>
+                            </p:column>
+                            <p:column headerText="Data de Registro" sortBy="#{historico.dataRegistro}"
+                                      filterBy="#{historico.dataRegistro}">
+                                <h:outputText value="#{historico.dataRegistro}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                            </p:column>
+                            <p:column headerText="Solicitante" sortBy="#{historico.solicitante}"
+                                      filterBy="#{historico.solicitante}">
+                                <h:outputText value="#{historico.solicitante}"/>
+                            </p:column>
+                            <p:column headerText="Data de Solicitação" sortBy="#{historico.dataSolicitacao}"
+                                      filterBy="#{historico.dataSolicitacao}">
+                                <h:outputText value="#{historico.dataSolicitacao}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:rowExpansion>
+                                <p:panel style="width: 100%">
+                                    <h:outputText value="#{historico.motivo}"/>
+                                </p:panel>
+                            </p:rowExpansion>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="Histórico Legado" id="tabHistoricoLegado">
+                        <h:panelGrid columns="2" id="gridfiltro">
+                            <h:outputText value="Filtrar por Data de Alteração: "/>
+                            <p:calendar onkeypress="mascara(this, Data)" maxlength="10" showOn="button" size="15"
+                                        title="Digite a Data da Alteração para filtrar" navigator="true"
+                                        value="#{cadastroImobiliarioControlador.dataAlteracaoFiltroHistoricoLegado}"
+                                        id="dataRescisao" pattern="dd/MM/yyyy" locale="pt_BR">
+                            </p:calendar>
+                            <h:outputText value="Filtrar pelo Motivo: "/>
+                            <p:inputText value="#{cadastroImobiliarioControlador.motivoFiltroHistoricoLegado}">
+                            </p:inputText>
+                            <h:outputText value="Filtrar pelo Usuário: "/>
+                            <p:inputText value="#{cadastroImobiliarioControlador.usuarioFiltroHistoricoLegado}">
+                            </p:inputText>
+                            <p:commandButton value="Pesquisar (P)"
+                                             title="Clique para pesquisar"
+                                             accesskey="P"
+                                             update="tabela-historico"
+                                             process="gridfiltro"
+                                             icon="ui-icon-search"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="prioritario mrig05 pesquisar"
+                                             style="width: 150px">
+                            </p:commandButton>
+                        </h:panelGrid>
+                        <p:dataTable id="tabela-historico"
+                                     value="#{cadastroImobiliarioControlador.historicoLegadoBCIDataModel}"
+                                     var="hist"
+                                     lazy="true"
+                                     paginator="true"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram encontrados Historicos para o Cadastro Imobiliário."
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>HISTÓRICO LEGADO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100">
+
+
+                            <p:column headerText="Data de Alteração" style="width:50px; text-align: center">
+                                <h:outputText value="#{hist.dtaimvhst}" converter="javax.faces.DateTime"/>
+                            </p:column>
+                            <p:column headerText="Motivo" style="text-align: left">
+                                <h:outputText value="#{hist.mtvaltimv1} #{hist.mtvaltimv2} #{hist.mtvaltimv3}"/>
+                            </p:column>
+                            <p:column headerText="Usuário" style="text-align: left">
+                                <h:outputText value="#{hist.usrhstimv}"/>
+                            </p:column>
+                            <p:column headerText="BCI" style="width: 15px; text-align: center">
+                                <p:commandButton icon="ui-icon-print"
+                                                 process="@this"
+                                                 title="Clique para Visualizar o Registro Detalhadamente"
+                                                 actionListener="#{cadastroImobiliarioControlador.gerarRelatorioHistoricoLegadoBCI(hist)}"/>
+
+                            </p:column>
+
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="Visualizar Histórico Retroativo" rendered="false">
+                        <h:panelGrid columns="3" rendered="#{cadastroImobiliarioControlador.idRevisao eq null}">
+                            <h:outputText value="Data Retroativa: " styleClass="negrito"/>
+                            <p:calendar onkeypress="mascara(this, Data)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        autocomplete="off"
+                                        title="Digite a data da caução."
+                                        value="#{cadastroImobiliarioControlador.dataRetroativa}"
+                                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                        size="10"/>
+                            <p:commandButton
+                                actionListener="#{cadastroImobiliarioControlador.verCadastroPelaDataRetroativa()}"
+                                rendered="#{cadastroImobiliarioControlador.idRevisao eq null}"
+                                onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                icon="ui-icon-search"/>
+                        </h:panelGrid>
+                    </p:tab>
+                    <p:tab id="tabAlvaraConstrucaoHabitese" title="Alvará de Construção e Habite-se">
+                        <p:scrollPanel mode="native">
+                            <p:dataTable value="#{cadastroImobiliarioControlador.selecionado.alvarasContrucao}"
+                                         style="text-align: center;"
+                                         var="alvaraConstrucao"
+                                         emptyMessage="Nenhum alvará de construção registrado para esse cadastro imobiliário.">
+                                <f:facet name="header">
+                                    <h:outputText value="Alvarás de Construção"/>
+                                </f:facet>
+                                <p:column headerText="Exercício">
+                                    <h:outputText value="#{alvaraConstrucao.exercicio.ano}"/>
+                                </p:column>
+                                <p:column headerText="Código">
+                                    <a href="#{facesContext.externalContext.requestContextPath}/alvara-construcao/ver/#{alvaraConstrucao.id}/">
+                                        #{alvaraConstrucao.codigo}
+                                    </a>
+                                </p:column>
+                                <p:column headerText="Data de Expedição">
+                                    <h:outputText value="#{alvaraConstrucao.dataExpedicao}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Data de Vencimento Cartaz">
+                                    <h:outputText value="#{alvaraConstrucao.dataVencimentoCartaz}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+
+                            <p:dataTable value="#{cadastroImobiliarioControlador.selecionado.habiteses}"
+                                         style="text-align: center; margin-top: 10px;"
+                                         var="habitese"
+                                         emptyMessage="Nenhum habite-se de construção registrado para esse cadastro imobiliário.">
+                                <f:facet name="header">
+                                    <h:outputText value="Habite-se de Construção"/>
+                                </f:facet>
+                                <p:column headerText="Exercício">
+                                    <h:outputText value="#{habitese.exercicio.ano}"/>
+                                </p:column>
+                                <p:column headerText="Código">
+                                    <a href="#{facesContext.externalContext.requestContextPath}/habitese-construcao/ver/#{habitese.id}/">
+                                        #{habitese.codigo}
+                                    </a>
+                                </p:column>
+                                <p:column headerText="Data de Lançamento">
+                                    <h:outputText value="#{habitese.dataLancamento}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:scrollPanel>
+                    </p:tab>
+                </p:tabView>
+
+                <br/>
+                <h:panelGrid columns="2">
+                    <h:outputText value="Observações: "/>
+                    <h:outputText value="#{cadastroImobiliarioControlador.selecionado.observacoes.conteudo}"/>
+                </h:panelGrid>
+            </p:panel>
+            <br/>
+            <p:outputPanel rendered="#{cadastroImobiliarioControlador.imovelPenhorado}"
+                           style="text-align: center !important">
+                <div
+                    class="#{cadastroImobiliarioControlador.imovelBloqueado ? 'ui-messages-error':'ui-messages-warn'} ui-corner-all textomedio">
+                    <div
+                        class="#{cadastroImobiliarioControlador.imovelBloqueado ? 'ui-messages-error-icon':'ui-messages-warn-icon'} margem-direita-cinco-pixels"/>
+                    <h:outputText value="Atenção! "
+                                  styleClass="#{cadastroImobiliarioControlador.imovelBloqueado? 'ui-messages-error-summary': 'ui-messages-warn-summary'}"/>
+                    <h:outputText
+                        value="Este Imóvel encontra-se penhorado #{cadastroImobiliarioControlador.imovelBloqueado ? 'e bloqueado. Não é permitido alteração ou exclusão.':''}"
+                        styleClass="#{cadastroImobiliarioControlador.imovelBloqueado? 'ui-messages-error-detail': 'ui-messages-warn-detail'}"/>
+                    <br/><h:outputText
+                    value="Processo nº #{cadastroImobiliarioControlador.ultimaPenhora.numeroProcesso}, na data de #{cadastroImobiliarioControlador.ultimaPenhora.dataPenhora}, pelo Autor #{cadastroImobiliarioControlador.ultimaPenhora.autor.nome}."
+                    styleClass="#{cadastroImobiliarioControlador.imovelBloqueado? 'ui-messages-error-detail': 'ui-messages-warn-detail'}"/><br/>
+                    <h:outputText
+                        value="#{cadastroImobiliarioControlador.ultimaPenhora.bloqueio? 'Com ':'Sem '}Bloqueio."
+                        styleClass="#{cadastroImobiliarioControlador.imovelBloqueado? 'ui-messages-error-detail': 'ui-messages-warn-detail'}"/>
+                </div>
+            </p:outputPanel>
+        </h:form>
+        <p:dialog modal="true" header="Atributos da Construção" widgetVar="dlg" id="janela" width="700">
+            <h:form id="formJanela">
+                <fc:vizualizaAtributosGenericos
+                    atributos="#{cadastroImobiliarioControlador.construcaoSelecionada.atributos}"
+                    classe="#{sistemaControlador.classeConstrucao}"/>
+            </h:form>
+        </p:dialog>
+        <p:dialog modal="true" header="Histórico de Sincronização com o SIT" widgetVar="historicoSit"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  id="dialogHistoricoSit" width="600">
+            <h:form id="formHistoricoSit">
+                <div style="width: 100%; height: 400px; overflow-y: scroll;">
+                    <ui:repeat value="#{cadastroImobiliarioControlador.integracoes}" var="sit">
+                        <div class="alert alert-#{sit.sucesso ? 'info' : 'error'}">
+                            <h:outputText value="#{sit.dataIntegracao}" styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:mm"/>
+                            </h:outputText> - <h:outputText value="#{sit.mensagem}"/> - <h:outputText
+                            value="#{sit.usuarioDaAuditoria}"/>
+                        </div>
+                    </ui:repeat>
+                </div>
+                <p:separator/>
+
+                <div style="text-align: center">
+                    <p:commandButton value="OK" styleClass="operacao prioritario"
+                                     icon="ui-icon-check"
+                                     onclick="historicoSit.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <h:form id="fomularioVisualizar">
+            <h:panelGrid columns="3">
+                <fc:rodapeVisualizarPretty controlador="#{cadastroImobiliarioControlador}"
+                                           mostrarExcluir="#{cadastroImobiliarioControlador.idRevisao eq null}"
+                                           mostrarEditar="#{cadastroImobiliarioControlador.idRevisao eq null}"/>
+
+                <p:commandButton
+                    actionListener="#{relatorioCadastroImobiliarioControlador.gerarRelatorioImobiliario(cadastroImobiliarioControlador.selecionado)}"
+                    rendered="#{cadastroImobiliarioControlador.idRevisao eq null}"
+                    styleClass="mtop10"
+                    onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                    style="height: 30px;"
+                    value="Imprimir" icon="ui-icon-document"
+                    id="commandButton"/>
+            </h:panelGrid>
+        </h:form>
+        <p:dialog header="Destalhamento do Histórico Legado" modal="true" dynamic="true"
+                  position="center" style="position: fixed !important;" resizable="false"
+                  id="iddialogDetalhesHistoricoLegado"
+                  widgetVar="dialogDetalhesHistoricoLegado" closable="true" width="900">
+            <h:form id="FormularioDialogHistorico">
+                <p:dataTable id="tabeladialoghistorico"
+                             value="#{cadastroImobiliarioControlador.hsitoricoLegadoBCISelecionado}" var="form">
+                    <p:column headerText="dtaimvhst" style="width: 40px;"
+                              styleClass="alinhamentoDireita">
+                        <h:outputText value="#{form.dtaimvhst}"
+                                      converter="javax.faces.DateTime"/>
+                    </p:column><p:column headerText="mtvaltimv1" style="width: 40px;"
+                                         styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.mtvaltimv1}"/>
+                </p:column><p:column headerText="mtvaltimv2" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.mtvaltimv2}"/>
+                </p:column><p:column headerText="mtvaltimv3" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.mtvaltimv3}"/>
+                </p:column><p:column headerText="usrhstimv" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.usrhstimv}"/>
+                </p:column>
+                    <p:column headerText="espolioimh" style="width: 40px;" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{form.espolioimh}"/>
+                    </p:column><p:column headerText="stsprcalt" style="width: 40px;"
+                                         styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.stsprcalt}"/>
+                </p:column><p:column headerText="flgemtetq" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.flgemtetq}"/>
+                </p:column><p:column headerText="cltdadhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cltdadhst}"/>
+                </p:column><p:column headerText="mtvarbhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.mtvarbhst}"/>
+                </p:column><p:column headerText="sitatvhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.sitatvhst}"/>
+                </p:column><p:column headerText="tpodscedih" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.tpodscedih}"/>
+                </p:column><p:column headerText="dscedihst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.dscedihst}"/>
+                </p:column><p:column headerText="cdgsethst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgsethst}"/>
+                </p:column><p:column headerText="cdgqdrhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgqdrhst}"/>
+                </p:column><p:column headerText="fcequahst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.fcequahst}"/>
+                </p:column><p:column headerText="cdglechst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdglechst}"/>
+                </p:column><p:column headerText="cdglothst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdglothst}"/>
+                </p:column><p:column headerText="cdgltehst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgltehst}"/>
+                </p:column><p:column headerText="cdgqlthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgqlthst}"/>
+                </p:column><p:column headerText="cdgarrhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgarrhst}"/>
+                </p:column><p:column headerText="tpoimvhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.tpoimvhst}"/>
+                </p:column><p:column headerText="cdgreghst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgreghst}"/>
+                </p:column><p:column headerText="sitpgrhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.sitpgrhst}"/>
+                </p:column><p:column headerText="anopgrhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.anopgrhst}"/>
+                </p:column><p:column headerText="cdglgrhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdglgrhst}"/>
+                </p:column><p:column headerText="nmrlothst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrlothst}"/>
+                </p:column><p:column headerText="cepedihst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cepedihst}"/>
+                </p:column><p:column headerText="cdgpeshst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgpeshst}"/>
+                </p:column><p:column headerText="cdgdsthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgdsthst}"/>
+                </p:column><p:column headerText="cdgmtrhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgmtrhst}"/>
+                </p:column><p:column headerText="metfrachst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.metfrachst}"/>
+                </p:column><p:column headerText="metfrenhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.metfrenhst}"/>
+                </p:column><p:column headerText="metlddirhs" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.metlddirhs}"/>
+                </p:column><p:column headerText="metldesqhs" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.metldesqhs}"/>
+                </p:column><p:column headerText="metfunhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.metfunhst}"/>
+                </p:column><p:column headerText="areterhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.areterhst}"/>
+                </p:column><p:column headerText="medtsthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.medtsthst}"/>
+                </p:column><p:column headerText="lnctrbhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.lnctrbhst}"/>
+                </p:column><p:column headerText="flginshst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.flginshst}"/>
+                </p:column><p:column headerText="qtdcrihhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdcrihhst}"/>
+                </p:column><p:column headerText="qtdcrimhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdcrimhst}"/>
+                </p:column><p:column headerText="qtdadthhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdadthhst}"/>
+                </p:column><p:column headerText="qtdadtmhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdadtmhst}"/>
+                </p:column><p:column headerText="qtdvelhhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdvelhhst}"/>
+                </p:column><p:column headerText="qtdvelmhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdvelmhst}"/>
+                </p:column><p:column headerText="qtdanfhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdanfhst}"/>
+                </p:column><p:column headerText="qtddeshst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtddeshst}"/>
+                </p:column><p:column headerText="lncipthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.lncipthst}"/>
+                </p:column><p:column headerText="cdglgrhs2" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdglgrhs2}"/>
+                </p:column><p:column headerText="cdglgrhs3" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdglgrhs3}"/>
+                </p:column><p:column headerText="cdglgrhs4" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdglgrhs4}"/>
+                </p:column><p:column headerText="fceqdrhs2" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.fceqdrhs2}"/>
+                </p:column><p:column headerText="fceqdrhs3" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.fceqdrhs3}"/>
+                </p:column><p:column headerText="fceqdrhs4" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.fceqdrhs4}"/>
+                </p:column><p:column headerText="sitorihst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.sitorihst}"/>
+                </p:column><p:column headerText="prcegbhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.prcegbhst}"/>
+                </p:column><p:column headerText="arqfothst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.arqfothst}"/>
+                </p:column><p:column headerText="cdggeohst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdggeohst}"/>
+                </p:column><p:column headerText="vlrvnlhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.vlrvnlhst}"/>
+                </p:column><p:column headerText="vlrterhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.vlrterhst}"/>
+                </p:column><p:column headerText="aretothst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.aretothst}"/>
+                </p:column><p:column headerText="lgrcorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.lgrcorhst}"/>
+                </p:column><p:column headerText="endcorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.endcorhst}"/>
+                </p:column><p:column headerText="brrcorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.brrcorhst}"/>
+                </p:column><p:column headerText="brrdeshst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.brrdeshst}"/>
+                </p:column><p:column headerText="tpocmpcorh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.tpocmpcorh}"/>
+                </p:column><p:column headerText="cmpcorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cmpcorhst}"/>
+                </p:column><p:column headerText="dstcorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.dstcorhst}"/>
+                </p:column><p:column headerText="muncorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.muncorhst}"/>
+                </p:column><p:column headerText="cepcorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cepcorhst}"/>
+                </p:column><p:column headerText="nmrcorhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrcorhst}"/>
+                </p:column><p:column headerText="cdgltmchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgltmchst}"/>
+                </p:column><p:column headerText="dscltmchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.dscltmchst}"/>
+                </p:column><p:column headerText="cdgltechst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgltechst}"/>
+                </p:column><p:column headerText="cdgqltchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgqltchst}"/>
+                </p:column><p:column headerText="cdgprchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgprchst}"/>
+                </p:column><p:column headerText="nmoprchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmoprchst}"/>
+                </p:column><p:column headerText="tpoprchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.tpoprchst}"/>
+                </p:column><p:column headerText="obsimvhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.obsimvhst}"/>
+                </p:column><p:column headerText="insatuhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.insatuhst}"/>
+                </p:column><p:column headerText="matrimvhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.matrimvhst}"/>
+                </p:column><p:column headerText="qtdfnthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdfnthst}"/>
+                </p:column><p:column headerText="qtdundmhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdundmhst}"/>
+                </p:column><p:column headerText="bseclchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.bseclchst}"/>
+                </p:column><p:column headerText="cdgleccorh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgleccorh}"/>
+                </p:column><p:column headerText="dscleccorh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.dscleccorh}"/>
+                </p:column><p:column headerText="tpoentcarh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.tpoentcarh}"/>
+                </p:column><p:column headerText="ultcfrhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.ultcfrhst}"/>
+                </p:column><p:column headerText="loccmthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.loccmthst}"/>
+                </p:column><p:column headerText="sitpenhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.sitpenhst}"/>
+                </p:column><p:column headerText="prcpenhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.prcpenhst}"/>
+                </p:column><p:column headerText="anopenhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.anopenhst}"/>
+                </p:column><p:column headerText="tpoalthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.tpoalthst}"/>
+                </p:column><p:column headerText="nmrprcuhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrprcuhst}"/>
+                </p:column><p:column headerText="dtanatjhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.dtanatjhst}"/>
+                </p:column><p:column headerText="qtdtotmulh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdtotmulh}"/>
+                </p:column><p:column headerText="qtdtothomh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdtothomh}"/>
+                </p:column><p:column headerText="qtdtotvlhh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdtotvlhh}"/>
+                </p:column><p:column headerText="qtdtotcrih" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qtdtotcrih}"/>
+                </p:column><p:column headerText="anoreshst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.anoreshst}"/>
+                </p:column><p:column headerText="nmrfamhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrfamhst}"/>
+                </p:column><p:column headerText="imglivregh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.imglivregh}"/>
+                </p:column><p:column headerText="emailcorhs" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.emailcorhs}"/>
+                </p:column><p:column headerText="foncelcorh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.foncelcorh}"/>
+                </p:column><p:column headerText="faxcomcorh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.faxcomcorh}"/>
+                </p:column><p:column headerText="foncomcorh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.foncomcorh}"/>
+                </p:column><p:column headerText="fonrescorh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.fonrescorh}"/>
+                </p:column><p:column headerText="qrtimvhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.qrtimvhst}"/>
+                </p:column><p:column headerText="flgpenhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.flgpenhst}"/>
+                </p:column><p:column headerText="pdaflag" style="width: 40px;" styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.pdaflag}"/>
+                </p:column><p:column headerText="rotid" style="width: 40px;" styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.rotid}"/>
+                </p:column><p:column headerText="rotusrid" style="width: 40px;" styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.rotusrid}"/>
+                </p:column><p:column headerText="statusrot" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.statusrot}"/>
+                </p:column><p:column headerText="provemde" style="width: 40px;" styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.provemde}"/>
+                </p:column><p:column headerText="cdgwebphst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgwebphst}"/>
+                </p:column><p:column headerText="cdgpespchs" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgpespchs}"/>
+                </p:column><p:column headerText="nmrserloth" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrserloth}"/>
+                </p:column><p:column headerText="nmrtitdefh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrtitdefh}"/>
+                </p:column><p:column headerText="anotitdefh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.anotitdefh}"/>
+                </p:column><p:column headerText="nmrescpubh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrescpubh}"/>
+                </p:column><p:column headerText="anoescpubh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.anoescpubh}"/>
+                </p:column><p:column headerText="flhescpubh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.flhescpubh}"/>
+                </p:column><p:column headerText="cdgcarthst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.cdgcarthst}"/>
+                </p:column><p:column headerText="lvrescpubh" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.lvrescpubh}"/>
+                </p:column><p:column headerText="lnctsuhst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.lnctsuhst}"/>
+                </p:column><p:column headerText="idnimvloth" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.idnimvloth}"/>
+                </p:column><p:column headerText="id" style="width: 40px;" styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.id}"/>
+                </p:column><p:column headerText="nmrinshst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrinshst}"/>
+                </p:column><p:column headerText="nmrprchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.nmrprchst}"/>
+                </p:column><p:column headerText="anoprchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.anoprchst}"/>
+                </p:column><p:column headerText="dtaprchst" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.dtaprchst}"/>
+                </p:column><p:column headerText="hraaltimv" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.hraaltimv}"/>
+                </p:column><p:column headerText="stsemtetq" style="width: 40px;"
+                                     styleClass="alinhamentoDireita">
+                    <h:outputText value="#{form.stsemtetq}"/>
+                </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <script type="text/javascript">
+            var mapa;
+
+            function verIncricao(inscricao) {
+                if (mapa === undefined) {
+                    mapa = SITGeo_criarMapa('mapa');
+                }
+                getLote(inscricao);
+            }
+
+            function getLote(inscricao) {
+                $("#Formulario\\:aguarde-mapa").css("display", "block");
+                setTimeout(function (inscricao) {
+                    if (mapa.lotes !== undefined) {
+                        mapa.lotes.SITGeo_getLote(inscricao);
+                        $("#Formulario\\:aguarde-mapa").css("display", "none");
+                        exibeCentraliza(inscricao);
+                    } else {
+                        getLote(inscricao);
+                    }
+                }, 2000, inscricao);
+            }
+
+            function buscarCoordenadasDoSIT(iq) {
+                let coordinates = JSON.parse(mapa.lotes[iq].the_geom).coordinates;
+                var coordsLonge = getRectCoordinates(coordinates[0][0][0][0], coordinates[0][0][0][1], 100);
+                var lats = [coordsLonge.bottomLeft.y, coordsLonge.bottomRight.y, coordsLonge.topLeft.y, coordsLonge.topRight.y];
+                var lngs = [coordsLonge.bottomLeft.x, coordsLonge.bottomRight.x, coordsLonge.topLeft.x, coordsLonge.topRight.x];
+                var minlat = Math.min.apply(null, lats),
+                    maxlat = Math.max.apply(null, lats);
+                var minlng = Math.min.apply(null, lngs),
+                    maxlng = Math.max.apply(null, lngs);
+                document.getElementById('Formulario:coordenadasSit').value = "" + minlng + "," + minlat + "," + maxlng + "," + maxlat;
+                atualizarCoordenadasDoSit();
+            }
+
+            function exibeCentraliza(iq) {
+                setTimeout(function (iq) {
+                    if (mapa.lotes[iq] !== undefined) {
+                        mapa.lotes.SITGeo_exibirLote(true, mapa.lotes[iq]);
+                        mapa.lotes.SITGeo_centralizarLote(iq);
+                        buscarCoordenadasDoSIT(iq);
+                    } else {
+                        exibeCentraliza(iq);
+                    }
+                }, 2000, iq);
+            }
+
+            var center = function (arr) {
+                var minX, maxX, minY, maxY;
+                for (var i = 0; i &lt; arr.length; i++) {
+                    var x = arr[i][0], y = arr[i][1];
+                    minX = (x &lt; minX || minX == null) ? x : minX;
+                    maxX = !(x > maxX || maxX == null) ? maxX : x;
+                    minY = (y &lt; minY || minY == null) ? y : minY;
+                    maxY = (y > maxY || maxY == null) ? y : maxY;
+                }
+                return [(minX + maxX) / 2, (minY + maxY) / 2];
+            };
+
+            function getRectCoordinates(x, y, r) {
+                //theta is the angle hard-coded to 45 degrees to think as the square
+                var theta = Math.PI / 4,
+                    cos = Math.cos,
+                    sin = Math.sin;
+                return {
+                    'topRight': {
+                        'x': x + r * cos(theta),
+                        'y': y + r * sin(theta)
+                    },
+                    'bottomRight': {
+                        'x': x + r * cos(theta),
+                        'y': y - r * sin(theta)
+                    },
+                    'topLeft': {
+                        'x': x - r * cos(theta),
+                        'y': y + r * sin(theta)
+                    },
+                    'bottomLeft': {
+                        'x': x + r * cos(theta),
+                        'y': y - r * sin(theta)
+                    }
+                }
+            }
+
+            window.setTimeout(function () {
+                $("#Formulario\\:botao-ver-mapa").click();
+                $("#Formulario\\:aguarde-mapa").css("display", "block");
+            }, 2000);
+
+            function imprimir() {
+                domtoimage.toJpeg(mapa.iframe_padrao, {quality: 0.95})
+                    .then(function (dataUrl) {
+                        var link = document.createElement('a');
+                        link.download = 'my-image-name.jpeg';
+                        link.href = dataUrl;
+                        link.click();
+                    });
+            }
+
+        </script>
+
+    </ui:define>
+</ui:composition>
+</html>

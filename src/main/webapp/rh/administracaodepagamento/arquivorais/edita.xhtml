@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+>
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <p:dialog modal="true" widgetVar="statusDialog" header="Gerando arquivo..."
+                  draggable="false" closable="false" resizable="false">
+            <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+        </p:dialog>
+        <h:form id="Formulario">
+            <p:messages id="msg" showDetail="true"/>
+            <p:panel header="Gerar arquivo RAIS" id="panel-principal">
+                <h:panelGrid columns="2">
+
+                    <fc:outputLabelObrigatorio value="Exercício: "/>
+                    <h:selectOneMenu title="Selecione o ano" value="#{arquivoRAISControlador.selecionado.exercicio}"
+                                     id="exercicio"
+                                     converter="#{arquivoRAISControlador.converterExercicio}">
+                        <f:selectItems value="#{arquivoRAISControlador.exercicios}" var="ex" itemLabel="#{ex}"
+                                       itemValue="#{ex}"/>
+                        <p:ajax event="change"
+                                update="entidade responsavel"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                process="@this"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Entidade: "/>
+                    <h:panelGroup>
+                        <h:selectOneMenu title="Selecione uma entidade"
+                                         value="#{arquivoRAISControlador.selecionado.entidade}"
+                                         id="entidade"
+                                         style="width: 400px;"
+                                         styleClass="mrig05"
+                                         disabled="#{arquivoRAISControlador.selecionado.exercicio.id eq null}"
+                                         converter="#{arquivoRAISControlador.converterEntidade}">
+                            <f:selectItems value="#{arquivoRAISControlador.recuperarEntidadesParaDeclaracao()}"
+                                           var="item"
+                                           itemLabel="#{item}" itemValue="#{item}"/>
+                            <f:ajax event="change" execute="@this" render="botaoDetalhes"/>
+                        </h:selectOneMenu>
+
+                        <p:commandButton icon="ui-icon-lupa"
+                                         id="botaoDetalhes"
+                                         styleClass="icone-20"
+                                         disabled="#{arquivoRAISControlador.selecionado.entidade eq null}"
+                                         update=":formUnidadesDeclaracao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide(); dialogUnidadesDeclaracao.show()"
+                                         title="Clique para ver as unidades deste estabelecimento"/>
+
+                        <p:commandButton icon="ui-icon-info"
+                                         tabindex="-1"
+                                         id="bt-info-entidade"
+                                         styleClass="icone-20 mlef05"
+                                         process="@none"
+                                         update="@none"/>
+
+                        <p:overlayPanel for="bt-info-entidade"
+                                        style="width: 400px;"
+                                        at="right top">
+                            <h:outputText
+                                value="As Entidades são configuradas em 'Configuração de Entidades para Declarações
+                                    e Prestações de Contas' para a Declaração/Prestação de Contas: RAIS."
+                                escape="false"/>
+                            <br/>
+                            <h:outputText
+                                value="Aqui são listadas as Entidades da configuração vigente de acordo com o Exercício selecionado."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Responsável: "/>
+                    <p:autoComplete queryDelay="1000" id="responsavel"
+                                    completeMethod="#{arquivoRAISControlador.completaPessoaFisica}"
+                                    value="#{arquivoRAISControlador.selecionado.pessoaFisica}"
+                                    var="pessoa"
+                                    title="Selecione o responsável para geração do arquivo."
+                                    disabled="#{arquivoRAISControlador.selecionado.exercicio.id eq null}"
+                                    maxResults="10"
+                                    itemLabel="#{pessoa}"
+                                    itemValue="#{pessoa.id}"
+                                    converter="#{arquivoRAISControlador.converterPessoaFisica}"
+                                    forceSelection="true"
+                                    size="70">
+                        <p:ajax event="itemSelect" process="@this" update="@this"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Indicador de Retificação: "/>
+                    <h:selectOneMenu title="Selecione uma opção"
+                                     value="#{arquivoRAISControlador.selecionado.indicadorRetificacao}"
+                                     id="indicador">
+                        <f:selectItem/>
+                        <f:selectItems value="#{arquivoRAISControlador.indicadoresRetificacao}" var="ir"
+                                       itemLabel="#{ir.descricao}" itemValue="#{ir}"/>
+                        <p:ajax event="valueChange" update="panel-principal" process="@this" onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </h:selectOneMenu>
+                </h:panelGrid>
+
+                <p:tabView styleClass="mtop10" id="tab-view-principal"
+                           rendered="#{arquivoRAISControlador.selecionado.isIndicadorRetifica()}">
+                    <p:tab title="Servidores" id="tab-servidores">
+                        <p:outputPanel id="out-put-servidor">
+                            <h:panelGrid columns="3" id="panel-servidor">
+                                <h:outputLabel value="Servidor(a):"/>
+                                <p:autoComplete queryDelay="1000" id="servidor"
+                                                size="50"
+                                                completeMethod="#{arquivoRAISControlador.buscarServidores}"
+                                                converter="#{contratoFPControlador.converterGenerico}"
+                                                value="#{arquivoRAISControlador.selecionado.servidorSelecionado}"
+                                                var="contrato"
+                                                itemLabel="#{contrato}"
+                                                itemValue="#{contrato.id}"/>
+
+                                <p:commandButton value="Adicionar" styleClass="operacao" icon="ui-icon-plus"
+                                                 process="panel-servidor"
+                                                 title="click para adicionar o servidor(a) na lista."
+                                                 actionListener="#{arquivoRAISControlador.adicionarServidorNaLista()}"
+                                                 update="out-put-servidor"/>
+                            </h:panelGrid>
+                            <p:dataTable paginator="true"
+                                         id="tabela-servidores"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{arquivoRAISControlador.selecionado.servidores}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Servidores&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="servidor">
+                                <p:column headerText="Ação" style="width: 15px">
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     process="@this"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{arquivoRAISControlador.selecionado.removerServidorNaLista(servidor)}"
+                                                     title="Clique para remover este registro."
+                                                     update="tabela-servidores"/>
+                                </p:column>
+                                <p:column headerText="Matricula" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{servidor.matriculaFP.matricula}"/>
+                                </p:column>
+                                <p:column headerText="Contrato" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{servidor.numero}"/>
+                                </p:column>
+                                <p:column headerText="Nome" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{servidor.matriculaFP.pessoa.nome}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+
+            </p:panel>
+            <p:commandButton id="gerar"
+                             value="Gerar Arquivo"
+                             update="@none"
+                             process="@this"
+                             title="Click para iniciar a geração do arquivo."
+                             styleClass="mrig05 mtop05 prioritario operacao"
+                             icon="ui-icon-print"
+                             actionListener="#{arquivoRAISControlador.validarParametrosParaGeracao()}"
+                             onclick="if (!confirm('Este processo pode levar alguns minutos até sua conclusão, tem certeza que deseja gerar o arquivo agora?')) {return false; } else {aguarde.show();}"
+                             oncomplete="aguarde.hide();"/>
+
+            <p:commandButton value="Cancelar"
+                             styleClass="mtop05 operacao"
+                             ajax="false"
+                             title="Click para cancelar e voltar para lista de arquivo RAIS"
+                             action="lista.xhtml"
+                             icon="ui-icon-cancel"/>
+        </h:form>
+
+        <p:dialog modal="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  header="Arquivo já existente encontrado"
+                  resizable="false"
+                  dynamic="true"
+                  widgetVar="dialogArquivoJaExistente"
+                  closable="false">
+            <h:form id="form-arquivo-existente">
+                <h:outputText value="#{arquivoRAISControlador.mensagemArquivoExistente()}"
+                              escape="false"/>
+                <br/>
+                <h:outputText value="Deseja substituir o arquivo já existente?"
+                              style="font-size: 14px;"
+                              styleClass="negrito"/>
+
+                <div align="center" style="padding-bottom: 10px;">
+                    <p:commandButton value="Sim"
+                                     process="@this"
+                                     update="@none"
+                                     icon="ui-icon-check"
+                                     styleClass="mrig05 mtop05 prioritario padrao"
+                                     actionListener="#{arquivoRAISControlador.gerarRais()}"/>
+
+                    <p:commandButton value="Não"
+                                     icon="ui-icon-cancel"
+                                     process="@none"
+                                     update="@none"
+                                     styleClass="mtop05 padrao"
+                                     onclick="dialogArquivoJaExistente.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  height="500"
+                  width="900"
+                  dynamic="true"
+                  header="Orgãos"
+                  resizable="false"
+                  widgetVar="dialogUnidadesDeclaracao"
+                  closable="true">
+            <h:form id="formUnidadesDeclaracao">
+                <p:dataTable id="tabelaHierarquia"
+                             styleClass="mtop05 mbot10"
+                             rowKey="#{item.id}"
+                             rowStyleClass="#{arquivoRAISControlador.orgaoEstaEmEstabelecimentoSelecionado(item)? 'fundo-verde' : ''}"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{arquivoRAISControlador.orgaosVigentesNaDataDoSefip()}"
+                             var="item">
+
+                    <p:column headerText="Orgãos">
+                        <h:outputText value="#{item}"/>
+                    </p:column>
+                    <p:column headerText="Inicio de Vigência" style="text-align: center;">
+                        <h:outputText value="#{item.inicioVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Fim de Vigência" style="text-align: center;">
+                        <h:outputText value="#{item.fimVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

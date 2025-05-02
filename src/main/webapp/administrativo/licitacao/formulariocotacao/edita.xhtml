@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+
+            function desabilitarCampoArquivo(campoOrigem, idCampoDestino) {
+                var split = campoOrigem.id.toString().split(':');
+                var idOrigem = split[split.length - 1];
+
+                if (campoOrigem.value.toString().trim().length == 0 || campoOrigem.value == '' || campoOrigem.value == 'undefined') {
+                    var idPanel = campoOrigem.id.replace(idOrigem, idCampoDestino);
+                    var panel = document.getElementById(idPanel);
+                    panel.disabled = true;
+                    atribuirNullTipoDocumento();
+                }
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparDadosIRP"
+                             process="@this"
+                             update=":Formulario:tab-view-geral:pn-dados-gerais :Formulario:tab-view-geral:pn-lotes"
+                             actionListener="#{formularioCotacaoControlador.limparDadosIRP()}"/>
+
+            <fc:cabecalhoPretty origem="#{formularioCotacaoControlador.caminhoPadrao}listar/"
+                                controlador="#{formularioCotacaoControlador}"/>
+
+            <p:panel header="Formulário de Cotação">
+                <p:tabView id="tab-view-geral" styleClass="mtop05">
+                    <p:ajax event="tabChange"
+                            process="@this"
+                            listener="#{formularioCotacaoControlador.onTabChange}"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"/>
+
+                    <p:tab title="Dados Gerais">
+                        <p:outputPanel id="pn-dados-gerais">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Número: "/>
+                                <h:outputText value="#{formularioCotacaoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar.' :
+                                                   formularioCotacaoControlador.selecionado.numero}"
+                                              styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Criado em: "/>
+                                <p:calendar onkeypress="mascara(this, mdata)"
+                                            maxlength="10"
+                                            style="text-align: right"
+                                            autocomplete="off"
+                                            showOn="button"
+                                            title="Digite a data de criação do formulário."
+                                            value="#{formularioCotacaoControlador.selecionado.dataFormulario}"
+                                            disabled="#{formularioCotacaoControlador.desabilitaEdicaoDadosGeraisSeLoteAdicionado}"
+                                            locale="pt_BR"
+                                            navigator="true"
+                                            pattern="dd/MM/yyyy"
+                                            size="12"/>
+
+                                <fc:outputLabelObrigatorio value="Exercício:"/>
+                                <p:inputMask id="itemExer"
+                                             mask="9999"
+                                             size="12"
+                                             converter="#{exercicioControlador.converterExercicio}"
+                                             value="#{formularioCotacaoControlador.selecionado.exercicio}"
+                                             disabled="#{formularioCotacaoControlador.hasCotacao}"
+                                             maxlength="4"
+                                             title="Informe o exercício.">
+                                    <p:ajax event="blur" process="@this" update="@this"/>
+                                </p:inputMask>
+
+                                <h:outputLabel value="Criado Por:"/>
+                                <h:outputText styleClass="negrito"
+                                              value="#{formularioCotacaoControlador.selecionado.usuarioCriacao.pessoaFisica.nome}"/>
+
+                                <h:outputText value="Formulário IRP: "/>
+                                <p:selectBooleanCheckbox
+                                    value="#{formularioCotacaoControlador.formularioIrp}"
+                                    disabled="#{formularioCotacaoControlador.hasCotacao}">
+                                    <p:ajax event="change"
+                                            process="@this :Formulario:tab-view-geral:pn-dados-gerais"
+                                            update=":Formulario:tab-view-geral:pn-dados-gerais :Formulario:tab-view-geral:pn-lotes"
+                                            listener="#{formularioCotacaoControlador.limparDadosGeradosIrp}"/>
+                                </p:selectBooleanCheckbox>
+
+                                <fc:outputLabelObrigatorio value="Intenção de Registro Preço:"
+                                                           rendered="#{formularioCotacaoControlador.formularioIrp}"/>
+                                <p:autoComplete queryDelay="1000"
+                                                title="Informe uma intenção de reigstro de preço."
+                                                value="#{formularioCotacaoControlador.selecionado.intencaoRegistroPreco}"
+                                                completeMethod="#{formularioCotacaoControlador.completarIRP}"
+                                                converter="#{intencaoRegistroPrecoControlador.converterGenerico}"
+                                                rendered="#{formularioCotacaoControlador.formularioIrp}"
+                                                var="irp"
+                                                itemLabel="#{irp}"
+                                                itemValue="#{irp.id}"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosIRP();}"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 800px"
+                                                maxResults="50"
+                                                size="70"
+                                                disabled="#{formularioCotacaoControlador.hasCotacao}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this :Formulario:tab-view-geral:pn-dados-gerais"
+                                            update=":Formulario:tab-view-geral:pn-dados-gerais :Formulario:tab-view-geral:pn-lotes"
+                                            listener="#{formularioCotacaoControlador.preencherFormularioCotacaoIRP}"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio value="Unidade Administrativa: "/>
+                                <p:autoComplete queryDelay="1000" id="unidadeorganizacional"
+                                                title="Informe a unidade administrativa."
+                                                value="#{formularioCotacaoControlador.hierarquiaOrganizacional}"
+                                                completeMethod="#{hierarquiaOrganizacionalControlador.buscarHierarquiaOrganizacionalAdministrativaOndeUsuarioLogadoEhGestorDeLicitacao}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                var="ho"
+                                                itemLabel="#{ho}"
+                                                itemValue="#{ho.id}"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 800px"
+                                                maxResults="30"
+                                                size="70"
+                                                disabled="#{formularioCotacaoControlador.desabilitaEdicaoDadosGeraisSeLoteAdicionado}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            update="@this"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio for="som-tipo-solicitacao" value="Tipo de Objeto:"/>
+                                <h:selectOneMenu value="#{formularioCotacaoControlador.selecionado.tipoSolicitacao}"
+                                                 title="Selecione um tipo de objeto ."
+                                                 id="som-tipo-solicitacao"
+                                                 style="width: 250px;"
+                                                 disabled="#{formularioCotacaoControlador.desabilitaEdicaoDadosGeraisSeLoteAdicionado}">
+                                    <f:selectItems value="#{formularioCotacaoControlador.tiposObjeto}"/>
+                                    <p:ajax event="change"
+                                            process="@this pn-dados-gerais"
+                                            update="pn-dados-gerais"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio value="Objeto: "/>
+                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                    <p:inputTextarea rows="5"
+                                                     cols="68"
+                                                     counter="objeto"
+                                                     value="#{formularioCotacaoControlador.selecionado.objeto}"
+                                                     maxlength="3000"
+                                                     counterTemplate="{0} caracteres restantes."
+                                                     autoResize="false"
+                                                     disabled="#{formularioCotacaoControlador.desabilitaEdicaoDadosGeraisSeLoteAdicionado}"/>
+                                    <h:outputText id="objeto" styleClass="mlef05 azul"/>
+                                </h:panelGrid>
+
+                                <fc:outputLabelObrigatorio for="tipoApuracao" value="Tipo de Apuração:"/>
+                                <h:selectOneMenu
+                                    value="#{formularioCotacaoControlador.selecionado.tipoApuracaoLicitacao}"
+                                    id="tipoApuracao" title="Informe o Tipo de Apuração" style="width: 250px;"
+                                    disabled="#{formularioCotacaoControlador.desabilitaEdicaoDadosGeraisSeLoteAdicionado}">
+                                    <f:selectItems value="#{formularioCotacaoControlador.tiposApuracao}"/>
+                                    <p:ajax event="change" process="@this"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio value="Observações: "/>
+                                <h:panelGrid cellpadding="0" cellspacing="0" columns="2">
+                                    <p:inputTextarea rows="5"
+                                                     cols="68"
+                                                     counter="observacoes"
+                                                     value="#{formularioCotacaoControlador.selecionado.observacao}"
+                                                     maxlength="3000" counterTemplate="{0} caracteres restantes."
+                                                     autoResize="false"
+                                                     disabled="#{formularioCotacaoControlador.hasCotacao}"/>
+                                    <h:outputText id="observacoes" styleClass="mlef05 azul"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Lote / Itens">
+                        <p:outputPanel id="pn-lotes">
+                            <ad:input-lote-item-formulario
+                                updateGridDadosGerais=":Formulario:tab-view-geral:pn-dados-gerais"
+                                lotes="#{formularioCotacaoControlador.lotesVO}"
+                                selecionado="#{formularioCotacaoControlador.selecionado}"
+                                tipoProcesso="#{formularioCotacaoControlador.selecionado.tipoAnexo}"
+                                disabled="#{formularioCotacaoControlador.formularioIrp or formularioCotacaoControlador.hasCotacao}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Histórico do Processo" titleStyle="background: #d9edf7" id="tab-historico"
+                           rendered="#{formularioCotacaoControlador.operacaoEditar}">
+                        <fa:historico-processo-licitatorio
+                            filtroProcesso="#{formularioCotacaoControlador.filtroHistoricoProcesso}"/>
+                    </p:tab>
+
+                    <p:tab id="tabAnexo" title="Anexo">
+                        <fc:detentorDocumentoLicitacao selecionado="#{formularioCotacaoControlador.selecionado}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty id="rodapeEdita" controlador="#{formularioCotacaoControlador}"/>
+        </h:form>
+
+
+        <p:dialog widgetVar="dlgPesquisaObjComp"
+                  modal="true"
+                  position="center"
+                  dynamic="true"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  height="480"
+                  width="1100"
+                  closable="true">
+            <p:outputPanel id="panelDglPsquisaObj">
+                <fc:consultaEntidade id="pesquisa-obj-consumo"
+                                     chave="#{formularioCotacaoControlador.selecionado.tipoSolicitacao.isCompraServico() ? 'OBJETO_COMPRA_COMPRASERVICO' : 'OBJETO_COMPRA_OBRA'}"
+                                     renderedBotaoExportarDados="false"
+                                     outrosBotoesTabela="/administrativo/licitacao/formulariocotacao/botao-selecionar-obj-compra.xhtml"/>
+            </p:outputPanel>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

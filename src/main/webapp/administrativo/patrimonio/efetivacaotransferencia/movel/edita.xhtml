@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+            var timer;
+
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerSalvar;
+
+            function acompanharSalvar() {
+                timerSalvar = setInterval(function () {
+                    rcAcompanharSalvar();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timerSalvar);
+                rcFinalizarSalvar();
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{loteEfetivacaoTransferenciaBemControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                onstart="aguarde.show()"
+                oncomplete="aguarde.hide()"
+                update=":Formulario:tab:tabelaTranferencia"
+                actionListener="#{loteEfetivacaoTransferenciaBemControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                actionListener="#{loteEfetivacaoTransferenciaBemControlador.consultarFutureEfetivacao}"
+                update=":FormularioSalvar"
+                name="rcAcompanharSalvar"/>
+
+            <p:remoteCommand
+                actionListener="#{loteEfetivacaoTransferenciaBemControlador.finalizarEfetivacao}"
+                update=":FormularioSalvar"
+                name="rcFinalizarSalvar"/>
+
+            <p:remoteCommand name="limparDadosUnidade"
+                             process="@this"
+                             update=":Formulario:tab:gridGeral :Formulario:tab:tabelaTranferencia"
+                             actionListener="#{loteEfetivacaoTransferenciaBemControlador.limparDadosUnidade()}"/>
+
+            <p:remoteCommand name="limparDadosSolicitacao"
+                             process="@this"
+                             update=":Formulario:tab:gridGeral :Formulario:tab:tabelaTranferencia"
+                             actionListener="#{loteEfetivacaoTransferenciaBemControlador.limparDadosSolicitacao()}"/>
+
+            <fc:cabecalhoPretty controlador="#{loteEfetivacaoTransferenciaBemControlador}"
+                                origem="#{loteEfetivacaoTransferenciaBemControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Efetivação de Transferência de Bens Móveis" id="panelPrincipal">
+                <p:tabView id="tab" styleClass="mtop05">
+                    <p:tab title="Dados Gerais" id="tabPrincipal">
+                        <h:panelGrid columns="2" id="gridGeral">
+                            <h:outputLabel value="Código:"/>
+                            <h:outputLabel
+                                value="#{loteEfetivacaoTransferenciaBemControlador.selecionado.codigo == null ? 'Gerado automaticamente ao salvar.' : loteEfetivacaoTransferenciaBemControlador.selecionado.codigo}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Data da Efetivação:"/>
+                            <h:outputText
+                                value="#{loteEfetivacaoTransferenciaBemControlador.selecionado.dataEfetivacao}"
+                                styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:ss"/>
+                            </h:outputText>
+
+                            <h:outputLabel value="Usuário da Efetivação:"/>
+                            <h:outputText
+                                value="#{loteEfetivacaoTransferenciaBemControlador.selecionado.usuarioSistema.pessoaFisica}"
+                                styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="Solicitação de Transferência:"/>
+                            <h:panelGroup>
+                                <p:autoComplete queryDelay="1000"
+                                                id="solTransf"
+                                                title="Informe a solicitação de transferência"
+                                                value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia}"
+                                                completeMethod="#{loteEfetivacaoTransferenciaBemControlador.completarSolicitacaoTransferencia}"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosSolicitacao();}"
+                                                var="sol"
+                                                size="70"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-width: 800px; max-height: 250px"
+                                                itemLabel="#{sol.codigo} - #{sol.descricao}"
+                                                itemValue="#{sol.id}"
+                                                converter="#{loteTransferenciaControlador.converterGenerico}">
+                                    <p:ajax process="@this"
+                                            event="itemSelect"
+                                            listener="#{loteEfetivacaoTransferenciaBemControlador.atribuirUnidadeNaEfetivacao()}"
+                                            update="tabelaTranferencia :Formulario:tab:gridGeral"/>
+                                </p:autoComplete>
+
+                                <p:commandButton icon="ui-icon-search"
+                                                 styleClass="mlef05"
+                                                 onstart="aguarde.show()"
+                                                 process="@this"
+                                                 actionListener="#{loteEfetivacaoTransferenciaBemControlador.abrirDlgDetalhesSolicitacao}"
+                                                 title="Clique para ver os detalhes da solicitação de transferência."
+                                                 oncomplete="aguarde.hide()"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Tipo da Solicitação: "/>
+                            <h:outputText
+                                value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.tipoTransferencia.descricao}"
+                                styleClass="negrito"/>
+
+                        </h:panelGrid>
+
+                        <p:commandButton value="Pesquisar"
+                                         title="Clique para pesquisar"
+                                         accesskey="P"
+                                         icon="ui-icon-search"
+                                         actionListener="#{loteEfetivacaoTransferenciaBemControlador.pesquisar()}"
+                                         process="@this :Formulario:tab:gridGeral"
+                                         styleClass="prioritario mrig05 mtop10 pesquisar"
+                                         style="width: 150px"
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         update="tabelaTranferencia"/>
+
+                        <p:dataTable emptyMessage="Não foram localizados registros para serem apresentados."
+                                     id="tabelaTranferencia"
+                                     styleClass="mtop03"
+                                     style="overflow: scroll; width: auto"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     rows="10"
+                                     rowsPerPageTemplate="10,50,100,200,300"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     paginator="true"
+                                     value="#{loteEfetivacaoTransferenciaBemControlador.bensSolicitacao}"
+                                     var="bem">
+                            <p:column headerText="Reg. Patrimonial" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{bem.registroPatrimonial}"/>
+                            </p:column>
+                            <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{bem.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Estado de Conservação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{bem.estadoConservacaoBem.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Situação de Conservação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{bem.situacaoConservacaoBem.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Orçamentária Origem" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{bem.unidadeOrcamentariaOrigem}"/>
+                            </p:column>
+                            <p:column styleClass="alinhamentoEsquerda">
+                                <f:facet name="header">
+                                    Orçamentária Destino
+                                    <p:commandButton value="Atribuir Unidades"
+                                                     title="Clique para atribuir várias unidades ao mesmo tempo."
+                                                     icon="ui-icon-newwin"
+                                                     styleClass="mlef10"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{loteEfetivacaoTransferenciaBemControlador.abrirDlgAtribuirUnidades()}"/>
+                                </f:facet>
+                                <h:selectOneMenu
+                                    style="max-width: 300px"
+                                    title="#{bem.unidadeOrcamentariaDestino}"
+                                    value="#{bem.unidadeOrcamentariaDestino}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    id="hoOrcDestino">
+                                    <f:selectItems
+                                        value="#{loteEfetivacaoTransferenciaBemControlador.retornaHierarquiaOrcamentaria()}"/>
+                                    <p:ajax event="change"
+                                            process="@this"
+                                            update="@this"
+                                            listener="#{loteEfetivacaoTransferenciaBemControlador.validarUnidadeOrcamentariaDestino(bem)}"/>
+                                    <p:ajax event="change"
+                                            process="@this"
+                                            update="@this"
+                                            listener="#{loteEfetivacaoTransferenciaBemControlador.validarUnidadeOrcamentariaDestinoIgualOrigem(bem)}"/>
+                                </h:selectOneMenu>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" style="text-align: right;">
+                                <h:outputText value="#{bem.valorOriginal}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{loteEfetivacaoTransferenciaBemControlador.valorTotalOriginal}"
+                                        styleClass="negrito">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                            <p:column headerText="Ajustes (R$)" style="text-align: right;">
+                                <h:outputText value="#{bem.valorAjuste}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <f:facet name="footer">
+                                    <h:outputText value="#{loteEfetivacaoTransferenciaBemControlador.valorTotalAjuste}"
+                                                  styleClass="negrito">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <fc:filesUploadWP selecionado="#{loteEfetivacaoTransferenciaBemControlador.selecionado}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             title="Clique para salvar este registro."
+                             actionListener="#{loteEfetivacaoTransferenciaBemControlador.salvar()}"
+                             onstart="aguarde.show()"
+                             styleClass="operacao prioritario mtop10 mrig05"/>
+
+
+            <fc:rodapePretty controlador="#{loteEfetivacaoTransferenciaBemControlador}"
+                             ocultarSalvar="true"/>
+        </h:form>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  resizable="false"
+                  closable="true"
+                  height="430"
+                  widgetVar="dialogAtribuirUndOrc"
+                  width="1100"
+                  style="position: fixed !important;">
+
+            <h:form id="formAtribuirUnidade">
+                <legend
+                    class="mbot02 legenda">Atribuir Unidade Orçamentária de Destino
+                </legend>
+
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Data:"/>
+                    <h:outputText
+                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.dataHoraCriacao}"
+                        styleClass="negrito">
+                        <f:convertDateTime type="both"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Número:"/>
+                    <h:outputText value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.codigo}"
+                                  styleClass="negrito"/>
+                </h:panelGrid>
+
+                <table>
+                    <tr>
+                        <td style="vertical-align: top; width: 50%">
+                            <p:fieldset legend="Origem">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Unidade Administrativa:"/>
+                                    <fc:codigo-descricao-hierarquia
+                                        unidadeOrganizacional="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.unidadeOrigem}"
+                                        dataMovimento="#{loteEfetivacaoTransferenciaBemControlador.selecionado.dataEfetivacao}"
+                                        tipoHierarquia="ADMINISTRATIVA"/>
+
+                                    <h:outputLabel value="Responsável:"/>
+                                    <h:outputText
+                                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.responsavelOrigem}"
+                                        styleClass="negrito"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+                        </td>
+
+                        <td style="vertical-align: top; width: 50%">
+                            <p:fieldset legend="Destino">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Unidade Administrativa:"/>
+                                    <fc:codigo-descricao-hierarquia
+                                        unidadeOrganizacional="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.unidadeDestino}"
+                                        dataMovimento="#{loteEfetivacaoTransferenciaBemControlador.selecionado.dataEfetivacao}"
+                                        tipoHierarquia="ADMINISTRATIVA"/>
+
+                                    <h:outputLabel value="Responsável:"/>
+                                    <h:outputText
+                                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.responsavelDestino}"
+                                        styleClass="negrito"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+                        </td>
+                    </tr>
+                </table>
+
+                <h:panelGrid columns="4" styleClass="mtop10">
+                    <h:outputLabel value="Unidade Orçamentária de Destino:"/>
+                    <h:selectOneMenu
+                        style="max-width: 400px"
+                        value="#{loteEfetivacaoTransferenciaBemControlador.unidadeOrcamentariaDestino}"
+                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                        id="orcamentariaAll">
+                        <f:selectItems
+                            value="#{loteEfetivacaoTransferenciaBemControlador.retornaHierarquiaOrcamentaria()}"/>
+                        <p:ajax event="change" process="@this"/>
+                    </h:selectOneMenu>
+
+                    <p:commandButton value="Atribuir a Todos Bem"
+                                     process="@this :formAtribuirUnidade"
+                                     styleClass="mlef02 prioritario"
+                                     icon="ui-icon-check"
+                                     onstart="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     update=":formAtribuirUnidade"
+                                     actionListener="#{loteEfetivacaoTransferenciaBemControlador.atribuirUnidadeOrcamentariaTodasTransferencia()}"/>
+
+                    <p:commandButton value="Confirmar/Fechar"
+                                     icon="ui-icon-circle-check"
+                                     process="@this"
+                                     update=":Formulario:tab:tabelaTranferencia"
+                                     onstart="aguarde.show();"
+                                     oncomplete="aguarde.hide();dialogAtribuirUndOrc.hide()"
+                                     styleClass="padrao"/>
+                </h:panelGrid>
+
+                <div style="overflow: scroll; max-height: 300px; width: auto;">
+                    <p:dataTable id="tablebensparaAtribuirUndOrc"
+                                 value="#{loteEfetivacaoTransferenciaBemControlador.bensSolicitacao}"
+                                 var="itemSol"
+                                 styleClass="mtop05"
+                                 rowIndexVar="rowIx"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 paginator="true"
+                                 rows="50"
+                                 rowsPerPageTemplate="50, 100,200,300"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}">
+                        <p:column headerText="Reg. Patrimonial" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemSol.registroPatrimonial}"/>
+                        </p:column>
+                        <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemSol.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Unidade Orçamentária Origem" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemSol.unidadeOrcamentariaOrigem}"/>
+                        </p:column>
+                        <p:column styleClass="alinhamentoEsquerda" headerText="Unidade Orçamentária Destino">
+                            <h:selectOneMenu
+                                style="max-width: 300px"
+                                title="#{itemSol.unidadeOrcamentariaDestino}"
+                                value="#{itemSol.unidadeOrcamentariaDestino}"
+                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                id="hoDlgOrcDestino">
+                                <f:selectItems
+                                    value="#{loteEfetivacaoTransferenciaBemControlador.retornaHierarquiaOrcamentaria()}"/>
+                            </h:selectOneMenu>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" style="text-align: right;">
+                            <h:outputText value="#{itemSol.valorOriginal}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Ajustes (R$)" style="text-align: right;">
+                            <h:outputText value="#{itemSol.valorAjuste}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dlgInfoTransferencia"
+                  showHeader="false"
+                  modal="true"
+                  dynamic="true"
+                  width="1000"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false">
+
+            <h:form id="formInfoTransf">
+                <legend
+                    class="legenda">Detalhes da Solicitação de Transferência
+                    <p:commandButton icon="ui-icon-close"
+                                     title="Clique para fechar."
+                                     process="@this"
+                                     style="float: right !important;"
+                                     styleClass="mtop10 botao-transparente"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgInfoTransferencia.hide();"/>
+                </legend>
+
+                <h:panelGrid columns="2" id="griddlgInfoTransferencia">
+                    <h:outputLabel value="Data:"/>
+                    <h:outputText
+                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.dataHoraCriacao}"
+                        styleClass="negrito">
+                        <f:convertDateTime type="both"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Número:"/>
+                    <h:outputText value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.codigo}"
+                                  styleClass="negrito"/>
+
+                    <h:outputLabel value="Situação:"/>
+                    <h:outputText
+                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.situacaoTransferenciaBem.descricao}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Tipo da Solicitação: "/>
+                    <h:outputText
+                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.tipoTransferencia.descricao}"
+                        styleClass="negrito"/>
+
+                    <h:outputLabel value="Descrição:"/>
+                    <p:inputTextarea
+                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.descricao}"
+                        cols="100"
+                        rows="5"
+                        style="box-shadow: none; border-color: lightgrey"
+                        readonly="true"/>
+                </h:panelGrid>
+
+                <table class="mtop10">
+                    <tr>
+                        <td style="vertical-align: top; width: 50%">
+                            <p:fieldset legend="Origem">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Unidade Administrativa:"/>
+                                    <fc:codigo-descricao-hierarquia
+                                        unidadeOrganizacional="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.unidadeOrigem}"
+                                        dataMovimento="#{loteEfetivacaoTransferenciaBemControlador.selecionado.dataEfetivacao}"
+                                        tipoHierarquia="ADMINISTRATIVA"/>
+
+                                    <h:outputLabel value="Responsável:"/>
+                                    <h:outputText
+                                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.responsavelOrigem}"
+                                        styleClass="negrito"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+                        </td>
+
+                        <td style="vertical-align: top; width: 50%">
+                            <p:fieldset legend="Destino">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Unidade Administrativa:"/>
+                                    <fc:codigo-descricao-hierarquia
+                                        unidadeOrganizacional="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.unidadeDestino}"
+                                        dataMovimento="#{loteEfetivacaoTransferenciaBemControlador.selecionado.dataEfetivacao}"
+                                        tipoHierarquia="ADMINISTRATIVA"/>
+
+                                    <h:outputLabel value="Responsável:"/>
+                                    <h:outputText
+                                        value="#{loteEfetivacaoTransferenciaBemControlador.solicitacaoTransferencia.responsavelDestino}"
+                                        styleClass="negrito"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+                        </td>
+                    </tr>
+                </table>
+            </h:form>
+        </p:dialog>
+
+        <div id="dlgEfetivacao" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Efetivação de Transferência de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{loteEfetivacaoTransferenciaBemControlador.assistenteMovimentacao.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{loteEfetivacaoTransferenciaBemControlador.assistenteMovimentacao.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{loteEfetivacaoTransferenciaBemControlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{loteEfetivacaoTransferenciaBemControlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{loteEfetivacaoTransferenciaBemControlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{loteEfetivacaoTransferenciaBemControlador.assistenteMovimentacao.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{loteEfetivacaoTransferenciaBemControlador.assistenteMovimentacao.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Consultando Solicitações de Transferência</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/> <br/>
+                        Processando informações, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

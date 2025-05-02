@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+            function desabilitarCampoArquivo(campoOrigem, idCampoDestino) {
+                var split = campoOrigem.id.toString().split(':');
+                var idOrigem = split[split.length - 1];
+
+                if (campoOrigem.value.toString().trim().length == 0 || campoOrigem.value == '' || campoOrigem.value == 'undefined') {
+                    var idPanel = campoOrigem.id.replace(idOrigem, idCampoDestino);
+                    var panel = document.getElementById(idPanel);
+                    panel.disabled = true;
+                    atribuirNullTipoDocumento();
+                }
+            }
+
+        </script>
+
+        <h:form id="Formulario">
+
+            <fc:cabecalhoPretty controlador="#{ataRegistroPrecoControlador}"
+                                origem="#{ataRegistroPrecoControlador.caminhoPadrao}/listar"/>
+
+            <p:panel header="Ata Registro de Preço">
+                <p:tabView id="tab-view-geral">
+                    <p:ajax event="tabChange"
+                            process="@this"
+                            listener="#{ataRegistroPrecoControlador.onTabChange}"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"/>
+
+                    <p:tab title="Dados Gerais">
+                        <p:outputPanel id="panel-geral">
+                            <h:panelGrid columns="2" id="grid-geral">
+                                <fc:outputLabelObrigatorio value="Licitação:"/>
+                                <h:panelGroup>
+                                    <p:autoComplete queryDelay="1000" id="licitacao" title="Informe a Licitação."
+                                                    value="#{ataRegistroPrecoControlador.selecionado.licitacao}"
+                                                    completeMethod="#{licitacaoControlador.buscarLicitacaoPorAnoOrNumeroOrDescricaoDoPCSemAtaDeRegPrecoAndUsuarioGestorLicitacao}"
+                                                    converter="#{licitacaoControlador.converterGenerico}"
+                                                    disabled="#{ataRegistroPrecoControlador.isEditar()}"
+                                                    var="lic"
+                                                    itemLabel="#{lic}"
+                                                    itemValue="#{lic.id}"
+                                                    size="70"
+                                                    maxResults="50"
+                                                    dropdown="true"
+                                                    panelStyle="max-width: 750px;max-height: 250px"
+                                                    onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'dadosLicitacao', false, true, false); cleanCampos(this)">
+                                        <p:ajax event="itemSelect"
+                                                listener="#{ataRegistroPrecoControlador.listenerLicitacao()}"
+                                                process="@this"
+                                                update=":Formulario:tab-view-geral:grid-geral :Formulario:tab-view-geral:tabela-fornecedores :Formulario:tab-view-geral:panelValoresAta"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"/>
+                                    </p:autoComplete>
+
+                                    <co:botao_informacao
+                                        styleClass="mlef05"
+                                        descricao="A busca irá listar apenas licitações que não estejam vinculadas a uma ata de registro de preço."/>
+
+                                    <p:panel id="dadosLicitacao"
+                                             styleClass="mtop05 mbot05"
+                                             rendered="#{ataRegistroPrecoControlador.selecionado.licitacao != null}"
+                                             style="width: 100%">
+                                        <h:panelGrid columns="2" cellpadding="3">
+                                            <h:outputText value="Data da Publicação:"/>
+                                            <h:outputText
+                                                value="#{ataRegistroPrecoControlador.publicacaoLicitacao.dataPublicacao}"
+                                                style="font-weight: bold">
+                                                <f:convertDateTime type="date"/>
+                                            </h:outputText>
+
+                                            <h:outputText value="Veículo da Publicação: "/>
+                                            <h:outputText
+                                                value="#{ataRegistroPrecoControlador.publicacaoLicitacao.veiculoDePublicacao}"
+                                                style="font-weight: bold"/>
+
+                                            <h:outputText value="Unidade do Processo: "/>
+                                            <fc:codigo-descricao-hierarquia
+                                                dataMovimento="#{ataRegistroPrecoControlador.selecionado.dataInicio}"
+                                                tipoHierarquia="ADMINISTRATIVA"
+                                                unidadeOrganizacional="#{ataRegistroPrecoControlador.selecionado.licitacao.processoDeCompra.unidadeOrganizacional}"/>
+                                        </h:panelGrid>
+                                    </p:panel>
+                                </h:panelGroup>
+
+                                <fc:outputLabelObrigatorio value="Unidade Organizacional: "
+                                                           rendered="#{ataRegistroPrecoControlador.selecionado.licitacao ne null}"/>
+                                <h:panelGroup rendered="#{ataRegistroPrecoControlador.selecionado.licitacao ne null}">
+
+                                    <h:outputText
+                                        rendered="#{!ataRegistroPrecoControlador.licitacaoIRP}"
+                                        value="#{ataRegistroPrecoControlador.hierarquiaOrganizacional}"
+                                        styleClass="negrito"/>
+
+                                    <p:scrollPanel mode="native" style="max-height: 150px">
+                                        <div class="alert alert-info" style="padding: 3px" align="center">
+                                            Unidades Participantes IRP
+
+                                            <fc:botaoInformacao id="btn-info-part"
+                                                                detalhes="Quando o processo de licitação é de um IRP, a unidade da ata provirá das unidades participantes."
+                                            />
+                                        </div>
+                                        <p:selectOneRadio value="#{ataRegistroPrecoControlador.participanteIRP}"
+                                                          id="part-irp"
+                                                          layout="pageDirection"
+                                                          converter="#{participanteIRPControlador.converterGenerico}"
+                                                          rendered="#{ataRegistroPrecoControlador.licitacaoIRP}"
+                                                          disabled="#{ataRegistroPrecoControlador.hasExecucoes()}">
+                                            <f:selectItems
+                                                value="#{ataRegistroPrecoControlador.unidadesParticipantesIrp}"/>
+                                            <p:ajax event="change"
+                                                    process="@this"
+                                                    onstart="aguarde.show();"
+                                                    oncomplete="aguarde.hide();"
+                                                    update=":Formulario:tab-view-geral:grid-geral :Formulario:tab-view-geral:tabela-fornecedores :Formulario:tab-view-geral:panelValoresAta"
+                                                    listener="#{ataRegistroPrecoControlador.listenerParticipanteIrp()}"/>
+                                        </p:selectOneRadio>
+                                    </p:scrollPanel>
+                                </h:panelGroup>
+
+                                <fc:outputLabelObrigatorio value="Número da Ata: "/>
+                                <h:outputText
+                                    value="#{ataRegistroPrecoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar.' : ataRegistroPrecoControlador.selecionado.numero}"
+                                    styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Data de Início: "/>
+                                <p:calendar onkeypress="mascara(this, mdata)"
+                                            maxlength="10"
+                                            style="text-align: right"
+                                            autocomplete="off"
+                                            disabled="#{ataRegistroPrecoControlador.hasExecucoes()}"
+                                            value="#{ataRegistroPrecoControlador.selecionado.dataInicio}"
+                                            title="Digite a data de início."
+                                            locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                            size="10">
+                                    <p:ajax event="dateSelect" update="@this" process="@this"
+                                            onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                </p:calendar>
+
+                                <fc:outputLabelObrigatorio value="Data de Vencimento: "/>
+                                <p:calendar onkeypress="mascara(this, mdata)"
+                                            maxlength="10"
+                                            style="text-align: right"
+                                            autocomplete="off"
+                                            title="Digite a data de vencimento."
+                                            disabled="#{ataRegistroPrecoControlador.hasExecucoes()}"
+                                            value="#{ataRegistroPrecoControlador.selecionado.dataVencimento}"
+                                            locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                            size="10">
+                                    <p:ajax event="dateSelect" update="@this" process="@this"
+                                            onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                </p:calendar>
+
+                                <fc:outputLabelObrigatorio value="Data de Assinatura: "/>
+                                <p:calendar onkeypress="mascara(this, mdata)"
+                                            maxlength="10"
+                                            style="text-align: right"
+                                            autocomplete="off"
+                                            disabled="#{ataRegistroPrecoControlador.hasExecucoes()}"
+                                            value="#{ataRegistroPrecoControlador.selecionado.dataAssinatura}"
+                                            title="Digite a data de assinatura."
+                                            locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                            size="10">
+                                    <p:ajax event="dateSelect" update="@this" process="@this"
+                                            onstart="aguarde.show();" oncomplete="aguarde.hide();"/>
+                                </p:calendar>
+                            </h:panelGrid>
+
+                            <p:outputPanel id="panelValoresAta">
+                                <fa:detalhes-saldo-processo
+                                    rendered="#{ataRegistroPrecoControlador.selecionado.licitacao ne null}"
+                                    saldoProcesso="#{ataRegistroPrecoControlador.saldoAtaVO}"/>
+                            </p:outputPanel>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Fornecedor">
+                        <p:dataTable id="tabela-fornecedores"
+                                     paginator="true"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{ataRegistroPrecoControlador.fornecedoresVencedores}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>FORNECEDORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="fornecedor">
+
+                            <p:column headerText="Itens"
+                                      style="text-align: center; width: 90px;">
+                                <p:commandButton icon="ui-icon-search"
+                                                 title="Clique para consultar os itens deste fornecedor"
+                                                 process="@this"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="dlgItensFornecedor.show(); aguarde.hide();"
+                                                 actionListener="#{ataRegistroPrecoControlador.selecionarFornecedor(fornecedor)}"
+                                                 update=":formItensFornecedor"/>
+                            </p:column>
+                            <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{fornecedor.fornecedor}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Adesões">
+                        <p:dataTable paginator="true"
+                                     id="tabela-adesoes"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{ataRegistroPrecoControlador.selecionado.adesoes}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ADESÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="adesao">
+                            <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{adesao.data}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{adesao.tipoAdesao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Nº Requisição" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{adesao.numeroRequisicao}"/>
+                            </p:column>
+                            <p:column headerText="Data Requisição" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{adesao.dataRequisicao}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Solicitação Registro Preço Interna" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{adesao.solicitacaoMaterialExterno}"/>
+                            </p:column>
+                            <p:column headerText="Documento" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{adesao.documento}"/>
+                            </p:column>
+                            <p:column headerText="Unidade Externa" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{adesao.unidadeExterna}"/>
+                            </p:column>
+                            <p:column headerText="Adesão Aceita" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{utilBean.converterBooleanSimOuNao(adesao.adesaoAceita)}"
+                                              style="font-size: 13px;"/>
+                            </p:column>
+                            <p:column headerText="Avaliar Adesão" styleClass="alinhamentoCentralizado">
+                                <p:commandButton icon="ui-icon-atualizar"
+                                                 process="@this"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide(); dialogAceitaAdesao.show();"
+                                                 rendered="#{ataRegistroPrecoControlador.operacaoVer}"
+                                                 disabled="#{!adesao.isInterna()}"
+                                                 actionListener="#{ataRegistroPrecoControlador.selecionarAdesao(adesao)}"
+                                                 title="Clique para avaliar esta adesão."
+                                                 update=":form-aceita-adesao"/>
+                            </p:column>
+                            <p:column headerText="Observação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{adesao.observacao}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Histórico do Processo"
+                           titleStyle="background: #d9edf7" id="tab-historico"
+                           rendered="#{ataRegistroPrecoControlador.operacaoEditar}">
+                        <fa:historico-processo-licitatorio
+                            filtroProcesso="#{ataRegistroPrecoControlador.filtroHistoricoProcesso}"/>
+                    </p:tab>
+
+                    <p:tab id="tabAnexo" title="Anexo">
+                        <fc:detentorDocumentoLicitacao selecionado="#{ataRegistroPrecoControlador.selecionado}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty id="rodapeEdita" controlador="#{ataRegistroPrecoControlador}"/>
+        </h:form>
+
+        <p:dialog widgetVar="dlgItensFornecedor"
+                  dynamic="true"
+                  draggable="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  closable="true"
+                  modal="true"
+                  width="1100"
+                  resizable="false">
+            <h:form id="formItensFornecedor">
+                <h:outputText value="Itens Vencidos Por: " styleClass="mtop02"/>
+                <h:outputText value="#{ataRegistroPrecoControlador.fornecedorSelecionado.fornecedor}"
+                              styleClass="azulnegrito"/>
+
+                <p:dataTable paginator="true"
+                             id="tbItens"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             style="overflow: scroll; width: auto; max-height: 450px"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop10"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{ataRegistroPrecoControlador.fornecedorSelecionado.itens}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="item">
+                    <p:columnGroup type="header">
+                        <p:row>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Lote" rowspan="2"/>
+                            <p:column styleClass="alinhamentoEsquerda" headerText="Item" rowspan="2"/>
+                            <p:column styleClass="alinhamentoEsquerda" headerText="Especif." rowspan="2"/>
+                            <p:column styleClass="alinhamentoEsquerda" headerText="Grupo" rowspan="2"/>
+                            <p:column styleClass="alinhamentoEsquerda" headerText="Conta" rowspan="2"
+                                      style="border-right: 1px solid lightgrey !important;"/>
+                            <p:column styleClass="alinhamentoCentralizado negrito" headerText="Licitado" colspan="4"
+                                      style="border-right: 1px solid lightgrey !important;"/>
+                            <p:column styleClass="alinhamentoCentralizado negrito" headerText="Contratado"
+                                      colspan="3"/>
+                        </p:row>
+
+                        <p:row>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Qtde Licitada"/>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Qtde Ata"/>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Vl. Unit. (R$)"/>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Vl. Total (R$)"
+                                      style="border-right: 1px solid lightgrey !important;"/>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Qtde"/>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Vl. Unit. (R$)"/>
+                            <p:column styleClass="alinhamentoCentralizado" headerText="Vl. Total (R$)"/>
+                        </p:row>
+                    </p:columnGroup>
+
+                    <p:column styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{item.itemProcessoCompra.numeroLote}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{item.itemProcessoCompra.numeroDescricao}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoCentralizado">
+                        <fa:especificacao-objeto-compra
+                            especificacao="#{item.itemProcessoCompra.descricaoComplementar}"/>
+                    </p:column>
+                    <p:column
+                        style="text-align: left; width: 50px; ">
+                        <h:outputText
+                            value="#{item.itemProcessoCompra.objetoCompra.grupoContaDespesa.grupo}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoEsquerda">
+                        <fa:conta-desdobrada-por-grupo
+                            styleClass="default"
+                            grupoContaDespesa="#{item.itemProcessoCompra.objetoCompra.grupoContaDespesa}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{item.itemProcessoCompra.unidadeMedida.mascaraQuantidade}"
+                            value="#{item.quantidadeProcesso}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{item.itemProcessoCompra.unidadeMedida.mascaraQuantidade}"
+                            value="#{item.quantidadeAta}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoDireita" style="width: 100px;">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{item.itemProcessoCompra.unidadeMedida.mascaraValorUnitario}"
+                            value="#{item.valorUnitarioHomologado}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoDireita" style="width: 100px;">
+                        <h:outputText value="#{item.valorAta}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <f:facet name="footer">
+                            <h:outputText value="#{ataRegistroPrecoControlador.fornecedorSelecionado.valorTotalAta}"
+                                          styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column styleClass="alinhamentoDireita">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{item.itemProcessoCompra.unidadeMedida.mascaraQuantidade}"
+                            value="#{item.quantidadeContratada}"/>
+                    </p:column>
+                    <p:column styleClass="alinhamentoDireita" style="width: 100px;">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{item.itemProcessoCompra.unidadeMedida.mascaraValorUnitario}"
+                            value="#{item.valorUnitarioHomologado}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total" styleClass="alinhamentoDireita" style="width: 100px;">
+                        <h:outputText value="#{item.valorContratado}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <f:facet name="footer">
+                            <h:outputText
+                                value="#{ataRegistroPrecoControlador.fornecedorSelecionado.valorTotalContratado}"
+                                styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

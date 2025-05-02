@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:panel header="Geração/Importação de Arquivo Proposta Licitação" id="panelGeral">
+
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Gerar Arquivo?: "/>
+                    <p:selectBooleanCheckbox value="#{arquivoPropostaFornecedorControlador.novoArquivo}">
+                        <p:ajax event="change" update=":Formulario:panelGeral :Formulario:panelBotoes" process="@this" onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                    </p:selectBooleanCheckbox>
+
+                    <fc:outputLabelObrigatorio value="Importar Arquivo: "
+                                               rendered="#{!arquivoPropostaFornecedorControlador.novoArquivo}"/>
+                    <p:fileUpload mode="advanced"
+                                  auto="true"
+                                  label="Selecionar Arquivo"
+                                  sizeLimit="700000"
+                                  rendered="#{!arquivoPropostaFornecedorControlador.novoArquivo and arquivoPropostaFornecedorControlador.propostaFile eq null}"
+                                  allowTypes="/(\.|\/)(txt|TXT)$/"
+                                  style="width: 600px;"
+                                  invalidFileMessage="Formato de arquivo inválido."
+                                  fileUploadListener="#{arquivoPropostaFornecedorControlador.handleFilesUploads}"
+                                  update="@form">
+                    </p:fileUpload>
+
+                    <h:panelGroup rendered="#{arquivoPropostaFornecedorControlador.propostaFile ne null}">
+                        <h:outputText
+                            rendered="#{arquivoPropostaFornecedorControlador.propostaFile ne null}"
+                            value="#{arquivoPropostaFornecedorControlador.propostaFile.fileName}"
+                            styleClass="negrito"/>
+                        <p:commandButton styleClass="vinteLarguraVinteAltura mlef05"
+                                         rendered="#{arquivoPropostaFornecedorControlador.propostaFile ne null}"
+                                         update="@form"
+                                         icon="ui-icon-close"
+                                         actionListener="#{arquivoPropostaFornecedorControlador.setPropostaFile(null)}"/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Data: "
+                                               rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"/>
+                    <p:calendar id="data"
+                                title="Informe a data da proposta."
+                                onkeypress="mascara(this, mdata)"
+                                maxlength="10"
+                                style="text-align: right"
+                                autocomplete="off"
+                                value="#{arquivoPropostaFornecedorControlador.selecionado.data}"
+                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                size="10"
+                                disabled="true"
+                                styleClass="mrig05"
+                                rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"/>
+
+                    <fc:outputLabelObrigatorio value="Licitação: "
+                                               rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"/>
+                    <h:panelGrid columns="3"
+                                 rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"
+                                 cellpadding="0"
+                                 cellspacing="0">
+                        <p:autoComplete queryDelay="1000" id="licitacao"
+                                        title="Informe a licitação."
+                                        value="#{arquivoPropostaFornecedorControlador.selecionado.licitacao}"
+                                        completeMethod="#{arquivoPropostaFornecedorControlador.buscarLicitacoes}"
+                                        converter="#{licitacaoControlador.converterGenerico}"
+                                        var="lic"
+                                        forceSelection="true"
+                                        itemLabel="Nº - #{lic.numeroLicitacao} de #{lic.exercicio.ano} - #{lic.modalidadeLicitacao.descricao} - #{lic.processoDeCompra.descricaoReduzida}"
+                                        itemValue="#{lic.id}"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px;max-width: 800px"
+                                        size="70"
+                                        styleClass="mrig05">
+                            <p:ajax event="itemSelect"
+                                    listener="#{arquivoPropostaFornecedorControlador.carregarListasDaLicitacao()}"
+                                    process="@this"
+                                    update=":Formulario:panelGeral :Formulario:panelBotoes"
+                                    onstart="aguarde.show();"
+                                    oncomplete="aguarde.hide();"/>
+                        </p:autoComplete>
+
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         id="bt-informacao-licitacao"
+                                         styleClass="icone-20 mrig05"
+                                         icon="ui-icon-info"/>
+
+                        <p:overlayPanel for="bt-informacao-licitacao"
+                                        style="border : solid black 1px;"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout">
+                            <h:outputText
+                                value=" &lt;b>Será listado licitações com o último status em 'ANDAMENTO'  e que tenha fornecedor cadastrado.&lt;/b>
+                                        &lt;br/&gt;&lt;br/&gt; &bull;
+                                        Para consultar licitações específicas, digite o número da licitação ou ano ou número/ano ou modalidade ou descrição do processo de compra."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGrid>
+
+                    <h:outputText value="Fornecedor:"
+                                  rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"/>
+                    <h:panelGrid columns="3"
+                                 cellspacing="0"
+                                 rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"
+                                 cellpadding="0">
+                        <p:autoComplete queryDelay="1000" id="fornecedor"
+                                        title="Digite o fornecedor que deseja pesquisar."
+                                        value="#{arquivoPropostaFornecedorControlador.selecionado.fornecedor}"
+                                        completeMethod="#{arquivoPropostaFornecedorControlador.completarPessoa}"
+                                        converter="#{propostaTecnicaControlador.converterPessoa}"
+                                        var="fo"
+                                        forceSelection="true"
+                                        itemValue="#{fo.id}"
+                                        itemLabel="#{fo}"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px;max-width: 800px"
+                                        size="70"
+                                        styleClass="mrig05">
+                        </p:autoComplete>
+
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         id="bt-informacao-fornecedor"
+                                         styleClass="icone-20 mrig05"
+                                         icon="ui-icon-info"/>
+
+                        <p:overlayPanel for="bt-informacao-fornecedor"
+                                        style="border : solid black 1px;"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout">
+                            <h:outputText
+                                value=" &lt;b>Será listado somente os fornecedores que ainda não fizeram proposta.&lt;/b>
+                                        &lt;br/&gt;&lt;br/&gt; &bull;
+                                        Para consultar fornecedores específicos, digite o cpf/cnpj ou nome/razão social do fornecedor."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGrid>
+
+                    <h:outputText value="Representante: "
+                                  rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"/>
+                    <p:autoComplete queryDelay="1000" id="representante"
+                                    rendered="#{arquivoPropostaFornecedorControlador.novoArquivo}"
+                                    title="Digite o representante do fornecedor caso queira alterar."
+                                    value="#{arquivoPropostaFornecedorControlador.selecionado.representante}"
+                                    completeMethod="#{propostaTecnicaControlador.completarRepresentante}"
+                                    converter="#{representanteLicitacaoControlador.converterGenerico}"
+                                    var="representante"
+                                    itemLabel="#{representante}"
+                                    itemValue="#{representante.id}"
+                                    maxResults="50"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px;max-width: 800px"
+                                    size="70"/>
+                </h:panelGrid>
+
+                <p:dataTable id="tabela-item"
+                             rendered="#{arquivoPropostaFornecedorControlador.selecionado.licitacao ne null and arquivoPropostaFornecedorControlador.novoArquivo}"
+                             value="#{arquivoPropostaFornecedorControlador.selecionado.itens}"
+                             var="ipdc"
+                             paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram encontrados Itens nesta licitação."
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DA LICITAÇÃO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100">
+                    <p:column headerText="Lote" style="width: 40px;" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{ipdc.loteProcessoDeCompra.numero}"/>
+                    </p:column>
+                    <p:column headerText="Item" style="width: 40px;" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{ipdc.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{ipdc.itemSolicitacaoMaterial.descricao}"/>
+                    </p:column>
+                    <p:column headerText="UN" style="width: 80px;" styleClass="alinhamentoCentralizado">
+                        <h:outputText
+                            value="#{ipdc.itemSolicitacaoMaterial.unidadeMedida.descricao}"
+                            rendered="#{ipdc.itemSolicitacaoMaterial.itemSolicitacaoServico eq null}"/>
+                        <h:outputText
+                            value="#{ipdc.itemSolicitacaoMaterial.itemSolicitacaoServico.servicoCompravel.unidadeMedida.descricao}"
+                            rendered="#{ipdc.itemSolicitacaoMaterial.itemSolicitacaoServico ne null}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" style="width: 80px;" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{ipdc.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Preço (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{ipdc.itemSolicitacaoMaterial.preco}"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+
+            <p:outputPanel id="panelBotoes">
+                <p:commandButton value="Confirmar"
+                                 id="cbRedirecionar"
+                                 styleClass="mtop10 mrig05 prioritario"
+                                 style="height: 30px"
+                                 icon="ui-icon-disk"
+                                 title="Clique para gerar o Arquivo"
+                                 actionListener="#{arquivoPropostaFornecedorControlador.redirecionarProposta()}"
+                                 rendered="#{!arquivoPropostaFornecedorControlador.novoArquivo}"
+                                 onclick="aguarde.show()"
+                                 update="@form"
+                                 oncomplete="aguarde.hide()"/>
+
+                <p:commandButton value="Gerar Arquivo"
+                                 id="cbSalvar"
+                                 styleClass="mtop10 mrig05 prioritario"
+                                 style="height: 30px"
+                                 icon="ui-icon-disk"
+                                 title="Clique para gerar o Arquivo"
+                                 actionListener="#{arquivoPropostaFornecedorControlador.gerarArquivo()}"
+                                 rendered="#{arquivoPropostaFornecedorControlador.selecionado.licitacao ne null and arquivoPropostaFornecedorControlador.novoArquivo}"
+                                 onclick="aguarde.show()"
+                                 update="@form"
+                                 oncomplete="aguarde.hide()"/>
+
+                <p:commandButton ajax="false"
+                                 value="Download"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{arquivoPropostaFornecedorControlador.gerarArquivo()}"
+                                 title="Clique para fazer o download do arquivo."
+                                 styleClass="mtop10 mrig05 prioritario"
+                                 style="height: 30px"
+                                 icon="ui-icon-download"
+                                 rendered="#{arquivoPropostaFornecedorControlador.streamedContent ne null and arquivoPropostaFornecedorControlador.novoArquivo}">
+                    <p:fileDownload value="#{arquivoPropostaFornecedorControlador.streamedContent}"/>
+                </p:commandButton>
+            </p:outputPanel>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+
+            var timer;
+
+            function iniciaPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timer = setInterval(function () {
+                    acompanhaAndamento();
+                }, 1000);
+            }
+
+            function encerrarPesquisa() {
+                clearInterval(timer);
+                finalizaPesquisa();
+            }
+
+            function iniciaTransferencia() {
+                $('#dlgPesquisa').modal({backdrop: 'static', keyboard: false});
+                $('#dlgPesquisa').modal('show');
+                timer = setInterval(function () {
+                    acompanhaTransferencia();
+                }, 1000);
+            }
+
+            function encerrarTransferencia() {
+                clearInterval(timer);
+                $("#dlgPesquisa").modal('hide');
+                finalizaTransferencia();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="acompanhaAndamento"
+                             process="@this"
+                             actionListener="#{aprovacaoTransferenciaBemControlador.consultarAndamentoPesquisa}"
+                             update=":FormularioPesquisa"/>
+
+            <p:remoteCommand name="finalizaPesquisa"
+                             oncomplete="$('#dlgPesquisa').modal('hide');"
+                             actionListener="#{aprovacaoTransferenciaBemControlador.encerrarPesquisa}"/>
+
+            <p:remoteCommand name="acompanhaTransferencia"
+                             process="@this"
+                             actionListener="#{aprovacaoTransferenciaBemControlador.consultarAndamentoAprovacao}"
+                             update=":FormularioPesquisa"/>
+
+            <p:remoteCommand name="finalizaTransferencia"
+                             process="@form"
+                             actionListener="#{aprovacaoTransferenciaBemControlador.redirecionarAposSalvar}"/>
+
+            <p:remoteCommand name="limparDadosSolicitacao"
+                             process="@this"
+                             update=":Formulario:tabViewPrincipal:panelDadosGerais"
+                             actionListener="#{aprovacaoTransferenciaBemControlador.limparDadosSolicitacao()}"/>
+
+            <fc:cabecalhoPretty controlador="#{aprovacaoTransferenciaBemControlador}"
+                                origem="#{aprovacaoTransferenciaBemControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Aprovação de Transferência de Bem Móvel" id="painelPrincipal">
+                <p:tabView id="tabViewPrincipal">
+                    <p:tab title="Dados da Gerais">
+
+                        <p:outputPanel id="panelDadosGerais">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Data: "/>
+                                <h:outputText id="data"
+                                              value="#{aprovacaoTransferenciaBemControlador.selecionado.dataAprovacao}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputLabel for="codigo" value="Código: "/>
+                                <h:outputLabel id="codigo"
+                                               value="#{aprovacaoTransferenciaBemControlador.selecionado.codigo == null ? 'Gerado automaticamente ao concluir' : aprovacaoTransferenciaBemControlador.selecionado.codigo}"
+                                               styleClass="negrito"/>
+
+                                <h:outputText value="Usuário: "/>
+                                <h:outputText id="usuario"
+                                              value="#{aprovacaoTransferenciaBemControlador.selecionado.usuarioSistema}"
+                                              styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Solicitação: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="solTransf"
+                                                title="Informe a solicitação de transferência"
+                                                value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia}"
+                                                completeMethod="#{aprovacaoTransferenciaBemControlador.completarSolicitacaoTransferencia}"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosSolicitacao();}"
+                                                var="sol"
+                                                size="70"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-width: 800px; max-height: 250px"
+                                                itemLabel="#{sol.codigo} - #{sol.descricao}"
+                                                itemValue="#{sol.id}"
+                                                converter="#{loteTransferenciaControlador.converterGenerico}">
+                                    <p:ajax process="@this"
+                                            event="itemSelect"
+                                            listener="#{aprovacaoTransferenciaBemControlador.pesquisar()}"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio value="Situação: "/>
+                                <h:selectOneMenu
+                                    value="#{aprovacaoTransferenciaBemControlador.selecionado.situacao}">
+                                    <f:selectItems
+                                        value="#{aprovacaoTransferenciaBemControlador.situacoes}"/>
+                                    <p:ajax event="change"
+                                            process="@this :Formulario:tabViewPrincipal:panelDadosGerais"
+                                            update=":Formulario:tabViewPrincipal:panelDadosGerais"
+                                            listener="#{aprovacaoTransferenciaBemControlador.atribuirNullMotivo()}"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="motivo" value="Motivo:"
+                                                           rendered="#{aprovacaoTransferenciaBemControlador.selecionado.isRecusada()}"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea
+                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.motivo}"
+                                        rendered="#{aprovacaoTransferenciaBemControlador.selecionado.isRecusada()}"
+                                        id="motivo"
+                                        style="width: 508px;"
+                                        autoResize="false"
+                                        counterTemplate="{0} Caracteres Restantes."
+                                        counter="counter"
+                                        maxlength="3000"/>
+                                    <h:outputText id="counter"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+
+                            <p:outputPanel id="panelSolicitacao"
+                                           rendered="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia ne null}">
+                                <p:separator/>
+                                <legend
+                                    class="legenda">Detalhes da Solicitação de Transferência
+                                </legend>
+
+                                <h:panelGrid columns="2" id="griddlgInfoTransferencia">
+                                    <h:outputLabel value="Data:"/>
+                                    <h:outputText
+                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.dataHoraCriacao}"
+                                        styleClass="negrito">
+                                        <f:convertDateTime type="both"/>
+                                    </h:outputText>
+
+                                    <h:outputLabel value="Número:"/>
+                                    <h:outputText
+                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.codigo}"
+                                        styleClass="negrito"/>
+
+                                    <h:outputLabel value="Situação:"/>
+                                    <h:outputText
+                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.situacaoTransferenciaBem.descricao}"
+                                        styleClass="negrito"/>
+
+                                    <h:outputLabel value="Descrição:"/>
+                                    <p:inputTextarea
+                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.descricao}"
+                                        cols="100"
+                                        rows="5"
+                                        style="box-shadow: none; border-color: lightgrey"
+                                        readonly="true"/>
+
+                                    <h:outputLabel value="Tipo:"/>
+                                    <h:outputText
+                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.tipoTransferencia.descricao}"
+                                        styleClass="negrito"/>
+                                </h:panelGrid>
+
+                                <table class="mtop10">
+                                    <tr>
+                                        <td style="vertical-align: top; width: 50%">
+                                            <p:fieldset legend="Origem">
+                                                <h:panelGrid columns="2">
+                                                    <h:outputLabel value="Unidade Administrativa:"/>
+                                                    <fc:codigo-descricao-hierarquia
+                                                        unidadeOrganizacional="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.unidadeOrigem}"
+                                                        dataMovimento="#{aprovacaoTransferenciaBemControlador.selecionado.dataAprovacao}"
+                                                        tipoHierarquia="ADMINISTRATIVA"/>
+
+                                                    <h:outputLabel value="Responsável:"/>
+                                                    <h:outputText
+                                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.responsavelOrigem}"
+                                                        styleClass="negrito"/>
+                                                </h:panelGrid>
+                                            </p:fieldset>
+                                        </td>
+
+                                        <td style="vertical-align: top; width: 50%">
+                                            <p:fieldset legend="Destino">
+                                                <h:panelGrid columns="2">
+                                                    <h:outputLabel value="Unidade Administrativa:"/>
+                                                    <fc:codigo-descricao-hierarquia
+                                                        unidadeOrganizacional="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.unidadeDestino}"
+                                                        dataMovimento="#{aprovacaoTransferenciaBemControlador.selecionado.dataAprovacao}"
+                                                        tipoHierarquia="ADMINISTRATIVA"/>
+
+                                                    <h:outputLabel value="Responsável:"/>
+                                                    <h:outputText
+                                                        value="#{aprovacaoTransferenciaBemControlador.selecionado.solicitacaoTransferencia.responsavelDestino}"
+                                                        styleClass="negrito"/>
+                                                </h:panelGrid>
+                                            </p:fieldset>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </p:outputPanel>
+                        </p:outputPanel>
+
+                    </p:tab>
+
+                    <p:tab title="Bens">
+                        <p:outputPanel id="panelBensSolicitacao">
+                            <p:dataTable id="tablebensparaAtribuirUndOrc"
+                                         value="#{aprovacaoTransferenciaBemControlador.bensSolicitacao}"
+                                         var="itemSol"
+                                         styleClass="mtop05"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         paginator="true"
+                                         rows="10"
+                                         rowsPerPageTemplate="10, 50, 100,200,300"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}">
+                                <p:column headerText="Detalhes">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Registro Patrimonial" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{itemSol.registroPatrimonial}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemSol.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemSol.unidadeOrcOrigem}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" style="text-align: right;">
+                                    <h:outputText value="#{itemSol.valorOriginal}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Ajustes (R$)" style="text-align: right;">
+                                    <h:outputText value="#{itemSol.valorAjuste}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:rowExpansion>
+                                    <ad:detalhes-estado-bem estadoBem="#{itemSol.estadoBem}"/>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Inconsistências" id="tabInconsistencias">
+                        <p:outputPanel id="outputPanelInconsistencias">
+                            <ad:inconsistencias-pesquisa-bens
+                                inconsistencias="#{aprovacaoTransferenciaBemControlador.assistente.mensagens}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos" id="tabAnexo">
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio value="Tipo de Documento: "/>
+                            <h:selectOneMenu value="#{aprovacaoTransferenciaBemControlador.tipoDocumentoAnexo}"
+                                             converter="#{tipoDocumentoAnexoControlador.converterGenerico}">
+                                <p:ajax event="valueChange"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        update=":Formulario:tabViewPrincipal:bt-upload-anexo"
+                                        process="@this"/>
+                                <f:selectItems value="#{aprovacaoTransferenciaBemControlador.tiposDocumentos}"/>
+                            </h:selectOneMenu>
+
+                            <h:outputText value="Arquivo:"/>
+                            <p:fileUpload mode="advanced"
+                                          auto="true"
+                                          label="Selecionar"
+                                          disabled="#{aprovacaoTransferenciaBemControlador.tipoDocumentoAnexo eq null}"
+                                          id="bt-upload-anexo"
+                                          styleClass="somenteBotao mrig02"
+                                          sizeLimit="15728640"
+                                          multiple="true"
+                                          update=":Formulario:tabViewPrincipal:tabela-anexo"
+                                          invalidSizeMessage="O tamanho do arquivo é inválido, o tamanho do arquivo não pode ser superior a 10Mb."
+                                          invalidFileMessage="O tipo do arquivo é inválido."
+                                          style="z-index : 0;"
+                                          fileUploadListener="#{aprovacaoTransferenciaBemControlador.carregarArquivo}">
+                            </p:fileUpload>
+                        </h:panelGrid>
+
+                        <p:dataTable paginator="true"
+                                     id="tabela-anexo"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{aprovacaoTransferenciaBemControlador.selecionado.anexos}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ANEXOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="anexo">
+                            <p:column headerText="Ações" style="text-align: center; width: 80px;">
+                                <p:commandButton icon="ui-icon-download"
+                                                 ajax="false"
+                                                 title="Clique para fazer o download do arquivo indicado."
+                                                 immediate="true"
+                                                 onclick="PrimeFaces.monitorDownload(start, stop)"
+                                                 styleClass="mrig05">
+                                    <p:fileDownload
+                                        value="#{aprovacaoTransferenciaBemControlador.recuperarArquivo(anexo.arquivo)}"/>
+                                </p:commandButton>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 id="bt-remover-anexo"
+                                                 title="Clique para remover o arquivo indicado."
+                                                 process="@this"
+                                                 update="tabela-anexo"
+                                                 actionListener="#{aprovacaoTransferenciaBemControlador.removerAnexo(anexo)}"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este arquivo da lista?')) {return false; } else {aguarde.show();}"
+                                                 oncomplete="aguarde.hide()"/>
+                            </p:column>
+                            <p:column headerText="Nome do Arquivo" style="text-align: left;">
+                                <h:outputText
+                                    value="#{anexo.arquivo.nome}"/>
+                            </p:column>
+                            <p:column headerText="Tipo de Documento" style="text-align: left;">
+                                <h:outputText
+                                    value="#{anexo.tipoDocumentoAnexo.descricao}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+
+                <p:outputPanel id="alertInconsistencias">
+                    <ad:alerta-pesquisa-com-inconsistencias
+                        render="#{aprovacaoTransferenciaBemControlador.assistente.hasInconsistencias()}"/>
+                </p:outputPanel>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             onstart="aguarde.show()"
+                             process="Formulario"
+                             disabled="#{aprovacaoTransferenciaBemControlador.assistente.bloquearAcoesTela}"
+                             actionListener="#{aprovacaoTransferenciaBemControlador.salvar()}"
+                             styleClass="mtop10 prioritario operacao"/>
+
+            <p:commandButton value="Cancelar"
+                             icon="ui-icon-cancel"
+                             onstart="aguade.show()"
+                             actionListener="#{aprovacaoTransferenciaBemControlador.cancelar()}"
+                             styleClass="mlef05 mtop10 operacao"/>
+        </h:form>
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <h:form id="FormularioPesquisa">
+
+                <div class="modal-header alert-info" style="text-align: center">
+                    <div class="centralizado ">
+                        <strong> #{aprovacaoTransferenciaBemControlador.assistente.descricaoProcesso}</strong>
+                    </div>
+                </div>
+
+                <div class="modal-body" style="text-align: center">
+                    <div
+                        style="#{aprovacaoTransferenciaBemControlador.assistente.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/>
+                    </div>
+                    <div
+                        style="#{aprovacaoTransferenciaBemControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{aprovacaoTransferenciaBemControlador.assistente.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="#{aprovacaoTransferenciaBemControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                            <div class="bar"
+                                 style="width: #{aprovacaoTransferenciaBemControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+                    <br/>
+                </div>
+            </h:form>
+        </div>
+
+    </ui:define>
+</ui:composition>
+</html>

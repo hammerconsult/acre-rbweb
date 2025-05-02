@@ -1,0 +1,2 @@
+delete LOTACAOFUNCIONAL where id = 895069588;
+delete HORARIOCONTRATOFP where id  = 895069589;

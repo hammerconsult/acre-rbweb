@@ -1,0 +1,8 @@
+alter table enderecocadastroeconomico drop column alteracaocadastroeconomico_id;
+alter table enderecocadastroeconomico_aud drop column alteracaocadastroeconomico_id;
+drop table alteracaocmccnae;
+drop table alteracaocmccnae_aud;
+drop table alteracaocmcendereco;
+drop table alteracaocmcendereco_aud;
+drop table alteracaocadastroeconomico;
+drop table alteracaocadastroeconomico_aud;

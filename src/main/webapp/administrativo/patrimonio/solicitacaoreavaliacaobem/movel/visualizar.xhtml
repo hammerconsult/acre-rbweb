@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            window.onload = function () {
+                buscarBensAoEditar();
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerAcompanhaSalvar;
+
+            function acompanharSalvar() {
+                timerAcompanhaSalvar = setInterval(
+                    function () {
+                        rcAtualizaCompFutures();
+                    }, 1000);
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                aguarde.show();
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty  auditavel="#{true}" controlador="#{loteReavaliacaoBemControlador}"
+                                origem="#{loteReavaliacaoBemControlador.caminhoPadrao}ver/#{loteReavaliacaoBemControlador.selecionado.id}/"/>
+
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{loteReavaliacaoBemControlador.consultarFutureSalvar()}"
+                name="rcAtualizaCompFutures"/>
+
+            <p:panel header="Detalhes da Solicitação de Reavaliação de Bens Móveis">
+                <p:tabView styleClass="mtop05">
+                    <p:tab title="Dados da Reavaliação">
+                        <p:outputPanel>
+                            <h:panelGrid columns="2">
+                                <h:outputText for="codigo" value="Código: "/>
+                                <h:outputText id="codigo"
+                                              value="#{loteReavaliacaoBemControlador.selecionado.codigo ne null ? loteReavaliacaoBemControlador.selecionado.codigo : 'Gerado automaticamente ao concluir'}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Data: "/>
+                                <h:outputText value="#{loteReavaliacaoBemControlador.selecionado.dataHoraCriacao}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                                </h:outputText>
+
+                                <h:outputLabel value="Situação: "/>
+                                <h:outputText
+                                    value="#{loteReavaliacaoBemControlador.selecionado.situacaoReavaliacaoBem.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Tipo de Reavaliação do Bem: "/>
+                                <h:outputText styleClass="negrito"
+                                              value="#{loteReavaliacaoBemControlador.selecionado.tipoOperacaoBem.descricao}"/>
+
+                                <h:outputText for="descricao" value="Descrição:"/>
+                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                    <p:inputTextarea title="Digite a descrição da solicitação de reavaliação de bem."
+                                                     value="#{loteReavaliacaoBemControlador.selecionado.descricao}"
+                                                     maxlength="255"
+                                                     id="descricao"
+                                                     cols="67"
+                                                     rows="4"
+                                                     styleClass="negrito"
+                                                     autoResize="true"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-descricao"
+                                                     readonly="true">
+                                    </p:inputTextarea>
+                                    <h:outputText id="counter-descricao"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+
+                                <h:outputText for="origem" value="Unidade Administrativa: "/>
+                                <h:outputText id="origem"
+                                              styleClass="negrito"
+                                              value="#{loteReavaliacaoBemControlador.selecionado.hierarquiaOrganizacional}"/>
+
+                                <h:outputText value="Responsável pela Unidade: "/>
+                                <h:outputText id="responsavelOrigem"
+                                              readonly="true"
+                                              styleClass="negrito"
+                                              style="width: 508px!important"
+                                              title="Informe o responsável por receber os bens reavaliados."
+                                              value="#{loteReavaliacaoBemControlador.selecionado.responsavel}"/>
+
+                                <h:outputText for="motivorecusa"
+                                              rendered="#{loteReavaliacaoBemControlador.selecionado.foiRecusado()}"
+                                              value="Motivo da Recusa:"/>
+                                <p:inputTextarea id="motivorecusa"
+                                                 styleClass="negrito"
+                                                 cols="67"
+                                                 rows="3"
+                                                 readonly="true"
+                                                 rendered="#{loteReavaliacaoBemControlador.selecionado.foiRecusado()}"
+                                                 value="#{loteReavaliacaoBemControlador.selecionado.motivoRecusa}"/>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Bens">
+                        <p:outputPanel>
+                            <p:dataTable id="tableencontrados"
+                                         value="#{loteReavaliacaoBemControlador.bensSelecionados}"
+                                         var="bem"
+                                         styleClass="mtop05"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rows="100"
+                                         rowsPerPageTemplate="100,200,300"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         paginator="true"
+                                         emptyMessage="Nenhum bem encontrado."
+                            >
+                                <p:column headerText="Registro Patrimonial" style="width: 5%; text-align: left">
+                                    <h:outputText value="#{bem.identificacao}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" style="width: 25%; text-align: left">
+                                    <h:outputText value="#{bem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial" style="width: 20%; text-align: left">
+                                    <h:outputText value="#{bem.ultimoEstado.grupoBem}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária" style="width: 20%; text-align: left">
+                                    <fc:codigo-descricao-hierarquia dataMovimento="#{loteReavaliacaoBemControlador.selecionado.dataHoraCriacao}"
+                                                                    tipoHierarquia="ORCAMENTARIA"
+                                                                    styleClass="default"
+                                                                    unidadeOrganizacional="#{bem.ultimoEstado.detentoraOrcamentaria}"/>
+                                </p:column>
+                                <p:column headerText="Valor do Bem (R$)" style="width: 10%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.valorOriginal}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Ajustes (R$)" style="width: 5%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.ultimoEstado.valorDosAjustes}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Valor Líquido (R$)" style="width: 5%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.ultimoEstado.valorLiquido}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Valor Reavaliação (R$)" style="width: 10%"
+                                          styleClass="alinhamentoDireita">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.valorAjuste}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Valor Final (R$)"
+                                          style="width: 5%; text-align: right">
+                                    <h:outputText
+                                        value="#{bem.valorAjustadoBem}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:columnGroup id="total" type="footer">
+                                    <p:row>
+                                        <p:column styleClass="azulnegrito" colspan="4" style="text-align:right"
+                                                  footerText="Total Geral do(s) Bem(ns) Selecionado(s):"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalOriginal)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalAjuste)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalLiquido)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalReavaliacao)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteReavaliacaoBemControlador.formatarValor(loteReavaliacaoBemControlador.valorTotalFinal)}"/>
+                                    </p:row>
+                                </p:columnGroup>
+                                <p:rowExpansion>
+                                    <ad:detalhes-estado-bem estadoBem="#{bem.ultimoEstado}"/>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Anexos" id="anexos">
+                        <fc:filesUploadWP selecionado="#{loteReavaliacaoBemControlador.selecionado}"
+                                          isTelaEditar="false"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+            <h:panelGrid columns="3">
+                <fc:rodapeVisualizarPretty id="rodape"
+                                           controlador="#{loteReavaliacaoBemControlador}"
+                                           mostrarExcluir="#{loteReavaliacaoBemControlador.mostrarBotaoExcluir()}"
+                                           mostrarEditar="#{loteReavaliacaoBemControlador.mostrarBotaoEditar()}"/>
+
+                <p:commandButton value="Concluir Solicitação de Reavaliação"
+                                 icon="ui-icon-check"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 title="Clique para concluir a reavaliação de bens."
+                                 rendered="#{loteReavaliacaoBemControlador.mostrarBotaoConcluir()}"
+                                 actionListener="#{loteReavaliacaoBemControlador.concluirReavalicao()}"
+                                 styleClass="mtop10 prioritario operacao"/>
+
+                <p:button id="btnNovaSolicitacao"
+                          title="Clique para criar uma nova solicitação a partir da solicitação recusada."
+                          icon="ui-icon-circle-plus"
+                          styleClass="mtop10 mlef05 prioritario operacao"
+                          value="Nova Solicitação"
+                          onstart="aguarde.show()"
+                          href="/solicitacao-reavaliacao-bens-moveis-recusada/novo/#{loteReavaliacaoBemControlador.selecionado.id}/"
+                          rendered="#{loteReavaliacaoBemControlador.mostrarBotaoCriarNova()}"/>
+
+            </h:panelGrid>
+        </h:form>
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Reavaliação de Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{loteReavaliacaoBemControlador.assistente.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{loteReavaliacaoBemControlador.assistente.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{loteReavaliacaoBemControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{loteReavaliacaoBemControlador.assistente.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{loteReavaliacaoBemControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{loteReavaliacaoBemControlador.assistente.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{loteReavaliacaoBemControlador.assistente.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

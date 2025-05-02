@@ -1,0 +1,38 @@
+package br.com.webpublico.nfse.domain.dtos.enums;
+
+/**
+ * Created by william on 19/09/17.
+ */
+public enum TipoTemplateNfse {
+    FALE_CONOSCO("FALE CONOSCO"),
+    ATIVACAO_CADASTRO("ATIVAÇÃO DE CADASTRO"),
+    EMAIL_SOLICITADO_ACESSO_SEM_CADASTRO("SOLICITAÇÃO DE ACESSO SEM CADASTRO"),
+    EMAIL_NOTAFISCAL("EMAIL DA NOTA FISCAL"),
+    NFSE("NOTA FISCAL"),
+    DECLARACAO_SERVICO_TOMADO("DECLARAÇÃO SERVIÇO TOMADO"),
+    SOLICITACAO_ALTERACAO_SENHA("SOLICITAÇÃO DE ALTERAÇÃO DE SENHA"),
+    SOLICITACAO_ACESSO_EMPRESA("SOLICITAÇÃO DE ACESSO À EMRPESA"),
+    PERMISSAO_ACESSO_EMPRESA("PERMISSAO DE ACESSO À EMRPESA"),
+    ITEM_SERVICO("ITEM DE SERVIÇO"),
+    NFSE_EMITIDA_TOMADOR("NFSE EMITIDA AO TOMADOR"),
+    NFSE_EMITIDA_CONTADOR("NFSE EMITIDA AO CONTADOR"),
+    NFSE_CANCELADA_TOMADOR("NFSE CANCELADA AO TOMADOR"),
+    NFSE_CANCELADA_PRESTADOR("NFSE CANCELADA AO PRESTADOR"),
+    NFSE_CANCELADA_CONTADOR("NFSE CANCELADA AO CONTADOR"),
+    NFSE_AVALIACAO_TOMADOR("NFSE AVALIAÇÃO AO TOMADOR");
+
+    private String descricao;
+
+    TipoTemplateNfse(String descricao) {
+        this.descricao = descricao;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    @Override
+    public String toString() {
+        return descricao;
+    }
+}

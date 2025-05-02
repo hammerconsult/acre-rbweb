@@ -1,0 +1,858 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparCampos"
+                             process="@this"
+                             actionListener="#{obrigacaoAPagarControlador.atribuirNullParaVariaveisDoSelecionado()}"
+                             update=":Formulario:viewGeral:dadosEmpenho :Formulario:viewGeral:gridHistorico :Formulario:viewGeral:panelGeral
+                                     :Formulario:viewGeral:tabelaDoctos :Formulario:viewGeral:tabelaDesdobramento"/>
+
+            <p:remoteCommand name="limparClasseCredor"
+                             process="@this"
+                             actionListener="#{obrigacaoAPagarControlador.atribuirNullParaClasseAndPessoa()}"
+                             update=":Formulario:viewGeral:classeCredor"/>
+
+            <fc:cabecalhoPretty controlador="#{obrigacaoAPagarControlador}"
+                                origem="#{obrigacaoAPagarControlador.caminhoPadrao}listar/"/>
+
+
+            <p:tabView id="viewGeral">
+                <p:tab title="Obrigação a Pagar">
+                    <p:outputPanel id="panelGeral">
+                        <h:panelGrid id="infos" columns="2">
+                            <h:outputText value="Número: "/>
+                            <h:outputText id="numero"
+                                          value="#{obrigacaoAPagarControlador.selecionado.id eq null ? 'Gerado automaticamente' : obrigacaoAPagarControlador.selecionado.numero}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Data: "/>
+                            <h:outputText value="#{obrigacaoAPagarControlador.selecionado.dataLancamento}"
+                                          styleClass="negrito">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+
+                            <h:outputText value="Unidade Organizacional: "/>
+                            <fc:codigo-descricao-hierarquia
+                                tipoHierarquia="ORCAMENTARIA"
+                                unidadeOrganizacional="#{obrigacaoAPagarControlador.selecionado.unidadeOrganizacional}"
+                                dataMovimento="#{obrigacaoAPagarControlador.selecionado.dataLancamento}"/>
+
+                            <h:outputText value="Empenho: "/>
+                            <h:panelGroup>
+                                <p:autoComplete queryDelay="1000"
+                                                id="empenho"
+                                                size="70"
+                                                title="Selecione um empenho."
+                                                completeMethod="#{obrigacaoAPagarControlador.completarEmpenho}"
+                                                maxResults="10"
+                                                converter="#{empenhoControlador.converterGenerico}"
+                                                value="#{obrigacaoAPagarControlador.selecionado.empenho}"
+                                                var="em"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 700px"
+                                                itemValue="#{em.id}"
+                                                itemLabel="#{em}"
+                                                disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparCampos();}">
+                                    <p:ajax event="itemSelect"
+                                            update=":Formulario:viewGeral:dadosEmpenho :Formulario:viewGeral:gridHistorico :Formulario:viewGeral:panelGeral
+                                                    :Formulario:viewGeral:tabelaDoctos :Formulario:viewGeral:painelDesdob"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{obrigacaoAPagarControlador.definirEmpenho()}"/>
+                                </p:autoComplete>
+
+                                <p:commandButton styleClass="botao_azul icone_branco mlef05"
+                                                 update=":formDlg:panelDlgEmpenho"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide();dialogEmpenho.show()"
+                                                 icon="ui-icon-search"
+                                                 title="Clique para selecionar um empenho."
+                                                 disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Funcional Programática: "/>
+                            <h:outputText value="#{obrigacaoAPagarControlador.selecionado.despesaORC.funcionalProgramatica}" styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio for="elementoDespesa" value="Elemento de Despesa: "/>
+                            <co:consultar-despesa-orcamentaria
+                                value="#{obrigacaoAPagarControlador.selecionado.despesaORC}"
+                                update=":Formulario:viewGeral:panelGeral"
+                                process="@this :Formulario:viewGeral:panelGeral"
+                                tiposContaDespesa="#{obrigacaoAPagarControlador.tiposContaDespesaObrigacao}"
+                                disabled="#{obrigacaoAPagarControlador.isEmpenhoSelecionado() or !empty obrigacaoAPagarControlador.selecionado.desdobramentos}"
+                                recuperarSomenteUnidadeLogada="true"
+                                actionListener="#{obrigacaoAPagarControlador.definirTiposContaDespesa()}"
+                                id="elementoDespesa"/>
+
+                            <fc:outputLabelObrigatorio value="Tipo de Despesa: "/>
+                            <p:selectOneRadio id="tipoContaDespesa"
+                                              value="#{obrigacaoAPagarControlador.selecionado.tipoContaDespesa}"
+                                              disabled="#{obrigacaoAPagarControlador.isEmpenhoSelecionado() or !empty obrigacaoAPagarControlador.selecionado.desdobramentos}">
+                                <f:selectItems value="#{obrigacaoAPagarControlador.tipoContas}"/>
+                                <p:ajax update=":Formulario:viewGeral:panelGeral"
+                                        process="@this"
+                                        event="change"
+                                        listener="#{obrigacaoAPagarControlador.buscarSubTiposContaDespesa()}"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"/>
+                            </p:selectOneRadio>
+
+                            <fc:outputLabelObrigatorio value="Subtipo de Despesa: "
+                                                       rendered="#{obrigacaoAPagarControlador.renderizarSubTipoDespesa()}"/>
+                            <p:selectOneRadio id="subTipoDespesa"
+                                              value="#{obrigacaoAPagarControlador.selecionado.subTipoDespesa}"
+                                              rendered="#{obrigacaoAPagarControlador.renderizarSubTipoDespesa()}"
+                                              disabled="#{obrigacaoAPagarControlador.isEmpenhoSelecionado() or !empty obrigacaoAPagarControlador.selecionado.desdobramentos}">
+                                <f:selectItems value="#{obrigacaoAPagarControlador.subTipoContas}"/>
+                                <p:ajax update=":Formulario:viewGeral:panelGeral"
+                                        process="@this"
+                                        event="change"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"/>
+                            </p:selectOneRadio>
+
+                            <h:outputText value="Fonte de Recursos: "/>
+                            <h:outputText value="#{obrigacaoAPagarControlador.selecionado.fonteDespesaORC.descricaoFonteDeRecurso}"
+                                          id="fonteRec"
+                                          styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio for="fonteDespesaORC" value="Conta de Destinação de Recurso: "/>
+                            <h:selectOneMenu value="#{obrigacaoAPagarControlador.selecionado.fonteDespesaORC}"
+                                             id="fonteDespesaORC"
+                                             title="Informe a fonte de recurso."
+                                             converter="#{obrigacaoAPagarControlador.converterFonteDespesaORC}"
+                                             disabled="#{obrigacaoAPagarControlador.isEmpenhoSelecionado()}">
+                                <f:selectItems value="#{obrigacaoAPagarControlador.fontesDespesaORC}"
+                                               var="fo"/>
+                                <p:ajax update=":Formulario:viewGeral:fonteRec"
+                                        event="change"
+                                        process="@this"
+                                        listener="#{obrigacaoAPagarControlador.atribuirFonteDeRecursos}"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio for="pessoa" value="Pessoa: "/>
+                            <h:panelGroup>
+                                <p:autoComplete queryDelay="1000"
+                                                id="pessoa"
+                                                size="70"
+                                                title="Informe a pessoa."
+                                                value="#{obrigacaoAPagarControlador.selecionado.pessoa}"
+                                                completeMethod="#{obrigacaoAPagarControlador.completarPessoa}"
+                                                converter="#{pessoaContabilControlador.converterGenerico}"
+                                                disabled="#{obrigacaoAPagarControlador.isEmpenhoSelecionado()}"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparClasseCredor();}"
+                                                maxResults="10"
+                                                styleClass="mrig05"
+                                                var="pes"
+                                                itemValue="#{pes.id}"
+                                                itemLabel="#{pes.nomeAutoComplete}">
+                                    <p:ajax update=":Formulario:viewGeral:classeCredor compCamposPessoa"
+                                            process="@this"
+                                            event="itemSelect"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                </p:autoComplete>
+
+                                <p:outputPanel id="compCamposPessoa">
+                                    <fc:visualizarCampos objeto="#{obrigacaoAPagarControlador.selecionado.pessoa}"/>
+                                </p:outputPanel>
+
+                                <p:commandButton icon="ui-icon-search"
+                                                 title="Clique para Consultar as Pessoas"
+                                                 oncomplete="dlgPesquisarPessoa.show()"
+                                                 styleClass="mlef05"
+                                                 update=":FormularioPesquisarPessoa"
+                                                 process=":FormularioPesquisarPessoa"
+                                                 disabled="#{obrigacaoAPagarControlador.isEmpenhoSelecionado()}"/>
+                            </h:panelGroup>
+
+                            <fc:outputLabelObrigatorio for="classeCredor" value="Classe: "/>
+                            <h:selectOneMenu value="#{obrigacaoAPagarControlador.selecionado.classeCredor}"
+                                             id="classeCredor"
+                                             title="Informe a classe da pessoa."
+                                             converter="#{classeCredorControlador.converterGenerico}"
+                                             disabled="#{obrigacaoAPagarControlador.isEmpenhoSelecionado()}">
+                                <f:selectItems value="#{obrigacaoAPagarControlador.classesCredor}"
+                                               var="cc"
+                                               itemValue="#{cc.id}"
+                                               itemLabel="#{cc}"/>
+                                <p:ajax event="change"
+                                        process="@this"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        update="@none"/>
+                            </h:selectOneMenu>
+                        </h:panelGrid>
+                    </p:outputPanel>
+
+                    <p:outputPanel id="dadosEmpenho">
+                        <p:panel rendered="#{obrigacaoAPagarControlador.selecionado.empenho ne null}"
+                                 styleClass="mtop05"
+                                 toggleable="true"
+                                 header="Empenho">
+
+                            <h:panelGrid columns="2" cellpadding="3" styleClass="mtop05">
+                                <h:outputText value="Número: "/>
+                                <h:commandLink target="_blank"
+                                               title="Clique para visualizar este registro em nova aba."
+                                               styleClass="azulnegrito"
+                                               actionListener="#{utilBeanContabil.redirecionarParaEmpenho(obrigacaoAPagarControlador.selecionado.empenho)}">
+                                    <h:outputText
+                                        value="#{obrigacaoAPagarControlador.selecionado.empenho.numero}"
+                                        styleClass="azulnegrito"/>
+                                </h:commandLink>
+
+
+                                <h:outputText value="Data: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.dataEmpenho}"
+                                    styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputText value="Evento Contábil: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.eventoContabil}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Tipo de Empenho: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.tipoEmpenho.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Categoria Orçamentária: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.categoriaOrcamentaria.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Elemento de Despesa: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.despesaORC}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Tipo da Conta: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.tipoContaDespesa.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Subtipo da Conta: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.subTipoDespesa.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Código Reduzido: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.despesaORC.codigoReduzido}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Tipo Conta de Despesa: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.tipoContaDespesa.toString()}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Fonte de Recurso: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.fonteDespesaORC.provisaoPPAFonte.destinacaoDeRecursos}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Pessoa: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.fornecedor}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Classe: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.classeCredor}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Histórico: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.complementoHistorico}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Valor: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.valor}"
+                                    converter="moneyConverter"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Saldo Empenho: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.saldo}"
+                                    converter="moneyConverter"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Saldo Obrigação Antes Empenho: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.saldoObrigacaoPagarAntesEmp}"
+                                    converter="moneyConverter"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Saldo Obrigação Depois Empenho: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.saldoObrigacaoPagarDepoisEmp}"
+                                    converter="moneyConverter"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Saldo sem Obrigação a Pagar: "/>
+                                <h:outputText
+                                    value="#{obrigacaoAPagarControlador.selecionado.empenho.saldoDisponivelEmpenhoComObrigacao}"
+                                    converter="moneyConverter"
+                                    styleClass="negrito"/>
+                            </h:panelGrid>
+                        </p:panel>
+                    </p:outputPanel>
+
+                    <p:panel id="painelDoctos" styleClass="mtop10" header="Documento Comprobatório">
+                        <p:commandButton value="Novo"
+                                         icon="ui-icon-circle-plus"
+                                         actionListener="#{obrigacaoAPagarControlador.novoDocumentoFiscal()}"
+                                         rendered="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal eq null}"
+                                         update=":Formulario:viewGeral:painelDoctos"
+                                         process="@this"
+                                         id="btnNovoDocto"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mtop10 padrao"
+                                         disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                         title="Clique para cadastrar um novo Documento Fiscal"/>
+
+                        <h:panelGrid columns="2"
+                                     id="novoDocto"
+                                     rendered="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal ne null}"
+                                     styleClass="mtop10">
+
+                            <fc:outputLabelObrigatorio for="tipoDocumentoFiscal" value="Tipo de Documento: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="tipoDocumentoFiscal"
+                                            title="Informe um Tipo de Documento Fiscal"
+                                            var="int"
+                                            value="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.tipoDocumentoFiscal}"
+                                            completeMethod="#{obrigacaoAPagarControlador.completarTipoDocumentos}"
+                                            converter="#{tipoDocumentoFiscalControlador.converterGenerico}"
+                                            maxResults="50"
+                                            itemValue="#{int.id}"
+                                            itemLabel="#{int}"
+                                            dropdown="true"
+                                            panelStyle="max-height: 250px"
+                                            styleClass="mrig05"
+                                            size="70">
+                                <p:ajax update="chave"
+                                        process="@this"
+                                        event="itemSelect"/>
+                            </p:autoComplete>
+
+                            <h:panelGroup id="chave">
+                                <fc:outputLabelObrigatorio value="Chave de Acesso: "
+                                                           rendered="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal ne null and obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.tipoDocumentoFiscal.obrigarChaveDeAcesso}"/>
+                                <h:outputLabel value="Chave de Acesso: "
+                                               rendered="#{!obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.tipoDocumentoFiscal.obrigarChaveDeAcesso}"/>
+                            </h:panelGroup>
+                            <p:inputText disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                         maxlength="44"
+                                         size="45"
+                                         value="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.chaveDeAcesso}"
+                                         title="Informe o número da chave de acesso"/>
+
+                            <fc:outputLabelObrigatorio for="dataDocto" value="Data de Emissão: "/>
+                            <p:calendar
+                                value="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.dataDocto}"
+                                id="dataDocto"
+                                size="12"
+                                pattern="dd/MM/yyyy"
+                                navigator="true"
+                                locale="pt_BR"
+                                disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                title="Informe a Data do Documento Fiscal"
+                                onkeypress="mascara(this,mdata)"/>
+
+                            <fc:outputLabelObrigatorio value="Número: " for="numeroDocto"/>
+                            <p:inputText id="numeroDocto"
+                                         disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                         maxlength="40"
+                                         size="12"
+                                         value="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.numero}"
+                                         title="Informe o número do Documento Fiscal"/>
+
+                            <h:outputText value="Série: "/>
+                            <p:inputText id="serieDocto"
+                                         size="12"
+                                         maxlength="20"
+                                         disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                         value="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.serie}"
+                                         title="Informe a Série do Documento Fiscal"/>
+
+                            <h:outputText value="UF: "/>
+                            <h:selectOneMenu id="ufDocto"
+                                             disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                             title="Informe a UF do Documento Fiscal"
+                                             converter="#{uFControlador.converterGenerico}"
+                                             value="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.uf}">
+                                <f:selectItems value="#{obrigacaoAPagarControlador.listaUfs}"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio for="valorDocto" value="Valor: "/>
+                            <fc:inputMoeda id="valorDocto"
+                                           value="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal.documentoFiscal.valor}"
+                                           disable="#{obrigacaoAPagarControlador.isRegistroEditavel()}"/>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Adicionar"
+                                         icon="ui-icon-circle-plus"
+                                         actionListener="#{obrigacaoAPagarControlador.adicionarDocumentoFiscal()}"
+                                         update=":Formulario:viewGeral:painelDoctos :Formulario:viewGeral:gridHistorico"
+                                         process="@this :Formulario:viewGeral:painelDoctos"
+                                         styleClass="padrao mtop10"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         rendered="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal ne null}"
+                                         title="Clique para adicionar o Documento Fiscal Selecionado"/>
+
+                        <p:commandButton value="Cancelar"
+                                         icon="ui-icon-cancel"
+                                         actionListener="#{obrigacaoAPagarControlador.cancelarDocumentoFiscal()}"
+                                         rendered="#{obrigacaoAPagarControlador.obrigacaoDocumentoFiscal ne null}"
+                                         update=":Formulario:viewGeral:painelDoctos"
+                                         process="@this"
+                                         id="btnCancelarDocto"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mlef05 mtop10 padrao"
+                                         title="Clique para cancelar esta operação."/>
+
+                        <p:dataTable id="tabelaDoctos"
+                                     value="#{obrigacaoAPagarControlador.selecionado.documentosFiscais}"
+                                     var="docto"
+                                     styleClass="mtop02"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DOCUMENTOS COMPROBATÓRIOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+                            <p:column headerText="Ações" style="text-align: center; width: 7%">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 styleClass="mrig05"
+                                                 disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                                 actionListener="#{obrigacaoAPagarControlador.editarDocumentoFiscal(docto)}"
+                                                 title="Clique para alterar este registro."
+                                                 id="btEditarDocto"
+                                                 process="@this :Formulario:viewGeral:painelDoctos"
+                                                 update=":Formulario:viewGeral:painelDoctos"/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                                 actionListener="#{obrigacaoAPagarControlador.removerDocumentoFiscal(docto)}"
+                                                 title="Clique para remover este registro."
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 id="btRemoveDocto"
+                                                 process=":Formulario:viewGeral:gridHistorico @this"
+                                                 update=":Formulario:viewGeral:tabelaDoctos :Formulario:viewGeral:gridHistorico"/>
+                            </p:column>
+                            <p:column headerText="Tipo de Documento" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{docto.documentoFiscal.tipoDocumentoFiscal}"/>
+                            </p:column>
+                            <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{docto.documentoFiscal.dataDocto}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{docto.documentoFiscal.numero}"/>
+                            </p:column>
+                            <p:column headerText="Série" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{docto.documentoFiscal.serie}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{docto.valor}"
+                                              converter="moneyConverter"/>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText id="totalDocto"
+                                                      value="#{obrigacaoAPagarControlador.selecionado.valorTotalDocumentos}"
+                                                      converter="moneyConverter"/>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column headerText="Saldo (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{docto.saldo}"
+                                              converter="moneyConverter"/>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{obrigacaoAPagarControlador.selecionado.saldoTotalDocumentos}"
+                                            converter="moneyConverter"/>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:panel>
+
+                    <p:panel id="painelDesdob"
+                             header="Detalhamento"
+                             styleClass="mtop10">
+
+                        <p:commandButton value="Novo"
+                                         icon="ui-icon-circle-plus"
+                                         actionListener="#{obrigacaoAPagarControlador.novoDesdobramento()}"
+                                         rendered="#{obrigacaoAPagarControlador.desdobramento eq null}"
+                                         update=":Formulario:viewGeral:painelDesdob"
+                                         process="@this"
+                                         id="btnNovoDesdobramento"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mtop10 padrao"
+                                         disabled="#{obrigacaoAPagarControlador.getBloquearNovoDesdobramento()}"
+                                         title="Clique para adicionar um novo desdobramento."/>
+
+                        <h:panelGrid columns="2" id="panelGridDesdobramento"
+                                     rendered="#{obrigacaoAPagarControlador.desdobramento ne null}">
+                            <fc:outputLabelObrigatorio for="contaDesdobramento" value="Conta de Despesa: "/>
+                            <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                <p:autoComplete queryDelay="1000"
+                                                id="contaDesdobramento"
+                                                size="70"
+                                                title="Selecione a conta de despesa desdobrada filtrando pelo tipo da conta de despesa selecionada no empenho."
+                                                completeMethod="#{obrigacaoAPagarControlador.completarDesdobramento}"
+                                                converter="#{planoDeContasWizardControlador.converterConta}"
+                                                value="#{obrigacaoAPagarControlador.desdobramento.conta}"
+                                                disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                                var="cd"
+                                                styleClass="mrig03"
+                                                maxlength="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px"
+                                                itemValue="#{cd.id}"
+                                                itemLabel="#{cd}"/>
+
+                                <p:commandButton styleClass="mlef03"
+                                                 update="@this"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 onclick="dialogDetalhamento.show()"
+                                                 icon="ui-icon-search"
+                                                 title="Clique para selecionar um detalhamento"
+                                                 disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"/>
+                            </h:panelGrid>
+
+                            <fc:outputLabelObrigatorio value="Valor: "/>
+                            <p:outputPanel id="valorConta">
+                                <fc:inputMoeda value="#{obrigacaoAPagarControlador.desdobramento.valor}"
+                                               disable="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                               title="Informe o Valor da Conta de Despesa"/>
+                            </p:outputPanel>
+                        </h:panelGrid>
+
+                        <p:commandButton id="btnAddConta"
+                                         icon="ui-icon-check"
+                                         disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mtop10 padrao"
+                                         rendered="#{obrigacaoAPagarControlador.desdobramento ne null}"
+                                         actionListener="#{obrigacaoAPagarControlador.adicionarDesdobramento()}"
+                                         title="Clique para adicionar este registro."
+                                         update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:gridHistorico :Formulario:viewGeral:panelGeral"
+                                         process=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:panelGeral @this"
+                                         value="Adicionar"/>
+
+                        <p:commandButton value="Cancelar"
+                                         icon="ui-icon-cancel"
+                                         actionListener="#{obrigacaoAPagarControlador.cancelarDesdobramento()}"
+                                         rendered="#{obrigacaoAPagarControlador.desdobramento ne null}"
+                                         update=":Formulario:viewGeral:painelDesdob"
+                                         process="@this"
+                                         id="btnCancelarDesdobramento"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mlef05 mtop10 padrao"
+                                         title="Clique para cancelar esta operação."/>
+
+
+                        <p:dataTable id="tabelaDesdobramento"
+                                     value="#{obrigacaoAPagarControlador.selecionado.desdobramentos}"
+                                     var="des"
+                                     styleClass="mtop02"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DETALHAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+                            <p:column headerText="Ação" style="width: 8%;text-align: center">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 styleClass="mrig05"
+                                                 disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                                                 actionListener="#{obrigacaoAPagarControlador.editarDesdobramento(des)}"
+                                                 title="Clique para alterar este registro."
+                                                 id="btEditarContaDesdobrada"
+                                                 process="@this :Formulario:viewGeral:painelDesdob"
+                                                 update=":Formulario:viewGeral:painelDesdob"/>
+
+                                <p:commandButton id="btnExcluirConta"
+                                                 update=":Formulario:viewGeral:tabelaDesdobramento :Formulario:viewGeral:panelGeral :Formulario:viewGeral:painelDesdob"
+                                                 process="@this"
+                                                 actionListener="#{obrigacaoAPagarControlador.removerDesdobramento(des)}"
+                                                 title="Clique para remover este registro."
+                                                 icon="ui-icon-trash"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"/>
+                            </p:column>
+                            <p:column headerText="Conta de Despesa" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{des.conta}"/>
+                            </p:column>
+                            <p:column headerText="Evento Contábil" styleClass="alinhamentoEsquerda">
+                                <co:visualizarEventoContabil evento="#{des.eventoContabil}"
+                                                             parametroEvento="#{obrigacaoAPagarControlador.getParametroEvento(des)}"/>
+                            </p:column>
+                            <p:column headerText="Valor" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{des.valor}">
+                                    <f:convertNumber type="currency"/>
+                                </h:outputText>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText id="totalDesd"
+                                                      value="#{obrigacaoAPagarControlador.selecionado.valorTotalDesdobramentos}"
+                                                      converter="moneyConverter"/>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column headerText="Saldo" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{des.saldo}">
+                                    <f:convertNumber type="currency"/>
+                                </h:outputText>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText id="saldoTotalDesd"
+                                                      value="#{obrigacaoAPagarControlador.selecionado.saldoTotalDesdobramentos}"
+                                                      converter="moneyConverter"/>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:panel>
+
+                    <p:outputPanel id="gridHistorico">
+                        <co:historico-contabil historico="#{obrigacaoAPagarControlador.selecionado.historico}"
+                                               controlador="#{obrigacaoAPagarControlador}"
+                                               disabled="#{obrigacaoAPagarControlador.isRegistroEditavel()}"
+                        />
+
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio for="valor" value="Valor: "/>
+                            <h:outputText id="valor"
+                                          style="margin-left: 50px"
+                                          onkeydown="mascaraMonetaria(this);"
+                                          converter="moneyConverter"
+                                          value="#{obrigacaoAPagarControlador.selecionado.valor}"
+                                          styleClass="negrito">
+                            </h:outputText>
+                        </h:panelGrid>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab title="Execução Orçamentária">
+                    <co:execucao-orcamentaria
+                        abas="#{obrigacaoAPagarControlador.abasExecucaoOrcamentaria}"
+                        empenhos="#{obrigacaoAPagarControlador.empenhos}"
+                        estornosEmpenho="#{obrigacaoAPagarControlador.estornosEmpenho}"
+                        liquidacoes="#{obrigacaoAPagarControlador.liquidacoes}"
+                        estornosLiquidacao="#{obrigacaoAPagarControlador.estornosLiquidacao}"
+                        pagamentos="#{obrigacaoAPagarControlador.pagamentos}"
+                        estornosPagamento="#{obrigacaoAPagarControlador.estornosPagamento}"
+                    />
+                </p:tab>
+            </p:tabView>
+
+            <fc:rodapePretty controlador="#{obrigacaoAPagarControlador}"/>
+
+            <fc:botaoTargetBlank label="Imprimir Nota"
+                                 actionListener="#{obrigacaoAPagarControlador.gerarNotaOrcamentaria(false)}"
+                                 rendered="#{obrigacaoAPagarControlador.isOperacaoEditar()}"
+                                 imprimeNoDialog="true" update="@this"
+                                 styleClass="mtop10 mrig05"
+                                 style="height: 30px"
+                                 icon="ui-icon-print"
+                                 title="Clique para imprimir a nota de obrigação a pagar."/>
+
+            <p:commandButton value="Download Nota"
+                             rendered="#{obrigacaoAPagarControlador.isOperacaoEditar()}"
+                             title="Clique para fazer o download da nota de obrigação a pagar."
+                             ajax="false"
+                             icon="ui-icon-arrowthick-1-s"
+                             styleClass="mtop10 mrig05">
+                <p:fileDownload value="#{obrigacaoAPagarControlador.gerarNotaOrcamentaria(true)}"/>
+            </p:commandButton>
+        </h:form>
+
+
+        <p:dialog widgetVar="dialogEmpenho"
+                  modal="true"
+                  closable="true"
+                  resizable="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  width="1000"
+                  height="500">
+            <h:form id="formDlg">
+                <p:panel id="panelDlgEmpenho" styleClass="mtop05">
+                    <fc:pesquisaGenerico id="lista"
+                                         caminhoAtual="edita"
+                                         caminhoControlador="#{obrigacaoAPagarControlador.caminho}"
+                                         nomeDaClasse="Empenho"
+                                         dialog="true"
+                                         pretty="true"
+                                         iconmSelecionar="check-icon.png"
+                                         novo="#{obrigacaoAPagarControlador.novo()}"
+                                         selecionar="#{obrigacaoAPagarControlador.selecionarEmpenho}"
+                                         mostrarHistorico="false"
+                                         mostrarBotaoNovo="false"
+                                         pesquisaNoEnter="false"
+                                         guardarNaSessao="false"
+                                         mostrarBotaoConsultasPersonalizadas="false"
+                                         mostrarBotaoEditarConfiguracaoRelatorio="false"
+                                         mostrarBotaoImprimirRelatorioTabela="false"
+                                         mostrarBotaoImprimirRelatorioUnicoRegistro="false"
+                                         meuControlador="#{obrigacaoAPagarEmpenhoPesquisaControlador}"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dlgPesquisarPessoa"
+                  modal="true"
+                  width="800"
+                  height="500"
+                  closable="true"
+                  resizable="false"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="FormularioPesquisarPessoa">
+                <fc:pesquisaGenerico
+                    selecionar="#{obrigacaoAPagarControlador.selecionarPessoa}"
+                    id="componentePesquisaGenerico"
+                    nomeDaClasse="Pessoa"
+                    guardarNaSessao="false"
+                    novo="#{pessoaTributarioControlador.novaPessoaFisica()}"
+                    caminhoAtual="listatributario"
+                    caminhoControlador="#{pessoaTributarioControlador.caminhoPadrao}"
+                    mostrarBotaoNovo="false"
+                    mostrarBotaoImprimirRelatorioTabela="false"
+                    mostrarHistorico="false"
+                    utilizarTabelaPessoa="true"
+                    mostrarOrdenacao="false"
+                    iconmSelecionar="check-icon.png"
+                    mostrarBotaoImprimirRelatorioUnicoRegistro="false"
+                    pretty="true"
+                    dialog="true"
+                    mostrarBotaoEditarConfiguracaoRelatorio="false"
+                    meuControlador="#{pessoaPesquisaGenerico}"
+                    pesquisaNoEnter="false"/>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog widgetVar="dialogDetalhamento"
+                  modal="true"
+                  resizable="false"
+                  onShow="redimensionarLadosDialog(this.id);redimensionarAlturaDialog(this.id)"
+                  width="1000"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;overflow-y: auto">
+            <h:form id="FormularioDetalhamento">
+                <h:panelGrid columns="3" styleClass="mtop10">
+                    <h:outputText value="Detalhamento: "/>
+                    <p:inputText value="#{obrigacaoAPagarControlador.filtroDetalhamento}"
+                                 id="inputDetalhamento"
+                                 title="Informe o código ou descrição do detalhamento para pesquisar."
+                                 size="70">
+                        <p:watermark value="Pesquisa por código ou descrição da conta de despesa."
+                                     for="inputDetalhamento"/>
+                    </p:inputText>
+
+                    <p:commandButton value="Pesquisar"
+                                     id="btnPesquisa"
+                                     title="Clique para Pesquisar os Detalhamento."
+                                     icon="ui-icon-search"
+                                     actionListener="#{obrigacaoAPagarControlador.recuperarDesdobramento()}"
+                                     styleClass="mlef10 prioritario padrao"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                                     update=":FormularioDetalhamento"
+                                     process="@this :FormularioDetalhamento"/>
+                </h:panelGrid>
+
+                <p:dataTable value="#{obrigacaoAPagarControlador.desdobramentos}"
+                             var="detalhamento"
+                             styleClass="mtop02"
+                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginator="true"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DETALHAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+                    <p:column headerText="Ação" style="text-align: center; width: 5%">
+                        <p:commandButton icon="ui-icon-check"
+                                         styleClass="botao-transparente"
+                                         title="Clique para selecionar etse detalhamento."
+                                         update=":Formulario:viewGeral:painelDesdob :FormularioDetalhamento"
+                                         process=":FormularioDetalhamento"
+                                         onstart="aguarde.show()"
+                                         oncomplete="dialogDetalhamento.hide();aguarde.hide();"
+                                         disabled="#{detalhamento.id eq obrigacaoAPagarControlador.desdobramento.conta.id}"
+                                         actionListener="#{obrigacaoAPagarControlador.definirContaDesdobrada(detalhamento)}"/>
+                    </p:column>
+                    <p:column headerText="Código"
+                              styleClass="alinhamentoDireita"
+                              filterBy="#{detalhamento.codigo}"
+                              filterMatchMode="contains"
+                              style="width: 15%">
+                        <h:outputText value="#{detalhamento.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Descrição"
+                              filterBy="#{detalhamento.descricao}"
+                              filterMatchMode="contains"
+                              styleClass="alinhamentoEsquerda"
+                              style="width: 70%">
+                        <h:outputText value="#{detalhamento.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Conta de Despesa"
+                              styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{detalhamento.tipoContaDespesa.codigo} - #{detalhamento.tipoContaDespesa.descricao}"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

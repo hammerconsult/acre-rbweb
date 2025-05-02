@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:rh="http://java.sun.com/jsf/composite/components/rh"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <style type="text/css">
+            .inputGrande .ui-inputfield {
+                font-weight: normal;
+                width: 600px;
+            }
+        </style>
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty id="cpCabecalhoPretty"
+                                origem="#{calculoFolhaDePagamentoControlador.caminhoPadrao}/listar/"
+                                controlador="#{calculoFolhaDePagamentoControlador}"/>
+
+            <p:panel header="Requisitos para o Cálculo da Folha de Pagamento">
+                <h:panelGrid columns="2">
+
+                    <fc:outputLabelObrigatorio for="competencia" value="Competência:"/>
+                    <h:selectOneMenu value="#{calculoFolhaDePagamentoControlador.competenciaFP}"
+                                     style="width: 99%;"
+                                     id="competencia"
+                                     converter="#{calculoFolhaDePagamentoControlador.converterCompetenciaFP}">
+                        <f:selectItems value="#{calculoFolhaDePagamentoControlador.competenciasFP}"/>
+                        <p:ajax event="valueChange"
+                                onstart="aguarde.show()"
+                                update="folhaPagamento calculadaEm tipoFolhaDePagamento qtdeRetroativo gerar-folha Formulario texto-calculo-tempo combo-calculo-tempo info-data-calendario"
+                                oncomplete="aguarde.hide()"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio for="folhaPagamento" value="Folha:"/>
+                    <h:selectOneMenu id="folhaPagamento"
+                                     style="width: 99%;"
+                                     value="#{calculoFolhaDePagamentoControlador.folhaDePagamento}"
+                                     converter="#{creditoSalarioControlador.converterFolhaDePagamento}">
+                        <f:selectItems value="#{calculoFolhaDePagamentoControlador.folhasDePagamento}"/>
+                        <p:ajax process="@this"
+                                update="calculadaEm tipoFolhaDePagamento qtdeRetroativo gerar-folha Formulario texto-calculo-tempo combo-calculo-tempo"
+                                oncomplete="aguarde.hide()"
+                                listener="#{calculoFolhaDePagamentoControlador.definirPropriedades()}"
+                                onstart="aguarde.show()"
+                        />
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio for="calculadaEm" value="Calculada Em:"/>
+                    <p:calendar onkeypress="mascara(this, Data)" maxlength="10"
+                                disabled="true"
+                                value="#{calculoFolhaDePagamentoControlador.folhaDePagamento.calculadaEm}"
+                                id="calculadaEm" pattern="dd/MM/yyyy" locale="pt_BR"/>
+
+                    <fc:outputLabelObrigatorio for="tipoFolhaDePagamento" value="Tipo de Folha de Pagamento:"/>
+                    <h:selectOneMenu title="Selecione o Tipo de Folha de Pagamento"
+                                     disabled="true"
+                                     value="#{calculoFolhaDePagamentoControlador.folhaDePagamento.tipoFolhaDePagamento}"
+                                     id="tipoFolhaDePagamento">
+                        <f:selectItems value="#{calculoFolhaDePagamentoControlador.tipoFolhaDePagamento}"/>
+                        <p:ajax process="@this"
+                                update="Formulario:qtdeRetroativo"
+                                onstart="aguarde.show();" oncomplete="aguarde.hide();"
+                                event="change">
+                        </p:ajax>
+                    </h:selectOneMenu>
+
+                    <h:outputLabel value="Quem deseja calcular:"/>
+                    <p:selectOneRadio id="options" value="#{calculoFolhaDePagamentoControlador.filtro.tipoCalculo}">
+                        <f:selectItem itemLabel="Individual" itemValue="INDIVIDUAL"/>
+                        <f:selectItem itemLabel="Órgão" itemValue="ORGAO"/>
+                        <f:selectItem itemLabel="Calcular Lote" itemValue="LOTE"/>
+                        <f:selectItem itemLabel="Calcular Entidade" itemValue="ENTIDADE"/>
+                        <f:selectItem itemLabel="Calcular Todos" itemValue="TODOS"/>
+                        <p:ajax onstart="aguarde.show();"
+                                oncomplete="aguarde.hide();"
+                                update="@form"/>
+                    </p:selectOneRadio>
+                    <h:outputLabel
+                        value=""
+                        rendered="#{calculoFolhaDePagamentoControlador.deveRenderizarArvoreHierarquiaOrganizacional()}"/>
+                    <fc:arvoreHierarquiaAdministrativa
+                        hoSelecionadas="#{calculoFolhaDePagamentoControlador.hieraquiasOrganizacionaisSelecionadas}"
+                        rendered="#{calculoFolhaDePagamentoControlador.deveRenderizarArvoreHierarquiaOrganizacional()}"/>
+                    <h:outputLabel value="Órgão:"/>
+                    <p:autoComplete queryDelay="1000" id="orgao"
+                                    disabled="#{calculoFolhaDePagamentoControlador.filtro.tipoCalculo ne 'ORGAO'}"
+                                    value="#{calculoFolhaDePagamentoControlador.filtro.hierarquiaOrganizacional}"
+                                    converter="#{calculoFolhaDePagamentoControlador.converterHierarquiaOrganizacional}"
+                                    completeMethod="#{calculoFolhaDePagamentoControlador.completaHierarquia}"
+                                    forceSelection="true"
+                                    size="70"
+                                    var="h"
+                                    maxResults="10"
+                                    itemLabel="#{h}"
+                                    itemValue="#{h.id}">
+                        <p:ajax event="itemSelect" update="servidor"
+                                listener="#{calculoFolhaDePagamentoControlador.liberaServidor()}"/>
+                        <p:ajax event="blur" update="servidor"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Entidade:"
+                                               rendered="#{calculoFolhaDePagamentoControlador.filtro.tipoCalculo eq 'ENTIDADE'}"/>
+                    <p:autoComplete queryDelay="1000" id="entidade"
+                                    rendered="#{calculoFolhaDePagamentoControlador.filtro.tipoCalculo eq 'ENTIDADE'}"
+                                    value="#{calculoFolhaDePagamentoControlador.filtro.itemEntidadeDPContas}"
+                                    converter="#{calculoFolhaDePagamentoControlador.converterItemEntidadeDPContas}"
+                                    completeMethod="#{calculoFolhaDePagamentoControlador.completarItemEntidadeDPContas}"
+                                    forceSelection="true"
+                                    size="70"
+                                    var="h"
+                                    maxResults="10"
+                                    itemLabel="#{h.entidade}"
+                                    itemValue="#{h.id}">
+                        <p:ajax event="itemSelect" update="servidor"
+                                listener="#{calculoFolhaDePagamentoControlador.liberaServidor()}"/>
+                        <p:ajax event="blur" update="servidor"/>
+                    </p:autoComplete>
+
+
+                    <h:outputText title="Engloba também os ativos e inativos do sistema" value="Servidor(a):"/>
+                    <rh:auto-complete-vinculofp id="servidor"
+                                                typeMatriculaNumero="hidden"
+                                                disabled="#{calculoFolhaDePagamentoControlador.filtro.tipoCalculo ne 'INDIVIDUAL'}"
+                                                value="#{calculoFolhaDePagamentoControlador.filtro.vinculoFP}"
+                                                completeMethod="#{calculoFolhaDePagamentoControlador.completarContratoFP}"
+                                                classe="VinculoFP"
+                                                update="@this"
+                                                process="@this"
+                                                actionListener="#{calculoFolhaDePagamentoControlador.liberarUnidade()}"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();">
+                    </rh:auto-complete-vinculofp>
+
+                    <h:outputLabel value="Lote:"/>
+                    <h:selectOneMenu id="lote" disabled="#{calculoFolhaDePagamentoControlador.filtro.tipoCalculo ne 'LOTE'}"
+                                     value="#{calculoFolhaDePagamentoControlador.filtro.loteProcessamento}"
+                                     converter="#{calculoFolhaDePagamentoControlador.converterLoteProcessamento}">
+                        <f:selectItems value="#{calculoFolhaDePagamentoControlador.loteProcessamentos}"/>
+                        <p:ajax update="orgao servidor qtdeRetroativo"
+                                listener="#{calculoFolhaDePagamentoControlador.liberaLote}"/>
+                    </h:selectOneMenu>
+
+                    <h:outputLabel value="Quantidade de Meses de Retroação:"/>
+                    <p:inputText size="5" id="qtdeRetroativo"
+                                 disabled="#{calculoFolhaDePagamentoControlador.desabilitarConfiguracaoRetrocao() || calculoFolhaDePagamentoControlador.folhaDePagamento eq null}"
+                                 value="#{calculoFolhaDePagamentoControlador.folhaDePagamento.qtdeMesesRetroacao}">
+                        <p:ajax process="@this"/>
+                    </p:inputText>
+
+                    <h:outputLabel value="Verbas Bloqueadas:"/>
+                    <p:autoComplete converter="#{eventoFPControlador.converterGenerico}"
+                                    value="#{calculoFolhaDePagamentoControlador.filtro.eventosFPsBloqueados}"
+                                    var="valor"
+                                    styleClass="inputGrande"
+                                    itemValue="#{valor.id}"
+                                    itemLabel="#{valor}"
+                                    maxResults="10"
+                                    completeMethod="#{lancamentoFPControlador.completaEventoFP}"
+                                    multiple="true">
+                        <p:ajax process="@this"/>
+                    </p:autoComplete>
+
+                    <h:outputText rendered="#{calculoFolhaDePagamentoControlador.podeMostrarBotaoCalcularTodosLotes}"
+                                  value="Imprimir Log no Resumo:"/>
+                    <p:selectBooleanCheckbox
+                        rendered="#{calculoFolhaDePagamentoControlador.podeMostrarBotaoCalcularTodosLotes}"
+                        value="#{calculoFolhaDePagamentoControlador.imprimeLogEmArquivo}">
+                        <p:ajax process="@this"/>
+                    </p:selectBooleanCheckbox>
+
+                    <h:outputText value="Gravar Memória de Cálculo:"/>
+                    <p:selectBooleanCheckbox
+                        value="#{calculoFolhaDePagamentoControlador.gravarMemoriaCalculo}">
+                        <p:ajax process="@this"/>
+                    </p:selectBooleanCheckbox>
+
+                    <h:outputText
+                        id="texto-calculo-tempo"
+                        rendered="#{calculoFolhaDePagamentoControlador.folhaDePagamento ne null and calculoFolhaDePagamentoControlador.folhaDePagamento.tipoFolhaDePagamento ne 'NORMAL'}"
+                        value="Processar com calculo temporário:"/>
+
+                    <p:selectBooleanCheckbox
+                        id="combo-calculo-tempo"
+                        rendered="#{calculoFolhaDePagamentoControlador.folhaDePagamento ne null and calculoFolhaDePagamentoControlador.folhaDePagamento.tipoFolhaDePagamento ne 'NORMAL'}"
+                        value="#{calculoFolhaDePagamentoControlador.processarCalculoTransient}">
+                        <p:ajax process="@this"/>
+                    </p:selectBooleanCheckbox>
+
+                    <h:outputText value="Gravar Memória de Cálculo:"/>
+                    <p:selectBooleanCheckbox
+                        value="#{calculoFolhaDePagamentoControlador.gravarMemoriaCalculo}">
+                        <p:ajax process="@this"/>
+                    </p:selectBooleanCheckbox>
+
+                </h:panelGrid>
+
+                <p:outputPanel id="info-data-calendario">
+                    <p:panel rendered="${calculoFolhaDePagamentoControlador.itemCalendarioFP ne null}"
+                             style="background-color: #afe9af">
+                        <div style="text-align: center;">
+                            <h:outputText value="Data limite para processamento registrada no Calendário FP: "
+                                          style="color: #008000"/>
+                            <h:outputText
+                                value="${calculoFolhaDePagamentoControlador.itemCalendarioFP.dataUltimoDiaProcessamento}"
+                                style="color: #008000">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                            <h:outputText value=". Algumas funções podem ser limitadas a essa data."
+                                          style="color: #008000"/>
+                        </div>
+                    </p:panel>
+                </p:outputPanel>
+
+            </p:panel>
+            <p:commandButton value="#{calculoFolhaDePagamentoControlador.liberaCalculo? 'Calcular' : 'Calculando ...'}"
+                             id="gerar-folha"
+                             disabled="#{calculoFolhaDePagamentoControlador.folhaDePagamento eq null}"
+                             actionListener="#{calculoFolhaDePagamentoControlador.calcularFolha()}"
+                             onclick="if (!confirm('O Calculo da Folha de Pagamento pode ser um processo demorado, você será redirecionado para a tela de acompanhamento do cálculo, tem certeza que deseja continuar?'))
+                                            return false;"
+                             ajax="true" icon="ui-icon-calculator"
+                             onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             styleClass="mtop10 mrig05 prioritario"
+                             update="@form"
+                             style="height: 30px;"/>
+
+            <p:commandButton value="Calcular Todos os Lotes do Mes"
+                             rendered="#{calculoFolhaDePagamentoControlador.podeMostrarBotaoCalcularTodosLotes}"
+                             actionListener="#{calculoFolhaDePagamentoControlador.calcularTodosLotesDoMes}"
+                             onclick="if (!confirm('Ao iniciar o este processo o sistema irá calcular todos os lotes para o mes selecionado, sendo assim, será um processo demorado, tem certeza que deseja continuar?'))
+                                            return false;"
+                             ajax="true" icon="ui-icon-calculator"
+                             onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             styleClass="mtop10 mrig05 prioritario"
+                             update="@form"
+                             style="height: 30px"/>
+
+            <p:commandButton actionListener="#{calculoFolhaDePagamentoControlador.efetivarFolha}"
+                             styleClass="mtop10 mrig05"
+                             icon="ui-icon-pencil"
+                             style="height: 30px"
+                             value="Efetivar Folha"
+                             disabled="#{calculoFolhaDePagamentoControlador.selecionado.id eq null}"
+                             update="Formulario"/>
+
+            <p:commandButton action="#{calculoFolhaDePagamentoControlador.cancelar}"
+                             styleClass="mtop10 mrig05"
+                             icon="ui-icon-cancel"
+                             style="height: 30px;"
+                             value="Cancelar"
+                             immediate="true"/>
+
+        </h:form>
+        <h:form rendered="false">
+            <fc:ajaxLoader16x16/>
+            <p:poll interval="1" update="scroll"/>
+
+        </h:form>
+        <h:form id="formTabela">
+            <p:dataTable rendered="#{!calculoFolhaDePagamentoControlador.contratosSemEnquadramento.isEmpty()}"
+                         id="tabela"
+                         var="objeto" value="#{calculoFolhaDePagamentoControlador.contratosSemEnquadramento}"
+                         widgetVar="tabela"
+                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'even-row' : 'odd-row'}"
+                         rowIndexVar="rowIx"
+                         style="text-align: center;"
+            >
+                <p:column
+                    headerText="Matricula/Contrato"
+                    filterMatchMode="contains">
+                    <h:outputText value="#{objeto.matriculaFP.matricula} - #{objeto.numero}"/>
+                </p:column>
+                <p:column
+                    headerText="Servidor"
+                    filterMatchMode="contains">
+                    <h:outputText value="#{objeto.matriculaFP.pessoa}"/>
+                </p:column>
+                <p:column
+                    headerText="Modalidade"
+                    filterMatchMode="contains">
+                    <h:outputText value="#{objeto.modalidadeContratoFP}"/>
+                </p:column>
+                <p:column
+                    headerText="Cargo"
+                    filterMatchMode="contains">
+                    <h:outputText value="#{objeto.cargo}"/>
+                </p:column>
+                <p:column
+                    headerText="Tipo de Regime Jurídico"
+                    filterMatchMode="contains">
+                    <h:outputText value="#{objeto.tipoRegime}"/>
+                </p:column>
+                <p:column
+                    headerText="Início de Vigência"
+                    filterMatchMode="contains">
+                    <h:outputText value="#{objeto.inicioVigenciaFormatado}"/>
+                </p:column>
+            </p:dataTable>
+        </h:form>
+
+    </ui:define>
+</ui:composition>
+</html>

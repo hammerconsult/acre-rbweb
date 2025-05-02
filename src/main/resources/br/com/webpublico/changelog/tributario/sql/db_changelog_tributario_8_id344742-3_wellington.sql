@@ -1,0 +1,1 @@
+create sequence seq_descarte_numero_unico

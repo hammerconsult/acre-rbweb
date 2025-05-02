@@ -1,0 +1,542 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{certameControlador}"
+                                origem="#{certameControlador.caminhoPadrao}novo/"/>
+
+            <p:panel header="Mapa Comparativo - Preço">
+                <p:tabView id="tabGeral">
+                    <p:ajax event="tabChange"
+                            process="@this"
+                            listener="#{certameControlador.onTabChange}"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"/>
+                    <p:tab title="Dados Gerais" id="tab-dados-gerais">
+                        <p:outputPanel id="panel-certame">
+                            <h:panelGrid columns="2">
+
+                                <fc:outputLabelObrigatorio value="Data: "/>
+                                <p:calendar id="data"
+                                            title="A data será atribuída automaticamente pelo sistema, sendo a mesma data de abertura da licitação informada."
+                                            onkeypress="mascara(this, Data)"
+                                            maxlength="10"
+                                            style="text-align: right"
+                                            autocomplete="off"
+                                            value="#{certameControlador.selecionado.dataRealizado}"
+                                            locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                            size="10"
+                                            styleClass="mrig05"
+                                            disabled="true"/>
+
+                                <fc:outputLabelObrigatorio value="Licitação: "/>
+                                <h:panelGrid columns="3"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:autoComplete id="licitacao"
+                                                    title="Digite a licitação que deseja pesquisar."
+                                                    value="#{certameControlador.selecionado.licitacao}"
+                                                    completeMethod="#{certameControlador.buscarLicitacoes}"
+                                                    converter="#{licitacaoControlador.converterGenerico}"
+                                                    disabled="#{certameControlador.isEditar()}"
+                                                    var="lic"
+                                                    forceSelection="true"
+                                                    itemValue="#{lic.id}"
+                                                    itemLabel="#{lic}"
+                                                    maxResults="50"
+                                                    dropdown="true"
+                                                    panelStyle="max-height: 250px; max-width: 800px"
+                                                    size="70"
+                                                    styleClass="mrig05">
+                                        <p:ajax event="itemSelect"
+                                                listener="#{certameControlador.carregarItensDoCertame()}"
+                                                process="@this"
+                                                update=":Formulario:tabGeral:panel-certame"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"/>
+                                    </p:autoComplete>
+
+                                    <p:commandButton process="@none"
+                                                     update="@none"
+                                                     id="bt-informacao-licitacao"
+                                                     icon="ui-icon-info"/>
+
+                                    <p:overlayPanel for="bt-informacao-licitacao"
+                                                    style="border : solid black 1px;"
+                                                    showEvent="mouseover"
+                                                    hideEvent="mouseout">
+                                        <h:outputText value="Para consultar licitações específicas, digite o número da licitação/ano/descrição do processo de compra.
+                                &lt;br/>A consulta não irá mostar as licitações com:
+                                &lt;br/>Modalidade: Pregão;
+                                &lt;br/>Tipo de Avaliação: Técnica e Preço."
+                                                      escape="false"/>
+                                    </p:overlayPanel>
+                                </h:panelGrid>
+
+                            </h:panelGrid>
+
+                            <br/>
+                            <p:outputPanel id="panel-itens" rendered="#{certameControlador.isLicitacaoInformada()}">
+                                <div class="ui-message-warn"
+                                     style="text-align: center; font-size: 14px; padding: 4px; margin: 0px!important;">
+                                    <h:outputText
+                                        value="#{certameControlador.mensagemTipoApuracao}"/>
+                                </div>
+
+                                <p:dataTable paginator="true"
+                                             id="tabela-itens"
+                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                             rowIndexVar="rowIx"
+                                             styleClass="mtop02"
+                                             emptyMessage="Não foram localizados registros para serem apresentados"
+                                             value="#{certameControlador.selecionado.listaItemCertame}"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                             rowsPerPageTemplate="10,25,50,100"
+                                             var="item">
+                                    <p:column headerText="Itens"
+                                              style="width: 5%"
+                                              rendered="#{certameControlador.selecionado.isTipoApuracaoPrecoLote()}"
+                                              styleClass="centralizado">
+                                        <p:commandButton icon="ui-icon-search"
+                                                         title="Clique para visualizar os itens do lote."
+                                                         actionListener="#{certameControlador.recuperarItensPropostaFornecedor(item)}"
+                                                         styleClass="mlef05"
+                                                         process="@this"
+                                                         update=":form-itens-lote"
+                                                         onclick="aguarde.show();"
+                                                         oncomplete="aguarde.hide(); dialogItensLote.show();"/>
+                                    </p:column>
+                                    <p:column headerText="Nº Lote" styleClass="alinhamentoDireita"
+                                              style="width: 5%"
+                                              rendered="#{certameControlador.selecionado.tipoApuracaoPrecoLote}">
+                                        <h:outputText value="#{item.numeroLote}"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}"/>
+                                    </p:column>
+                                    <p:column headerText="Nº Lote" styleClass="alinhamentoDireita"
+                                              style="width: 5%"
+                                              rendered="#{!certameControlador.selecionado.tipoApuracaoPrecoLote}">
+                                        <h:outputText
+                                            value="#{item.itemCertameItemProcesso.itemProcessoDeCompra.loteProcessoDeCompra.numero}"
+                                            styleClass="#{certameControlador.getStyleCor(item)}"/>
+                                    </p:column>
+                                    <p:column headerText="Nº Item" styleClass="alinhamentoDireita"
+                                              style="width: 5%"
+                                              rendered="#{certameControlador.selecionado.isTipoApuracaoPrecoItem()}">
+                                        <h:outputText value="#{item.numeroItem}"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{item.descricaoItem}"
+                                                      style="width: 300px;"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}"/>
+                                    </p:column>
+                                    <p:column headerText="Marca" styleClass="alinhamentoEsquerda"
+                                              rendered="#{certameControlador.selecionado.isTipoApuracaoPrecoItem()}">
+                                        <h:outputText value="#{item.marcaItem}"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}"/>
+                                    </p:column>
+                                    <p:column headerText="Especif." styleClass="alinhamentoCentralizado"
+                                              style="width: 10%"
+                                              rendered="#{certameControlador.selecionado.isTipoApuracaoPrecoItem()}">
+                                        <fa:especificacao-objeto-compra
+                                            especificacao="#{item.itemCertameItemProcesso.itemProcessoDeCompra.descricaoComplementar}"/>
+                                    </p:column>
+                                    <p:column headerText="Quantidade" styleClass="alinhamentoDireita"
+                                              rendered="#{certameControlador.selecionado.isTipoApuracaoPrecoItem()
+                                                        and !certameControlador.selecionado.isMaiorDesconto()}">
+                                        <fc:output-mascara-unidade-medida
+                                            styleClass="#{certameControlador.getStyleCor(item)}"
+                                            tipoMascara="#{item.itemCertameItemProcesso.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraQuantidade}"
+                                            value="#{item.quantidadeItem}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Unitário (R$)" styleClass="alinhamentoDireita"
+                                              rendered="#{certameControlador.selecionado.isTipoApuracaoPrecoItem()
+                                              and !certameControlador.selecionado.isMaiorDesconto()}">
+                                        <fc:output-mascara-unidade-medida
+                                            styleClass="#{certameControlador.getStyleCor(item)}"
+                                            tipoMascara="#{item.itemCertameItemProcesso.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"
+                                            value="#{item.precoItem}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Total (R$)" styleClass="alinhamentoDireita"
+                                              rendered="#{!certameControlador.selecionado.isMaiorDesconto()}">
+                                        <h:outputText value="#{item.valorTotal}"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Percentual de Desconto (%)" styleClass="alinhamentoDireita"
+                                              rendered="#{certameControlador.selecionado.isMaiorDesconto()}">
+                                        <h:outputText value="#{item.percentualDesconto}"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}">
+                                            <f:convertNumber pattern="#,###0.000"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{item.fornecedor}"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}"/>
+                                    </p:column>
+                                    <p:column headerText="Situação" style="width: 15%"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{item.situacaoItemCertame.descricao}"
+                                                      styleClass="#{certameControlador.getStyleCor(item)}"
+                                                      rendered="#{!certameControlador.validarValorNoItem(item)}"/>
+
+                                        <h:selectOneMenu value="#{item.situacaoItemCertame}"
+                                                         rendered="#{certameControlador.validarValorNoItem(item)}"
+                                                         disabled="#{certameControlador.bloquearCampoSituacaoQuandoDesclassificado(item) or certameControlador.isBloquearEdicaoItem(item)}">
+                                            <f:selectItems value="#{certameControlador.situacaoItemCertame}"/>
+                                            <p:ajax event="valueChange"
+                                                    listener="#{certameControlador.processarSituacao(item)}"
+                                                    process="@form"
+                                                    update="tabela-itens :form-alteracao-situacao :form-visualizar-motivo"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"/>
+                                        </h:selectOneMenu>
+                                    </p:column>
+                                    <p:column headerText="Motivo"
+                                              style="width: 5%"
+                                              styleClass="alinhamentoCentralizado">
+                                        <p:commandButton icon="ui-icon-search"
+                                                         title="Clique para visualizar o motivo de alteração da situação do item."
+                                                         actionListener="#{certameControlador.setItemCertameSelecionado(item)}"
+                                                         disabled="#{!item.isSituacaoAlterada(item)}"
+                                                         process="@this"
+                                                         update=":form-visualizar-motivo"
+                                                         onclick="aguarde.show();"
+                                                         oncomplete="aguarde.hide(); dialogAlteracaoSituacaoVisualizar.show();"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Histórico do Processo"
+                           titleStyle="background: #d9edf7" id="tab-historico"
+                           rendered="#{certameControlador.operacaoEditar}">
+                        <fa:historico-processo-licitatorio
+                            filtroProcesso="#{certameControlador.filtroHistoricoProcesso}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{certameControlador}"/>
+
+            <fc:rodapeRelatorio actionListenerBotaoGerar="#{certameControlador.gerarRelatorio('PDF')}"
+                                controller="#{certameControlador}"
+                                rendered="#{certameControlador.isEditar()}"
+                                mostrarLimparCampos="false"
+                                mostrarBotoesExportar="true"/>
+        </h:form>
+
+        <p:dialog header="Alterar Situação do Item"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  width="800"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dialogAlteracaoSituacao"
+                  closable="false">
+            <h:form id="form-alteracao-situacao">
+
+                <h:panelGrid columns="2">
+                    <h:outputText value="Item Selecionado: "/>
+                    <h:outputText value="#{certameControlador.toStringItemSelecionado()}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Fornecedor: "/>
+                    <h:outputText value="#{certameControlador.itemCertameSelecionado.fornecedor}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Nova Situação: "/>
+                    <h:outputText value="#{certameControlador.itemCertameSelecionado.situacaoItemCertame.descricao}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Motivo: "/>
+                    <h:panelGrid columns="2"
+                                 cellpadding="0"
+                                 cellspacing="0">
+                        <p:inputTextarea id="motivo"
+                                         title="Digite o motivo da alteração da situação do item."
+                                         value="#{certameControlador.itemCertameSelecionado.motivo}"
+                                         cols="70"
+                                         maxlength="255"
+                                         autoResize="true"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter-motivo"/>
+                        <h:outputText id="counter-motivo"
+                                      style="color: #497692"
+                                      styleClass="mlef05"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <div style="text-align: center" class="mtop10 mbot05">
+
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     actionListener="#{certameControlador.confirmarMotivoAlteracaoSituacaoItem()}"
+                                     process="motivo @this"
+                                     update=":Formulario:tabGeral:tabela-itens"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="padrao"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Visualizar Motivo"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dialogAlteracaoSituacaoVisualizar"
+                  closable="false">
+            <h:form id="form-visualizar-motivo">
+
+                <h:panelGrid columns="2">
+                    <h:outputText value="Item Selecionado: "/>
+                    <h:outputText value="#{certameControlador.toStringItemSelecionado()}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Fornecedor: "/>
+                    <h:outputText value="#{certameControlador.itemCertameSelecionado.fornecedor}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Situação: "/>
+                    <h:outputText value="#{certameControlador.itemCertameSelecionado.situacaoItemCertame.descricao}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Motivo: "/>
+                    <h:panelGrid columns="2"
+                                 cellpadding="0"
+                                 cellspacing="0">
+                        <p:inputTextarea id="motivoVer"
+                                         title="Digite o motivo da alteração da situação do item."
+                                         value="#{certameControlador.itemCertameSelecionado.motivo}"
+                                         cols="70"
+                                         maxlength="255"
+                                         autoResize="true"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter-motivo-ver"
+                                         readonly="true"/>
+                        <h:outputText id="counter-motivo-ver"
+                                      style="color: #497692"
+                                      styleClass="mlef05"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <div style="text-align: center" class="mtop10 mbot05">
+                    <p:commandButton value="Ok"
+                                     icon="ui-icon-check"
+                                     process="@this"
+                                     style="width: 100px;"
+                                     update="@none"
+                                     actionListener="#{certameControlador.cancelarItemCertameSelecionado()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide(); dialogAlteracaoSituacaoVisualizar.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Itens do Lote"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  resizable="false"
+                  widgetVar="dialogItensLote"
+                  width="1200"
+                  height="450">
+            <h:form id="form-itens-lote">
+                <fa:tabelaItensDoLote itensDoLote="#{certameControlador.lotePropostaFornecedor.itens}"/>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important; "
+                  draggable="true"
+                  resizable="false"
+                  closable="false"
+                  width="1200"
+                  widgetVar="dlgDistribuirValor">
+            <h:form id="formDistribuirValor">
+                <legend class="legenda mbot03">Distribuir Valor do Lote aos Itens</legend>
+
+                <div class="modal-body">
+                    <h:panelGrid columns="4">
+                        <h:outputText value="Lote: "/>
+                        <h:outputText
+                            value="#{certameControlador.lotePropostaFornecedor}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Fornecedor Vencedor: " styleClass="mlef50"/>
+                        <h:outputText
+                            value="#{certameControlador.lotePropostaFornecedor.fornecedor}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Valor do Lote (R$): "/>
+                        <h:outputText
+                            value="#{certameControlador.lotePropostaFornecedor.loteProcessoDeCompra.valor}"
+                            styleClass="negrito">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <h:outputText value="Valor Negociado do Lote (R$): " styleClass="mlef50"/>
+                        <h:outputText
+                            value="#{certameControlador.lotePropostaFornecedor.valor}"
+                            styleClass="negrito">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <h:outputText value="Valor do Desconto (R$): "/>
+                        <h:outputText
+                            value="#{certameControlador.valorDescontoLote}"
+                            styleClass="negrito">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <h:outputText value="Percentual de Desconto (%): "
+                                      styleClass="mlef50"
+                                      rendered="#{certameControlador.selecionado.isMaiorDesconto()}"/>
+                        <h:outputText value="#{certameControlador.lotePropostaFornecedor.percentualDesconto}"
+                                      rendered="#{certameControlador.selecionado.isMaiorDesconto()}"
+                                      styleClass="negrito"
+                                      title="Percentual = (((Valor do Lote - Valor Negociado)) / Valor do Lote)*100">
+                            <f:convertNumber pattern="#,##0.000"/>
+                        </h:outputText>
+                    </h:panelGrid>
+
+                    <p:commandButton value="Aplicar Distribuição"
+                                     icon="ui-icon-check"
+                                     rendered="#{certameControlador.selecionado.isMaiorDesconto()}"
+                                     actionListener="#{certameControlador.aplicarValorAosItens()}"
+                                     process="@this"
+                                     title="Valor Unitário = Valor Unitário - ((Valor Unitário * Percentual Diferença do Lote) / 100)"
+                                     update=":formDistribuirValor:tableItensLote"
+                                     styleClass="prioritario mtop05 botao-transparente"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"/>
+
+                    <p:dataTable
+                        paginator="true"
+                        id="tableItensLote"
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        style="overflow: scroll; max-height: 300px; width: auto"
+                        rowIndexVar="rowIx"
+                        styleClass="mtop02"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{certameControlador.lotePropostaFornecedor.itens}"
+                        rows="10"
+                        paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                        currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                        rowsPerPageTemplate="10,25,50,100"
+                        var="itemProp">
+                        <p:column headerText="Nº Item" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{itemProp.numeroItem}"/>
+                        </p:column>
+                        <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemProp.descricaoCurtaItem}"
+                                          title="#{itemProp.descricaoItem}"/>
+                        </p:column>
+                        <p:column headerText="Especif." styleClass="alinhamentoCentralizado">
+                            <fa:especificacao-objeto-compra
+                                especificacao="#{itemProp.itemProcessoDeCompra.descricaoComplementar}"/>
+                        </p:column>
+                        <p:column headerText="Unid. Med." styleClass="alinhamentoEsquerda">
+                            <h:outputText
+                                value="#{itemProp.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.sigla}"/>
+                        </p:column>
+                        <p:column headerText="Qtde" styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{itemProp.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraQuantidade}"
+                                value="#{itemProp.quantidadeItem}"/>
+                        </p:column>
+                        <p:column headerText="Valor Unit. (R$)" styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{itemProp.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"
+                                value="#{itemProp.itemProcessoDeCompra.itemSolicitacaoMaterial.preco}"/>
+                        </p:column>
+                        <p:column headerText="Valor Total (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText
+                                value="#{itemProp.itemProcessoDeCompra.itemSolicitacaoMaterial.precoTotal}">
+                                <f:convertNumber pattern="##,##0.00"/>
+                            </h:outputText>
+                            <f:facet name="footer">
+                                <h:outputText
+                                    value="#{certameControlador.lotePropostaFornecedor.loteProcessoDeCompra.valor}">
+                                    <f:convertNumber pattern="R$ ##,##0.00"/>
+                                </h:outputText>
+                            </f:facet>
+                        </p:column>
+                        <p:column headerText="Preço Unit. (R$)" styleClass="alinhamentoDireita">
+                            <fc:input-mascara-unidade-medida
+                                value="#{itemProp.preco}"
+                                size="15"
+                                update=":formDistribuirValor:tableItensLote"
+                                tipoMascara="#{itemProp.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"/>
+                        </p:column>
+                        <p:column headerText="Preço Total (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText
+                                value="#{itemProp.precoTotal}"
+                                id="precototal"
+                                size="15" styleClass="alinhamentoDireita">
+                                <f:convertNumber pattern="##,##0.00"/>
+                            </h:outputText>
+                            <f:facet name="footer">
+                                <h:outputText id="precoTotalLote"
+                                              value="#{certameControlador.lotePropostaFornecedor.valorTotalItens}">
+                                    <f:convertNumber pattern="##,##0.00"/>
+                                </h:outputText>
+                            </f:facet>
+                        </p:column>
+                        <p:column headerText="Justificativa">
+                            <p:inputTextarea value="#{itemProp.justificativa}" maxlength="255" autoResize="false"
+                                             scrollHeight="3">
+                                <p:ajax event="blur" process="@this"/>
+                            </p:inputTextarea>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+
+                <div class="modal-footer">
+                    <p:commandButton value="Confirmar e Salvar"
+                                     icon="ui-icon-disk"
+                                     title="Clique para confirmar a distribuição do valor do lote aos itens"
+                                     actionListener="#{certameControlador.confirmarDistruicaoLote()}"
+                                     styleClass="operacao prioritario mtop10"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                    />
+                    <p:commandButton value="Cancelar"
+                                     oncomplete="aguarde.hide()"
+                                     onstart="aguarde.show()"
+                                     title="Clique para cancelar a operação."
+                                     actionListener="#{certameControlador.cancelarDistruicaoLote()}"
+                                     icon="ui-icon-close"
+                                     styleClass="operacao mlef05 mtop10"
+                                     process="@this" update="@this"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

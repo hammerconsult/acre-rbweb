@@ -1,0 +1,1 @@
+call proc_popular_documento_licitacao()

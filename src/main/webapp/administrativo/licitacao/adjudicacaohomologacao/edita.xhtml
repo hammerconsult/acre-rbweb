@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{statusFornecedorLicitacaoControlador}"
+                                origem="#{statusFornecedorLicitacaoControlador.caminhoPadrao}novo/"/>
+
+            <p:panel header="Adjudicação e Homologação da Licitação">
+                <h:panelGrid columns="2" id="gridGeral">
+                    <fc:outputLabelObrigatorio value="Número:"/>
+                    <h:outputText id="numero"
+                                  value="#{statusFornecedorLicitacaoControlador.selecionado.numero == null ? 'Gerado automaticamente.' :
+                                                        statusFornecedorLicitacaoControlador.selecionado.numero}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Data da Operação:"/>
+                    <p:calendar id="data-operacao"
+                                onkeypress="mascara(this, mdata)"
+                                maxlength="10"
+                                style="text-align: right"
+                                autocomplete="off"
+                                title="Digite a data de validade da ata."
+                                value="#{statusFornecedorLicitacaoControlador.selecionado.dataSituacao}"
+                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                size="10"/>
+
+                    <fc:outputLabelObrigatorio value="Operação:"/>
+                    <h:selectOneMenu id="operacao"
+                                     value="#{statusFornecedorLicitacaoControlador.selecionado.tipoSituacao}">
+                        <f:selectItems value="#{statusFornecedorLicitacaoControlador.tiposSituacao}"/>
+                        <p:ajax event="change"
+                                update=":Formulario:gridGeral :Formulario:panel-item :Formulario:panel-lote"
+                                process="@this"
+                                listener="#{statusFornecedorLicitacaoControlador.limparCampos()}"
+                                onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Licitação: "/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000" id="licitacao" title="Digite a licitação"
+                                        value="#{statusFornecedorLicitacaoControlador.licitacao}"
+                                        completeMethod="#{statusFornecedorLicitacaoControlador.completarLicitacoes}"
+                                        var="lic"
+                                        itemLabel="#{lic.toStringAutoCompleteComModalidade()}"
+                                        itemValue="#{lic.id}"
+                                        onclick="this.select();"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px; width: 800px"
+                                        maxResults="50"
+                                        size="70"
+                                        styleClass="mrig05"
+                                        converter="#{licitacaoControlador.converterGenerico}">
+                            <p:ajax event="itemSelect"
+                                    listener="#{statusFornecedorLicitacaoControlador.definirNumeroStatusFornecedorLicitacao()}"
+                                    process="@this"
+                                    update="numero fornecedor"
+                                    onstart="aguarde.show();"
+                                    oncomplete="aguarde.hide();"/>
+                        </p:autoComplete>
+
+                        <p:commandButton id="bt-informacao-numero"
+                                         icon="ui-icon-info"
+                                         process="@none"
+                                         update="@none"/>
+                        <p:overlayPanel for="bt-informacao-numero"
+                                        appendToBody="true"
+                                        style="border : solid black 2px;"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout">
+                            <h:outputText
+                                styleClass="semSombra"
+                                value="Ao adjudicar ou homologar, a busca trará apenas as licitações com: &lt;br/>
+                                            - O último status em andamento.&lt;br/>&lt;br/>
+
+                                            Ao adjudicar, a busca trará apenas os itens da licitações com: &lt;br/>
+                                            - O status em aguardando.&lt;br/>&lt;br/>
+
+                                            Ao homologar um item da licitação, a busca trará os itens com: &lt;br/>
+                                            - O status igual a adjudicada; &lt;br/>
+                                            - O usuário deve estar logado na mesma unidade organizacional informada no processo de compra.&lt;br/>&lt;br/>
+
+                                            Na homologação dos itens da licitação ou adjudicação, a busca trará apenas:&lt;br/>
+                                            - Fornecedores habilitados referente à documentação;&lt;br/>
+                                            - Certame ou mapa comparativo de técnica e preço com vencedor para cada item/lote;&lt;br/>
+                                            - Pregão com status dos itens/lotes como finalizados."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Fornecedor:"/>
+                    <h:selectOneMenu id="fornecedor"
+                                     value="#{statusFornecedorLicitacaoControlador.selecionado.licitacaoFornecedor}"
+                                     converter="#{participanteLicitacaoControlador.converterGenerico}"
+                                     style="width: 430px;">
+                        <f:selectItem value="#{null}" itemLabel=" "/>
+                        <f:selectItems value="#{statusFornecedorLicitacaoControlador.participantesLicitacao}"/>
+                        <p:ajax event="change"
+                                listener="#{statusFornecedorLicitacaoControlador.criarLoteAndItensStatus()}"
+                                process="@this"
+                                update=":Formulario:panel-item :Formulario:panel-lote"
+                                onstart="aguarde.show();"
+                                oncomplete="aguarde.hide();"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Motivo:"/>
+                    <h:panelGrid columns="2"
+                                 cellpadding="0"
+                                 cellspacing="0">
+                        <p:inputTextarea id="motivo"
+                                         title="Por favor, informe o motivo da realização desta operação."
+                                         value="#{statusFornecedorLicitacaoControlador.selecionado.motivo}"
+                                         cols="70"
+                                         maxlength="255"
+                                         autoResize="true"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter-motivo"
+                                         style="width: 420px;"/>
+                        <h:outputText id="counter-motivo"
+                                      style="color: #497692"
+                                      styleClass="mlef05"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:outputPanel id="panel-item">
+                    <p:dataTable paginator="true"
+                                 id="tabela-itens"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rendered="#{statusFornecedorLicitacaoControlador.licitacao.isTipoApuracaoPrecoItem()}"
+                                 value="#{statusFornecedorLicitacaoControlador.itensStatus}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS PARA #{statusFornecedorLicitacaoControlador.selecionado.tipoSituacao.descricaoFuncional}&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="item">
+                        <p:column headerText="" style="text-align: center; width: 5%">
+                            <f:facet name="header">
+                                <p:commandButton
+                                    actionListener="#{statusFornecedorLicitacaoControlador.desmarcarTodosOsItens}"
+                                    rendered="#{statusFornecedorLicitacaoControlador.todosOsItensMarcados()}"
+                                    icon="ui-icon-check"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update="tabela-itens"
+                                    styleClass="vinteLarguraVinteAltura"/>
+
+                                <p:commandButton
+                                    actionListener="#{statusFornecedorLicitacaoControlador.marcarTodosOsItens()}"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    icon="ui-icon-none"
+                                    update="tabela-itens"
+                                    rendered="#{!statusFornecedorLicitacaoControlador.todosOsItensMarcados()}"
+                                    styleClass="vinteLarguraVinteAltura"/>
+                            </f:facet>
+                            <p:commandButton icon="ui-icon-check"
+                                             actionListener="#{item.setSelecionado(false)}"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update="tabela-itens"
+                                             styleClass="vinteLarguraVinteAltura"
+                                             rendered="#{item.selecionado eq true}"/>
+
+                            <p:commandButton styleClass="vinteLarguraVinteAltura"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             icon="ui-icon-none"
+                                             actionListener="#{item.setSelecionado(true)}"
+                                             update="tabela-itens"
+                                             rendered="#{item.selecionado eq false}"/>
+                        </p:column>
+
+                        <p:column headerText="Nº Lote" styleClass="alinhamentoDireita" style="width: 5%;">
+                            <h:outputText
+                                value="#{item.loteStatus.numero}"/>
+                        </p:column>
+                        <p:column headerText="Nº Item" styleClass="alinhamentoDireita" style="width: 5%;">
+                            <h:outputText value="#{item.itemProcessoCompra.numero}"/>
+                        </p:column>
+                        <p:column headerText="Descrição" styleClass="alinhamentoEsquerda" style="width: 60%;">
+                            <h:outputText
+                                value="#{item.itemProcessoCompra.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Especificação" styleClass="alinhamentoCentralizado" style="max-width: 10%">
+                            <fa:especificacao-objeto-compra
+                                especificacao="#{item.itemProcessoCompra.descricaoComplementar}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{item.itemProcessoCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"
+                                value="#{item.valorUnitario}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+
+                <p:outputPanel id="panel-lote">
+                    <p:dataTable paginator="true"
+                                 id="tabela-lote"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{statusFornecedorLicitacaoControlador.lotesStatus}"
+                                 rendered="#{statusFornecedorLicitacaoControlador.licitacao.isTipoApuracaoPrecoLote()}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>LOTES PARA #{statusFornecedorLicitacaoControlador.selecionado.tipoSituacao.descricaoFuncional}&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="loteStatus">
+                        <p:column style="width:2%">
+                            <p:rowToggler/>
+                        </p:column>
+                        <p:column headerText="" style="text-align: center ; width: 5%">
+                            <f:facet name="header">
+                                <p:commandButton
+                                    actionListener="#{statusFornecedorLicitacaoControlador.desmarcarTodosOsItens}"
+                                    rendered="#{statusFornecedorLicitacaoControlador.todosOsItensMarcados()}"
+                                    icon="ui-icon-check"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update="tabela-lote"
+                                    styleClass="vinteLarguraVinteAltura"/>
+
+                                <p:commandButton
+                                    actionListener="#{statusFornecedorLicitacaoControlador.marcarTodosOsItens()}"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    icon="ui-icon-none"
+                                    update="tabela-lote"
+                                    rendered="#{!statusFornecedorLicitacaoControlador.todosOsItensMarcados()}"
+                                    styleClass="vinteLarguraVinteAltura"/>
+                            </f:facet>
+                            <p:commandButton icon="ui-icon-check"
+                                             actionListener="#{statusFornecedorLicitacaoControlador.desmarcarItensDoLote(loteStatus)}"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update="tabela-lote"
+                                             styleClass="vinteLarguraVinteAltura"
+                                             rendered="#{loteStatus.selecionado eq true}"/>
+
+                            <p:commandButton styleClass="vinteLarguraVinteAltura"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             icon="ui-icon-none"
+                                             actionListener="#{statusFornecedorLicitacaoControlador.mascarItensDoLote(loteStatus)}"
+                                             update="tabela-lote"
+                                             rendered="#{loteStatus.selecionado eq false}"/>
+                        </p:column>
+                        <p:column headerText="Nº Lote" styleClass="alinhamentoDireita" style="width: 10%;">
+                            <h:outputText
+                                value="#{loteStatus.numero}"/>
+                        </p:column>
+                        <p:column headerText="Descrição" styleClass="alinhamentoEsquerda" style="width: 50%;">
+                            <h:outputText value="#{loteStatus.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita" style="width: 20%;">
+                            <h:outputText value="#{loteStatus.valorTotal}" >
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:rowExpansion>
+                            <p:dataTable
+                                id="tabela-itens-lote"
+                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                styleClass="mtop05 mlef50"
+                                emptyMessage="Não foram localizados registros para serem apresentados"
+                                value="#{loteStatus.itens}"
+                                var="item">
+                                <f:facet name="header">
+                                    <p:outputPanel>
+                                        <h:outputText value="ITENS DO LOTE"/>
+                                    </p:outputPanel>
+                                </f:facet>
+                                <p:column headerText="Nº Item" styleClass="alinhamentoDireita" style="width: 5%;">
+                                    <h:outputText value="#{item.itemProcessoCompra.numero}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" styleClass="alinhamentoEsquerda"
+                                          style="width: 45%;">
+                                    <h:outputText value="#{item.itemProcessoCompra.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Especificação" styleClass="alinhamentoCentralizado">
+                                    <fa:especificacao-objeto-compra
+                                        especificacao="#{item.itemProcessoCompra.descricaoComplementar}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                    <fc:output-mascara-unidade-medida
+                                        tipoMascara="#{item.itemProcessoCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"
+                                        value="#{item.valorUnitario}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:rowExpansion>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+            <fc:rodapePretty controlador="#{statusFornecedorLicitacaoControlador}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

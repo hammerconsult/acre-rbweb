@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="formConsulta">
+            <p:panel id="painelConsultaDebitos" header="Arrecadação por Lote » Pesquisa de Débitos">
+                <h:panelGrid columns="2" id="gridFiltros">
+                    <h:outputText value="Tipo de Cadastro: "/>
+                    <h:panelGrid columns="5" id="cadastros">
+                        <h:selectOneMenu value="#{loteBaixaControlador.tipoCadastroTributario}">
+                            <f:selectItems value="#{loteBaixaControlador.tiposCadastro}"/>
+                            <p:ajax update="cadastros" event="change"
+                                    listener="#{loteBaixaControlador.setaInscricaoCadastro()}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Cadastro: "/>
+                        <p:inputText readonly="true" size="70"
+                                     rendered="#{loteBaixaControlador.tipoCadastroTributario == null}"/>
+                        <fc:autocompletePessoa rendered="#{loteBaixaControlador.tipoCadastroTributario eq 'PESSOA'}"
+                                               caminhoAtual="/tributario/arrecadacao/edita"
+                                               id="completaPessoaGenerico"
+                                               tamanhoAutoComplete="70"
+                                               value="#{loteBaixaControlador.filtroContribuinte}"
+                                               habilitaBotaoNovaPF="false" habilitaBotaoNovaPJ="false"/>
+                        <p:autoComplete queryDelay="1000" id="cadastroimobiliario"
+                                        title="Selecione um Cadastro Imobiliário"
+                                        value="#{loteBaixaControlador.cadastro}"
+                                        size="70"
+                                        completeMethod="#{loteBaixaControlador.completaCadastroImobiliario}"
+                                        var="c"
+                                        maxResults="10"
+                                        rendered="#{loteBaixaControlador.tipoCadastroTributario eq 'IMOBILIARIO'}"
+                                        itemLabel="#{c.inscricaoCadastral}"
+                                        itemValue="#{c.id}"
+                                        converter="#{loteBaixaControlador.converterCadastroImobiliario}">
+                            <p:ajax event="itemSelect" process="@form" update="botaoInfo :formCadastros"/>
+                        </p:autoComplete>
+                        <p:autoComplete queryDelay="1000"
+                                        value="#{loteBaixaControlador.cadastro}"
+                                        completeMethod="#{loteBaixaControlador.completaCadastroEconomico}"
+                                        var="cadastroEInicial"
+                                        id="cadastroEInicial"
+                                        itemLabel="#{cadastroEInicial.inscricaoCadastral} - #{cadastroEInicial.pessoa.nome} - #{cadastroEInicial.pessoa.cpf_Cnpj}"
+                                        itemValue="#{cadastroEInicial.id}"
+                                        size="70"
+                                        maxResults="10"
+                                        rendered="#{loteBaixaControlador.tipoCadastroTributario eq 'ECONOMICO'}"
+                                        converter="#{loteBaixaControlador.converterCadastroEconomico}"
+                                        title="Informe ou selecione o C.M.C.">
+                            <p:ajax event="itemSelect" process="@form" update="botaoInfo :formCadastros"/>
+                        </p:autoComplete>
+                        <p:autoComplete queryDelay="1000"
+                                        completeMethod="#{loteBaixaControlador.completaCadastroRural}"
+                                        var="cadRInicial"
+                                        itemLabel="#{cadRInicial.codigo} - #{cadRInicial.nomePropriedade} - #{cadRInicial.numeroIncra}"
+                                        itemValue="#{cadRInicial.id}"
+                                        size="70"
+                                        maxResults="10"
+                                        rendered="#{loteBaixaControlador.tipoCadastroTributario eq 'RURAL'}"
+                                        value="#{loteBaixaControlador.cadastro}"
+                                        converter="#{loteBaixaControlador.converterCadastroRural}"
+                                        title="Informe ou selecione o Cadastro Rural">
+                            <p:ajax event="itemSelect" process="@form" update="botaoInfo :formCadastros"/>
+                        </p:autoComplete>
+                        <p:commandButton id="botaoInfo" icon="ui-icon-info"
+                                         update=":formCadastros"
+                                         styleClass="vinteLarguraVinteAltura icone_branco botao_azul"
+                                         disabled="#{loteBaixaControlador.cadastro == null}"
+                                         title="Clique para visualizar informações do cadastro selecionado"
+                                         onclick="cadastros.show()"
+                        />
+                    </h:panelGrid>
+
+                    <h:outputText value="Número do DAM: "/>
+                    <p:inputText value="#{loteBaixaControlador.filtroNumeroDAM}" size="60"/>
+                </h:panelGrid>
+                <br/>
+                <p:panel style="border: 1px solid silver !important">
+                    <h:panelGrid columns="4" style="width: 100%; text-align: center; border: 0 !important;">
+                        <p:commandButton onclick="statusDialog.show()"
+                                         oncomplete="statusDialog.hide()"
+                                         value="Pesquisar"
+                                         style="width: 200px"
+                                         icon="ui-icon-search"
+                                         styleClass="prioritario"
+                                         actionListener="#{loteBaixaControlador.iniciarPesquisa()}"
+                                         update="tabelaConsultas"/>
+                        <p:commandButton onclick="statusDialog.show()"
+                                         oncomplete="statusDialog.hide()"
+                                         value="Limpar Campos/Tabela"
+                                         style="width: 200px"
+                                         icon="ui-icon-document"
+                                         actionListener="#{loteBaixaControlador.inicializaFiltros()}" update="@form"/>
+                        <p:commandButton onclick="statusDialog.show()"
+                                         oncomplete="statusDialog.hide()"
+                                         value="Adicionar todas Parcelas"
+                                         style="width: 200px"
+                                         rendered="#{loteBaixaControlador.selecionado.formaPagamento ne 'CARTAO_CREDITO'}"
+                                         icon="ui-icon-newwin"
+                                         title="Clique para adicionar todas as parcelas"
+                                         actionListener="#{loteBaixaControlador.addTodosItem()}" update="@form"/>
+                        <p:commandButton value="Voltar"
+                                         ajax="false"
+                                         process="@none"
+                                         style="width: 200px"
+                                         actionListener="#{loteBaixaControlador.navegaParaEdita()}"
+                                         icon="ui-icon-arrowreturnthick-1-w"
+                        />
+                    </h:panelGrid>
+                </p:panel>
+
+                <br/>
+                <p:panel id="tabelaConsultas" visible="#{loteBaixaControlador.dams.size() >0}"
+                         style="border: 0 !important">
+                    <center>
+                        ** Os valores de acréscimos foram calculados na data de emissão do Documento de Arrecadação
+                    </center>
+                    <br/>
+                    <p:outputPanel id="tabela-parcelas">
+                        <table class="table table-striped table-bordered">
+                            <tr>
+                                <th>&nbsp;</th>
+                                <th>Número do DAM</th>
+                                <th>Data de Emissão</th>
+                                <th>Vencimento</th>
+                                <th style="text-align: right">Valor</th>
+                                <th style="text-align: right">Desconto</th>
+                                <th style="text-align: right">Juros</th>
+                                <th style="text-align: right">Multa</th>
+                                <th style="text-align: right">Correção</th>
+                                <th style="text-align: right">Honorários</th>
+                                <th style="text-align: right">Total</th>
+                                <th style="text-align: center">Situação</th>
+                                <th>&nbsp;</th>
+                            </tr>
+                            <ui:repeat var="dam" varStatus="index"
+                                       value="#{loteBaixaControlador.dams}">
+                                <tr>
+                                    <td>
+                                        <p:commandButton icon="ui-icon-circle-plus" styleClass="botao-transparente"
+                                                         onclick="statusDialog.show()"
+                                                         process="@this"
+                                                         oncomplete="statusDialog.hide()"
+                                                         actionListener="#{loteBaixaControlador.definirFormaPagamento(dam)}"/>
+                                    </td>
+                                    <td><h:outputText value="${dam.numeroDAM}"/></td>
+                                    <td><h:outputText value="${dam.emissao}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                    </td>
+                                    <td><h:outputText value="${dam.vencimento}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="${dam.valorOriginal}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="${dam.desconto}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="${dam.juros}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="${dam.multa}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="${dam.correcaoMonetaria}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="${dam.honorarios}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="${dam.valorTotal}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td style="text-align: center">
+                                        <h:outputText value="${dam.situacao.descricao}"/>
+                                    </td>
+                                    <td>
+                                        <a data-toggle="collapse" href="#linha#{index.index}">
+                                            <i class="icon-th-list"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="13">
+                                        <div id="linha#{index.index}" class="collapse out" style="font-size: 9px;">
+                                            <h:dataTable var="item"
+                                                         styleClass="table table-striped "
+                                                         value="#{dam.itens}">
+                                                <h:column>
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Dívida"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.parcela.valorDivida.divida}"/>
+                                                </h:column>
+                                                <h:column>
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Parcela"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.parcela.sequenciaParcela}"/>
+                                                </h:column>
+                                                <h:column headerClass="Valor">
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Valor"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.valorOriginalDevido}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </h:column>
+                                                <h:column>
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Desconto"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.desconto}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </h:column>
+                                                <h:column headerClass="Juros">
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Juros"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.juros}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </h:column>
+                                                <h:column headerClass="Multa">
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Multa"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.multa}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </h:column>
+                                                <h:column headerClass="Correção">
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Correção"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.correcaoMonetaria}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </h:column>
+                                                <h:column headerClass="Honorários">
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Honorários"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.honorarios}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </h:column>
+                                                <h:column headerClass="Total">
+                                                    <f:facet name="header">
+                                                        <p:outputPanel>
+                                                            <h:outputText value="Total"/>
+                                                        </p:outputPanel>
+                                                    </f:facet>
+                                                    <h:outputText value="#{item.valorTotal}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </h:column>
+                                            </h:dataTable>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                        </table>
+                    </p:outputPanel>
+
+                </p:panel>
+
+            </p:panel>
+        </h:form>
+
+        <p:dialog id="idCadastros"
+                  widgetVar="cadastros"
+                  modal="true" width="1000"
+                  header="Detalhes"
+                  closable="true">
+            <h:form id="formCadastros">
+                <c:if test="#{loteBaixaControlador.tipoCadastroTributario eq 'ECONOMICO'}">
+                    <h:panelGrid style="width: 100%">
+                        <h:outputText value="CADASTRO ECONÔMICO" styleClass="azulnegrito"/>
+                        <p:separator/>
+                        <h:panelGrid columns="2">
+                            <h:outputText value="C.M.C.: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.inscricaoCadastral}"/>
+                            <h:outputText value="Razão Social: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.pessoa.nome}"/>
+                            <h:outputText value="CNPJ: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.pessoa.cpf_Cnpj}"/>
+                            <h:outputText value="Situação: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.situacaoCadastroEconomico.situacaoCadastral}"/>
+                        </h:panelGrid>
+
+                    </h:panelGrid>
+                </c:if>
+                <c:if test="#{loteBaixaControlador.tipoCadastroTributario eq 'IMOBILIARIO'}">
+                    <h:panelGrid style="width: 100%">
+                        <h:outputText value="CADASTRO IMOBILIÁRIO" styleClass="azulnegrito"/>
+                        <p:separator/>
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Inscrição Cadastral: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.inscricaoCadastral}"/>
+                            <h:outputText value="Complemento: " styleClass="negrito"/>
+                            <h:outputText value="#{autoCompleteCadastrosControlador.cadastro.lote.complemento}"/>
+                            <h:outputText value="Loteamento: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.lote.descricaoLoteamento}"/>
+                            <h:outputText value="Quadra: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.lote.quadra.descricao}"/>
+                            <h:outputText value="Lote: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.lote.codigoLote}"/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+
+                </c:if>
+                <c:if test="#{loteBaixaControlador.tipoCadastroTributario eq 'RURAL'}">
+                    <h:panelGrid style="width: 100%">
+                        <h:outputText value="CADASTRO RURAL" styleClass="azulnegrito"/>
+                        <p:separator/>
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Código: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.codigo}"/>
+                            <h:outputText value="Nome da Propriedade: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.nomePropriedade}"/>
+                            <h:outputText value="Localização: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.localizacaoLote}"/>
+                            <h:outputText value="Área: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.areaLote}"/>
+                            <h:outputText value="Tipo de Área: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.tipoAreaRural}"/>
+                            <h:outputText value="INCRA: " styleClass="negrito"/>
+                            <h:outputText value="#{loteBaixaControlador.cadastro.numeroIncra}"/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+                </c:if>
+
+                <p:dataTable
+                    value="#{loteBaixaControlador.recuperaPessoasCadastro()}"
+                    var="pessoaCad"
+                    emptyMessage="Nenhuma pessoa encontrada no cadastro selecionado!">
+                    <f:facet name="header">
+                        <h:outputText
+                            value="#{loteBaixaControlador.tipoCadastroTributario eq 'ECONOMICO' ? 'Sócios' : 'Proprietários'}"/>
+
+                    </f:facet>
+                    <p:column headerText="Nome">
+                        <h:outputText value="#{pessoaCad.nome}"/>
+                    </p:column>
+                    <p:column headerText="CPF/CNPJ">
+                        <h:outputText value="#{pessoaCad.cpf_Cnpj}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Pessoa">
+                        <h:outputText value="#{pessoaCad.tipoPessoa}"/>
+                    </p:column>
+                </p:dataTable>
+                <br/>
+                <center>
+                    <p:commandButton value="Ok" icon="ui-icon-check" onclick="cadastros.hide()"
+                                     styleClass="botao_verde icone_branco"/>
+                </center>
+            </h:form>
+
+        </p:dialog>
+        <p:dialog widgetVar="dialogCartaoCredito" id="idDialogCartaoCredito" header="Pagamento por cartão de crédito"
+                  modal="true" resizable="false"
+                  closable="false" width="600" height="380">
+            <h:form id="FormularioDialog">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Bandeira do Cartão: "/>
+                    <h:selectOneMenu value="#{loteBaixaControlador.pagamentoCartao.bandeiraCartao}"
+                                     converter="#{bandeiraCartaoControlador.converterGenerico}">
+                        <p:ajax event="valueChange" process="@this" update="@form"
+                                listener="#{loteBaixaControlador.adicionarQuantidadeParcelasDaBandeira()}"/>
+                        <f:selectItems value="#{loteBaixaControlador.bandeiraCartao}"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Valor Devido: "/>
+                    <h:outputText value="#{loteBaixaControlador.pagamentoCartao.valorPago}" styleClass="negrito">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                    <fc:outputLabelObrigatorio value="Valor Pago: "/>
+                    <p:inputText value="#{loteBaixaControlador.pagamentoCartao.valorPago}" id="valorPago">
+                        <f:convertNumber pattern="#,##0.00"/>
+                        <p:ajax event="blur" listener="#{loteBaixaControlador.criarItemPagamentoCartao(true)}"
+                                update="tabelaParcelas " onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                    </p:inputText>
+
+                    <fc:outputLabelObrigatorio value="Quantidade de Parcelas: "/>
+                    <p:inputText value="#{loteBaixaControlador.pagamentoCartao.quantidadeParcela}" id="qtdeParcelas"
+                                 onkeypress="mascara(this,soNumeros);">
+                        <p:ajax event="blur" listener="#{loteBaixaControlador.criarItemPagamentoCartao(true)}"
+                                update="tabelaParcelas valorPago" onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                    </p:inputText>
+                </h:panelGrid>
+
+                <div class="alert alert-war">
+                    <div class="ui-message-warn-icon"
+                         style="margin-right: 10px;"/>
+                    <strong>Atenção!</strong>
+                    A Data de Vencimento deve ser em dias úteis.
+                </div>
+                <p:dataTable value="#{loteBaixaControlador.pagamentoCartao.item}" var="parcela" id="tabelaParcelas"
+                             style="max-height: 200px; overflow-y: scroll; border : solid #92B8D3 1px; margin-top: 10px;"
+                             styleClass="mtop05" emptyMessage="Nenhuma Parcela Encontrada.">
+                    <p:column headerText="Parcela">
+                        <h:outputText value="#{parcela.parcela}"/>
+                    </p:column>
+                    <p:column headerText="Vencimento" style="text-align: center">
+                        <p:calendar value="#{parcela.vencimento}" pattern="dd/MM/yyyy"
+                                    onkeyup="mascara(this, mdata)">
+                            <p:ajax event="dateSelect" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                    listener="#{loteBaixaControlador.ajustarDataVencimentoDemaisParcelas(parcela)}"
+                                    update="tabelaParcelas"/>
+                            <p:ajax event="change" onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                    listener="#{loteBaixaControlador.ajustarDataVencimentoDemaisParcelas(parcela)}"
+                                    update="tabelaParcelas"/>
+                        </p:calendar>
+                    </p:column>
+                    <p:column headerText="Valor" style="text-align: right">
+                        <p:inputText value="#{parcela.valor}" id="valorParcelas">
+                            <f:convertNumber pattern="#,##0.00"/>
+                            <p:ajax event="blur"
+                                    listener="#{loteBaixaControlador.ajustarValoresDemaisParcelas(parcela)}"
+                                    update="tabelaParcelas :FormularioDialog:valorPago" onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"/>
+                        </p:inputText>
+                    </p:column>
+                </p:dataTable>
+
+                <div align="center" class="mtop05"
+                     style="bottom: 5px !important; position: absolute; width: 100%; margin-left: -1em">
+                    <p:commandButton value="Confirmar" styleClass="padrao prioritario" icon="ui-icon-check"
+                                     update=":formConsulta:tabela-parcelas"
+                                     onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                     process="@this"
+                                     actionListener="#{loteBaixaControlador.adicionarDamPagamentoCartao()}"/>
+                    <p:commandButton value="Cancelar" styleClass="padrao mlef02" icon="ui-icon-cancel"
+                                     process="@none"
+                                     onclick="aguarde.show(); dialogCartaoCredito.hide()" oncomplete="aguarde.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:messages showDetail="true"/>
+    </ui:define>
+</ui:composition>
+</html>

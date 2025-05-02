@@ -1,0 +1,1 @@
+update calculotaxasdiversas set situacao = 'EMITIDO' where situacao <> 'CANCELADO';

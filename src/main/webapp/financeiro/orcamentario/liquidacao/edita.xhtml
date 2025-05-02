@@ -1,0 +1,2138 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:adm="http://java.sun.com/jsf/composite/components/administrativo">
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="limparCampos"
+                             process="@this"
+                             actionListener="#{liquidacaoControlador.limparCamposDoEmpenho()}"
+                             update=":Formulario:viewGeral:dadosEmp :Formulario:viewGeral:painelDoctos
+                                     :Formulario:viewGeral:panelValorLiquidacao :Formulario:viewGeral:painelDesdob"/>
+
+            <fc:cabecalhoPretty controlador="#{liquidacaoControlador}"
+                                origem="#{liquidacaoControlador.caminhoPadrao}listar/"/>
+
+            <p:tabView id="viewGeral">
+                <p:tab id="tabCadLiqui" title="#{liquidacaoControlador.tituloLiquidacao}">
+
+                    <h:panelGrid id="gridGeral" columns="2">
+                        <h:outputText value="Número: "/>
+                        <h:outputText id="numero"
+                                      styleClass="negrito"
+                                      value="#{liquidacaoControlador.selecionado.numero eq null ? 'Gerado pelo sistema' : liquidacaoControlador.selecionado.numero}"
+                                      title="Número gerado automaticamente pelo sistema."/>
+
+                        <h:outputText value="Data: "/>
+                        <h:outputText value="#{liquidacaoControlador.selecionado.dataLiquidacao}"
+                                      styleClass="negrito">
+                            <f:convertDateTime type="date"/>
+                        </h:outputText>
+
+                        <h:outputText value="Unidade Organizacional: "/>
+                        <fc:codigo-descricao-hierarquia
+                            tipoHierarquia="ORCAMENTARIA"
+                            unidadeOrganizacional="#{liquidacaoControlador.selecionado.unidadeOrganizacional}"
+                            dataMovimento="#{liquidacaoControlador.selecionado.dataLiquidacao}"/>
+
+                        <fc:outputLabelObrigatorio for="emp" value="Empenho: "/>
+                        <h:panelGroup>
+                            <p:autoComplete queryDelay="1000" id="emp"
+                                            size="70"
+                                            title="Selecione um empenho."
+                                            completeMethod="#{liquidacaoControlador.completarEmpenho}"
+                                            maxResults="30"
+                                            converter="#{empenhoControlador.converterGenerico}"
+                                            value="#{liquidacaoControlador.selecionado.empenho}"
+                                            var="em"
+                                            itemValue="#{em.id}"
+                                            itemLabel="#{em}"
+                                            panelStyle="max-height: 250px; max-width: 800px"
+                                            dropdown="true"
+                                            disabled="#{liquidacaoControlador.verificaEdicao}"
+                                            onkeyup="if(keyUpCampoVazio(this)){limparCampos();}">
+                                <p:ajax event="itemSelect"
+                                        update=":Formulario:viewGeral:dadosEmp :Formulario:viewGeral:painelDoctos :Formulario:viewGeral:panelObrigacaoPagar
+                                                :Formulario:viewGeral:panelValorLiquidacao :Formulario:viewGeral:painelDesdob :Formulario:viewGeral:panelTransferenciasBens"
+                                        process="@this :Formulario:viewGeral:gridGeral"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        listener="#{liquidacaoControlador.definirEmpenho()}"/>
+                            </p:autoComplete>
+
+                            <p:commandButton styleClass="botao_azul icone_branco mlef05"
+                                             update=":Formulario-dialog:panelDialog"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide();dialog.show()"
+                                             icon="ui-icon-search"
+                                             title="Clique para selecionar um empenho."
+                                             disabled="#{liquidacaoControlador.verificaEdicao}"/>
+                        </h:panelGroup>
+                    </h:panelGrid>
+
+                    <p:outputPanel id="dadosEmp">
+                        <p:panel rendered="#{liquidacaoControlador.hasEmpenhoSelecionado()}"
+                                 toggleable="true"
+                                 header="#{liquidacaoControlador.tituloEmpenho}">
+
+                            <h:panelGrid columns="2" cellpadding="3">
+                                <h:outputText value="Número: "/>
+                                <h:commandLink target="_blank"
+                                               title="Clique para visualizar este registro em nova aba."
+                                               styleClass="azulnegrito"
+                                               style="color: #497692"
+                                               actionListener="#{utilBeanContabil.redirecionarParaEmpenho(liquidacaoControlador.selecionado.empenho)}">
+                                    <h:outputText value="#{liquidacaoControlador.selecionado.empenho.numero}"
+                                                  styleClass="azulnegrito"/>
+                                </h:commandLink>
+
+                                <h:outputText value="Data: "/>
+                                <h:outputText value="#{liquidacaoControlador.selecionado.empenho.dataEmpenho}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputText value="Evento Contábil: "/>
+                                <h:outputText value="#{liquidacaoControlador.selecionado.empenho.eventoContabil}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Tipo de Empenho: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.tipoEmpenho.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Tipo de Resto Processados: "
+                                              rendered="#{!liquidacaoControlador.categoriaOrcamentoriaLiquidacao}"/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.tipoRestosProcessados.descricao}"
+                                    rendered="#{!liquidacaoControlador.categoriaOrcamentoriaLiquidacao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Tipo de Inscritos: "
+                                              rendered="#{!liquidacaoControlador.categoriaOrcamentoriaLiquidacao}"/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.tipoRestosInscritos.descricao}"
+                                    rendered="#{!liquidacaoControlador.categoriaOrcamentoriaLiquidacao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Categoria Orçamentária: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.categoriaOrcamentaria.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Contrato: "
+                                              rendered="#{liquidacaoControlador.selecionado.empenho.contrato ne null}"/>
+                                <h:outputText value="#{liquidacaoControlador.selecionado.empenho.contrato}"
+                                              rendered="#{liquidacaoControlador.selecionado.empenho.contrato ne null}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Elemento Despesa: "/>
+                                <co:consultar-despesa-orcamentaria
+                                    value="#{liquidacaoControlador.selecionado.empenho.despesaORC}"
+                                    disabled="true"/>
+
+
+                                <h:outputText value="Tipo de Despesa: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.tipoContaDespesa.toString()}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Fonte de Recurso: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.fonteDespesaORC.descricaoFonteDeRecurso}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Conta de Destinação de Recurso: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.fonteDespesaORC.descricaoContaDeDestinacao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Funcional Programática: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.fonteDespesaORC.funcionalProgramatica}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Sub-Tipo de Despesa: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.subTipoDespesa.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Pessoa: "/>
+                                <h:outputText value="#{liquidacaoControlador.selecionado.empenho.fornecedor}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Classe: "/>
+                                <h:outputText value="#{liquidacaoControlador.selecionado.empenho.classeCredor}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Histórico: "/>
+                                <p:inputTextarea id="historicoEmp"
+                                                 readonly="true"
+                                                 value="#{liquidacaoControlador.selecionado.empenho.complementoHistorico}"
+                                                 cols="70"
+                                                 styleClass="negrito"
+                                                 autoResize="true"/>
+
+                                <h:outputText value="Valor: "/>
+                                <h:outputText value="#{liquidacaoControlador.selecionado.empenho.valor}"
+                                              converter="#{liquidacaoControlador.moneyConverter}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Saldo do Empenho: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.saldo}"
+                                    converter="#{liquidacaoControlador.moneyConverter}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Saldo de Obrigação Antes Empenho: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.saldoObrigacaoPagarAntesEmp}"
+                                    converter="#{liquidacaoControlador.moneyConverter}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Saldo de Obrigação Depois Empenho: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.saldoObrigacaoPagarDepoisEmp}"
+                                    converter="#{liquidacaoControlador.moneyConverter}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Saldo sem Obrigação a Pagar: "/>
+                                <h:outputText
+                                    value="#{liquidacaoControlador.selecionado.empenho.saldoDisponivelEmpenhoComObrigacao}"
+                                    converter="#{liquidacaoControlador.moneyConverter}"
+                                    styleClass="negrito"/>
+                            </h:panelGrid>
+                        </p:panel>
+
+                        <p:panel id="panelObrigacaoPagar"
+                                 header="Obrigação a Pagar"
+                                 styleClass="mtop10"
+                                 rendered="#{liquidacaoControlador.isEmpenhoWithObrigacaoPagar() or liquidacaoControlador.selecionado.isLiquidacaoPossuiObrigacoesPagar()}">
+
+                            <h:panelGrid columns="3" id="gridObrigacao">
+                                <fc:outputLabelObrigatorio for="obrigacaoPagar" value="Obrigação a Pagar: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="obrigacaoPagar"
+                                                size="70"
+                                                title="Selecione uma obrigação a pagar."
+                                                completeMethod="#{liquidacaoControlador.completarObrigacaoPagar}"
+                                                converter="#{obrigacaoAPagarControlador.converterGenerico}"
+                                                value="#{liquidacaoControlador.liquidacaoObrigacaoPagar.obrigacaoAPagar}"
+                                                disabled="#{liquidacaoControlador.verificaEdicao or liquidacaoControlador.isDetalhamentoWithObrigacaoPagar()}"
+                                                var="obrigacao"
+                                                dropdown="true"
+                                                panelStyle="max-height: 270px; max-width: 700px"
+                                                maxlength="50"
+                                                itemValue="#{obrigacao.id}"
+                                                itemLabel="#{obrigacao}"/>
+
+                                <p:commandButton styleClass="padrao"
+                                                 update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:panelObrigacaoPagar :Formulario:viewGeral:painelDoctos"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 value="Adicionar"
+                                                 process="@this :Formulario:viewGeral:panelObrigacaoPagar :Formulario:viewGeral:painelDesdob"
+                                                 icon="ui-icon-circle-plus"
+                                                 actionListener="#{liquidacaoControlador.adicionarObrigacaoPagar()}"
+                                                 title="Clique para selecionar um Detalhamento"
+                                                 disabled="#{liquidacaoControlador.verificaEdicao or liquidacaoControlador.isDetalhamentoWithObrigacaoPagar()}"/>
+                            </h:panelGrid>
+
+                            <p:dataTable id="tableObrigacao"
+                                         value="#{liquidacaoControlador.selecionado.obrigacoesPagar}"
+                                         var="op"
+                                         styleClass="mtop03"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Obrigações a Pagar&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Documentos" styleClass="alinhamentoDireita"
+                                          style="width: 7%">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Remover" style="width: 5%;text-align: center">
+                                    <p:commandButton id="btnRemoverObrigacao"
+                                                     update=":Formulario:viewGeral:tableObrigacao :Formulario:viewGeral:painelDesdob :Formulario:viewGeral:painelDoctos"
+                                                     process="@this"
+                                                     actionListener="#{liquidacaoControlador.removerObrigacaoPagar(op)}"
+                                                     title="Clique para remover este registro."
+                                                     icon="ui-icon-trash"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     disabled="#{liquidacaoControlador.verificaEdicao or liquidacaoControlador.desabilitarRemoerObrigacaoPagar()}"/>
+                                </p:column>
+                                <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{op.obrigacaoAPagar.numero}"/>
+                                </p:column>
+                                <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{op.obrigacaoAPagar.dataLancamento}">
+                                        <f:convertDateTime type="date"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Elemento de Despesa" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{op.obrigacaoAPagar.despesaORC.contaDeDespesa}"/>
+                                </p:column>
+                                <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{op.obrigacaoAPagar.fonteDespesaORC.descricaoFonteDeRecurso}"/>
+                                </p:column>
+                                <p:column headerText="Valor" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{op.obrigacaoAPagar.valor}">
+                                        <f:convertNumber type="currency"/>
+                                    </h:outputText>
+                                    <f:facet name="footer">
+                                        <div class="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{liquidacaoControlador.selecionado.totalObrigacaoPagar}">
+                                                <f:convertNumber type="currency"/>
+                                            </h:outputText>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                                <p:column headerText="Saldo" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{op.obrigacaoAPagar.saldo}">
+                                        <f:convertNumber type="currency"/>
+                                    </h:outputText>
+                                    <f:facet name="footer">
+                                        <div class="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{liquidacaoControlador.selecionado.saldoTotalObrigacaoPagar}">
+                                                <f:convertNumber type="currency"/>
+                                            </h:outputText>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                                <p:rowExpansion>
+                                    <p:scrollPanel mode="native" styleClass="mtop05 mbot10 mrig05 mlef05"
+                                                   style="max-height: 250px; border: 0px">
+
+                                        <p:dataTable id="tableDoctoOP"
+                                                     value="#{op.obrigacaoAPagar.documentosFiscais}"
+                                                     var="docOp"
+                                                     styleClass="mtop05"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados.">
+                                            <p:column headerText="Tipo de Documento" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{docOp.documentoFiscal.tipoDocumentoFiscal}"/>
+                                            </p:column>
+                                            <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado">
+                                                <h:outputText value="#{docOp.documentoFiscal.dataDocto}">
+                                                    <f:convertDateTime type="date"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Número" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{docOp.documentoFiscal.numero}"/>
+                                            </p:column>
+                                            <p:column headerText="Série" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{docOp.documentoFiscal.serie}"/>
+                                            </p:column>
+                                            <p:column headerText="Estado" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{docOp.documentoFiscal.uf}"/>
+                                            </p:column>
+                                            <p:column headerText="Valor " styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{docOp.documentoFiscal.valor}"
+                                                              converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                <f:facet name="footer">
+                                                    <div align="right">
+                                                        <h:outputText
+                                                            value="#{docOp.obrigacaoAPagar.valorTotalDocumentos}"
+                                                            converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+                                            <p:column headerText="Saldo " styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{docOp.documentoFiscal.saldo}"
+                                                              converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                <f:facet name="footer">
+                                                    <div align="right">
+                                                        <h:outputText
+                                                            value="#{docOp.obrigacaoAPagar.saldoTotalDocumentos}"
+                                                            converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+                                        </p:dataTable>
+
+                                        <p:dataTable id="tableDesdOp"
+                                                     value="#{op.obrigacaoAPagar.desdobramentos}"
+                                                     var="desdOp"
+                                                     styleClass="mtop20"
+                                                     emptyMessage="Não foram localizados registros para serem apresentados.">
+                                            <p:column headerText="Conta de Despesa" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{desdOp.conta}"/>
+                                            </p:column>
+                                            <p:column headerText="Tipo de Conta" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{desdOp.conta.tipoContaDespesa.toString()}"/>
+                                            </p:column>
+                                            <p:column headerText="Evento Contábil" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{desdOp.eventoContabil}"/>
+                                            </p:column>
+                                            <p:column headerText="Valor " styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{desdOp.valor}"
+                                                              converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                <f:facet name="footer">
+                                                    <div align="right">
+                                                        <h:outputText
+                                                            value="#{desdOp.obrigacaoAPagar.valorTotalDesdobramentos}"
+                                                            converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+                                            <p:column headerText="Saldo " styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{desdOp.saldo}"
+                                                              converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                <f:facet name="footer">
+                                                    <div align="right">
+                                                        <h:outputText
+                                                            value="#{desdOp.obrigacaoAPagar.saldoTotalDesdobramentos}"
+                                                            converter="#{liquidacaoControlador.moneyConverter}"/>
+                                                    </div>
+                                                </f:facet>
+                                            </p:column>
+                                        </p:dataTable>
+                                    </p:scrollPanel>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:panel>
+
+                        <p:panel id="painelDoctos"
+                                 styleClass="mtop10"
+                                 header="Documento Comprobatório"
+                                 rendered="#{liquidacaoControlador.hasEmpenhoSelecionado()}">
+
+                            <p:commandButton value="Novo"
+                                             icon="ui-icon-circle-plus"
+                                             actionListener="#{liquidacaoControlador.novoDocumentoFiscal()}"
+                                             rendered="#{liquidacaoControlador.documentoFiscal eq null
+                                                        and !liquidacaoControlador.isBemMovel()
+                                                        and !liquidacaoControlador.isEstoque()}"
+                                             update=":Formulario:viewGeral:painelDoctos"
+                                             process="@this"
+                                             id="btnNovoDocto"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="padrao"
+                                             disabled="#{liquidacaoControlador.verificaEdicao or !liquidacaoControlador.canHabilitarNovoDocumento()}"
+                                             title="Clique para adicionar um novo documento fiscal."/>
+
+                            <co:botao_informacao
+                                descricao="Empenho de serviços de terceiros para este desdobramento é necessário vinculo do empenho com o Contrato,
+                                utilize a tela de vinculação de contrato com empenho para dar continuidade na liquidação."
+                                rendered="#{!liquidacaoControlador.canHabilitarNovoDocumento()}"/>
+
+                            <p:commandButton value="Novo Documento Estoque"
+                                             icon="ui-icon-circle-plus"
+                                             actionListener="#{liquidacaoControlador.novoDocumentoFiscalEstoque()}"
+                                             rendered="#{liquidacaoControlador.documentoFiscal eq null
+                                                         and liquidacaoControlador.permitiNovoDocumentoFiscalEstoque()}"
+                                             update=":Formulario:viewGeral:painelDoctos"
+                                             process="@this"
+                                             id="btnNovoDoctoMaterial"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="padrao"
+                                             disabled="#{liquidacaoControlador.verificaEdicao}"
+                                             title="Clique para adicionar um novo documento fiscal."/>
+
+                            <h:panelGrid columns="4"
+                                         rendered="#{liquidacaoControlador.documentoFiscal ne null
+                                         and liquidacaoControlador.isDocumentoFiscalIntegracaoContratoOrObrigacaoPagar()}">
+                                <fc:outputLabelObrigatorio for="doctoFiscal" value="Documento Fiscal: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="doctoFiscal"
+                                                title="Informe um documento fiscal."
+                                                var="doc"
+                                                value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao}"
+                                                completeMethod="#{liquidacaoControlador.completarDocumentosFiscais}"
+                                                converter="#{doctoFiscalLiquidacaoControlador.converterGenerico}"
+                                                maxResults="50"
+                                                panelStyle="max-height: 250px"
+                                                dropdown="true"
+                                                disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                itemValue="#{doc.id}"
+                                                itemLabel="#{doc}"
+                                                size="70">
+                                    <p:ajax event="itemSelect"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{liquidacaoControlador.listenerDocumentoFiscal()}"
+                                            process="@this"
+                                            update=":Formulario:viewGeral:painelDoctos"/>
+                                </p:autoComplete>
+                            </h:panelGrid>
+
+                            <h:panelGrid columns="2" id="novoDocto"
+                                         rendered="#{liquidacaoControlador.documentoFiscal ne null
+                                                     and !liquidacaoControlador.isDocumentoFiscalIntegracaoContratoOrObrigacaoPagar()}"
+                                         styleClass="mtop10">
+
+                                <h:outputText value="Portaria da Diária: " style="margin-right: 20px"
+                                              rendered="#{liquidacaoControlador.renderizarAtributosDiaria()}"/>
+                                <h:outputText
+                                    rendered="#{liquidacaoControlador.renderizarAtributosDiaria()}"
+                                    value="#{liquidacaoControlador.selecionado.empenho.propostaConcessaoDiaria.atoLegal}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Tipo de Viagem: " style="margin-right: 20px"
+                                              rendered="#{liquidacaoControlador.renderizarAtributosDiaria()}"/>
+                                <h:outputText
+                                    rendered="#{liquidacaoControlador.renderizarAtributosDiaria()}"
+                                    value="#{liquidacaoControlador.selecionado.empenho.propostaConcessaoDiaria.tipoViagem.descricao}"
+                                    styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio for="tipoDocumentoFiscal" value="Tipo de Documento: "/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="tipoDocumentoFiscal"
+                                                title="Informe um Tipo de Documento Fiscal"
+                                                var="int"
+                                                value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.tipoDocumentoFiscal}"
+                                                completeMethod="#{liquidacaoControlador.completarTipoDoctos}"
+                                                converter="#{tipoDocumentoFiscalControlador.converterGenerico}"
+                                                maxResults="30"
+                                                panelStyle="max-height: 250px"
+                                                dropdown="true"
+                                                itemValue="#{int.id}"
+                                                itemLabel="#{int}"
+                                                size="70"
+                                                styleClass="mrig05">
+                                    <p:ajax update="novoDocto"
+                                            process="@this"
+                                            event="itemSelect"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio for="dataDocto" value="Data de Emissão: "/>
+                                <p:calendar
+                                    value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.dataDocto}"
+                                    id="dataDocto"
+                                    pattern="dd/MM/yyyy"
+                                    navigator="true"
+                                    locale="pt_BR"
+                                    disabled="#{liquidacaoControlador.verificaEdicao}"
+                                    title="Informe a Data do Documento Fiscal"
+                                    onkeyup="mascara(this,mdata)">
+                                    <p:ajax event="dateSelect" process="@this"/>
+                                    <p:ajax event="valueChange" process="@this"/>
+                                </p:calendar>
+
+                                <fc:outputLabelObrigatorio value="Data do Atesto: " for="dataAtesto"/>
+                                <p:calendar
+                                    value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.dataAtesto}"
+                                    id="dataAtesto"
+                                    size="12"
+                                    pattern="dd/MM/yyyy"
+                                    navigator="true"
+                                    disabled="#{liquidacaoControlador.verificaEdicao}"
+                                    locale="pt_BR"
+                                    title="Informe a Data do Atesto."
+                                    onkeypress="mascara(this,mdata)"/>
+
+                                <fc:outputLabelObrigatorio value="Número: " for="numeroDocto"/>
+                                <p:inputText id="numeroDocto"
+                                             disabled="#{liquidacaoControlador.verificaEdicao}"
+                                             maxlength="40"
+                                             value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.numero}"
+                                             title="Informe o número do Documento Fiscal">
+                                    <p:ajax event="change" process="@this"/>
+                                </p:inputText>
+
+                                <fc:outputLabelObrigatorio value="Série: "/>
+                                <p:inputText id="serieDocto"
+                                             disabled="#{liquidacaoControlador.verificaEdicao}"
+                                             value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.serie}"
+                                             title="Informe a Série do Documento Fiscal"/>
+
+                                <h:panelGroup id="idGroupLabelChaveCesso">
+                                    <h:outputText value="Chave de Acesso da NF-e/Cód. Verif. NFS-e: "
+                                                  rendered="#{!liquidacaoControlador.isTipoDocumentoFiscalObrigaChaveAcesso()}"/>
+                                    <fc:outputLabelObrigatorio value="Chave de Acesso da NF-e/Cód. Verif. NFS-e: "
+                                                               rendered="#{liquidacaoControlador.isTipoDocumentoFiscalObrigaChaveAcesso()}"/>
+                                </h:panelGroup>
+                                <h:panelGroup id="groupChaveAcesso">
+                                    <p:inputText disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                 maxlength="54"
+                                                 size="50"
+                                                 value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.chaveDeAcesso}"
+                                                 title="Informe o número da chave de acesso"/>
+
+                                    <p:commandButton styleClass="botao_azul icone_branco mlef03"
+                                                     actionListener="#{liquidacaoControlador.buscarNotasFiscais()}"
+                                                     disabled="#{!liquidacaoControlador.isTipoDocumentoFiscalObrigaChaveAcesso()}"
+                                                     process="@this"
+                                                     onstart="aguarde.show()"
+                                                     update=":formNotasFiscais"
+                                                     oncomplete="aguarde.hide()"
+                                                     image="ui-icon-search"/>
+                                </h:panelGroup>
+
+                                <fc:outputLabelObrigatorio value="UF: "/>
+                                <h:selectOneMenu id="ufDocto"
+                                                 disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                 title="Informe a UF do Documento Fiscal"
+                                                 style="width: 127px"
+                                                 converter="#{uFControlador.converterGenerico}"
+                                                 value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.uf}">
+                                    <f:selectItems value="#{liquidacaoControlador.listaUfs}"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="valorDocto" value="Valor Documento: "/>
+                                <fc:inputMoeda id="valorDocto"
+                                               value="#{liquidacaoControlador.documentoFiscal.doctoFiscalLiquidacao.valor}"
+                                               disable="#{liquidacaoControlador.verificaEdicao}"
+                                               process="@this :Formulario:viewGeral:painelDoctos"
+                                               update=":Formulario:viewGeral:painelDoctos"
+                                               listenerBlurEvent="#{liquidacaoControlador.atualizarValorBaseCalculoQuandoNaoRetencaoPrevidenciaria()}"/>
+                            </h:panelGrid>
+
+                            <h:panelGrid id="panelAddDoctoBem"
+                                         columns="2"
+                                         rendered="#{liquidacaoControlador.isDocumentoFiscalIntegracaoContratoOrObrigacaoPagar()}">
+                                <h:outputText value="Valor Liquidado: " style="margin-right: 20px"/>
+                                <h:outputText value="#{liquidacaoControlador.valorTotalDocumentosLiquidados}"
+                                              converter="#{liquidacaoControlador.moneyConverter}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Saldo a Liquidar: "/>
+                                <h:outputText value="#{liquidacaoControlador.saldoLiquidar}"
+                                              converter="#{liquidacaoControlador.moneyConverter}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Valor a Liquidar: "/>
+                                <fc:inputMoeda value="#{liquidacaoControlador.documentoFiscal.valorLiquidado}"/>
+                            </h:panelGrid>
+
+                            <co:editar-reinf-liquidacao-docto-fiscal
+                                documentoFiscal="#{liquidacaoControlador.documentoFiscal}"
+                                renderizarCampos="#{liquidacaoControlador.contaDespesaEventoReinf}"
+                                update=":Formulario:viewGeral:painelDoctos"
+                                process="@this :Formulario:viewGeral:painelDoctos"
+                                canEditarEventoR2010="#{liquidacaoControlador.eventoR2010Atual eq null or liquidacaoControlador.eventoR2010Atual.codigoResposta != 0}"
+                                canEditarEventoR4020="#{liquidacaoControlador.eventoR4020Atual eq null or liquidacaoControlador.eventoR4020Atual.codigoResposta != 0}"
+                                contaExtraInss="#{liquidacaoControlador.buscarContaInss()}"
+                                contaExtraIrrf="#{liquidacaoControlador.buscarContaIrrf()}"/>
+
+                            <p:commandButton value="Adicionar"
+                                             icon="ui-icon-circle-plus"
+                                             actionListener="#{liquidacaoControlador.adicionarDocumentoFiscal()}"
+                                             update=":Formulario:viewGeral:painelDoctos :Formulario:viewGeral:panelValorLiquidacao
+                                                     :Formulario:viewGeral:painelDesdob :Formulario:viewGeral:panelObrigacaoPagar"
+                                             process="@this :Formulario:viewGeral:painelDoctos"
+                                             styleClass="padrao mtop10"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             rendered="#{liquidacaoControlador.documentoFiscal ne null}"
+                                             title="Clique para adicionar o Documento Fiscal Selecionado"/>
+
+                            <p:commandButton value="Cancelar"
+                                             icon="ui-icon-cancel"
+                                             actionListener="#{liquidacaoControlador.cancelarDocumentoFiscal()}"
+                                             update=":Formulario:viewGeral:painelDoctos"
+                                             process="@this"
+                                             styleClass="mlef05 mtop10 padrao"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             rendered="#{liquidacaoControlador.documentoFiscal ne null}"
+                                             title="Clique para cancelar um novo Documento Fiscal"/>
+
+                            <p:dataTable id="tabelaDoctos"
+                                         value="#{liquidacaoControlador.selecionado.doctoFiscais}"
+                                         rendered="#{!liquidacaoControlador.isIntegracaoDocumentoFiscal()}"
+                                         var="d"
+                                         style="overflow: scroll; width: auto"
+                                         styleClass="mtop02"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DOCUMENTOS COMPROBATÓRIOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Ações" style="text-align: center; width: 12%">
+                                    <p:commandButton onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     rendered="#{d.notaFiscal ne null}"
+                                                     actionListener="#{liquidacaoControlador.imprimirNotaFiscal(d.notaFiscal)}"
+                                                     icon="ui-icon-print"/>
+
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     styleClass="mrig05"
+                                                     disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                     actionListener="#{liquidacaoControlador.editarDocumentoFiscal(d)}"
+                                                     title="Clique para alterar este registro."
+                                                     id="btEditarDocto"
+                                                     update=":Formulario:viewGeral:painelDoctos :Formulario:viewGeral:panelValorLiquidacao"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                     actionListener="#{liquidacaoControlador.removerDocumentoFiscal(d)}"
+                                                     title="Clique para remover este registro."
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     id="btRemoveDocto"
+                                                     process="@this"
+                                                     update=":Formulario:viewGeral:tabelaDoctos :Formulario:viewGeral:panelValorLiquidacao
+                                                                 :Formulario:viewGeral:panelObrigacaoPagar :Formulario:viewGeral:painelDesdob"/>
+
+                                    <adm:detalhes-origem-documento-liquidacao
+                                        styleClass="mlef05"
+                                        rendered="#{liquidacaoControlador.isBemMovel() or liquidacaoControlador.isEstoque()}"
+                                        update=":Formulario:viewGeral:painelDoctos"
+                                        empenho="#{liquidacaoControlador.selecionado.empenho}"
+                                        doctoFiscalLiqiudacao="#{d.doctoFiscalLiquidacao}"/>
+
+                                    <p:commandButton icon="ui-icon-refresh"
+                                                     update="@this :FormularioReinf"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this"
+                                                     onclick="dialogReinf.show()"
+                                                     actionListener="#{liquidacaoControlador.editarReinfDocumentoFiscal(d)}"
+                                                     title="Clique para atualizar as informações da REINF."
+                                                     rendered="#{liquidacaoControlador.contaDespesaEventoReinf
+                                                     and liquidacaoControlador.operacaoEditar}"/>
+
+                                </p:column>
+                                <p:column headerText="Tipo de Documento" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{d.doctoFiscalLiquidacao.tipoDocumentoFiscal}"/>
+                                </p:column>
+                                <p:column headerText="Chave de Acesso" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{d.doctoFiscalLiquidacao.chaveDeAcesso}"/>
+                                </p:column>
+                                <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{d.doctoFiscalLiquidacao.dataDocto}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Data do Atesto" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{d.doctoFiscalLiquidacao.dataAtesto}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Número" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{d.doctoFiscalLiquidacao.numero}"/>
+                                </p:column>
+                                <p:column headerText="Série" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{d.doctoFiscalLiquidacao.serie}"
+                                                  rendered="#{!liquidacaoControlador.contaDespesaEventoReinf}"/>
+                                    <p:inputText
+                                        rendered="#{liquidacaoControlador.contaDespesaEventoReinf}"
+                                        value="#{d.doctoFiscalLiquidacao.serie}" size="8"
+                                        title="Informe a Série do Documento Fiscal"/>
+                                </p:column>
+                                <p:column headerText="Natureza de Rendimentos" styleClass="alinhamentoEsquerda"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf4020}">
+                                    <p:autoComplete queryDelay="1000"
+                                                    title="Informe uma natureza de rendimentos."
+                                                    var="nrr"
+                                                    value="#{d.naturezaRendimentoReinf}"
+                                                    completeMethod="#{liquidacaoControlador.completarNaturezasDosRendimentosREINF}"
+                                                    converter="#{naturezaRendimentoReinfControlador.converterGenerico}"
+                                                    maxResults="30"
+                                                    panelStyle="max-height: 250px"
+                                                    itemValue="#{nrr.id}"
+                                                    itemLabel="#{nrr.toStringAutoComplete()}"
+                                                    size="22"
+                                                    styleClass="mrig05"/>
+                                </p:column>
+                                <p:column headerText="Vlr. Base Cálc. IR" styleClass="alinhamentoDireita"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf4020}">
+                                    <h:outputText value="#{d.valorBaseCalculoIrrf}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </p:column>
+                                <p:column headerText="% IR Retido" styleClass="alinhamentoDireita"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf4020}">
+                                    <h:outputText value="#{d.porcentagemRetencaoMaximaIrrf}"
+                                                  converter="porcentagemConverter"/>
+                                </p:column>
+                                <p:column headerText="Vlr. IR Retido" styleClass="alinhamentoDireita"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf4020}">
+                                    <h:outputText value="#{d.valorRetidoIrrf}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Serviço" styleClass="alinhamentoEsquerda"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf2010}">
+                                    <h:selectOneMenu
+                                        title="Informe o Tipo de serviço REINF do Documento Fiscal"
+                                        style="width: 127px"
+                                        rendered="#{d.retencaoPrevidenciaria}"
+                                        value="#{d.tipoServicoReinf}">
+                                        <f:selectItems value="#{liquidacaoControlador.tipoServicoReinf}"/>
+                                    </h:selectOneMenu>
+                                </p:column>
+                                <p:column headerText="Vlr. Base Calc. INSS" styleClass="alinhamentoDireita"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf2010}">
+                                    <h:outputText value="#{d.valorBaseCalculo}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </p:column>
+                                <p:column headerText="% INSS Retido" styleClass="alinhamentoDireita"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf2010}">
+                                    <h:outputText value="#{d.porcentagemRetencaoMaxima}"
+                                                  converter="porcentagemConverter"/>
+                                </p:column>
+                                <p:column headerText="Vlr. INSS Retido" styleClass="alinhamentoDireita"
+                                          rendered="#{liquidacaoControlador.renderizarCamposReinf2010}">
+                                    <h:outputText value="#{d.valorRetido}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </p:column>
+                                <p:column headerText="Vlr. Líquido" styleClass="alinhamentoDireita"
+                                          rendered="#{liquidacaoControlador.contaDespesaEventoReinf}">
+                                    <h:outputText value="#{d.valorCalculoIrInssOuSaldoAtual}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)"
+                                          rendered="#{!liquidacaoControlador.contaDespesaEventoReinf}"
+                                          styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{d.valorLiquidado}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                    <f:facet name="footer">
+                                        <div align="right">
+                                            <h:outputText id="totalDocto"
+                                                          value="#{liquidacaoControlador.selecionado.totalDocumentos}"
+                                                          converter="#{liquidacaoControlador.moneyConverter}"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                                <p:column headerText="Saldo (R$)" styleClass="alinhamentoDireita"
+                                          rendered="#{!liquidacaoControlador.contaDespesaEventoReinf}">
+                                    <h:outputText value="#{d.saldo}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                    <f:facet name="footer">
+                                        <div align="right">
+                                            <h:outputText
+                                                value="#{liquidacaoControlador.selecionado.saldoTotalDocumentos}"
+                                                converter="#{liquidacaoControlador.moneyConverter}"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                            </p:dataTable>
+
+                            <div class="thumbnail mtop05" style="overflow: scroll; max-height: 400px; width: auto;">
+                                <p:outputPanel
+                                    rendered="#{liquidacaoControlador.isIntegracaoDocumentoFiscal()}">
+                                    <div align="center" class="alert alert-info negrito"
+                                         style="padding: 4px">
+                                        Documentos Comprobatórios da Integração com #{liquidacaoControlador.isBemMovel() ? 'Aquisição de Bens' : 'Entrada por Compra'}
+                                    </div>
+
+                                    <div align="center" class="thumbnail">
+                                        Somente Documento Integrador:
+                                        <h:selectBooleanCheckbox
+                                            value="#{liquidacaoControlador.assistenteDocumentoFiscal.integrado}"
+                                            styleClass="mrig20">
+                                            <p:ajax event="valueChange"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:painelDoctos
+                                                             :Formulario:viewGeral:valor"
+                                                    process="@this"
+                                                    listener="#{liquidacaoControlador.filtrarSomenteDocumentoFiscalIntegracao()}"/>
+                                        </h:selectBooleanCheckbox>
+
+                                        Somente Documento com Saldo:
+                                        <h:selectBooleanCheckbox
+                                            value="#{liquidacaoControlador.assistenteDocumentoFiscal.comSaldo}">
+                                            <p:ajax event="valueChange"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:painelDoctos
+                                                            :Formulario:viewGeral:valor"
+                                                    process="@this"
+                                                    listener="#{liquidacaoControlador.filtrarSomenteDocumentoFiscalComSaldo()}"/>
+                                        </h:selectBooleanCheckbox>
+                                    </div>
+
+                                    <table class="table" style="width: 100%">
+                                        <tr>
+                                            <th style="width: 3%" class="alinhamentoCentralizado">
+                                                <p:commandButton icon="ui-icon-check"
+                                                                 styleClass="vinteLarguraVinteAltura icone-16"
+                                                                 onstart="aguarde.show();"
+                                                                 oncomplete="aguarde.hide();"
+                                                                 process="@this"
+                                                                 update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:painelDoctos
+                                                            :Formulario:viewGeral:valor :Formulario:viewGeral:panelTransferenciasBens"
+                                                                 rendered="#{!liquidacaoControlador.mostrarBotaoSelecionarTodos()}"
+                                                                 actionListener="#{liquidacaoControlador.desmarcarTodos()}"/>
+                                                <p:commandButton
+                                                    styleClass="vinteLarguraVinteAltura botao-select-desmarcado icone-16"
+                                                    value=""
+                                                    process="@this"
+                                                    update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:painelDoctos
+                                                            :Formulario:viewGeral:valor :Formulario:viewGeral:panelTransferenciasBens"
+                                                    onstart="aguarde.show();"
+                                                    oncomplete="aguarde.hide();"
+                                                    rendered="#{liquidacaoControlador.mostrarBotaoSelecionarTodos()}"
+                                                    actionListener="#{liquidacaoControlador.selecionarTodos()}"/>
+                                            </th>
+                                            <th style="width: 3%" class="alinhamentoCentralizado">Grupos</th>
+                                            <th class="alinhamentoCentralizado"></th>
+                                            <th class="alinhamentoEsquerda">Tipo de Documento</th>
+                                            <th class="alinhamentoCentralizado">Emissão</th>
+                                            <th class="alinhamentoCentralizado">Atesto</th>
+                                            <th class="alinhamentoDireita">Número</th>
+                                            <th class="alinhamentoDireita">Série</th>
+                                            <th class="alinhamentoDireita">Vl Doc (R$)</th>
+                                            <th class="alinhamentoDireita">Vl Liquidado (R$)</th>
+                                            <th class="alinhamentoDireita">Vl à Liquidar (R$)</th>
+                                        </tr>
+                                        <ui:repeat
+                                            value="#{liquidacaoControlador.documentosIntegracao}"
+                                            varStatus="index"
+                                            var="docInteg">
+
+                                            <tr>
+                                                <td class="alinhamentoCentralizado">
+                                                    <h:selectBooleanCheckbox value="#{docInteg.selecionado}"
+                                                                             styleClass="icone-16"
+                                                                             disabled="#{!docInteg.integrador or liquidacaoControlador.isOperacaoEditar()}">
+                                                        <p:ajax event="valueChange"
+                                                                onstart="aguarde.show()"
+                                                                oncomplete="aguarde.hide()"
+                                                                update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:painelDoctos :Formulario:viewGeral:valor :Formulario:viewGeral:panelTransferenciasBens"
+                                                                process="@this :Formulario:viewGeral:painelDoctos"
+                                                                listener="#{liquidacaoControlador.distribuirValorEAdicionarOuRemoverDocumentoFiscal(docInteg)}"/>
+                                                    </h:selectBooleanCheckbox>
+                                                </td>
+                                                <td class="alinhamentoCentralizado">
+                                                    <div class="pull-left"
+                                                         style="display: #{liquidacaoControlador.isOperacaoNovo() ? 'block' : 'none'}">
+                                                        <p:commandButton
+                                                            rendered="#{!docInteg.expandirGrupos}"
+                                                            icon="ui-icon-triangle-1-e"
+                                                            styleClass="icone-16"
+                                                            actionListener="#{liquidacaoControlador.expandirGrupoDocumento(docInteg, true)}"
+                                                            update=":Formulario:viewGeral:painelDoctos"
+                                                            process="@this"
+                                                            onstart="aguarde.show()"
+                                                            oncomplete="aguarde.hide()"
+                                                            title="Clique para ver os grupos do documento."/>
+
+                                                        <p:commandButton
+                                                            rendered="#{docInteg.expandirGrupos}"
+                                                            icon="ui-icon-triangle-1-s"
+                                                            styleClass="icone-16"
+                                                            actionListener="#{liquidacaoControlador.expandirGrupoDocumento(docInteg, false)}"
+                                                            update=":Formulario:viewGeral:painelDoctos"
+                                                            process="@this"
+                                                            onstart="aguarde.show()"
+                                                            oncomplete="aguarde.hide()"
+                                                            title="Clique para ver os grupos do documento."/>
+                                                    </div>
+
+                                                    <div class="pull-right">
+                                                        <adm:detalhes-origem-documento-liquidacao
+                                                            styleClass="icone-16"
+                                                            update=":Formulario:viewGeral:painelDoctos"
+                                                            empenho="#{liquidacaoControlador.selecionado.empenho}"
+                                                            doctoFiscalLiqiudacao="#{docInteg.doctoFiscalLiquidacao}"/>
+                                                    </div>
+                                                </td>
+                                                <td class="alinhamentoCentralizado">
+                                                    <div class="label label-success">
+                                                        <h:outputText
+                                                            value="#{docInteg.integrador ? 'Integrador' : ''}"/>
+                                                    </div>
+                                                </td>
+                                                <td class="alinhamentoEsquerda">
+                                                    <h:outputText
+                                                        value="#{docInteg.doctoFiscalLiquidacao.tipoDocumentoFiscal.codigo} - #{docInteg.doctoFiscalLiquidacao.tipoDocumentoFiscal.descricao}"/>
+
+                                                    <br/>
+                                                    <h:outputText value="Chave de Acesso: " styleClass="cinzaEscuro"/>
+                                                    <h:outputText
+                                                        value="#{docInteg.doctoFiscalLiquidacao.chaveDeAcesso}"
+                                                        styleClass="cinzaEscuro negrito"/>
+                                                </td>
+                                                <td class="alinhamentoCentralizado">
+                                                    <h:outputText value="#{docInteg.doctoFiscalLiquidacao.dataDocto}">
+                                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                    </h:outputText>
+                                                </td>
+                                                <td class="alinhamentoCentralizado">
+                                                    <h:outputText value="#{docInteg.doctoFiscalLiquidacao.dataAtesto}">
+                                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                    </h:outputText>
+                                                </td>
+                                                <td class="alinhamentoDireita">
+                                                    <h:outputText value="#{docInteg.doctoFiscalLiquidacao.numero}"/>
+                                                </td>
+                                                <td class="alinhamentoDireita">
+                                                    <h:outputText value="#{docInteg.doctoFiscalLiquidacao.serie}"/>
+                                                </td>
+                                                <td class="alinhamentoDireita">
+                                                    <p:commandLink onstart="aguarde.show();"
+                                                                   oncomplete="aguarde.hide();dlgEmpenhoDoc.show()"
+                                                                   title="Clique para visualizar a estrutura de empenho(s) que compõe o valor do documento."
+                                                                   actionListener="#{liquidacaoControlador.selecionarDocumentoIntegracao(docInteg)}"
+                                                                   update=":form-dlg-empenho-doc"
+                                                                   process="@this">
+                                                        <h:outputText value="#{docInteg.doctoFiscalLiquidacao.valor}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:commandLink>
+                                                </td>
+                                                <td class="alinhamentoDireita">
+                                                    <h:outputText value="#{docInteg.valorLiquidado}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </td>
+                                                <td class="alinhamentoDireita">
+                                                    <p:outputPanel id="vl-liquidar">
+                                                        <p:inputText value="#{docInteg.valorALiquidar}"
+                                                                     disabled="#{!docInteg.selecionado}"
+                                                                     size="13"
+                                                                     onkeydown="mascara(this, mvalor)"
+                                                                     styleClass="alinhamentoDireita">
+                                                            <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                            <p:ajax event="blur"
+                                                                    onstart="aguarde.show()"
+                                                                    oncomplete="aguarde.hide()"
+                                                                    update=":Formulario:viewGeral:painelDesdob tabela-grupos panel-msg
+                                                                            :Formulario:viewGeral:panel-valor-total-doc
+                                                                            :Formulario:viewGeral:valor
+                                                                            :Formulario:viewGeral:panelTransferenciasBens"
+                                                                    process="@this"
+                                                                    listener="#{liquidacaoControlador.distribuirValorLiquidadoGrupoIntegracao(docInteg)}"/>
+                                                        </p:inputText>
+                                                    </p:outputPanel>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td colspan="12">
+                                                    <p:dataTable value="#{docInteg.grupos}"
+                                                                 styleClass="mlef20 mbot20"
+                                                                 id="tabela-grupos"
+                                                                 rendered="#{docInteg.hasGrupos() and docInteg.expandirGrupos}"
+                                                                 var="docGrupo">
+                                                        <p:column headerText="Itens" style="width: 5%"
+                                                                  styleClass="alinhamentoCentralizado">
+                                                            <p:rowToggler/>
+                                                        </p:column>
+                                                        <p:column headerText="#{docInteg.descricaoGrupoProcesso}"
+                                                                  styleClass="alinhamentoEsquerda">
+                                                            <h:outputText value="#{docGrupo.grupoBem}"
+                                                                          style="color: #{docGrupo.integrador ? 'darkgreen' : ''}"
+                                                                          rendered="#{docInteg.isBemMovel()}"/>
+                                                            <h:outputText value="#{docGrupo.grupoMaterial}"
+                                                                          style="color: #{docGrupo.integrador ? 'darkgreen' : ''}"
+                                                                          rendered="#{docInteg.isEstoque()}"/>
+                                                        </p:column>
+                                                        <p:column headerText="Grupo do Desdobramento"
+                                                                  styleClass="alinhamentoEsquerda">
+                                                            <h:outputText
+                                                                rendered="#{docInteg.isBemMovel()}"
+                                                                style="color: #{docGrupo.integrador ? 'darkgreen' : ''}"
+                                                                value="#{docGrupo.grupoBemDesdobramento}"/>
+                                                            <h:outputText
+                                                                rendered="#{docInteg.isEstoque()}"
+                                                                style="color: #{docGrupo.integrador ? 'darkgreen' : ''}"
+                                                                value="#{docGrupo.grupoMaterialDesdobramento}"/>
+                                                        </p:column>
+                                                        <p:column headerText="Empenho"
+                                                                  styleClass="alinhamentoEsquerda">
+                                                            <h:outputText
+                                                                value="#{docGrupo.empenho.numero}/#{docGrupo.empenho.exercicio.ano}"/>
+                                                        </p:column>
+                                                        <p:column headerText="Valor do Grupo (R$)"
+                                                                  styleClass="alinhamentoDireita">
+                                                            <h:outputText value="#{docGrupo.valorGrupo}">
+                                                                <f:convertNumber pattern="#,##0.00"/>
+                                                            </h:outputText>
+                                                        </p:column>
+
+                                                        <p:rowExpansion>
+                                                            <p:dataTable
+                                                                value="#{docGrupo.itens}"
+                                                                id="tabela-itens-grupo"
+                                                                var="itemGrupo"
+                                                                paginator="true"
+                                                                rows="10"
+                                                                paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                                currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                                                emptyMessage="Não foram localizados registros para serem apresentados."
+                                                                rowIndexVar="rowlx">
+                                                                <p:column
+                                                                    headerText="#{docInteg.descricaoColunaItem}"
+                                                                    styleClass="alinhamentoEsquerda">
+                                                                    <h:outputText
+                                                                        value="#{itemGrupo.descricaoItem}"/>
+                                                                </p:column>
+                                                                <p:column
+                                                                    headerText="Grupo"
+                                                                    styleClass="alinhamentoEsquerda">
+                                                                    <h:outputText
+                                                                        value="#{itemGrupo.grupo}"/>
+                                                                </p:column>
+                                                                <p:column
+                                                                    headerText="Situação"
+                                                                    styleClass="alinhamentoEsquerda">
+                                                                    <h:outputText
+                                                                        value="#{itemGrupo.situacao}"/>
+                                                                </p:column>
+                                                                <p:column
+                                                                    headerText="Vl Original (R$)"
+                                                                    styleClass="alinhamentoDireita">
+                                                                    <h:outputText
+                                                                        value="#{itemGrupo.valorLancamento}">
+                                                                        <f:convertNumber
+                                                                            pattern="#,##0.00"/>
+                                                                    </h:outputText>
+                                                                </p:column>
+                                                                <p:column
+                                                                    headerText="Vl Liquidado (R$)"
+                                                                    styleClass="alinhamentoDireita">
+                                                                    <h:outputText
+                                                                        value="#{itemGrupo.valorLiquidado}">
+                                                                        <f:convertNumber
+                                                                            pattern="#,##0.00"/>
+                                                                    </h:outputText>
+
+                                                                    <f:facet name="footer">
+                                                                        <div align="right">
+                                                                            <h:outputText
+                                                                                styleClass="negrito"
+                                                                                value="#{docGrupo.valorTotalLiquidadoGrupo}">
+                                                                                <f:convertNumber
+                                                                                    pattern="#,##0.00"/>
+                                                                            </h:outputText>
+                                                                        </div>
+                                                                    </f:facet>
+                                                                </p:column>
+                                                                <p:column
+                                                                    headerText="Vl a Liquidar (R$)"
+                                                                    styleClass="alinhamentoDireita">
+                                                                    <h:outputText
+                                                                        value="#{itemGrupo.valorALiquidar}">
+                                                                        <f:convertNumber
+                                                                            pattern="#,##0.00"/>
+                                                                    </h:outputText>
+
+                                                                    <f:facet name="footer">
+                                                                        <div align="right">
+                                                                            <h:outputText
+                                                                                styleClass="negrito"
+                                                                                value="#{docGrupo.valorTotalALiquidarGrupo}">
+                                                                                <f:convertNumber
+                                                                                    pattern="#,##0.00"/>
+                                                                            </h:outputText>
+                                                                        </div>
+                                                                    </f:facet>
+                                                                </p:column>
+                                                            </p:dataTable>
+                                                        </p:rowExpansion>
+                                                    </p:dataTable>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td colspan="12" class="mtop20">
+                                                    <p:outputPanel id="panel-msg">
+                                                        <ui:repeat value="#{docInteg.mensagens}" var="msg">
+                                                            <div class="alert alert-danger mtop02"
+                                                                 style="font-size: 15px; padding: 5px;">
+                                                                <i class="fa fa-exclamation-circle mrig05"/>
+                                                                #{msg}
+                                                            </div>
+                                                        </ui:repeat>
+                                                    </p:outputPanel>
+                                                </td>
+                                            </tr>
+                                        </ui:repeat>
+
+                                        <tr>
+                                            <td colspan="11">
+                                                <p:outputPanel id="panel-valor-total-doc">
+                                                    <div class="label label-default pull-right"
+                                                         style="font-size: 14px; padding: 5px;">
+                                                        Valor Total Documentos:
+                                                        <h:outputText
+                                                            value="#{liquidacaoControlador.valorTotalALiquidarGrupoIntegrador}">
+                                                            <f:convertNumber
+                                                                pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </div>
+                                                </p:outputPanel>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </p:outputPanel>
+                            </div>
+                        </p:panel>
+
+                        <p:outputPanel id="panelTransferenciasBens">
+                            <co:ver-transferencias-entre-grupos-por-documento-fiscal-liquidacao
+                                documentosFiscais="#{liquidacaoControlador.selecionado.doctoFiscais}"
+                                renderizarPainel="#{liquidacaoControlador.hasTransferenciasGruposBens()}"/>
+                        </p:outputPanel>
+
+                        <p:panel id="painelDesdob"
+                                 header="Detalhamento"
+                                 rendered="#{liquidacaoControlador.selecionado.empenho ne null}"
+                                 styleClass="mtop20">
+
+                            <p:commandButton id="btnNovoDetalhamento"
+                                             icon="ui-icon-circle-plus"
+                                             disabled="#{liquidacaoControlador.getBloquearNovoDesdobramento()}"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="mtop05 padrao"
+                                             actionListener="#{liquidacaoControlador.novoDetalhamento()}"
+                                             rendered="#{liquidacaoControlador.desdobramento eq null}"
+                                             title="Clique para adicionar um novo detalhamento"
+                                             process="@this"
+                                             update=":Formulario:viewGeral:painelDesdob"
+                                             value="Novo"/>
+
+                            <h:panelGrid columns="2" id="panelGridDesdobramento"
+                                         rendered="#{liquidacaoControlador.desdobramento ne null}">
+                                <fc:outputLabelObrigatorio for="contaDesdobramento" value="Conta de Despesa: "/>
+                                <h:panelGrid columns="3">
+                                    <p:autoComplete queryDelay="1000"
+                                                    id="contaDesdobramento"
+                                                    size="70"
+                                                    title="Informe a Conta de Despesa Desdobrada filtrando pelo tipo da conta de despesa selecionada no empenho."
+                                                    rendered="#{!liquidacaoControlador.selecionado.isLiquidacaoPossuiObrigacoesPagar() and !liquidacaoControlador.hasEmpenhoComDesdobramento()}"
+                                                    completeMethod="#{liquidacaoControlador.completarContaDespesaDesdobradaEmpenho}"
+                                                    converter="#{planoDeContasWizardControlador.converterConta}"
+                                                    value="#{liquidacaoControlador.desdobramento.conta}"
+                                                    disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                    var="contaDetalhamento"
+                                                    panelStyle="max-height: 250px; max-width: 700px"
+                                                    dropdown="true"
+                                                    maxResults="10"
+                                                    itemValue="#{contaDetalhamento.id}"
+                                                    itemLabel="#{contaDetalhamento}"/>
+
+                                    <p:autoComplete queryDelay="1000"
+                                                    id="desdobramentoOp"
+                                                    size="70"
+                                                    title="Informe a conta de despesa desdobrada filtrando pela lista de obrigações a pagar."
+                                                    rendered="#{liquidacaoControlador.selecionado.isLiquidacaoPossuiObrigacoesPagar()}"
+                                                    completeMethod="#{liquidacaoControlador.completarContaDespesaPorObrigacaoPagar}"
+                                                    converter="#{liquidacaoControlador.converterDesdobramentoObrigacao}"
+                                                    value="#{liquidacaoControlador.desdobramentoObrigacaoPagar}"
+                                                    disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                    var="desdObrigacao"
+                                                    panelStyle="max-height: 250px; max-width: 900px"
+                                                    dropdown="true"
+                                                    maxlength="50"
+                                                    itemValue="#{desdObrigacao.id}"
+                                                    itemLabel="#{desdObrigacao.toStringAutoComplete()}">
+                                        <p:ajax update=":Formulario:viewGeral:painelDesdob dadosDesdObrigacao"
+                                                process="@this"
+                                                listener="#{liquidacaoControlador.calcularSaldoDetalhamentoObrigacaoPagar()}"
+                                                event="itemSelect"/>
+                                    </p:autoComplete>
+
+                                    <p:outputPanel id="dadosDesdObrigacao">
+                                        <fc:visualizarCampos
+                                            objeto="#{liquidacaoControlador.desdobramentoObrigacaoPagar}"
+                                            rendered="#{liquidacaoControlador.selecionado.isLiquidacaoPossuiObrigacoesPagar()}"/>
+                                    </p:outputPanel>
+
+                                    <p:commandButton update="@this"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this"
+                                                     onclick="dialogDetalhamento.show()"
+                                                     icon="ui-icon-search"
+                                                     title="Clique para selecionar um Detalhamento"
+                                                     rendered="#{!liquidacaoControlador.selecionado.isLiquidacaoPossuiObrigacoesPagar() and !liquidacaoControlador.hasEmpenhoComDesdobramento()}"
+                                                     disabled="#{liquidacaoControlador.verificaEdicao}"/>
+
+                                    <p:autoComplete queryDelay="1000"
+                                                    id="desdobramentoEmp"
+                                                    size="70"
+                                                    title="Informe a conta de despesa desdobrada filtrando pelo empenho."
+                                                    rendered="#{liquidacaoControlador.hasEmpenhoComDesdobramento() and !liquidacaoControlador.selecionado.isLiquidacaoPossuiObrigacoesPagar()}"
+                                                    completeMethod="#{liquidacaoControlador.completarContasDeDespesaPorEmpenho}"
+                                                    converter="#{liquidacaoControlador.converterDesdobramentoEmpenho}"
+                                                    value="#{liquidacaoControlador.desdobramentoEmpenho}"
+                                                    disabled="#{liquidacaoControlador.verificaEdicao}"
+                                                    var="desdObrigacao"
+                                                    panelStyle="max-height: 250px; max-width: 900px"
+                                                    dropdown="true"
+                                                    maxlength="50"
+                                                    itemValue="#{desdObrigacao.id}"
+                                                    itemLabel="#{desdObrigacao.toStringAutoComplete()}">
+                                        <p:ajax update=":Formulario:viewGeral:painelDesdob dadosDesdEmpenho"
+                                                process="@this"
+                                                listener="#{liquidacaoControlador.calcularSaldoDetalhamentoEmpenho()}"
+                                                event="itemSelect"/>
+                                    </p:autoComplete>
+
+                                    <p:outputPanel id="dadosDesdEmpenho">
+                                        <fc:visualizarCampos
+                                            objeto="#{liquidacaoControlador.desdobramentoEmpenho}"
+                                            rendered="#{!liquidacaoControlador.selecionado.isLiquidacaoPossuiObrigacoesPagar() and liquidacaoControlador.hasEmpenhoComDesdobramento()}"/>
+                                    </p:outputPanel>
+                                </h:panelGrid>
+
+                                <fc:outputLabelObrigatorio value="Valor: "/>
+                                <p:outputPanel id="valorConta">
+                                    <fc:inputMoeda value="#{liquidacaoControlador.desdobramento.valor}"
+                                                   disable="#{liquidacaoControlador.verificaEdicao}"
+                                                   title="Informe o Valor da Conta de Despesa"/>
+                                </p:outputPanel>
+                            </h:panelGrid>
+
+                            <p:commandButton id="btnAddDetalhamento"
+                                             icon="ui-icon-check"
+                                             disabled="#{liquidacaoControlador.verificaEdicao}"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="mtop05 padrao"
+                                             actionListener="#{liquidacaoControlador.adicionarDetalhamento()}"
+                                             rendered="#{liquidacaoControlador.desdobramento ne null}"
+                                             title="Clique para adicionar uma Conta de Despesa Desdobrada"
+                                             update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:panelValorLiquidacao :Formulario:viewGeral:panelObrigacaoPagar"
+                                             value="Confirmar"/>
+
+                            <p:commandButton id="btnCancelarConta"
+                                             icon="ui-icon-cancel"
+                                             disabled="#{liquidacaoControlador.verificaEdicao}"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="mtop05 mlef05 padrao"
+                                             actionListener="#{liquidacaoControlador.cancelarDetalhamento()}"
+                                             rendered="#{liquidacaoControlador.desdobramento ne null}"
+                                             title="Clique para adicionar uma Conta de Despesa Desdobrada"
+                                             process="@this"
+                                             update=":Formulario:viewGeral:painelDesdob"
+                                             value="Cancelar"/>
+
+                            <p:dataTable id="tableContas"
+                                         value="#{liquidacaoControlador.selecionado.desdobramentos}"
+                                         var="des"
+                                         styleClass="mtop03"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DETALHAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Ação" style="width: 8%;text-align: center"
+                                          rendered="#{!liquidacaoControlador.getBloquearNovoDesdobramento()}">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     styleClass="mrig05"
+                                                     disabled="#{liquidacaoControlador.verificaEdicao or des.desdobramentoEmpenho ne null}"
+                                                     actionListener="#{liquidacaoControlador.editarDetalhamento(des)}"
+                                                     title="Clique para alterar este registro."
+                                                     id="btEditarContaDesdobrada"
+                                                     process="@this"
+                                                     update=":Formulario:viewGeral:painelDesdob :Formulario:viewGeral:tableContas"/>
+
+                                    <p:commandButton id="btnExcluirConta"
+                                                     update=":Formulario:viewGeral:tableContas :Formulario:viewGeral:panelObrigacaoPagar
+                                                             :Formulario:viewGeral:painelDesdob :Formulario:viewGeral:painelDoctos"
+                                                     process="@this"
+                                                     actionListener="#{liquidacaoControlador.removerDetalhamento(des)}"
+                                                     title="Clique para remover este registro."
+                                                     icon="ui-icon-trash"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     disabled="#{liquidacaoControlador.verificaEdicao or liquidacaoControlador.isBemMovel() or liquidacaoControlador.isEstoque()}"/>
+                                </p:column>
+                                <p:column headerText="Conta de Despesa" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{des.toStringDesdobramento()}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Conta de Despesa" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{des.conta.tipoContaDespesa.toString()}"/>
+                                </p:column>
+                                <p:column headerText="Evento Contábil" styleClass="alinhamentoEsquerda">
+                                    <co:visualizarEventoContabil evento="#{des.eventoContabil}"
+                                                                 parametroEvento="#{liquidacaoControlador.getParametroEvento(des)}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{des.valor}">
+                                        <f:convertNumber type="currency"/>
+                                    </h:outputText>
+                                    <f:facet name="footer">
+                                        <div align="right">
+                                            <h:outputText id="totalDoctos"
+                                                          value="#{liquidacaoControlador.selecionado.totalDesdobramentos}"
+                                                          converter="#{liquidacaoControlador.moneyConverter}"
+                                                          readonly="true"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                                <p:column headerText="Saldo (R$)" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{des.saldo}">
+                                        <f:convertNumber type="currency"/>
+                                    </h:outputText>
+                                    <f:facet name="footer">
+                                        <div align="right">
+                                            <h:outputText
+                                                value="#{liquidacaoControlador.selecionado.saldoTotalDesdobramentos}"
+                                                converter="#{liquidacaoControlador.moneyConverter}"
+                                                readonly="true"/>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                            </p:dataTable>
+                        </p:panel>
+                    </p:outputPanel>
+
+                    <h:panelGrid columns="2" id="panelValorLiquidacao">
+                        <h:outputLabel for="historicoContabil" value="Histórico Padrão:"
+                                       style="margin-right: 35px"/>
+                        <h:panelGroup>
+                            <p:autoComplete queryDelay="1000" id="historicoContabil"
+                                            size="70"
+                                            title="Selecione um histórico padrão."
+                                            value="#{liquidacaoControlador.historicoPadrao}"
+                                            completeMethod="#{liquidacaoControlador.completarHistoricoContabil}"
+                                            converter="#{historicoContabilControlador.converterGenerico}"
+                                            maxResults="10"
+                                            disabled="#{liquidacaoControlador.verificaEdicao}"
+                                            forceSelection="true"
+                                            styleClass="mrig05"
+                                            var="hc"
+                                            itemValue="#{hc.id}"
+                                            itemLabel="Número: #{hc.toStringAutoComplete()}">
+                                <p:ajax event="itemSelect"
+                                        update="@this complemento"
+                                        listener="#{liquidacaoControlador.copiarHistoricoUsuario()}"/>
+                            </p:autoComplete>
+
+                            <fc:novoParente destino="#{historicoContabilControlador.caminhoPadrao}novo/"
+                                            origem="#{liquidacaoControlador.caminhoPadrao}novo/"
+                                            rendered="#{!liquidacaoControlador.verificaEdicao}"
+                                            selecionado="#{liquidacaoControlador.selecionado}"/>
+                        </h:panelGroup>
+
+                        <fc:outputLabelObrigatorio value="Histórico: "/>
+                        <h:panelGrid columns="2">
+                            <p:inputTextarea id="complemento"
+                                             value="#{liquidacaoControlador.selecionado.complemento}"
+                                             cols="70"
+                                             maxlength="3000"
+                                             autoResize="true"
+                                             counterTemplate="{0} Caracteres Restantes."
+                                             counter="counter"
+                                             title="Informe o Histórico"
+                                             style="margin-left: -3px"/>
+                            <h:outputText id="counter"/>
+                        </h:panelGrid>
+
+                        <fc:outputLabelObrigatorio for="valor" value="Valor: "/>
+                        <h:outputText id="valor"
+                                      onkeydown="mascaraMonetaria(this);"
+                                      converter="#{liquidacaoControlador.moneyConverter}"
+                                      value="#{liquidacaoControlador.selecionado.valor}"
+                                      styleClass="negrito">
+                        </h:outputText>
+                    </h:panelGrid>
+
+                    <h:panelGrid columns="9"
+                                 id="painelInfo"
+                                 styleClass="mtop10"
+                                 rendered="#{liquidacaoControlador.selecionado.empenho ne null}">
+
+                        <h:outputText value="Valor Empenhado:" style="margin-right: 28px"/>
+                        <h:outputText title="Valor Empenhado" id="saldo"
+                                      converter="#{liquidacaoControlador.moneyConverter}" size="20"
+                                      styleClass="negrito"
+                                      value="#{liquidacaoControlador.valorEmpenho}"/>
+                        <p:spacer width="10"/>
+
+                        <h:outputText value="Valor a Pagar: "/>
+                        <h:outputText id="estLiqui" title="Valor a Pagar" styleClass="negrito"
+                                      converter="#{liquidacaoControlador.moneyConverter}"
+                                      value="#{liquidacaoControlador.calculaValorPagar}"/>
+                        <p:spacer width="10"/>
+
+                        <h:outputText value="Valor Pago: "/>
+                        <h:outputText id="somaPags" title="Valor Pago" styleClass="negrito"
+                                      converter="#{liquidacaoControlador.moneyConverter}"
+                                      value="#{liquidacaoControlador.calcularTotalPago()}"/>
+                        <p:spacer width="10"/>
+                    </h:panelGrid>
+                </p:tab>
+
+                <p:tab id="tabEstornos" title="Estorno de Liquidação">
+                    <p:dataTable id="dataEstLiq"
+                                 var="est"
+                                 value="#{liquidacaoControlador.estornoLiquidacoes}"
+                                 styleClass="mtop05"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>ESTORNOS DE Liquidação&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Ver" styleClass="alinhamentoDireita" style="width: 5px">
+                            <fc:botaoTargetBlank
+                                actionListener="#{utilBeanContabil.redirecionarParaLiquidacaoEstorno(est)}"
+                                icon="ui-icon-eye"
+                                style="width: 27px!important;min-width: 27px!important;height: 27px!important;min-height: 27px!important;"
+                                title="Clique para visualizar este registro."/>
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{est.numero}"/>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{est.dataEstorno}">
+                                <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Número do Empenho"
+                                  styleClass="alinhamentoDireita">
+                            <h:outputText value="#{est.liquidacao.empenho.numero}"/>
+                        </p:column>
+                        <p:column headerText="Número da Liquidação"
+                                  styleClass="alinhamentoDireita">
+                            <h:outputText value="#{est.liquidacao.numero}"/>
+                        </p:column>
+                        <p:column headerText="  Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{est.valor}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                        <f:facet name="footer">
+                            <div align="right">
+                                <h:outputText value="Total: "/>
+                                <h:outputText value="#{liquidacaoControlador.somaEstornoLiquidacoes}"
+                                              converter="#{liquidacaoControlador.moneyConverter}"/>
+                            </div>
+                        </f:facet>
+                    </p:dataTable>
+                </p:tab>
+
+                <p:tab id="tabPagamentos" title="Pagamento">
+                    <p:dataTable id="tabelaPagtos"
+                                 value="#{liquidacaoControlador.pagamentos}"
+                                 var="pag"
+                                 styleClass="mtop05"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>Pagamento&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Ver" styleClass="alinhamentoDireita" style="width: 5px">
+                            <fc:botaoTargetBlank
+                                actionListener="#{utilBeanContabil.redirecionarParaPagamento(pag)}"
+                                icon="ui-icon-eye"
+                                style="width: 27px!important;min-width: 27px!important;height: 27px!important;min-height: 27px!important;"
+                                title="Clique para visualizar este registro."/>
+                        </p:column>
+                        <p:column headerText="Retenções" style="width: 5px" styleClass="alinhamentoCentralizado"
+                                  rendered="#{liquidacaoControlador.renderizarRetencao()}">
+                            <p:commandButton id="verRetencao"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide();dialogRetencao.show()"
+                                             icon="ui-icon-lista"
+                                             update=":formRetencoes"
+                                             rendered="#{liquidacaoControlador.renderizarRetencaoIndividual(pag)}"
+                                             process="@this"
+                                             title="Clique para visualizar as retenções referente a este pagamento."
+                                             actionListener="#{liquidacaoControlador.selecionarPagamento(pag)}"
+                            />
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{pag.numeroPagamento}"/>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{pag.dataPagamento}">
+                                <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Usuário" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.usuarioSistema.nome}"/>
+                        </p:column>
+                        <p:column headerText="Valor Final (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{pag.valorFinal}"
+                                          converter="#{liquidacaoControlador.moneyConverter}"/>
+                        </p:column>
+                        <f:facet name="footer">
+                            <div align="right">
+                                <h:outputText value="Total: "/>
+                                <h:outputText value="#{liquidacaoControlador.somaPagamentos}"
+                                              converter="#{liquidacaoControlador.moneyConverter}"/>
+                            </div>
+                        </f:facet>
+                    </p:dataTable>
+
+                    <p:dataTable id="tabEstPagtos"
+                                 var="estP"
+                                 value="#{liquidacaoControlador.estornoPagamentos}"
+                                 styleClass="mtop20"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>ESTORNOS DE Pagamento&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Ver" styleClass="alinhamentoDireita" style="width: 5px">
+                            <fc:botaoTargetBlank
+                                actionListener="#{utilBeanContabil.redirecionarParaPagamentoEstorno(estP)}"
+                                icon="ui-icon-eye"
+                                style="width: 27px!important;min-width: 27px!important;height: 27px!important;min-height: 27px!important;"
+                                title="Clique para visualizar este registro."/>
+                        </p:column>
+                        <p:column headerText="Retenções" style="width: 5px" styleClass="alinhamentoCentralizado"
+                                  rendered="#{liquidacaoControlador.renderizarRetencaoEstorno()}">
+                            <p:commandButton id="verRetencaoEstorno"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide();dialogEstornoRetencao.show()"
+                                             icon="ui-icon-lista"
+                                             update=":formEstornoRetencoes"
+                                             rendered="#{liquidacaoControlador.renderizarRetencaoEstornoIndividual(estP)}"
+                                             process="@this"
+                                             title="Clique para visualizar as retenções referente a este estorno de pagamento."
+                                             actionListener="#{liquidacaoControlador.selecionarPagamentoEstorno(estP)}"
+                            />
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{estP.numero}"/>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{estP.dataEstorno}">
+                                <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Número do Pagamento"
+                                  styleClass="alinhamentoDireita">
+                            <h:outputText value="#{estP.pagamento.numeroPagamento}"/>
+                        </p:column>
+                        <p:column headerText="Usuário" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{estP.usuarioSistema.nome}"/>
+                        </p:column>
+                        <p:column headerText="Valor Final (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{estP.valorFinal}"
+                                          converter="#{liquidacaoControlador.moneyConverter}"/>
+                        </p:column>
+                        <f:facet name="footer">
+                            <div align="right">
+                                <h:outputText value="Total: "/>
+                                <h:outputText value="#{liquidacaoControlador.calcularEstornosPagamentos()}"
+                                              converter="#{liquidacaoControlador.moneyConverter}"/>
+                            </div>
+                        </f:facet>
+                    </p:dataTable>
+
+                    <br/>
+                    <h:outputText value="Total Pago: "/>
+                    <h:outputText value="#{liquidacaoControlador.calcularTotalPago()}"
+                                  converter="#{empenhoControlador.moneyConverter}"
+                                  styleClass="negrito"/>
+                </p:tab>
+            </p:tabView>
+
+            <fc:rodapePretty controlador="#{liquidacaoControlador}"/>
+
+            <fc:botaoTargetBlank label="Imprimir Nota"
+                                 actionListener="#{liquidacaoControlador.gerarNotaOrcamentaria(false)}"
+                                 rendered="#{liquidacaoControlador.isOperacaoEditar()}"
+                                 imprimeNoDialog="true" update="@this"
+                                 styleClass="mtop10 mrig05"
+                                 style="height: 30px"
+                                 icon="ui-icon-print"
+                                 title="Clique para imprimir a nota de liquidação."/>
+
+            <p:commandButton value="Download Nota"
+                             title="Clique para fazer o download da nota de liquidação."
+                             ajax="false"
+                             icon="ui-icon-arrowthick-1-s"
+                             rendered="#{liquidacaoControlador.isOperacaoEditar()}"
+                             styleClass="mtop10 mrig05">
+                <p:fileDownload value="#{liquidacaoControlador.gerarNotaOrcamentaria(true)}"/>
+            </p:commandButton>
+        </h:form>
+
+        <p:dialog widgetVar="dialog"
+                  modal="true"
+                  closable="true"
+                  resizable="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  width="1000" height="450">
+            <h:form id="Formulario-dialog">
+                <p:panel id="panelDialog" styleClass="mtop05">
+                    <fc:pesquisaGenerico id="lista"
+                                         caminhoAtual="edita"
+                                         caminhoControlador="#{liquidacaoControlador.caminho}"
+                                         nomeDaClasse="Empenho"
+                                         nomeDaTela="#{liquidacaoControlador.tituloEmpenho}"
+                                         dialog="true"
+                                         pretty="true"
+                                         iconmSelecionar="check-icon.png"
+                                         novo="#{liquidacaoControlador.novo()}"
+                                         selecionar="#{liquidacaoControlador.selecionarEmpenho}"
+                                         mostrarHistorico="false"
+                                         mostrarBotaoNovo="false"
+                                         pesquisaNoEnter="false"
+                                         guardarNaSessao="false"
+                                         mostrarBotaoConsultasPersonalizadas="false"
+                                         mostrarBotaoEditarConfiguracaoRelatorio="false"
+                                         mostrarBotaoImprimirRelatorioTabela="false"
+                                         mostrarBotaoImprimirRelatorioUnicoRegistro="false"
+                                         updateSelecionarTabela="dadosEmp"
+                                         meuControlador="#{liquidacaoEmpenhoPesquisaGenerica}"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dlgEmpenhoDoc"
+                  modal="true"
+                  closable="true"
+                  resizable="false"
+                  position="center"
+                  style="position: fixed !important;">
+
+            <h:form id="form-dlg-empenho-doc">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Documento Fiscal: "/>
+                    <h:outputText value="#{liquidacaoControlador.documentoIntegracao.doctoFiscalLiquidacao}"
+                                  styleClass="azulnegrito"/>
+                </h:panelGrid>
+
+                <p:dataTable value="#{liquidacaoControlador.documentoIntegracao.empenhosDocumentoFiscal}"
+                             styleClass="mtop10"
+                             var="empDoc">
+                    <f:facet name="header">ESTRUTURA DE EMPENHOS DO DOCUMENTO FISCAL</f:facet>
+                    <p:column headerText="Número/Ano" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{empDoc.numero}"/>
+                    </p:column>
+                    <p:column headerText="Categoria" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{empDoc.categoria}"/>
+                    </p:column>
+                    <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{empDoc.tipo}"/>
+                    </p:column>
+                    <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{empDoc.valor}">
+                            <f:convertNumber
+                                pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <f:facet name="footer">
+                            <h:outputText
+                                value="#{liquidacaoControlador.documentoIntegracao.valorTotalEmpenhoDocumento}"
+                                styleClass="negrito">
+                                <f:convertNumber
+                                    pattern="#,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogDetalhamento"
+                  modal="true"
+                  resizable="false"
+                  onShow="redimensionarLadosDialog(this.id);redimensionarAlturaDialog(this.id)"
+                  width="1000"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="FormularioDetalhamento">
+
+                <co:titulo-panel titulo="Filtros"/>
+                <h:panelGrid columns="2" styleClass="mtop10">
+                    <h:outputText value="Detalhamento: "/>
+                    <p:inputText value="#{liquidacaoControlador.filtroDetalhamento}"
+                                 id="inputDetalhamento"
+                                 title="Informe o código ou descrição do detalhamento para pesquisar."
+                                 size="70">
+                        <p:watermark value="Pesquisa por código ou descrição da conta de despesa."
+                                     for="inputDetalhamento"/>
+                    </p:inputText>
+                </h:panelGrid>
+
+                <p:commandButton value="Pesquisar"
+                                 id="btnPesquisa"
+                                 title="Clique para Pesquisar os Detalhamento."
+                                 icon="ui-icon-search"
+                                 actionListener="#{liquidacaoControlador.recuperarDetalhamentos()}"
+                                 styleClass="mtop10 mrig05 prioritario padrao"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide();"
+                                 update=":FormularioDetalhamento"
+                                 process=":FormularioDetalhamento"/>
+
+                <p:dataTable value="#{liquidacaoControlador.detalhamentos}"
+                             var="detalhamento"
+                             styleClass="mtop02"
+                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginator="true"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DETALHAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+                    <p:column headerText="Ação" style="text-align: center; width: 5%">
+                        <p:commandButton icon="ui-icon-check"
+                                         styleClass="botao-transparente"
+                                         title="Clique para selecionar etse detalhamento."
+                                         update=":Formulario:viewGeral:painelDesdob :FormularioDetalhamento"
+                                         process=":FormularioDetalhamento"
+                                         onstart="aguarde.show()"
+                                         oncomplete="dialogDetalhamento.hide();aguarde.hide();"
+                                         disabled="#{detalhamento.id eq liquidacaoControlador.desdobramento.conta.id}"
+                                         actionListener="#{liquidacaoControlador.definirContaDoDetalhamento(detalhamento)}"/>
+                    </p:column>
+                    <p:column headerText="Código"
+                              styleClass="alinhamentoDireita"
+                              filterBy="#{detalhamento.codigo}"
+                              filterMatchMode="contains"
+                              style="width: 15%">
+                        <h:outputText value="#{detalhamento.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Descrição"
+                              filterBy="#{detalhamento.descricao}"
+                              filterMatchMode="contains"
+                              styleClass="alinhamentoEsquerda"
+                              style="width: 70%">
+                        <h:outputText value="#{detalhamento.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Conta de Despesa"
+                              styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{detalhamento.tipoContaDespesa.toString()}"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogRetencao"
+                  modal="true"
+                  closable="true"
+                  resizable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formRetencoes">
+
+                <p:tabView styleClass="mtop05 mbot05">
+                    <p:tab id="tabRetencao" title="Retenções">
+                        <p:dataTable id="tableRetencoes"
+                                     value="#{liquidacaoControlador.receitaExtras}"
+                                     var="rec"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop10"
+                                     paginator="true"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     rows="5"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>RETENÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Ver" styleClass="alinhamentoDireita" style="width: 5px">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{utilBeanContabil.redirecionarParaReceitaExtra(rec)}"
+                                    icon="ui-icon-eye"
+                                    style="width: 27px!important;min-width: 27px!important;height: 27px!important;min-height: 27px!important;"
+                                    title="Clique para visualizar este registro."/>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{rec.numero}"/>
+                            </p:column>
+                            <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{rec.dataReceita}">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.situacaoReceitaExtra.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.contaExtraorcamentaria}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.subConta}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recursos" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.fonteDeRecursos}"/>
+                            </p:column>
+                            <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.pessoa}"/>
+                            </p:column>
+                            <p:column headerText="Classe">
+                                <h:outputText value="#{rec.classeCredor}"/>
+                            </p:column>
+                            <p:column headerText="Tipo de Consignação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.tipoConsignacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{rec.valor}" converter="#{pagamentoControlador.moneyConverter}"/>
+                            </p:column>
+                            <f:facet name="footer">
+                                <div align="right">
+                                    <h:outputText value="Total: "/>
+                                    <h:outputText value="#{liquidacaoControlador.somaReceitaExtra}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </div>
+                            </f:facet>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab id="tabEstRet" title="Estorno de Retenções">
+
+                        <p:dataTable id="tableEstRetencoes"
+                                     value="#{liquidacaoControlador.estornoReceitaExtras}"
+                                     var="estRec"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop10"
+                                     paginator="true"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     rows="5"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ESTORNOS DE RETENÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Ver" styleClass="alinhamentoDireita" style="width: 5px">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{utilBeanContabil.redirecionarParaReceitaExtraEstorno(estRec)}"
+                                    icon="ui-icon-eye"
+                                    style="width: 27px!important;min-width: 27px!important;height: 27px!important;min-height: 27px!important;"
+                                    title="Clique para visualizar este registro."/>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{estRec.numero}"/>
+                            </p:column>
+                            <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{estRec.dataEstorno}">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.contaExtraorcamentaria}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.subConta}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recursos" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.fonteDeRecursos}"/>
+                            </p:column>
+                            <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.pessoa}"/>
+                            </p:column>
+                            <p:column headerText="Classe">
+                                <h:outputText value="#{estRec.receitaExtra.classeCredor}"/>
+                            </p:column>
+                            <p:column headerText="Tipo de Consignação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.tipoConsignacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{estRec.valor}"
+                                              converter="#{pagamentoControlador.moneyConverter}"/>
+                            </p:column>
+                            <f:facet name="footer">
+                                <div align="right">
+                                    <h:outputText value="Total: "/>
+                                    <h:outputText value="#{liquidacaoControlador.somaEstornoReceitaExtra}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </div>
+                            </f:facet>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogEstornoRetencao"
+                  modal="true"
+                  closable="true"
+                  resizable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formEstornoRetencoes">
+                <p:tabView styleClass="mtop05 mbot05">
+                    <p:tab title="Estorno de Retenções">
+                        <p:dataTable id="tableEstRetencoesPagamentoEstorno"
+                                     value="#{liquidacaoControlador.estornoReceitaExtras}"
+                                     var="estRec"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop10"
+                                     paginator="true"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     rows="5"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ESTORNOS DE RETENÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Ver" styleClass="alinhamentoDireita" style="width: 5px">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{utilBeanContabil.redirecionarParaReceitaExtraEstorno(estRec)}"
+                                    icon="ui-icon-eye"
+                                    style="width: 27px!important;min-width: 27px!important;height: 27px!important;min-height: 27px!important;"
+                                    title="Clique para visualizar este registro."/>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{estRec.numero}"/>
+                            </p:column>
+                            <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{estRec.dataEstorno}">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.contaExtraorcamentaria}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.subConta}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recursos" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.fonteDeRecursos}"/>
+                            </p:column>
+                            <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.pessoa}"/>
+                            </p:column>
+                            <p:column headerText="Classe">
+                                <h:outputText value="#{estRec.receitaExtra.classeCredor}"/>
+                            </p:column>
+                            <p:column headerText="Tipo de Consignação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{estRec.receitaExtra.tipoConsignacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{estRec.valor}"
+                                              converter="#{pagamentoControlador.moneyConverter}"/>
+                            </p:column>
+                            <f:facet name="footer">
+                                <div align="right">
+                                    <h:outputText value="Total: "/>
+                                    <h:outputText value="#{liquidacaoControlador.somaEstornoReceitaExtra}"
+                                                  converter="#{liquidacaoControlador.moneyConverter}"/>
+                                </div>
+                            </f:facet>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogNotasFiscais"
+                  modal="true"
+                  closable="true"
+                  resizable="false"
+                  width="1200" height="450"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formNotasFiscais">
+                <p:dataTable id="tableNotasFiscais"
+                             value="#{liquidacaoControlador.notasFiscais}"
+                             var="nota"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop10"
+                             paginator="true"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             rows="5"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>NOTAS FISCAIS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100">
+                    <p:column styleClass="alinhamentoCentralizado" style="width: 5px">
+                        <p:commandButton styleClass="mrig05"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         process="@this"
+                                         title="Clique para selecionar esta nota."
+                                         update=":Formulario:viewGeral:groupChaveAcesso"
+                                         actionListener="#{liquidacaoControlador.atribuirNotaFiscalAoDocumentoComprobatorio(nota)}"
+                                         icon="ui-icon-check"/>
+                    </p:column>
+                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{nota.numero}"/>
+                    </p:column>
+                    <p:column headerText="Data de Emissão" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{nota.emissao}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Código de Verificação" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{nota.codigoVerificacao}"/>
+                    </p:column>
+                    <p:column headerText="Prestador" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{nota.prestador}"/>
+                    </p:column>
+                    <p:column headerText="Tomador" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{nota.tomador}"/>
+                    </p:column>
+                    <p:column headerText="Descriminação do Serviço" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{nota.descriminacaoServico}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{nota.declaracaoPrestacaoServico.totalNota}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogReinf"
+                  width="1000"
+                  height="430"
+                  modal="true"
+                  resizable="false"
+                  dynamic="true"
+                  closable="false"
+                  draggable="false"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="FormularioReinf">
+                <p:panel id="panelDialogReinf"
+                         header="Documento Comprobatório">
+
+                    <co:editar-reinf-liquidacao-docto-fiscal
+                        documentoFiscal="#{liquidacaoControlador.documentoFiscal}"
+                        renderizarCampos="#{liquidacaoControlador.contaDespesaEventoReinf}"
+                        hasPagamentoNaoEstornado="#{liquidacaoControlador.hasPagamentoNaoEstornado}"
+                        update=":FormularioReinf:panelDialogReinf"
+                        process="@this :FormularioReinf:panelDialogReinf"
+                        canEditarEventoR2010="#{liquidacaoControlador.eventoR2010Atual eq null or liquidacaoControlador.eventoR2010Atual.codigoResposta != 0}"
+                        canEditarEventoR4020="#{liquidacaoControlador.eventoR4020Atual eq null or liquidacaoControlador.eventoR4020Atual.codigoResposta != 0}"
+                        contaExtraInss="#{liquidacaoControlador.buscarContaInss()}"
+                        contaExtraIrrf="#{liquidacaoControlador.buscarContaIrrf()}"/>
+                </p:panel>
+                <div style='text-align:center'>
+                    <p:commandButton value="Atualizar"
+                                     icon="ui-icon-refresh"
+                                     actionListener="#{liquidacaoControlador.adicionarDocumentoFiscalReinf()}"
+                                     update=":FormularioReinf :Formulario:viewGeral:tabelaDoctos"
+                                     styleClass="padrao mtop10"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                                     title="Clique para adicionar as atualizações referentes a REINF."/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     actionListener="#{liquidacaoControlador.cancelarDocumentoFiscal()}"
+                                     update=":Formulario:viewGeral:tabelaDoctos"
+                                     process="@this"
+                                     styleClass="mlef05 mtop10 padrao"
+                                     onstart="aguarde.show()"
+                                     oncomplete="dialogReinf.hide();aguarde.hide();"
+                                     title="Clique para cancelar."/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

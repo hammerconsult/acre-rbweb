@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:adm="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="limparDadosBem"
+                             process="@this"
+                             update=":Formulario:tabview-geral:panel-geral"
+                             actionListener="#{veiculoControlador.limparDadosDoBem()}"/>
+
+            <fc:cabecalhoPretty origem="#{veiculoControlador.caminhoPadrao}listar" controlador="#{veiculoControlador}"/>
+
+            <p:panel header="Cadastro de Veículo">
+                <p:tabView id="tabview-geral">
+                    <p:tab title="Dados do Veículo">
+
+                        <h:panelGrid columns="2" id="panel-geral" cellspacing="5px">
+                            <h:outputText value="Órgão/Entidade/Fundo Vigente: "/>
+                            <h:panelGroup>
+                                <h:outputText
+                                    value="#{veiculoControlador.selecionado.hierarquiaOrganizacional ne null ? veiculoControlador.selecionado.hierarquiaOrganizacional : 'Utilize a aba unidades para informar o campo Órgão/Entidade/Fundo'}"
+                                    styleClass="negrito"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Unidade Organizacional Responsável: "/>
+                            <h:panelGroup>
+                                <p:autoComplete queryDelay="1000" id="acUnidadeResponsavel"
+                                                completeMethod="#{veiculoControlador.completarHierarquiaOrganizacionalFrotasFilhas}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                var="unid"
+                                                size="70"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 800px"
+                                                itemValue="#{unid.id}"
+                                                itemLabel="#{unid}"
+                                                value="#{veiculoControlador.selecionado.hierarquiaOrganizacionalResponsavel}">
+                                    <p:ajax event="itemSelect" process="@this" update="@this"/>
+                                </p:autoComplete>
+                                <p:watermark value="Selecione o Órgão/Entidade/Fundo."
+                                             for="acUnidadeResponsavel"
+                                             rendered="#{veiculoControlador.selecionado.hierarquiaOrganizacional eq null}"/>
+                            </h:panelGroup>
+
+                            <fc:outputLabelObrigatorio value="Identificação: "/>
+                            <p:inputText value="#{veiculoControlador.selecionado.identificacao}" maxlength="20"
+                                         onkeypress="mascara(this, soAlfaNumerico)">
+                                <p:ajax event="change" process="@this" update="@this"/>
+                            </p:inputText>
+
+                            <h:outputText value="Cedido: "/>
+                            <p:selectOneRadio value="#{veiculoControlador.selecionado.cedido}">
+                                <f:selectItem itemValue="#{true}" itemLabel="Sim"/>
+                                <f:selectItem itemValue="#{false}" itemLabel="Não"/>
+                                <p:ajax event="valueChange"
+                                        process="@this"
+                                        update=":Formulario:tabview-geral:panel-geral"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        listener="#{veiculoControlador.processarSelecaoCedido()}"/>
+                            </p:selectOneRadio>
+
+                            <h:outputText value="Cedido Por: "
+                                          rendered="#{veiculoControlador.selecionado.cedido}"/>
+                            <p:inputText value="#{veiculoControlador.selecionado.cedidoPor}"
+                                         size="70"
+                                         maxlength="70"
+                                         rendered="#{veiculoControlador.selecionado.cedido}"/>
+
+                            <fc:outputLabelObrigatorio value="Categoria: "/>
+                            <h:selectOneMenu id="smCategoria"
+                                             title="Selecione a categoria do veículo"
+                                             value="#{veiculoControlador.selecionado.categoria}">
+                                <f:selectItems value="#{veiculoControlador.categorias()}"/>
+                                <p:ajax event="change"
+                                        process=":Formulario:tabview-geral:panel-geral"
+                                        update=":Formulario:tabview-geral:panel-geral"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio value="Tipo de Caminhão: "
+                                                       rendered="#{veiculoControlador.selecionado.categoria eq 'CAMINHAO'}"/>
+                            <h:selectOneMenu id="d" title="Selecione o tipo do caminhão"
+                                             rendered="#{veiculoControlador.selecionado.categoria eq 'CAMINHAO'}"
+                                             value="#{veiculoControlador.selecionado.tipoCaminhao}">
+                                <f:selectItems value="#{veiculoControlador.getTiposCaminhao()}"/>
+                                <p:ajax event="change" process="@this"
+                                        update="@this"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio value="Tipo de Frota:"
+                                                       rendered="#{!veiculoControlador.selecionado.cedido}"/>
+                            <h:selectOneMenu id="tipoFrotaVeiculo" rendered="#{!veiculoControlador.selecionado.cedido}"
+                                             title="Selecione o tipo de frota do veículo"
+                                             value="#{veiculoControlador.selecionado.tipoAquisicaoObjetoFrota}">
+                                <f:selectItems value="#{veiculoControlador.tipos()}"/>
+                                <p:ajax event="valueChange"
+                                        process="panel-geral"
+                                        update="panel-geral"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        listener="#{veiculoControlador.processaMudancaDeTipo()}"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio for="contrato"
+                                                       value="Contrato:"
+                                                       rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}"/>
+                            <p:autoComplete queryDelay="1000" id="contrato"
+                                            value="#{veiculoControlador.selecionado.contrato}"
+                                            completeMethod="#{contratoAdmControlador.completaContratoUnidadeLogada}"
+                                            var="contrato"
+                                            itemLabel="#{contrato}"
+                                            itemValue="#{contrato.id}"
+                                            size="70"
+                                            maxResults="50"
+                                            dropdown="true"
+                                            panelStyle="max-height: 250px; max-width: 800px"
+                                            rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}"
+                                            converter="#{contratoAdmControlador.converterGenerico}">
+                                <p:ajax event="itemSelect" process="@this" update="panel-geral"
+                                        listener="#{veiculoControlador.processaSelecaoContrato()}"/>
+                                <p:ajax event="blur" process="@this"
+                                        listener="#{veiculoControlador.processaSelecaoContrato()}"/>
+                            </p:autoComplete>
+
+                            <h:outputText value="Objeto: "
+                                          rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}"/>
+                            <h:outputText value="#{veiculoControlador.selecionado.contrato.objeto}"
+                                          styleClass="negrito"
+                                          rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}"/>
+
+                            <h:outputText value="Data do Contrato: "
+                                          rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}"/>
+                            <h:outputText value="#{veiculoControlador.selecionado.contrato.inicioVigencia}"
+                                          styleClass="negrito"
+                                          rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputText value="Validade do Contrato: "
+                                          rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}"/>
+                            <h:outputText value="#{veiculoControlador.selecionado.contrato.terminoVigencia}"
+                                          styleClass="negrito"
+                                          rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado()}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <fc:outputLabelObrigatorio for="descricao"
+                                                       value="Descrição:"
+                                                       rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado() or veiculoControlador.selecionado.cedido}"/>
+                            <h:panelGrid columns="2" cellspacing="0" cellpadding="0"
+                                         rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaAlugado() or veiculoControlador.selecionado.cedido}">
+                                <p:inputTextarea value="#{veiculoControlador.selecionado.descricao}"
+                                                 id="descricao"
+                                                 rows="5"
+                                                 scrollHeight="5"
+                                                 autoResize="false"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counterDesc"
+                                                 maxlength="3000"
+                                                 cols="70">
+                                </p:inputTextarea>
+                                <h:outputText id="counterDesc" styleClass="azul mlef05"/>
+                            </h:panelGrid>
+
+                            <fc:outputLabelObrigatorio for="bem" value="Bem Patrimonial:"
+                                                       rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaProprio()}"/>
+                            <h:panelGroup
+                                id="groupBemProprio"
+                                rendered="#{veiculoControlador.isTipoAquisicaoObjetoFrotaProprio()}">
+                                <p:autoComplete queryDelay="1000" id="acBem"
+                                                title="Digite a descrição do bem patrimonial ligado a este veículo"
+                                                value="#{veiculoControlador.selecionado.bem}"
+                                                completeMethod="#{veiculoControlador.completarBem}"
+                                                var="bem"
+                                                itemLabel="#{bem.identificacao} - #{bem.descricao}"
+                                                itemValue="#{bem.id}"
+                                                size="70"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                styleClass="mrig05"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosBem()}"
+                                                panelStyle="max-height: 250px; max-width: 800px"
+                                                converter="#{bemControlador.converterBem}"
+                                                disabled="#{veiculoControlador.selecionado.hierarquiaOrganizacional eq null}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            update=":Formulario:tabview-geral:panel-geral"
+                                    />
+                                </p:autoComplete>
+
+                                <p:outputPanel id="panelDetalhesBem"
+                                               rendered="#{veiculoControlador.selecionado.bem ne null}">
+                                    <adm:detalhes-do-bem bem="#{veiculoControlador.selecionado.bem}"/>
+                                </p:outputPanel>
+
+                                <p:watermark value="Filtra Órgão/Entidade/Fundo e grupo patrimonial do parâmetro frota"
+                                             for="acBem"/>
+                            </h:panelGroup>
+
+
+                            <h:outputLabel
+                                rendered="#{veiculoControlador.selecionado.bem ne null}"
+                                for="dataAquisicaoBem" value="Data de Aquisição:"/>
+                            <h:outputLabel id="dataAquisicaoBem"
+                                           styleClass="negrito"
+                                           rendered="#{veiculoControlador.selecionado.bem ne null}"
+                                           value="#{veiculoControlador.selecionado.bem.dataAquisicao}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputLabel>
+
+                            <fc:outputLabelObrigatorio value="Data de Aquisição:"
+                                                       rendered="#{veiculoControlador.selecionado.cedido}"/>
+                            <p:calendar title="Digite a data de aquisição do veículo"
+                                        value="#{veiculoControlador.selecionado.dataAquisicao}"
+                                        onkeypress="mascara(this, mdata)"
+                                        rendered="#{veiculoControlador.selecionado.cedido}"
+                                        id="dataAquisicao"
+                                        locale="pt_BR"
+                                        size="15"
+                                        navigator="true"
+                                        showOn="button"
+                                        pattern="dd/MM/yyyy"/>
+
+                            <h:outputLabel
+                                rendered="#{veiculoControlador.selecionado.bem ne null}"
+                                for="marcaBem" value="Marca:"/>
+                            <h:outputText id="marcaBem"
+                                          styleClass="negrito"
+                                          rendered="#{veiculoControlador.selecionado.bem ne null}"
+                                          value="#{veiculoControlador.selecionado.bem.marca}"/>
+
+                            <fc:outputLabelObrigatorio for="placa" value="Placa:"/>
+                            <p:inputMask id="placa" title="Digite a placa do veículo" style="text-transform: uppercase"
+                                         mask="SSS-9999" value="#{veiculoControlador.selecionado.placa}" size="10"/>
+
+                            <fc:outputLabelObrigatorio for="anoFabricacao" value="Ano de Fabricação:"/>
+                            <p:inputMask id="anoFabricacao" title="Digite o ano de fabricação do veículo"
+                                         style="text-transform: uppercase"
+                                         mask="9999" value="#{veiculoControlador.selecionado.anoFabricacao}" size="10"/>
+
+                            <fc:outputLabelObrigatorio value="Cor:"/>
+                            <h:selectOneMenu id="cor"
+                                             value="#{veiculoControlador.selecionado.cor}"
+                                             title="Selecione a cor do veículo"
+                                             converter="#{corControlador.converterGenerico}">
+                                <f:selectItem itemValue="#{null}" itemLabel=" "/>
+                                <f:selectItems value="#{corControlador.cores()}"
+                                               var="cor"
+                                               itemValue="#{cor}"
+                                               itemLabel="#{cor.descricao}"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio for="kmAquisicao" value="Km Aquisição/Contratação:"/>
+                            <p:inputText id="kmAquisicao"
+                                         value="#{veiculoControlador.selecionado.kmAquisicao}"
+                                         onkeydown="mascaraPonto(this);">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </p:inputText>
+
+                            <fc:outputLabelObrigatorio for="kmAtual" value="Km Atual Inicial:"/>
+                            <h:panelGroup>
+                                <p:inputText id="kmAtualInicial"
+                                             value="#{veiculoControlador.selecionado.kmAtual}"
+                                             rendered="#{veiculoControlador.operacaoNovo}"
+                                             onkeydown="mascaraPonto(this);">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </p:inputText>
+                                <h:outputText value="#{veiculoControlador.selecionado.kmAtual}"
+                                              rendered="#{veiculoControlador.operacaoEditar}"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText
+                                    value="Km atual no ato do cadastro do veículo"
+                                    styleClass="azul mlef10"/>
+                            </h:panelGroup>
+
+                            <h:outputLabel for="kmAtual" value="Km Atual:"
+                                           rendered="#{veiculoControlador.operacaoEditar}"/>
+                            <h:panelGroup rendered="#{veiculoControlador.operacaoEditar}">
+                                <h:outputText value="#{veiculoControlador.selecionado.kmPercorrido.kmAtual}"
+                                              id="kmAtual"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+
+                                <h:outputText
+                                    value="km atual atualizado conforme movimentos do veículo"
+                                    styleClass="azul mlef10"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Data Final Garantia:"/>
+                            <p:calendar title="Digite o fimGarantia da Veiculo"
+                                        value="#{veiculoControlador.selecionado.dataFinalGarantia}"
+                                        onkeypress="mascara(this, mdata)"
+                                        id="fimGarantia"
+                                        locale="pt_BR"
+                                        size="15"
+                                        navigator="true"
+                                        showOn="button"
+                                        pattern="dd/MM/yyyy"/>
+
+                            <h:outputLabel for="kmFinalGarantia" value="Km Final Garantia:"/>
+                            <p:inputText id="kmFinalGarantia"
+                                         value="#{veiculoControlador.selecionado.kmFimGarantia}"
+                                         onkeydown="mascaraPonto(this);">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </p:inputText>
+
+                            <h:outputLabel value="Observações:"/>
+                            <h:panelGrid columns="2"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea title="Digite as observações do veículo"
+                                                 value="#{veiculoControlador.selecionado.observacao}"
+                                                 cols="70"
+                                                 rows="5"
+                                                 maxlength="255"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-descricao"/>
+                                <h:outputText id="counter-descricao"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </p:tab>
+
+                    <p:tab title="Unidades">
+                        <p:outputPanel id="panelUnidades">
+                            <p:commandButton icon="ui-icon-plus"
+                                             value="Novo"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar este registro."
+                                             process="@this"
+                                             update=":Formulario:tabview-geral:panelUnidades"
+                                             styleClass="padrao"
+                                             rendered="#{veiculoControlador.unidadeObjetoFrota eq null}"
+                                             actionListener="#{veiculoControlador.novaUnidade()}"/>
+
+                            <h:panelGrid columns="2" rendered="#{veiculoControlador.unidadeObjetoFrota ne null}">
+                                <fc:outputLabelObrigatorio value="Órgão/Entidade/Fundo: "/>
+                                <p:autoComplete queryDelay="1000" id="unidadeObjetoFrota"
+                                                completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalFrotas}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                                var="hoVeiculo"
+                                                size="70"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px; max-width: 800px"
+                                                itemValue="#{hoVeiculo.id}"
+                                                itemLabel="#{hoVeiculo}"
+                                                value="#{veiculoControlador.unidadeObjetoFrota.hierarquiaOrganizacional}">
+                                    <p:ajax event="itemSelect"
+                                            update="@none"
+                                            process="@this"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio value="Início de Vigência:"/>
+                                <p:calendar title="Informe o início de vigência"
+                                            value="#{veiculoControlador.unidadeObjetoFrota.inicioVigencia}"
+                                            onkeypress="mascara(this, mdata)"
+                                            id="inicioVigenciaUnidade"
+                                            locale="pt_BR"
+                                            size="15"
+                                            navigator="true"
+                                            showOn="button"
+                                            pattern="dd/MM/yyyy"/>
+
+                                <fc:outputLabelObrigatorio value="Fim de Vigência:"/>
+                                <p:calendar title="Informe o início de vigência"
+                                            value="#{veiculoControlador.unidadeObjetoFrota.fimVigencia}"
+                                            onkeypress="mascara(this, mdata)"
+                                            id="fimVigenciaUnidade"
+                                            locale="pt_BR"
+                                            size="15"
+                                            navigator="true"
+                                            showOn="button"
+                                            pattern="dd/MM/yyyy"/>
+
+                            </h:panelGrid>
+
+                            <p:commandButton icon="ui-icon-check"
+                                             value="Adicionar"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar este registro."
+                                             process=":Formulario:tabview-geral:panelUnidades"
+                                             update=":Formulario:tabview-geral:panelUnidades :Formulario:tabview-geral:panel-arquivos :Formulario:tabview-geral:panel-geral"
+                                             styleClass="mtop10 padrao"
+                                             rendered="#{veiculoControlador.unidadeObjetoFrota ne null}"
+                                             actionListener="#{veiculoControlador.adicionarUnidade}"/>
+
+                            <p:commandButton icon="ui-icon-cancel"
+                                             value="Cancelar"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para cancelar esta operação."
+                                             process="@this"
+                                             update=":Formulario:tabview-geral:panelUnidades"
+                                             styleClass="mtop10 padrao mlef05"
+                                             rendered="#{veiculoControlador.unidadeObjetoFrota ne null}"
+                                             actionListener="#{veiculoControlador.cancelarUnidade()}"/>
+
+                            <p:dataTable paginator="true"
+                                         id="tabela-unidades"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop03"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{veiculoControlador.selecionado.unidades}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Unidades&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="unid">
+                                <p:column headerText="Ações" style="text-align: center; width: 8%;">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     update=":Formulario:tabview-geral:panelUnidades"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para editar este registro."
+                                                     process="@this"
+                                                     styleClass="mrig05"
+                                                     actionListener="#{veiculoControlador.editarUnidade(unid)}"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     update="tabela-unidades :Formulario:tabview-geral:panel-geral"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para remover este registro."
+                                                     process="@this"
+                                                     actionListener="#{veiculoControlador.removerUnidade(unid)}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Organizacional" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{unid.hierarquiaOrganizacional}"/>
+                                </p:column>
+                                <p:column headerText="Início de Vigência" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{unid.inicioVigencia}">
+                                        <f:convertDateTime type="date"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Fim de Vigência" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{unid.fimVigencia}">
+                                        <f:convertDateTime type="date"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Programa de Revisão do Veículo">
+                        <p:outputPanel id="painelProgramaRevisao">
+                            <p:commandButton icon="ui-icon-plus"
+                                             value="Novo"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar este registro."
+                                             process="@this"
+                                             update=":Formulario:tabview-geral:painelProgramaRevisao"
+                                             styleClass="padrao"
+                                             rendered="#{veiculoControlador.programaRevisaoVeiculo eq null}"
+                                             actionListener="#{veiculoControlador.novoProgramaRevisao()}"/>
+
+                            <h:panelGrid columns="2" rendered="#{veiculoControlador.programaRevisaoVeiculo ne null}">
+                                <fc:outputLabelObrigatorio for="kmRevisao" value="Vencimento por Quilometragem:"/>
+                                <p:inputText id="kmRevisao"
+                                             value="#{veiculoControlador.programaRevisaoVeiculo.km}"
+                                             onkeydown="mascaraPonto(this);">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </p:inputText>
+
+                                <fc:outputLabelObrigatorio for="prazo" value="Vencimento por Prazo:"/>
+                                <h:panelGroup>
+                                    <p:spinner min="0"
+                                               title="Digite o vencimento em meses para a próxima revisão do veículo"
+                                               id="prazo" value="#{veiculoControlador.programaRevisaoVeiculo.prazo}"/>
+                                    <h:outputText value="meses" style="margin-left: 2px;"/>
+                                </h:panelGroup>
+                            </h:panelGrid>
+
+                            <p:commandButton icon="ui-icon-check"
+                                             value="Adicionar"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar este registro."
+                                             process=":Formulario:tabview-geral:painelProgramaRevisao"
+                                             update=":Formulario:tabview-geral:painelProgramaRevisao :Formulario:tabview-geral:panel-arquivos"
+                                             styleClass="mtop10 padrao"
+                                             rendered="#{veiculoControlador.programaRevisaoVeiculo ne null}"
+                                             actionListener="#{veiculoControlador.adicionarProgramaRevisaoVeiculo}"/>
+
+                            <p:commandButton icon="ui-icon-cancel"
+                                             value="Cancelar"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para cancelar esta operação."
+                                             process="@this"
+                                             update=":Formulario:tabview-geral:painelProgramaRevisao"
+                                             styleClass="mtop10 padrao mlef05"
+                                             rendered="#{veiculoControlador.programaRevisaoVeiculo ne null}"
+                                             actionListener="#{veiculoControlador.cancelarProgramaRevisao()}"/>
+
+                            <p:dataTable paginator="true"
+                                         id="tabelaProgramaRevisaoVeiculo"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop03"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{veiculoControlador.selecionado.programaRevisao}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Programações&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="programaRevisao">
+                                <p:column headerText="Ações" style="text-align: center; width: 5px;">
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     update="tabelaProgramaRevisaoVeiculo"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para remover este registro."
+                                                     disabled="#{programaRevisao.revisaoRealizada}"
+                                                     process="@this"
+                                                     actionListener="#{veiculoControlador.removeProgramaRevisaoVeiculo(programaRevisao)}"/>
+                                </p:column>
+                                <p:column headerText="Data de Lançamento" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{programaRevisao.dataLancamento}">
+                                        <f:convertDateTime type="both"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Sequência" styleClass="alinhamentoCentralizado">
+                                    <h:outputText value="#{programaRevisao.sequencia}"/>
+                                </p:column>
+                                <p:column headerText="Vencimento por Quilometragem" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{programaRevisao.km} quilômetros"/>
+                                </p:column>
+                                <p:column headerText="Vencimento por Prazo" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{programaRevisao.prazo} meses"/>
+                                </p:column>
+                                <p:column headerText="Realizada?" styleClass="alinhamentoCentralizado">
+                                    <h:outputText
+                                        value="#{utilBean.converterBooleanSimOuNao(programaRevisao.revisaoRealizada)}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Movimentações de Km do Veículo">
+                        <p:dataTable paginator="true"
+                                     id="movimento-km"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop03"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{veiculoControlador.selecionado.kmPercorridos}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Movimentações&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="km">
+                            <p:column headerText="#" style="width: 15px; text-align: center;">
+                                <h:outputText value="#{rowIx+1}" styleClass="negrito"/>
+                            </p:column>
+                            <p:column headerText="Data de Lançamento" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{km.dataLancamento}">
+                                    <f:convertDateTime type="both"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Km Atual" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{km.kmAtual}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <p:outputPanel id="panel-arquivos">
+                            <fc:filesUploadWP selecionado="#{veiculoControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+            <fc:rodapePretty controlador="#{veiculoControlador}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

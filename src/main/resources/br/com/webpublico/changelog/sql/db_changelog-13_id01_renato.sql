@@ -1,0 +1,1 @@
+update dividapublica set atolegal_id = null

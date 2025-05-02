@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty id="cpCabecalhoPretty" origem="#{localEstoqueControlador.caminhoPadrao}listar/"
+                                controlador="#{localEstoqueControlador}"/>
+
+            <p:tabView id="tabGeral">
+                <p:tab title="Associativa de Material ao Local de Estoque" id="tabPrincipal">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Local de Estoque:"/>
+                        <p:autoComplete queryDelay="1000"
+                                        id="local"
+                                        value="#{localEstoqueControlador.selecionado}"
+                                        completeMethod="#{localEstoqueControlador.completarLocaisDeEstoque}"
+                                        var="loc"
+                                        size="70"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px; max-width: 800px"
+                                        maxResults="50"
+                                        itemLabel="#{loc.toString()}"
+                                        itemValue="#{loc.id}"
+                                        converter="#{localEstoqueControlador.converterGenerico}">
+                            <p:ajax event="itemSelect"
+                                    update="@form"
+                                    listener="#{localEstoqueControlador.buscarMateriais()}"
+                                    process="@this"
+                                    onstart="aguarde.show();"
+                                    oncomplete="aguarde.hide();"/>
+                        </p:autoComplete>
+                    </h:panelGrid>
+
+                    <h:panelGrid columns="2" rendered="#{localEstoqueControlador.selecionado ne null}">
+                        <h:outputText value="Código:"/>
+                        <h:outputText
+                            value="#{localEstoqueControlador.selecionado.codigo}"
+                            id="codigo"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Descrição:"/>
+                        <h:outputText id="descricao"
+                                      value="#{localEstoqueControlador.selecionado.descricao}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Fechado em:"
+                                      rendered="#{localEstoqueControlador.selecionado.fechadoEm ne null}"/>
+                        <p:calendar value="#{localEstoqueControlador.selecionado.fechadoEm}"
+                                    id="fechadoEm" title="Informe a data de Fechamento"
+                                    pattern="dd/MM/yyyy" locale="pt_BR" navigator="true"
+                                    rendered="#{localEstoqueControlador.selecionado.fechadoEm ne null}"
+                                    readonly="true"/>
+
+                        <h:outputText value="Tipo de Estoque:"/>
+                        <h:outputText value="#{localEstoqueControlador.selecionado.tipoEstoque.descricao}"
+                                      id="tipoEstoque"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Unidade Administrativa:"/>
+                        <fc:codigo-descricao-hierarquia
+                            unidadeOrganizacional="#{localEstoqueControlador.selecionado.unidadeOrganizacional}"
+                            tipoHierarquia="ADMINISTRATIVA"
+                            dataMovimento="#{localEstoqueControlador.dataOperacao}"/>
+
+                        <h:outputText value="Superior:"
+                                      rendered="#{localEstoqueControlador.selecionado.superior ne null}"/>
+                        <h:outputText value="#{localEstoqueControlador.selecionado.superior}"
+                                      rendered="#{localEstoqueControlador.selecionado.superior ne null}"
+                                      id="superior" styleClass="negrito"/>
+
+                        <h:outputText value="Utilização de PIN:"
+                                      rendered="#{!localEstoqueControlador.isLocalEstoqueFilho()}"/>
+                        <h:outputText id="pin" rendered="#{!localEstoqueControlador.isLocalEstoqueFilho()}"
+                                      value="#{localEstoqueControlador.selecionado.utilizarPin ? 'Sim' : 'Não'}"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+
+                    <p:tabView rendered="#{localEstoqueControlador.selecionado ne null}">
+                        <p:tab title="Materiais" id="tabMaterialExistente">
+                            <p:outputPanel id="panelMaterialExistente">
+                                <p:dataTable
+                                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                    rowIndexVar="rowIx"
+                                    styleClass="mtop05"
+                                    emptyMessage="Não foram localizados registros para serem apresentados"
+                                    rows="10"
+                                    lazy="true"
+                                    paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais Adicionados&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                    rowsPerPageTemplate="10,25,50,100"
+                                    id="tableMaterial"
+                                    value="#{localEstoqueControlador.model}"
+                                    var="lem" paginator="true"
+
+                                    style="margin-top: 10px;">
+
+                                    <p:column headerText="Operação" style="width: 5%; text-align: center;">
+                                        <p:commandButton icon="ui-icon-trash"
+                                                         title="Clique para remover este item."
+                                                         process="@this"
+                                                         onclick="if (!confirm('Tem certeza que deseja excluir este registro?'))
+                                                         return false; aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         actionListener="#{localEstoqueControlador.removerItem(lem)}"
+                                                         update=":Formulario"/>
+                                    </p:column>
+                                    <p:column headerText="Código" style="width: 5%;"
+                                              styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{lem.material.codigo}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição" style="width: 30%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{lem.material.descricao}"
+                                                      title="#{lem.material.descricaoComplementar}"/>
+                                    </p:column>
+                                    <p:column headerText="Objeto de Compra" style="width: 30%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{lem.material.objetoCompra}"
+                                                      title="#{lem.material.objetoCompra}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo Material" style="width: 25%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{lem.material.grupo}"
+                                                      title="#{lem.material.grupo}"/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Medida" style="width: 5%;"
+                                              styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{lem.material.unidadeMedida.sigla}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </p:tab>
+                        <p:tab title="Novo Material" id="tabNovoMaterial">
+                            <p:outputPanel id="panelNovoMaterial">
+                                <p:commandButton value="Novo Material"
+                                                 actionListener="#{localEstoqueControlador.criarNovoLocalEstoqueMaterial()}"
+                                                 update="panelNovoMaterial"
+                                                 icon="ui-icon-circle-plus"
+                                                 process="@this panelMateriais"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 styleClass="padrao mrig05"/>
+
+                                <p:commandButton value="Vincular Materiais por Grupo"
+                                                 actionListener="#{localEstoqueControlador.criarNovoGrupoMaterial()}"
+                                                 update="panelNovoMaterial"
+                                                 icon="ui-icon-circle-plus"
+                                                 process="@this panelGrupoMateriais"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 styleClass="padrao mrig05"/>
+
+                                <p:commandButton value="Vincular Materiais Deferidos"
+                                                 actionListener="#{localEstoqueControlador.criarMateriaisDeferidos()}"
+                                                 update="panelNovoMaterial panelMaterialExistente"
+                                                 icon="ui-icon-circle-plus"
+                                                 process="@this panelGrupoMateriais"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 styleClass="padrao mrig05"/>
+
+                                <p:panel id="panelMateriais"
+                                         header="Novo Material"
+                                         styleClass="mtop10"
+                                         rendered="#{localEstoqueControlador.exibirPanelMateriais}">
+                                    <h:panelGrid columns="2">
+                                        <h:panelGroup>
+                                            <fc:outputLabelObrigatorio value="Material: " for="material"/>
+                                            <p:autoComplete queryDelay="1000" widgetVar="material" id="material"
+                                                            title="Digite o nome do Material"
+                                                            value="#{localEstoqueControlador.localEstoqueMaterial.material}"
+                                                            completeMethod="#{materialControlador.completarMaterialDeferidoPorDescricaoECodigo}"
+                                                            maxResults="100"
+                                                            var="mat" size="70"
+                                                            process="@this panelMateriais"
+                                                            itemLabel="#{mat.toStringAutoComplete()}"
+                                                            itemValue="#{mat.id}"
+                                                            converter="#{materialControlador.converterGenerico}"
+                                                            styleClass="mrig05">
+                                            </p:autoComplete>
+
+                                            <p:commandButton icon="ui-icon-circle-plus"
+                                                             actionListener="#{localEstoqueControlador.navegarMaterial()}"
+                                                             ajax="false"/>
+                                        </h:panelGroup>
+                                    </h:panelGrid>
+
+                                    <div class="mtop10">
+                                        <p:commandButton value="Adicionar Material"
+                                                         icon="ui-icon-plusthick"
+                                                         title="Clique para adicionar o material selecionado"
+                                                         process="@this panelMateriais"
+                                                         onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         actionListener="#{localEstoqueControlador.adicionarMaterialNaLista}"
+                                                         update="panelNovoMaterial"
+                                                         styleClass="padrao mrig05"/>
+
+                                        <p:commandButton icon="ui-icon-close"
+                                                         title="Clique para cancelar alteração do material"
+                                                         value="Cancelar Alteração"
+                                                         process="@this panelMateriais"
+                                                         onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         actionListener="#{localEstoqueControlador.cancelarEstoqueMaterial()}"
+                                                         update="panelNovoMaterial"
+                                                         styleClass="padrao mrig05"/>
+                                    </div>
+                                </p:panel>
+
+                                <p:panel id="panelGrupoMateriais"
+                                         header="Grupo Material"
+                                         styleClass="mtop10"
+                                         rendered="#{localEstoqueControlador.exibirPanelGrupoMaterial}">
+                                    <h:panelGrid columns="2">
+                                        <fc:outputLabelObrigatorio value="Grupo de Material: " for="grupoMat"/>
+                                        <p:autoComplete queryDelay="1000" id="grupoMat"
+                                                        title="Digite a descrição do bem"
+                                                        completeMethod="#{grupoMaterialControlador.completaGrupoMaterial}"
+                                                        value="#{localEstoqueControlador.grupoMaterial}"
+                                                        var="grupoMat" size="70"
+                                                        maxResults="10"
+                                                        itemLabel="#{grupoMat}"
+                                                        itemValue="#{grupoMat.id}"
+                                                        converter="#{grupoMaterialControlador.converterGenerico}"/>
+                                    </h:panelGrid>
+
+                                    <p:commandButton value="Adicionar Materiais do Grupo"
+                                                     icon="ui-icon-plusthick"
+                                                     process="@this panelGrupoMateriais"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     actionListener="#{localEstoqueControlador.preencherListaDeMaterialPorGrupo()}"
+                                                     update=":Formulario"
+                                                     styleClass="mtop10"/>
+                                </p:panel>
+
+                                <p:dataTable
+                                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                    rowIndexVar="rowIx"
+                                    styleClass="mtop05"
+                                    emptyMessage="Não foram localizados registros para serem apresentados"
+                                    rows="10"
+                                    lazy="true"
+                                    paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Novo Material&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                    rowsPerPageTemplate="10,25,50,100"
+                                    id="tablenovo"
+                                    value="#{localEstoqueControlador.materiaisNovos}"
+                                    var="local" paginator="true"
+                                    style="margin-top: 10px;">
+
+                                    <p:column headerText="Operação" style="width: 5%; text-align: center;">
+                                        <p:commandButton icon="ui-icon-trash"
+                                                         title="Clique para remover este item."
+                                                         process="@this"
+                                                         onclick="if (!confirm('Tem certeza que deseja excluir este registro?'))
+                                                         return false; aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         actionListener="#{localEstoqueControlador.removerMaterialNovo(local)}"
+                                                         update="tablenovo"/>
+                                    </p:column>
+                                    <p:column headerText="Código" style="width: 5%;"
+                                              styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{local.material.codigo}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição" style="width: 30%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{local.material.descricao}"
+                                                      title="#{local.material.descricaoComplementar}"/>
+                                    </p:column>
+                                    <p:column headerText="Objeto de Compra" style="width: 30%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{local.material.objetoCompra}"
+                                                      title="#{local.material.objetoCompra}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo Material" style="width: 25%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{local.material.grupo}"
+                                                      title="#{local.material.grupo}"/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Medida" style="width: 5%;"
+                                              styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{local.material.unidadeMedida.sigla}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </p:tab>
+                    </p:tabView>
+                </p:tab>
+            </p:tabView>
+            <p:commandButton value="Salvar"
+                             id="cbSalvar"
+                             styleClass="mtop10 mrig05 prioritario"
+                             style="height: 30px;"
+                             icon="ui-icon-disk"
+                             title="Clique para salvar o registro"
+                             process="@form"
+                             actionListener="#{localEstoqueControlador.salvarAssociacao()}"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"/>
+            <p:commandButton value="Cancelar"
+                             id="cbCancelar"
+                             style="height: 30px;"
+                             styleClass="mtop10"
+                             icon="ui-icon-cancel"
+                             onclick="aguarde.show()"
+                             process="@this"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar e retornar a página anterior"
+                             actionListener="#{localEstoqueControlador.cancelar()}"
+                             immediate="true"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="application/javascript">
+            function processar() {
+                processarBloqueio();
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand name="processarBloqueio" id="btnProcessar" onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             actionListener="#{bloqueioJudicialControlador.processarBloqueioJudicial()}"/>
+            <fc:cabecalhoPretty auditavel="#{true}" controlador="#{bloqueioJudicialControlador}"
+                                origem="#{bloqueioJudicialControlador.caminhoPadrao}/listar/"/>
+
+            <p:poll interval="1" widgetVar="pollProcesso"
+                    listener="#{bloqueioJudicialControlador.finalizarProcesso()}"
+                    stop="#{!bloqueioJudicialControlador.assistente.executando}"
+                    autoStart="false" update=":formProcesso:panelBarra"/>
+            <p:panel header="Processo de Bloqueio Judicial de Débitos" id="panelGeral">
+
+                <h:panelGrid columns="6" style="width: 50%">
+                    <h:outputText value="Exercício"/>
+                    <h:outputText value="Código"/>
+                    <h:outputText value="Data"/>
+                    <h:outputText value="Protocolo/Ano"/>
+                    <h:outputText value="Situação"/>
+                    <h:outputText value="Usuário"/>
+
+                    <p:inputText size="4" value="${bloqueioJudicialControlador.selecionado.exercicio}"
+                                 styleClass="negrito"
+                                 readonly="true"/>
+                    <p:inputText size="10" value="${bloqueioJudicialControlador.selecionado.codigo}"
+                                 styleClass="negrito"
+                                 title="Número gerado automaticamente pelo sistema."
+                                 readonly="true"/>
+                    <p:inputText size="10" value="${bloqueioJudicialControlador.selecionado.dataBloqueio}"
+                                 title="Data do processo de bloqueio"
+                                 styleClass="negrito"
+                                 readonly="true">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </p:inputText>
+                    <fc:protocolo numero="#{bloqueioJudicialControlador.selecionado.numeroProtocolo}"
+                                  controlador="#{bloqueioJudicialControlador}" readonly="true"
+                                  ano="#{bloqueioJudicialControlador.selecionado.anoProtocolo}" mostrarLabel="false"/>
+                    <p:inputText size="15" value="${bloqueioJudicialControlador.selecionado.situacao.descricao}"
+                                 title="Situação do processo de bloqueio"
+                                 styleClass="negrito"
+                                 readonly="true"/>
+                    <p:inputText size="20" value="${bloqueioJudicialControlador.selecionado.usuarioBloqueio.nome}"
+                                 styleClass="negrito"
+                                 readonly="true"/>
+                </h:panelGrid>
+
+                <p:tabView id="tabViewGeral" styleClass="mtop10">
+
+                    <p:tab title="Processo" id="tabProcesso">
+                        <h:panelGrid columns="1" style="width: 70%">
+                            <fc:outputLabelObrigatorio value="Motivo ou Fundamentação Legal"/>
+                            <p:inputTextarea value="#{bloqueioJudicialControlador.selecionado.motivo}"
+                                             rows="5" cols="100" styleClass="negrito"
+                                             maxlength="3000" readonly="true"
+                                             counter="counter"
+                                             counterTemplate="{0} Caracteres Restantes.">
+                                <p:ajax event="blur" process="@this"/>
+                            </p:inputTextarea>
+                            <h:outputText id="counter" styleClass="azulnegrito"/>
+                        </h:panelGrid>
+                        <br/>
+
+                        <span class="label">Decisão Judicial de Penhora</span>
+                        <p:panel>
+                            <h:panelGrid columns="2" id="gridTabPenhora">
+                                <h:outputText value="Data da Penhora: "/>
+                                <h:outputText value="#{bloqueioJudicialControlador.selecionado.dataPenhora}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value="Valor Penhorado: "/>
+                                <h:outputText value="${bloqueioJudicialControlador.selecionado.valorPenhora}"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="Contribuinte: "/>
+                                <h:outputText value="#{bloqueioJudicialControlador.selecionado.contribuintePenhora}"
+                                              styleClass="negrito"/>
+                                <h:outputText value="Processo Judicial: "/>
+                                <h:outputText value="#{bloqueioJudicialControlador.selecionado.processoJudicial}"
+                                              styleClass="negrito"/>
+                            </h:panelGrid>
+                        </p:panel>
+                        <br/>
+
+                        <p:tabView id="tabViewDebitos" styleClass="mtop10">
+                            <p:tab title="Débitos">
+                                <p:scrollPanel mode="native">
+                                    <p:dataTable id="tabelaParcelas"
+                                                 value="#{bloqueioJudicialControlador.parcelas}"
+                                                 var="parcela" styleClass="mtop10"
+                                                 paginator="true" rows="10"
+                                                 rowsPerPageTemplate="10,25,50,100"
+                                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Débitos Originais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                                 rowIndexVar="rowlx">
+                                        <p:column headerText="Inscrição Cadastral">
+                                            <h:outputText value="${parcela.cadastro}"/>
+                                        </p:column>
+                                        <p:column headerText="Referência">
+                                            <h:outputText value="${parcela.referencia}"/>
+                                        </p:column>
+                                        <p:column headerText="Dívida">
+                                            <h:outputText value="${parcela.divida}"/>
+                                        </p:column>
+                                        <p:column headerText="Exercício">
+                                            <h:outputText value="${parcela.exercicio}"/>
+                                        </p:column>
+                                        <p:column headerText="Tipo de Débito">
+                                            <h:outputText value="${parcela.tipoDeDebito}"/>
+                                        </p:column>
+                                        <p:column headerText="Parcela">
+                                            <h:outputText value="${parcela.parcela}"/>
+                                        </p:column>
+                                        <p:column headerText="SD">
+                                            <h:outputText value="${parcela.ordemApresentacao}"/>
+                                        </p:column>
+                                        <p:column headerText="Vencimento">
+                                            <h:outputText value="${parcela.vencimento}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Imposto">
+                                            <h:outputText value="${parcela.valorImposto}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Taxa">
+                                            <h:outputText value="${parcela.valorTaxa}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Juros">
+                                            <h:outputText value="${parcela.valorJuros}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Multa">
+                                            <h:outputText value="${parcela.valorMulta}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Correção">
+                                            <h:outputText value="${parcela.valorCorrecao}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Honorários">
+                                            <h:outputText value="${parcela.valorHonorarios}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Desconto">
+                                            <h:outputText value="${parcela.valorDesconto}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Total">
+                                            <h:outputText value="${parcela.valorTotal}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Situação">
+                                            <h:outputText value="#{parcela.situacaoDescricaoEnum}"
+                                                          title="#{parcela.idParcela}"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:scrollPanel>
+
+                                <h:panelGroup id="totais" styleClass="mtop10">
+                                    <table style="width: 100%; alignment: right" id="tabelaTotais">
+                                        <tr>
+                                            <td style="width: 100%">
+                                                <div style="float: right">
+                                                    <h:panelGrid columns="2">
+                                                        <h:outputText value="Total: "/>
+                                                        <h:outputText
+                                                            value="#{bloqueioJudicialControlador.valorTotalParcelas}"
+                                                            readonly="true"
+                                                            styleClass="negrito">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </h:panelGrid>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </h:panelGroup>
+
+                            </p:tab>
+
+                            <p:tab title="CDA">
+                                <p:dataTable id="tabelaCdas" styleClass="mtop10"
+                                             value="#{bloqueioJudicialControlador.cdas}"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true" var="cda" rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>CDA(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Número" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="${cda.numeroCda}/${cda.ano}" title="#{cda.idCda}"/>
+                                    </p:column>
+                                    <p:column headerText="Data CDA" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="${cda.dataCda}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Exercício" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="${cda.ano}"/>
+                                    </p:column>
+                                    <p:column headerText="Situação Judicial" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="${cda.situacaoJudicial}"/>
+                                    </p:column>
+                                    <p:column headerText="Situação Certidão" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="${cda.situacaoCda}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Atualizado (R$)" styleClass="alinhamentoDireita">
+                                        <h:outputText value="${cda.valorTotal}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:tab>
+                        </p:tabView>
+                        <br/><br/>
+
+                        <span class="label">Bloqueio Judicial de Débitos</span>
+                        <p:panel>
+                            <h:panelGrid columns="2" id="gridTabBloqueio">
+                                <h:outputText value="Data de Bloqueio: "/>
+                                <h:outputText value="#{bloqueioJudicialControlador.selecionado.dataBloqueio}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value="Valor Bloqueado: "/>
+                                <h:outputText value="${bloqueioJudicialControlador.selecionado.valorBloqueio}"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="Contribuinte: "/>
+                                <h:outputText value="#{bloqueioJudicialControlador.selecionado.contribuinteBloqueio}"
+                                              styleClass="negrito"/>
+                            </h:panelGrid>
+                        </p:panel>
+
+                        <p:panel id="panelResumo" header="Resumo do Processo" styleClass="mtop10">
+                            <h:panelGrid columns="8">
+                                <h:outputText value="Data de Bloqueio"/>
+                                <h:outputText value="Devedor" styleClass="mlef05"/>
+                                <h:outputText value="Valor Penhorado" styleClass="mlef05"/>
+                                <h:outputText value="Valor Devido" styleClass="mlef05"/>
+                                <h:outputText value="Valor Bloqueado" styleClass="mlef05"/>
+                                <h:outputText value="Valor Residual" styleClass="mlef05"/>
+                                <h:outputText value="Lote de Arrecadação" styleClass="mlef05"/>
+                                <h:outputText value="Data de Pagamento do Lote de Arrecadação" styleClass="mlef05"/>
+
+                                <h:outputText value="${bloqueioJudicialControlador.selecionado.dataBloqueio}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value="${bloqueioJudicialControlador.selecionado.contribuinteBloqueio}"
+                                              styleClass="negrito mlef05"/>
+                                <h:outputText value="${bloqueioJudicialControlador.selecionado.valorPenhora}"
+                                              styleClass="negrito mlef05">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="${bloqueioJudicialControlador.valorTotalParcelas}"
+                                              styleClass="negrito mlef05">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="${bloqueioJudicialControlador.selecionado.valorBloqueio}"
+                                              styleClass="negrito mlef05">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="${bloqueioJudicialControlador.valorTotalResidual}"
+                                              styleClass="negrito mlef05">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                                <h:panelGrid columns="2"
+                                             rendered="#{bloqueioJudicialControlador.selecionado.loteBaixa ne null}">
+                                    <h:outputText
+                                        value="${bloqueioJudicialControlador.selecionado.loteBaixa.codigoLote}"
+                                        styleClass="negrito mlef05"/>
+                                    <p:commandButton icon="ui-icon-search"
+                                                     styleClass="icone-20"
+                                                     actionListener="#{bloqueioJudicialControlador.redirecionarParaLoteArrecadacao()}"/>
+                                </h:panelGrid>
+                                <h:outputText value="Lote de Arrecadação não encontrado"
+                                              rendered="#{bloqueioJudicialControlador.selecionado.loteBaixa eq null}"
+                                              styleClass="negrito mlef05"/>
+                                <h:outputText value="${bloqueioJudicialControlador.selecionado.loteBaixa.dataPagamento}"
+                                              rendered="#{bloqueioJudicialControlador.selecionado.loteBaixa ne null}"
+                                              styleClass="negrito mlef05">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </h:panelGrid>
+                        </p:panel>
+                        <br/>
+
+                        <p:scrollPanel mode="native">
+                            <p:dataTable id="parcelasDemonstrativas" styleClass="mtop10"
+                                         value="#{bloqueioJudicialControlador.parcelasDemonstrativo}"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         var="demonstrativo"
+                                         paginator="true" rows="10"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Débitos Originados&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Inscrição Cadastral">
+                                    <h:outputText value="${demonstrativo.cadastro}"/>
+                                </p:column>
+                                <p:column headerText="Referência">
+                                    <h:outputText value="${demonstrativo.referencia}"/>
+                                </p:column>
+                                <p:column headerText="Dívida">
+                                    <h:outputText value="${demonstrativo.divida}"/>
+                                </p:column>
+                                <p:column headerText="Exercício">
+                                    <h:outputText value="${demonstrativo.exercicio}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Débito">
+                                    <h:outputText value="${demonstrativo.tipoDeDebito}"/>
+                                </p:column>
+                                <p:column headerText="Parcela">
+                                    <h:outputText value="${demonstrativo.parcela}"/>
+                                </p:column>
+                                <p:column headerText="SD">
+                                    <h:outputText value="${demonstrativo.ordemApresentacao}"/>
+                                </p:column>
+                                <p:column headerText="Vencimento">
+                                    <h:outputText value="${demonstrativo.vencimento}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Imposto">
+                                    <h:outputText value="${demonstrativo.valorImposto}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Taxa">
+                                    <h:outputText value="${demonstrativo.valorTaxa}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Juros">
+                                    <h:outputText value="${demonstrativo.valorJuros}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Multa">
+                                    <h:outputText value="${demonstrativo.valorMulta}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Correção">
+                                    <h:outputText value="${demonstrativo.valorCorrecao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Honorários">
+                                    <h:outputText value="${demonstrativo.valorHonorarios}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Desconto">
+                                    <h:outputText value="${demonstrativo.valorDesconto}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Total">
+                                    <h:outputText value="${demonstrativo.valorTotal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Situação">
+                                    <h:outputText value="${demonstrativo.situacaoDescricaoEnum}"
+                                                  title="#{demonstrativo.idParcela}"/>
+                                </p:column>
+                                <p:column headerText="DAM">
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura"
+                                                     icon="ui-icon-print"
+                                                     disabled="#{bloqueioJudicialControlador.canEstornarBloqueio() || demonstrativo.situacaoEnumValue eq 'PAGO_BLOQUEIO_JUDICIAL'}"
+                                                     onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                                     process="@this" update="@this"
+                                                     actionListener="#{bloqueioJudicialControlador.imprimirDAM(demonstrativo)}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:scrollPanel>
+                        <br/>
+
+                        <p:scrollPanel mode="native">
+                            <p:dataTable id="parcelasResiduais" styleClass="mtop10"
+                                         rendered="#{!empty bloqueioJudicialControlador.parcelasResiduais}"
+                                         value="#{bloqueioJudicialControlador.parcelasResiduais}"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         var="residual"
+                                         paginator="true" rows="10"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Débitos Residuais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         rowIndexVar="rowlx">
+                                <p:column headerText="Inscrição Cadastral">
+                                    <h:outputText value="${residual.cadastro}"/>
+                                </p:column>
+                                <p:column headerText="Referência">
+                                    <h:outputText value="${residual.referencia}"/>
+                                </p:column>
+                                <p:column headerText="Dívida">
+                                    <h:outputText value="${residual.divida}"/>
+                                </p:column>
+                                <p:column headerText="Exercício">
+                                    <h:outputText value="${residual.exercicio}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Débito">
+                                    <h:outputText value="${residual.tipoDeDebito}"/>
+                                </p:column>
+                                <p:column headerText="Parcela">
+                                    <h:outputText value="${residual.parcela}"/>
+                                </p:column>
+                                <p:column headerText="SD">
+                                    <h:outputText value="${residual.ordemApresentacao}"/>
+                                </p:column>
+                                <p:column headerText="Vencimento">
+                                    <h:outputText value="${residual.vencimento}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Imposto">
+                                    <h:outputText value="${residual.valorImposto}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Taxa">
+                                    <h:outputText value="${residual.valorTaxa}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Juros">
+                                    <h:outputText value="${residual.valorJuros}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Multa">
+                                    <h:outputText value="${residual.valorMulta}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Correção">
+                                    <h:outputText value="${residual.valorCorrecao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Honorários">
+                                    <h:outputText value="${residual.valorHonorarios}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Desconto">
+                                    <h:outputText value="${residual.valorDesconto}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Total">
+                                    <h:outputText value="${residual.valorTotal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Situação">
+                                    <h:outputText value="${residual.situacaoDescricaoEnum}"
+                                                  title="#{residual.idParcela}"/>
+                                </p:column>
+                                <p:column headerText="DAM">
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura"
+                                                     icon="ui-icon-print"
+                                                     disabled="#{residual.situacaoEnumValue ne 'EM_ABERTO'}"
+                                                     onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                                     process="@this" update="@this"
+                                                     actionListener="#{bloqueioJudicialControlador.imprimirDAM(residual)}"/>
+                                </p:column>
+
+                            </p:dataTable>
+                        </p:scrollPanel>
+                    </p:tab>
+                    <p:tab title="Histórico de Situações">
+                        <p:dataTable id="tabelaSituacoes" styleClass="mtop10"
+                                     value="#{bloqueioJudicialControlador.selecionado.historicoSituacoes}"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true" var="sit" rows="10"
+                                     paginatorTemplate="Situações" rowIndexVar="rowlx"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados.">
+                            <p:column headerText="Situação" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="${sit.situacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="${sit.dataHistorico}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Usuário Login" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="${sit.usuarioHistorico.login}"/>
+                            </p:column>
+                            <p:column headerText="Usuário Nome" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="${sit.usuarioHistorico.nome}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="Anexos">
+                        <fc:filesUploadWP isTelaEditar="false" selecionado="#{bloqueioJudicialControlador.selecionado}"
+                                          id="arquivos"/>
+                    </p:tab>
+                </p:tabView>
+
+            </p:panel>
+            <fc:rodapeVisualizarPretty controlador="#{bloqueioJudicialControlador}"
+                                       mostrarEditar="#{bloqueioJudicialControlador.canEditarBloqueio()}"
+                                       mostrarCancelar="false"
+                                       mostrarExcluir="false"/>
+
+            <p:commandButton value="Processar" icon="ui-icon-check"
+                             disabled="#{!bloqueioJudicialControlador.canProcessarBloqueioJudicial()}"
+                             onclick="if (!confirm('Deseja criar o lote de arrecadação?')) {return false; }"
+                             onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                             styleClass="operacao mtop10" process="@this"
+                             update=":Formulario"
+                             actionListener="#{bloqueioJudicialControlador.processarBloqueioJudicial()}"/>
+
+            <p:commandButton value="Estornar" icon="ui-icon-arrowreturnthick-1-w"
+                             onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                             styleClass="operacao mtop10 mlef05" process="@this"
+                             onclick="if(!confirm('Deseja estornar o Processo de Bloqueio Judicial?')) return false;"
+                             update=":Formulario" disabled="#{bloqueioJudicialControlador.canEstornarBloqueio()}"
+                             actionListener="#{bloqueioJudicialControlador.estornarProcesso()}"/>
+
+            <p:commandButton value="Cancelar" icon="ui-icon-cancel"
+                             onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                             styleClass="operacao mtop10 mlef05" process="@this"
+                             actionListener="#{bloqueioJudicialControlador.cancelar()}"/>
+        </h:form>
+
+        <p:dialog widgetVar="dialogProgres"
+                  width="800" closable="false" showHeader="false" modal="true"
+                  hideEffect="clip" resizable="false" position="center" dynamic="true">
+            <h:form id="formProcesso">
+                <p:panel style="text-align: center; width: 100%; border: 0px;"
+                         visible="#{bloqueioJudicialControlador.assistente.executando}"
+                         id="panelBarra">
+                    <h:outputText
+                        value="#{bloqueioJudicialControlador.assistente.mensagem}"
+                        escape="false"/>
+                    <br/>
+
+                    <div class="progress progress-striped active" id="barraProgresso">
+                        <div class="bar"
+                             style="width: #{bloqueioJudicialControlador.assistente.porcentagemDoCalculo}%;">
+                            <h:outputText
+                                value="#{bloqueioJudicialControlador.assistente.porcentagemDoCalculo}"
+                                styleClass="negrito">
+                                <f:convertNumber type="number" maxFractionDigits="2"/>
+                            </h:outputText>
+                            <h:outputText value="%"/>
+                        </div>
+                    </div>
+                    <br/>
+                    <h:outputText
+                        value="Tempo Decorrido: #{bloqueioJudicialControlador.assistente.tempoDecorrido}"
+                        styleClass="negrito"/>
+                    <br/>
+                    <h:outputText
+                        value="Tempo Estimado: #{bloqueioJudicialControlador.assistente.tempoEstimado}"
+                        styleClass="negrito"/>
+                    <br/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

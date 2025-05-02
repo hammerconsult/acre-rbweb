@@ -1,0 +1,17 @@
+DELETE FROM RECURSOSISTEMA WHERE CAMINHO = '/tributario/nfse/declaracaomensal/lancamento-lote.xhtml';
+DELETE FROM RECURSOSISTEMA WHERE CAMINHO = '/tributario/nfse/declaracaomensal/lista-lote.xhtml';
+INSERT INTO RECURSOSISTEMA (ID, NOME, CAMINHO, CADASTRO, MODULO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 'TRIBUTÁRIO > NOTA FISCAL > ENCERRAMENTO MENSAL DE SERVIÇO (LOTE) > LANÇAR',
+'/tributario/nfse/lotedeclaracaomensal/lancar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO RECURSOSISTEMA (ID, NOME, CAMINHO, CADASTRO, MODULO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 'TRIBUTÁRIO > NOTA FISCAL > ENCERRAMENTO MENSAL DE SERVIÇO (LOTE) > LISTAR',
+'/tributario/nfse/lotedeclaracaomensal/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO RECURSOSISTEMA (ID, NOME, CAMINHO, CADASTRO, MODULO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 'TRIBUTÁRIO > NOTA FISCAL > ENCERRAMENTO MENSAL DE SERVIÇO (LOTE) > VISUALIZAR',
+'/tributario/nfse/lotedeclaracaomensal/visualizar.xhtml', 0, 'TRIBUTARIO');
+UPDATE MENU SET CAMINHO = '/tributario/nfse/lotedeclaracaomensal/lista.xhtml'
+WHERE CAMINHO = '/tributario/nfse/declaracaomensal/lista-lote.xhtml';
+INSERT INTO GRUPORECURSOSISTEMA
+SELECT ID, (SELECT ID FROM GRUPORECURSO WHERE NOME = 'TRB - NFS-e - Gerencial')
+   FROM RECURSOSISTEMA RS
+WHERE RS.CAMINHO LIKE '/tributario/nfse/lotedeclaracaomensal/%';

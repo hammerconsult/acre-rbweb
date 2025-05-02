@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+
+            window.onload = function () {
+                pesquisarBensAoEditar();
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerSalvar;
+            function acompanharSalvar() {
+                timerSalvar = setInterval(function () {
+                    rcAcompanharSalvar();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timerSalvar);
+                rcFinalizarSalvar();
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                aguarde.show();
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand
+                id="btnBuscarBens"
+                name="pesquisarBensAoEditar"
+                actionListener="#{solicitacaoAlienacaoControlador.pesquisarBensAoEditar()}"/>
+
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                process="@this"
+                actionListener="#{solicitacaoAlienacaoControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                actionListener="#{solicitacaoAlienacaoControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                actionListener="#{solicitacaoAlienacaoControlador.acompanharAndamentoSalvar}"
+                update=":FormularioSalvar"
+                name="rcAcompanharSalvar"/>
+
+            <p:remoteCommand
+                actionListener="#{solicitacaoAlienacaoControlador.finalizarSalvar}"
+                update=":FormularioSalvar"
+                name="rcFinalizarSalvar"/>
+
+            <fc:cabecalhoPretty controlador="#{solicitacaoAlienacaoControlador}"
+                                origem="#{solicitacaoAlienacaoControlador.caminhoPadrao}novo/"/>
+
+            <p:panel header="Solicitação de Alienação" id="panelPrincipal">
+                <p:tabView id="tabViewPrincipal">
+                    <p:tab title="Dados Gerais" id="tabDados">
+                        <p:outputPanel id="panelDadosGerais">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Situação: "/>
+                                <h:outputText value="#{solicitacaoAlienacaoControlador.selecionado.situacao.descricao}"
+                                              styleClass="negrito"/>
+
+                                <h:outputLabel value="Código: "/>
+                                <h:outputText
+                                    value="#{solicitacaoAlienacaoControlador.selecionado.codigo == null ? 'Gerado automaticamente ao concluir.' : solicitacaoAlienacaoControlador.selecionado.codigo}"
+                                    styleClass="negrito"/>
+
+                                <h:outputLabel value="Data: "/>
+                                <h:outputText value="#{solicitacaoAlienacaoControlador.selecionado.dataSolicitacao}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputLabel value="Responsável: "/>
+                                <h:outputText
+                                    value="#{solicitacaoAlienacaoControlador.selecionado.responsavel.pessoaFisica.nome}"
+                                    styleClass="negrito"/>
+
+                                <h:outputLabel value="Tipo de Bem:"/>
+                                <h:outputText styleClass="negrito"
+                                              value="#{solicitacaoAlienacaoControlador.selecionado.tipoBem.descricao}"/>
+
+                                <fc:outputLabelObrigatorio value="Unidade Administrativa: "
+                                                           for="acUnidadeOrganizacional"/>
+                                <h:panelGrid columns="1">
+                                    <p:autoComplete queryDelay="1000"
+                                                    id="acUnidadeOrganizacional"
+                                                    title="Informe a Unidade Administrativa."
+                                                    value="#{solicitacaoAlienacaoControlador.hierarquiaOrganizacionalAdm}"
+                                                    completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalNivelDoisPaiEFilhoOndeUsuarioLogadoEhGestorPatrimonio}"
+                                                    disabled="#{!empty solicitacaoAlienacaoControlador.bensSelecionados}"
+                                                    var="unidade"
+                                                    size="70"
+                                                    dropdown="true"
+                                                    panelStyle="max-height: 250px;max-width: 800px"
+                                                    process="@this"
+                                                    maxResults="50"
+                                                    itemLabel="#{unidade}"
+                                                    itemValue="#{unidade.id}"
+                                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                        <p:ajax event="itemSelect"
+                                                process="@this :Formulario:tabViewPrincipal:panelBens"
+                                                update=":Formulario:tabViewPrincipal:panelBens"
+                                                listener="#{solicitacaoAlienacaoControlador.inicializarListas()}"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"/>
+                                    </p:autoComplete>
+
+                                    <p:outputPanel
+                                        rendered="#{!empty solicitacaoAlienacaoControlador.bensSelecionados}">
+                                        <h:outputText
+                                            value="Campo desabilitado, pois existem bens selecionados para essa unidade"
+                                            styleClass="cinzaEscuro mlef05"/>
+                                    </p:outputPanel>
+                                </h:panelGrid>
+
+                                <fc:outputLabelObrigatorio for="descricao" value="Descrição:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea id="descricao"
+                                                     title="Digite a descrição para solicitação da alienação."
+                                                     value="#{solicitacaoAlienacaoControlador.selecionado.descricao}"
+                                                     maxlength="255"
+                                                     cols="80"
+                                                     rows="4"
+                                                     minQueryLength="70"
+                                                     autoResize="false"
+                                                     scrollHeight="50"
+                                                     counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-descricao"
+                                                     style="text-transform: uppercase"/>
+                                    <h:outputText id="counter-descricao"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Bens a Alienar" id="tabBens">
+                        <p:outputPanel id="panelBens">
+
+                            <h:panelGrid columns="2" id="gridPesquisa">
+                                <h:outputText value="Unidade Administrativa:"/>
+                                <h:outputText id="ipUnidadeOrganizacionalOrigem"
+                                              styleClass="negrito"
+                                              value="#{solicitacaoAlienacaoControlador.hierarquiaOrganizacionalAdm}"/>
+
+                                <h:outputLabel value="Unidade Orçamentária:" for="orcamentariaAll"/>
+                                <h:selectOneMenu
+                                    value="#{solicitacaoAlienacaoControlador.filtroPesquisaBem.hierarquiaOrcamentaria}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    id="orcamentariaAll">
+                                    <f:selectItems
+                                        value="#{solicitacaoAlienacaoControlador.retornaHierarquiaOrcamentaria()}"/>
+                                </h:selectOneMenu>
+
+                                <h:outputText value="Grupo Patrimonial:"/>
+                                <p:autoComplete queryDelay="1000" widgetVar="grupo"
+                                                id="grupoBem"
+                                                title="Digite a descrição"
+                                                value="#{solicitacaoAlienacaoControlador.filtroPesquisaBem.grupoBem}"
+                                                completeMethod="#{grupoBemControlador.completaGrupoBem}"
+                                                var="grupo"
+                                                size="70"
+                                                process="@this"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 230px;max-width: 800px"
+                                                itemLabel="#{grupo}"
+                                                itemValue="#{grupo.id}"
+                                                forceSelection="true"
+                                                converter="#{grupoBemControlador.converterGenerico}"/>
+
+                                <h:outputText value="Bem:"/>
+                                <ad:auto-complete-bens bem="#{solicitacaoAlienacaoControlador.filtroPesquisaBem.bem}"
+                                                       visualizarCampos="true"
+                                                       id="acBem"
+                                                       estadoDoBemDiferenteDe="BAIXADO"
+                                                       tipoBem="MOVEIS"
+                                                       unidadeOrganizacional="#{solicitacaoAlienacaoControlador.hierarquiaOrganizacionalAdm.subordinada}"/>
+                            </h:panelGrid>
+
+                            <p:commandButton value="Pesquisar"
+                                             id="botaoPesquisar"
+                                             title="Clique para pesquisar"
+                                             icon="ui-icon-search"
+                                             actionListener="#{solicitacaoAlienacaoControlador.pesquisaBens()}"
+                                             process=":Formulario:tabViewPrincipal:panelBens @this"
+                                             update="tabelaBens :Formulario:tabViewPrincipal:panelAnexos"
+                                             styleClass="prioritario mtop10"
+                                             style="width: 150px"
+                                             onstart="aguarde.show()"/>
+
+                            <p:dataTable
+                                id="tabelaBens"
+                                lazy="true"
+                                value="#{solicitacaoAlienacaoControlador.bensDisponiveis}"
+                                var="bem"
+                                styleClass="mtop02"
+                                rowIndexVar="rowIx"
+                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                rows="10"
+                                rowsPerPageTemplate="10,50,100,200,300"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                paginator="true"
+                                emptyMessage="Não foram localizados registros para serem apresentados.">
+
+                                <p:column style="width: 5%; text-align: center;">
+                                    <f:facet name="header">
+                                        <p:commandButton icon="ui-icon-check"
+                                                         styleClass="vinteLarguraVinteAltura"
+                                                         onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         process="tabelaBens"
+                                                         update="tabelaBens :Formulario:tabViewPrincipal:panelDadosGerais"
+                                                         rendered="#{!solicitacaoAlienacaoControlador.mostrarBotaoSelecionarTodos()}"
+                                                         actionListener="#{solicitacaoAlienacaoControlador.desmarcarTodos()}"/>
+                                        <p:commandButton
+                                            styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                            value=""
+                                            process="tabelaBens"
+                                            update="tabelaBens :Formulario:tabViewPrincipal:panelDadosGerais"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"
+                                            rendered="#{solicitacaoAlienacaoControlador.mostrarBotaoSelecionarTodos()}"
+                                            actionListener="#{solicitacaoAlienacaoControlador.selecionarTodos()}"/>
+                                    </f:facet>
+
+                                    <p:commandButton icon="ui-icon-check"
+                                                     styleClass="vinteLarguraVinteAltura"
+                                                     process="tabelaBens"
+                                                     update="tabelaBens :Formulario:tabViewPrincipal:panelDadosGerais"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     rendered="#{solicitacaoAlienacaoControlador.itemSelecionado(bem)}"
+                                                     actionListener="#{solicitacaoAlienacaoControlador.desmarcarItem(bem)}"/>
+
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                     value=""
+                                                     process="tabelaBens"
+                                                     update="tabelaBens :Formulario:tabViewPrincipal:panelDadosGerais"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     rendered="#{!solicitacaoAlienacaoControlador.itemSelecionado(bem)}"
+                                                     actionListener="#{solicitacaoAlienacaoControlador.selecionarItem(bem)}"/>
+                                </p:column>
+
+                                <p:column headerText="Registro" style="text-align: left; width: 5%">
+                                    <h:outputLabel value="#{bem.identificacao}"/>
+                                </p:column>
+                                <p:column headerText="Registro Anterior" style="text-align: left; width: 10%">
+                                    <h:outputLabel value="#{bem.registroAnterior}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" style="text-align: left; width: 38%">
+                                    <h:outputLabel value="#{bem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária"
+                                          style="width: 25%; text-align: left;">
+                                    <h:outputLabel value="#{bem.orcamentaria}"/>
+                                </p:column>
+                                <p:column headerText="Valor Original (R$)"
+                                          styleClass="alinhamentoDireita"
+                                          style="width: 10%; text-align: left;">
+                                    <h:outputLabel value="#{bem.valorOriginal}"
+                                                   converter="moedaConverter"/>
+                                </p:column>
+                                <p:column headerText="Valor Ajustes (R$)"
+                                          styleClass="alinhamentoDireita"
+                                          style="width: 10%; text-align: left;">
+                                    <h:outputLabel value="#{bem.valorDosAjustes}"
+                                                   converter="moedaConverter"/>
+                                </p:column>
+                                <p:column headerText="Valor Líquido (R$)"
+                                          styleClass="alinhamentoDireita"
+                                          style="width: 10%; text-align: left;">
+                                    <h:outputLabel
+                                        value="#{bem.valorLiquido}"
+                                        converter="moedaConverter"/>
+                                </p:column>
+                                <p:columnGroup id="total" type="footer">
+                                    <p:row id="totalgeral">
+                                        <p:column styleClass="azulnegrito" colspan="5" style="text-align:right"
+                                                  footerText="Total Geral do(s) Bem(ns) Selecionado(s):"/>
+                                        <p:column id="total-original" styleClass="azulnegrito"
+                                                  style="text-align: right;"
+                                                  footerText="#{solicitacaoAlienacaoControlador.formatarValor(solicitacaoAlienacaoControlador.valorTotalOriginalBensSelecionados)}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{solicitacaoAlienacaoControlador.formatarValor(solicitacaoAlienacaoControlador.valorTotalAjusteBensSelecionados)}"/>
+                                        <p:column id="total-liquido" styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{solicitacaoAlienacaoControlador.formatarValor(solicitacaoAlienacaoControlador.valorTotalLiquidoBensSelecionados)}"/>
+                                    </p:row>
+                                </p:columnGroup>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Inconsistências">
+                        <p:outputPanel id="outPutValidacao">
+                            <p:tab>
+                                <p:outputPanel id="outputPanelInconsistencias">
+                                    <ad:inconsistencias-pesquisa-bens
+                                        inconsistencias="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.mensagens}"/>
+                                </p:outputPanel>
+                            </p:tab>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <p:outputPanel id="panelAnexos">
+                            <fc:filesUploadWP selecionado="#{solicitacaoAlienacaoControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+
+                <p:outputPanel id="alert-mensagem">
+                    <ad:alerta-pesquisa-com-inconsistencias
+                        render="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.hasInconsistencias()}"/>
+                </p:outputPanel>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             onstart="aguarde.show()"
+                             process=":Formulario"
+                             title="Clique para salvar este registro."
+                             disabled="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.bloquearAcoesTela}"
+                             rendered="#{solicitacaoAlienacaoControlador.selecionado.emElaboracao()}"
+                             actionListener="#{solicitacaoAlienacaoControlador.salvar()}"
+                             styleClass="mtop10 prioritario operacao"/>
+
+
+            <p:commandButton value="Cancelar"
+                             icon="ui-icon-cancel"
+                             onstart="aguarde.show()"
+                             process="@this"
+                             title="Clique para cancelar a operação."
+                             actionListener="#{solicitacaoAlienacaoControlador.cancelar()}"
+                             styleClass="mtop10 mlef05 operacao"/>
+        </h:form>
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Solicitação de Alienação de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{solicitacaoAlienacaoControlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{solicitacaoAlienacaoControlador.assistenteMovimentacao.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{solicitacaoAlienacaoControlador.assistenteMovimentacao.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Consulta de Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:outputText value="#{solicitacaoAlienacaoControlador.assistenteMovimentacao.descricaoProcesso}"/><br/>
+
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/> <br/><br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>
+

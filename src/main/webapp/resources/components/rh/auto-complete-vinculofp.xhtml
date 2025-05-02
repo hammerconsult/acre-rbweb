@@ -1,0 +1,317 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui" xmlns:h="http://java.sun.com/jsf/html"
+>
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="id" required="true"
+                  shortDescription="Id do componente, não utilizar ':' nem outros caracteres especiais."/>
+    <cc:attribute name="value" required="true"/>
+    <cc:attribute name="completeMethod"
+                  default="#{consultarVinculoFPAutoCompleteControlador.completarVinculosFP}"
+                  method-signature="java.util.List autoCompletar(java.lang.String)"/>
+
+    <cc:attribute name="actionListener"
+                  shortDescription="Possiveis valores.: Aposentadoria, ContratoFP, Estagiario, Beneficiario, BeneficioFP, Pensionista"
+                  targets="validar-vinculo"/>
+
+    <cc:attribute name="validarPermissaoDeAcessoAoVinculo"
+                  type="java.lang.Boolean"
+                  default="true"/>
+
+    <cc:attribute name="disabled"
+                  default="false"/>
+
+    <cc:attribute name="typeMatriculaNumero" required="false"
+                  default="text"/>
+
+    <cc:attribute name="size"
+                  default="70"/>
+
+    <cc:attribute name="classe"
+                  default="VinculoFP"/>
+
+    <cc:attribute name="converter" default="#{consultarVinculoFPAutoCompleteControlador.converterAutoComplete}"/>
+
+    <cc:attribute name="onstart" default=""/>
+    <cc:attribute name="oncomplete" default=""/>
+    <cc:attribute name="actionListenerAutoComplete" default="#{componenteSubContaControlador.naoFazNada()}" method-signature="void f()"/>
+
+    <cc:attribute name="process" default="@none"/>
+
+    <cc:attribute name="update" default="@none"/>
+</cc:interface>
+<cc:implementation>
+    <f:event type="preRenderComponent"
+             listener="#{consultarVinculoFPAutoCompleteControlador.novo(cc.clientId, cc.attrs.classe, cc.attrs.value)}"/>
+    <script type="text/javascript">
+        var componenteId = '';
+        var matriculaId = '';
+        var numeroId = '';
+        var autoCompleteId = '';
+        var autoCompleteInputId = '';
+        var autoCompleteInputHideId = '';
+
+        const xmlHttpUsuario = new XMLHttpRequest();
+        xmlHttpUsuario.open("GET", getRequestContextPath() + '/spring/usuario-sistema/usuario-logado', false);
+        xmlHttpUsuario.send(null);
+        const usuarioLogado = JSON.parse(xmlHttpUsuario.responseText);
+
+        function isNull(arg) {
+            if (arg == null == 'null' || arg == null || arg == 'undefined' || arg == '') {
+                return true;
+            }
+            return false;
+        }
+
+        function getElement(id) {
+            return document.getElementById(id);
+        }
+
+        function getIdComponente(id) {
+            var idx = id.lastIndexOf(':');
+            return id.substring(0, idx);
+        }
+
+        function definirNomeComponente(id) {
+            var idx = id.lastIndexOf(':');
+            componenteId = id.substring(0, idx);
+            matriculaId = componenteId.concat(':matricula');
+            numeroId = componenteId.concat(':numero');
+            autoCompleteId = componenteId.concat(':auto-complete');
+            autoCompleteInputId = componenteId.concat(':auto-complete_input');
+            autoCompleteInputHideId = componenteId.concat(':auto-complete_hinput');
+            classeAutoComplete = componenteId.concat(':classe-auto-complete');
+        }
+
+        function exibirMensagemDoVinculo(vinculo) {
+            var mensagem = vinculo.componente.concat(':mensagem');
+            var mensagemConteudo = vinculo.componente.concat(':mensagem:conteudo');
+            mensagem = getElement(mensagem);
+            mensagemConteudo = getElement(mensagemConteudo);
+            if (!isNull(vinculo.mensagem)) {
+                mensagem.style.display = 'inline';
+                mensagemConteudo.innerHTML = vinculo.mensagem;
+                return;
+            }
+        }
+
+        function completarInformacoesVinculo(vinculo) {
+            console.log("VInculo", vinculo);
+            vinculo = JSON.parse(vinculo);
+            exibirMensagemDoVinculo(vinculo);
+            var autoCompleteInputHideId = vinculo.componente.concat(':auto-complete_hinput');
+            var autoCompleteInputId = vinculo.componente.concat(':auto-complete_input');
+            if (isNull(vinculo.id)) {
+                getElement(autoCompleteInputHideId).removeAttribute('value');
+                getElement(autoCompleteInputId).value = '';
+            } else {
+                getElement(autoCompleteInputId).value = vinculo.descricao;
+                getElement(autoCompleteInputHideId).setAttribute('value', vinculo.id);
+            }
+
+            processUpdate(autoCompleteInputId);
+        }
+
+        function httpGetAsync(theUrl, funcao) {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                switch (xmlhttp.readyState) {
+                    case 0 : // UNINITIALIZED
+                    case 1 : // LOADING
+                    case 2 : // LOADED
+                    case 3 : // INTERACTIVE
+                        break;
+                    case 4 : // COMPLETED
+                        funcao(xmlhttp.responseText);
+                        break;
+                    default:
+                        alert("error");
+                }
+            };
+            xmlhttp.open("GET", theUrl, true);
+            xmlhttp.send(null);
+        }
+
+        function montarUrl(matricula, numero, componente, classe, validarPermissao) {
+            var url = getRequestContextPath();
+            url = url.concat('/spring/ler-vinculofp/descricao/');
+
+            url = url.concat('?login=').concat(usuarioLogado.login);
+            url = url.concat('&amp;matricula=').concat(getElement(matricula).value);
+            url = url.concat('&amp;numero=').concat(getElement(numero).value);
+            url = url.concat('&amp;componente=').concat(componente);
+            url = url.concat('&amp;uo-id=').concat(usuarioLogado.idUnidadeAdmLogada);
+            url = url.concat('&amp;data-referencia=').concat(usuarioLogado.dataOperacao);
+            url = url.concat('&amp;classe=').concat(getElement(classe).value);
+            url = url.concat('&amp;validarPermissao=').concat(getElement(validarPermissao).innerHTML);
+            console.log("url ", url);
+            return url;
+        }
+
+
+        function recuperarVinculoPorMatriculaNumero(id) {
+            var matriculaId = getIdComponente(id).concat(':matricula');
+            var numeroId = getIdComponente(id).concat(':numero');
+            var autoCompleteInputHideId = getIdComponente(id).concat(':auto-complete_hinput');
+            var autoCompleteInputId = getIdComponente(id).concat(':auto-complete_input');
+            var classe = getIdComponente(id).concat(':classe-auto-complete');
+            var validarPermissao = getIdComponente(id).concat(':validar-permissao-acesso');
+
+            if (isNull(getElement(matriculaId).value) || isNull(getElement(numeroId).value)) {
+                getElement(autoCompleteInputHideId).removeAttribute('value');
+                getElement(autoCompleteInputId).value = '';
+                return;
+            }
+
+            var urlDescricao = montarUrl(matriculaId, numeroId, getIdComponente(id), classe, validarPermissao);
+            getElement(getIdComponente(id).concat(':mensagem:conteudo')).innerHTML = '';
+            getElement(getIdComponente(id).concat(':mensagem')).style.display = 'none';
+            httpGetAsync(urlDescricao, completarInformacoesVinculo);
+        }
+
+        function completarCamposMatriculaNumero() {
+            var value = getElement(autoCompleteInputId).value;
+            value = value.split("/");
+            getElement(matriculaId).value = value[0];
+            value = value[1].split(" ");
+            getElement(numeroId).value = value[0];
+        }
+
+        function limparCamposAoDigitarMatricula(id) {
+            var idComp = getIdComponente(id);
+            getElement(idComp.concat(':auto-complete_hinput')).removeAttribute('value');
+            getElement(idComp.concat(':auto-complete_input')).value = '';
+            getElement(idComp.concat(':numero')).value = '';
+            getElement(idComp.concat(':mensagem:conteudo')).innerHTML = '';
+            getElement(idComp.concat(':mensagem')).style.display = 'none';
+        }
+
+        function limparCamposAoDigitarNumero(id) {
+            var idComp = getIdComponente(id);
+            getElement(idComp.concat(':auto-complete_hinput')).removeAttribute('value');
+            getElement(idComp.concat(':auto-complete_input')).value = '';
+            getElement(idComp.concat(':mensagem:conteudo')).innerHTML = '';
+            getElement(idComp.concat(':mensagem')).style.display = 'none';
+        }
+
+        function limparCamposCasoAutoCompleteEmBranco() {
+            if (getElement(autoCompleteInputId).value == '' || getElement(autoCompleteInputId).value == 'undefined' || getElement(autoCompleteInputId).value.toString().trim().length == 0) {
+                getElement(matriculaId).value = '';
+                getElement(numeroId).value = '';
+                getElement(getIdComponente(numeroId).concat(':mensagem:conteudo')).innerHTML = '';
+                getElement(getIdComponente(numeroId).concat(':mensagem')).style.display = 'none';
+            }
+        }
+
+        function limparCamposDoAutoComplete(id) {
+            var idComp = getIdComponente(id);
+            getElement(idComp.concat(':matricula')).value = '';
+            getElement(idComp.concat(':numero')).value = '';
+            getElement(idComp.concat(':auto-complete_hinput')).removeAttribute('value');
+            getElement(idComp.concat(':auto-complete_input')).value = '';
+        }
+
+        function processUpdate(id) {
+            var idComp = getIdComponente(id);
+            idComp = idComp.concat(':id-componente');
+            var funcao = getElement(idComp).innerHTML;
+            funcao = funcao.concat('_processarAtualizar()');
+            eval(funcao);
+        }
+
+        function preencherCamposNoVisualiza(idComponent) {
+            alert('veio aqui com ' + idComponent);
+            var autoComplete = idComponent.concat(':auto-complete_input');
+            if (!isNull(getElement(autoComplete).value)) {
+                autoCompleteInputId = autoComplete;
+                completarCamposMatriculaNumero();
+            }
+        }
+    </script>
+
+
+    <h:inputHidden id="classe-auto-complete"
+                   value="#{consultarVinculoFPAutoCompleteControlador.classe}"/>
+    <p:inputText id="matricula"
+                 style="width: 50px;"
+                 onfocus="this.select();"
+                 type="#{cc.attrs.typeMatriculaNumero}"
+                 disabled="#{cc.attrs.disabled}"
+                 onmouseup="return false;"
+                 title="Informe a matrícula para buscar as informações sobre "
+                 onchange="limparCamposAoDigitarMatricula(this.id); recuperarVinculoPorMatriculaNumero(this.id);"
+                 value="#{consultarVinculoFPAutoCompleteControlador.matricula}"
+                 styleClass="mrig03"/>
+    <p:inputText id="numero"
+                 style="width: 15px;"
+                 title="Informe o número para buscar"
+                 disabled="#{cc.attrs.disabled}"
+                 type="#{cc.attrs.typeMatriculaNumero}"
+                 onfocus="this.select();"
+                 onmouseup="return false;"
+                 value="#{consultarVinculoFPAutoCompleteControlador.numero}"
+                 onchange="limparCamposAoDigitarNumero(this.id); recuperarVinculoPorMatriculaNumero(this.id);"
+                 styleClass="mrig03"
+                 size="1"/>
+    <p:autoComplete queryDelay="500"
+                    size="#{cc.attrs.size}"
+                    title="Digite o nome ou parte do nome de uma pessoa que deseja pesquisar"
+                    id="auto-complete"
+                    scrollHeight="200"
+                    dropdown="true"
+                    tabindex="-1"
+                    disabled="#{cc.attrs.disabled}"
+                    onfocus="definirNomeComponente(this.id); this.select();"
+                    onmouseup="return false;"
+                    value="#{cc.attrs.value}"
+                    completeMethod="#{cc.attrs.completeMethod}"
+                    onkeyup="limparCamposCasoAutoCompleteEmBranco();"
+                    var="vinc"
+                    itemLabel="#{vinc.toString()}"
+                    itemValue="#{vinc.id}"
+                    forceSelection="false"
+                    converter="#{cc.attrs.converter}">
+        <p:ajax event="itemSelect"
+                update="@none"
+                process="@none"
+                oncomplete="completarCamposMatriculaNumero(); processUpdate(matriculaId);invocarListernerAutoComplete();"/>
+    </p:autoComplete>
+
+    <div id="#{cc.clientId}:mensagem"
+         style="min-width: 10px!important;
+                min-height: 20px!important;
+                top: 2px!important;
+                display: none;
+                left: 1px;
+                position: relative!important;
+                float : right!important;">
+        <div id="#{cc.clientId}:mensagem:conteudo"
+             class="ui-message ui-message-error ui-widget ui-corner-all"
+             style="position: absolute; white-space: nowrap!important">
+        </div>
+    </div>
+
+    <p:remoteCommand name="invocarListernerAutoComplete" actionListener="#{cc.attrs.actionListenerAutoComplete}" />
+
+    <p:remoteCommand name="#{consultarVinculoFPAutoCompleteControlador.pegarIdComponente()}_processarAtualizar"
+                     process="#{cc.attrs.process}"
+                     update="#{cc.attrs.update}"
+                     onstart="#{cc.attrs.onstart}"
+                     oncomplete="#{cc.attrs.oncomplete}"
+                     id="validar-vinculo">
+        <f:attribute name="value" value="#{cc.attrs.value}"/>
+    </p:remoteCommand>
+
+    <h:outputText style="display: none" id="id-componente"
+                  value="#{consultarVinculoFPAutoCompleteControlador.pegarIdComponente()}"/>
+    <h:outputText style="display: none" id="validar-permissao-acesso"
+                  value="#{cc.attrs.validarPermissaoDeAcessoAoVinculo}"/>
+
+</cc:implementation>
+</html>

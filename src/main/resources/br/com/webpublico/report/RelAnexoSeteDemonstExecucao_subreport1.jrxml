@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelAnexoSeteDemonstExecucao_subreport1" pageWidth="672" pageHeight="555" orientation="Landscape" columnWidth="672" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.zoom" value="1.4641000000000022"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="EXERCICIO_ID" class="java.lang.Long"/>
+	<parameter name="CODF" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["/home/juggernaut/NetBeansProjects/trunk/src/main/resources/br/com/webpublico/report/"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="ESF_CONSULTA" class="java.lang.String"/>
+	<parameter name="SQL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" "]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DATAINICIAL" class="java.lang.String"/>
+	<parameter name="DATAFINAL" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[select grupo.ESFERAORCAMENTARIA, grupo.CODSUBF, grupo.CODSUBFUNCAO, grupo.SUBFUNC,
+coalesce(sum(grupo.valor_atividades), 0) as VALOR_ATIVIDADES,
+coalesce(sum(grupo.valor_projeto), 0) as VALOR_PROJETO,
+coalesce(sum(grupo.operacoes_especiais), 0) as OPERACOES_ESPECIAIS,
+coalesce(sum(grupo.VALOR_ATIVIDADES), 0) + coalesce(sum(grupo.VALOR_PROJETO), 0) + coalesce(sum(grupo.OPERACOES_ESPECIAIS), 0) AS TOTAL
+from
+(SELECT
+      emp.id as empenho_id
+      , CASE coalesce(PF.ESFERAORCAMENTARIA, ' ')
+            WHEN 'ORCAMENTOGERAL' THEN 'G'
+            WHEN 'ORCAMENTOFISCAL' THEN 'F'
+            WHEN 'ORCAMENTOSEGURIDADESOCIAL' THEN 'S'
+            WHEN ' ' THEN 'G'
+          END AS ESFERAORCAMENTARIA
+    , SUBF.CODIGO as CODSUBF
+    , FUNC.CODIGO || '.' || SUBF.CODIGO AS CODSUBFUNCAO
+    , SUBF.DESCRICAO AS SUBFUNC
+    , case TIPOACAO.CODIGO when 2 then coalesce(emp.valor, 0) else 0 end AS VALOR_ATIVIDADES
+    , case TIPOACAO.CODIGO when 1 then coalesce(emp.valor, 0) else 0 end AS VALOR_PROJETO
+    , case TIPOACAO.CODIGO when 9 then coalesce(emp.valor, 0) else 0 end AS OPERACOES_ESPECIAIS
+
+            from empenho emp
+            INNER JOIN FONTEDESPESAORC FONTEDESP ON EMP.FONTEDESPESAORC_ID = FONTEDESP.ID AND EMP.CATEGORIAORCAMENTARIA = 'NORMAL'
+            INNER JOIN PROVISAOPPAFONTE PF ON FONTEDESP.PROVISAOPPAFONTE_ID = PF.ID
+            INNER JOIN PROVISAOPPADESPESA PROVD ON PF.PROVISAOPPADESPESA_ID = PROVD.ID
+            INNER JOIN vwhierarquiaorcamentaria VW ON VW.SUBORDINADA_ID = emp.UNIDADEORGANIZACIONAL_ID AND EMP.DATAEMPENHO BETWEEN VW.INICIOVIGENCIA AND COALESCE
+(VW.FIMVIGENCIA, EMP.DATAEMPENHO)
+            INNER JOIN SUBACAOPPA SUB ON PROVD.SUBACAOPPA_ID = SUB.ID
+            INNER JOIN ACAOPPA ACAO ON SUB.ACAOPPA_ID = ACAO.ID
+            INNER JOIN TIPOACAOPPA TIPOACAO ON ACAO.TIPOACAOPPA_ID = TIPOACAO.ID
+            INNER JOIN FUNCAO FUNC ON ACAO.FUNCAO_ID = FUNC.ID
+            INNER JOIN SUBFUNCAO SUBF ON ACAO.SUBFUNCAO_ID = SUBF.ID
+            INNER JOIN PROGRAMAPPA PROG ON ACAO.PROGRAMA_ID = PROG.ID
+            WHERE FUNC.CODIGO LIKE $P{CODF} AND PF.ESFERAORCAMENTARIA LIKE $P{ESF_CONSULTA}
+	  $P!{SQL} AND EMP.DATAEMPENHO BETWEEN TO_DATE($P{DATAINICIAL} ,'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL} ,'DD/MM/YYYY')
+
+union all
+SELECT
+      emp.id as empenho_id,
+      CASE coalesce(PF.ESFERAORCAMENTARIA, ' ')
+            WHEN 'ORCAMENTOGERAL' THEN 'G'
+            WHEN 'ORCAMENTOFISCAL' THEN 'F'
+            WHEN 'ORCAMENTOSEGURIDADESOCIAL' THEN 'S'
+            WHEN ' ' THEN 'G'
+          END AS ESFERAORCAMENTARIA
+    , SUBF.CODIGO as CODSUBF
+    , FUNC.CODIGO || '.' || SUBF.CODIGO AS CODSUBFUNCAO
+    , SUBF.DESCRICAO AS SUBFUNC,
+     case TIPOACAO.CODIGO when 2 then coalesce(est.valor, 0) else 0 end * -1 as VALOR_ATIVIDADES
+   , case TIPOACAO.CODIGO when 1 then coalesce(est.valor, 0) else 0 end * -1 as VALOR_PROJETO
+   , case TIPOACAO.CODIGO when 9 then coalesce(est.valor, 0) else 0 end * -1 as OPERACOES_ESPECIAIS
+            from empenhoestorno est
+            inner join empenho emp on est.empenho_id = emp.id
+            INNER JOIN FONTEDESPESAORC FONTEDESP ON EMP.FONTEDESPESAORC_ID = FONTEDESP.ID AND EMP.CATEGORIAORCAMENTARIA = 'NORMAL'
+            INNER JOIN PROVISAOPPAFONTE PF ON FONTEDESP.PROVISAOPPAFONTE_ID = PF.ID
+            INNER JOIN PROVISAOPPADESPESA PROVD ON PF.PROVISAOPPADESPESA_ID = PROVD.ID
+            INNER JOIN vwhierarquiaorcamentaria VW ON VW.SUBORDINADA_ID = emp.UNIDADEORGANIZACIONAL_ID AND est.dataestorno BETWEEN VW.INICIOVIGENCIA AND COALESCE
+(VW.FIMVIGENCIA, est.dataestorno)
+            INNER JOIN SUBACAOPPA SUB ON PROVD.SUBACAOPPA_ID = SUB.ID
+            INNER JOIN ACAOPPA ACAO ON SUB.ACAOPPA_ID = ACAO.ID
+            INNER JOIN TIPOACAOPPA TIPOACAO ON ACAO.TIPOACAOPPA_ID = TIPOACAO.ID
+            INNER JOIN FUNCAO FUNC ON ACAO.FUNCAO_ID = FUNC.ID
+            INNER JOIN SUBFUNCAO SUBF ON ACAO.SUBFUNCAO_ID = SUBF.ID
+            INNER JOIN PROGRAMAPPA PROG ON ACAO.PROGRAMA_ID = PROG.ID
+            WHERE FUNC.CODIGO LIKE $P{CODF} AND PF.ESFERAORCAMENTARIA LIKE $P{ESF_CONSULTA}
+	  $P!{SQL} AND EST.DATAESTORNO BETWEEN TO_DATE($P{DATAINICIAL} ,'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL} ,'DD/MM/YYYY')
+            ) grupo
+group by grupo.ESFERAORCAMENTARIA, grupo.CODSUBF, grupo.CODSUBFUNCAO, grupo.subfunc
+order by grupo.CODSUBF, grupo.SUBFUNC]]>
+	</queryString>
+	<field name="ESFERAORCAMENTARIA" class="java.lang.String"/>
+	<field name="CODSUBF" class="java.lang.String"/>
+	<field name="CODSUBFUNCAO" class="java.lang.String"/>
+	<field name="SUBFUNC" class="java.lang.String"/>
+	<field name="VALOR_ATIVIDADES" class="java.math.BigDecimal"/>
+	<field name="VALOR_PROJETO" class="java.math.BigDecimal"/>
+	<field name="OPERACOES_ESPECIAIS" class="java.math.BigDecimal"/>
+	<field name="TOTAL" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="11" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="0" width="75" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CODSUBFUNCAO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="80" y="0" width="310" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA["    " + $F{SUBFUNC}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="391" y="0" width="15" height="11"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ESFERAORCAMENTARIA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="407" y="0" width="64" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_PROJETO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="473" y="0" width="64" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_ATIVIDADES}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="539" y="0" width="59" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{OPERACOES_ESPECIAIS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="600" y="0" width="70" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL}]]></textFieldExpression>
+			</textField>
+			<subreport>
+				<reportElement x="0" y="11" width="672" height="0"/>
+				<subreportParameter name="EXERCICIO_ID">
+					<subreportParameterExpression><![CDATA[$P{EXERCICIO_ID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="SQL">
+					<subreportParameterExpression><![CDATA[$P{SQL}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DATAINICIAL">
+					<subreportParameterExpression><![CDATA[$P{DATAINICIAL}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="CODSUBF">
+					<subreportParameterExpression><![CDATA[$F{CODSUBF}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="CODF">
+					<subreportParameterExpression><![CDATA[$P{CODF}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="ESF_CONSULTA">
+					<subreportParameterExpression><![CDATA[$P{ESF_CONSULTA}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DATAFINAL">
+					<subreportParameterExpression><![CDATA[$P{DATAFINAL}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelAnexoSeteDemonstExecucao_subreport1_subreport1.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+</jasperReport>

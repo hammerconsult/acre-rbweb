@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+            window.onload = function () {
+                buscarBensAoEditar();
+            }
+
+            var timer;
+
+            function iniciarFuturePesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timer = setInterval(function () {
+                    acompanhaAndamento();
+                }, 1000);
+            }
+
+            function finalizarFuturePesquisa() {
+                clearInterval(timer);
+                finalizaPesquisa();
+            }
+
+            function iniciarFutureSalvar() {
+                $('#dlgPesquisa').modal({backdrop: 'static', keyboard: false});
+                $('#dlgPesquisa').modal('show');
+                timer = setInterval(function () {
+                    acompanhaTransferencia();
+                }, 1000);
+            }
+
+            function finalizarFutureSalvar() {
+                clearInterval(timer);
+                $("#dlgPesquisa").modal('hide');
+                finalizaTransferencia();
+            }
+        </script>
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="acompanhaAndamento"
+                             process="@this"
+                             actionListener="#{transferenciaBemHierarquiaEncerradaControlador.consultarPesquisa}"
+                             update=":FormularioPesquisa"/>
+
+            <p:remoteCommand name="finalizaPesquisa"
+                             oncomplete="$('#dlgPesquisa').modal('hide');"
+                             actionListener="#{transferenciaBemHierarquiaEncerradaControlador.finalizarPesquisa}"/>
+
+            <p:remoteCommand name="acompanhaTransferencia"
+                             process="@this"
+                             actionListener="#{transferenciaBemHierarquiaEncerradaControlador.consultarTransferencia}"
+                             update=":FormularioPesquisa"/>
+
+            <p:remoteCommand name="finalizaTransferencia"
+                             process="@form"
+                             actionListener="#{transferenciaBemHierarquiaEncerradaControlador.finalizarTransferencia}"/>
+
+            <p:panel header="Transferência de Bem Móvel - Hierarquia Encerrada" id="painelPrincipal">
+
+                <h:panelGrid columns="2" id="gridFiltros">
+                    <h:outputText value="Hierarquia Encerrada? "/>
+                    <h:panelGroup>
+                        <h:selectBooleanCheckbox
+                            styleClass="icone-20"
+                            value="#{transferenciaBemHierarquiaEncerradaControlador.filtroPesquisaBem.hirarquiaEncerrada}">
+                            <p:ajax process="@this" event="change" update="panel-btn-info"/>
+                        </h:selectBooleanCheckbox>
+
+                        <p:outputPanel id="panel-btn-info">
+                            <fc:botaoInformacao id="btn-info"
+                                                detalhes="#{transferenciaBemHierarquiaEncerradaControlador.filtroPesquisaBem.hirarquiaEncerrada
+                                            ? 'Pesquisa os bens com hierarquia administrativa encerrada filtrando pela hierarquia orçamentária vigente'
+                                            : 'Pesquisa os bens por hierarquia orçamentária, não verificando a hierarquia administrativa correspondente da orçamentária.'}"/>
+                        </p:outputPanel>
+                    </h:panelGroup>
+
+                    <h:outputLabel value="Unidade Orçamentária: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    value="#{transferenciaBemHierarquiaEncerradaControlador.filtroPesquisaBem.hierarquiaOrcamentaria}"
+                                    completeMethod="#{hierarquiaOrganizacionalControlador.completarHierarquiasOrcamentarias}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    var="unid"
+                                    size="70"
+                                    dropdown="true"
+                                    panelStyle="max-height: 230px;max-width: 800px"
+                                    itemLabel="#{unid}"
+                                    itemValue="#{unid.id}"
+                                    maxResults="50">
+                        <p:ajax event="itemSelect"
+                                process="@this"/>
+                    </p:autoComplete>
+
+                    <h:outputText value="Bem:"/>
+                    <ad:auto-complete-bens
+                        bem="#{transferenciaBemHierarquiaEncerradaControlador.filtroPesquisaBem.bem}"
+                        visualizarCampos="false"
+                        id="acBem"
+                        estadoDoBemDiferenteDe="BAIXADO"
+                        tipoBem="MOVEIS"/>
+                </h:panelGrid>
+
+                <p:commandButton value="Pesquisar"
+                                 title="Clique para pesquisar."
+                                 icon="ui-icon-search"
+                                 actionListener="#{transferenciaBemHierarquiaEncerradaControlador.pesquisarBens()}"
+                                 process="@this :Formulario:gridFiltros"
+                                 styleClass="operacao pesquisar mtop10"
+                                 style="width: 180px"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"/>
+
+                <p:commandButton value="Gerar Transferência"
+                                 title="Clique para pesquisar."
+                                 icon="ui-icon-gear"
+                                 actionListener="#{transferenciaBemHierarquiaEncerradaControlador.preencherMapHierarquiasOrigemBens()}"
+                                 process="@this :Formulario:gridFiltros"
+                                 styleClass="prioritario mlef05 pesquisar mtop10"
+                                 style="width: 180px"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"/>
+
+                <p:outputPanel id="panel-bens">
+                    <p:dataTable
+                        rendered="#{!transferenciaBemHierarquiaEncerradaControlador.hasTransferneicasVos()}"
+                        value="#{transferenciaBemHierarquiaEncerradaControlador.assistente.bensDisponiveis}"
+                        var="bem"
+                        styleClass="mtop05"
+                        rowIndexVar="rowIx"
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                        rows="10"
+                        rowsPerPageTemplate="10, 50,100,200,300"
+                        currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                        paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                        paginator="true"
+                        emptyMessage="Não foram localizados registros para serem apresentados">
+                        <p:column headerText="Bem" style="text-align: left">
+                            <h:outputText value="#{bem.identificacao} - #{bem.descricaoParaAutoComplete}"/>
+                        </p:column>
+                        <p:column headerText="Grupo Patrimonial" style="text-align: left">
+                            <h:outputText value="#{bem.ultimoEstado.grupoBem}"/>
+                        </p:column>
+                        <p:column headerText="Unidade Administrativa" style="text-align: left">
+                            <fc:codigo-descricao-hierarquia
+                                unidadeOrganizacional="#{bem.eventoBem.estadoResultante.detentoraAdministrativa}"
+                                dataMovimento="#{bem.eventoBem.dataDoLancamento}"
+                                styleClass="default"
+                                tipoHierarquia="ADMINISTRATIVA"/>
+                        </p:column>
+                        <p:column headerText="Ajustes (R$)" style="width: 10%; text-align: right">
+                            <h:outputText value="#{bem.valorDosAjustes}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                            <f:facet name="footer">
+                                <div style="text-align: right;">
+                                    <h:outputText
+                                        styleClass="negrito"
+                                        value="#{transferenciaBemHierarquiaEncerradaControlador.valorTotalAjuste}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </div>
+                            </f:facet>
+                        </p:column>
+                        <p:column headerText="Valor do Bem (R$)" style="text-align: right">
+                            <h:outputText value="#{bem.valorOriginal}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                            <f:facet name="footer">
+                                <div style="text-align: right;">
+                                    <h:outputText
+                                        styleClass="negrito"
+                                        value="#{transferenciaBemHierarquiaEncerradaControlador.valorTotalOriginal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </div>
+                            </f:facet>
+                        </p:column>
+                    </p:dataTable>
+
+
+                    <p:dataGrid
+                        columns="1"
+                        value="#{transferenciaBemHierarquiaEncerradaControlador.transferenciasVos}"
+                        var="transfVo"
+                        rendered="#{transferenciaBemHierarquiaEncerradaControlador.hasTransferneicasVos()}">
+                        <div class="thumbnail mbot30">
+                            <div class="alert alert-info negrito" align="center">
+                                SOLICITAÇÃO DE TRANSFERÊNCIA BENS MÓVEIS
+                            </div>
+                            <h:panelGrid columns="2">
+                                <h:outputLabel for="codigo" value="Código:"/>
+                                <h:outputLabel id="codigo"
+                                               value="Gerado automaticamente ao concluir"
+                                               styleClass="negrito"/>
+
+                                <h:outputLabel value="Data: "/>
+                                <h:outputLabel
+                                    value="#{transfVo.dataHoraCriacao}"
+                                    styleClass="negrito">
+                                    <f:convertDateTime type="both"/>
+                                </h:outputLabel>
+
+                                <h:outputLabel value="Tipo de Transferência: " style="margin-right: 40px"/>
+                                <p:outputPanel id="tipo-transf">
+                                    <h:outputLabel
+                                        value="#{transfVo.tipoTransferencia.descricao}"
+                                        styleClass="negrito"/>
+                                </p:outputPanel>
+                            </h:panelGrid>
+
+                            <p:fieldset legend="Origem" styleClass="mtop05">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Unidade Administrativa: "/>
+                                    <h:outputLabel
+                                        value="#{transfVo.hierarquiaOrigem}"
+                                        styleClass="negrito"/>
+
+                                    <h:outputText value="Unidades Orçamentárias:"/>
+                                    <p:dataList
+                                        value="#{transfVo.orcamentariasOrigem}"
+                                        var="unidade"
+                                        styleClass="negrito">
+                                        <h:outputText value="#{unidade}"/>
+                                    </p:dataList>
+
+                                    <h:outputLabel value="Responsável pela Unidade: "/>
+                                    <h:outputLabel
+                                        id="responsavelOrigem"
+                                        value="#{transfVo.responsavelOrigem.nome}"
+                                        styleClass="negrito"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+
+                            <p:fieldset legend="Destino" styleClass="mtop10">
+                                <h:panelGrid columns="2" id="gridDestino">
+                                    <fc:outputLabelObrigatorio value="Unidade Administrativa: "/>
+                                    <p:autoComplete queryDelay="1000" id="acUnidadeOrganizacionalDestino"
+                                                    title="Informe a Unidade Administrativa de destino"
+                                                    value="#{transfVo.hierarquiaDestino}"
+                                                    completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalAdministrativaOndeUsuarioLogadoEhGestorPatrimonio}"
+                                                    var="hoAdmDestino"
+                                                    process="@this"
+                                                    dropdown="true"
+                                                    size="70"
+                                                    panelStyle="max-height: 250px;max-width: 800px"
+                                                    maxResults="50"
+                                                    itemLabel="#{hoAdmDestino}"
+                                                    itemValue="#{hoAdmDestino.id}"
+                                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                        <p:ajax process="@this"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"
+                                                update="orcamentarias responsavelDestino responsavelOrigem hoOrcDestino tipo-transf"
+                                                listener="#{transferenciaBemHierarquiaEncerradaControlador.recuperarResponsavelAndOrcamentariasDestino(transfVo)}"
+                                                event="itemSelect"/>
+                                    </p:autoComplete>
+
+                                    <h:outputText value="Unidades Orçamentárias:"/>
+                                    <p:dataList
+                                        value="#{transfVo.orcamentariasDestino}"
+                                        var="unidade"
+                                        id="orcamentarias"
+                                        styleClass="negrito">
+                                        <h:outputText value="#{unidade}"/>
+                                    </p:dataList>
+
+                                    <fc:outputLabelObrigatorio value="Unidade Orçamentária de Destino: "/>
+                                    <h:selectOneMenu
+                                        value="#{transfVo.hierarquiaOrcamentariaDestino}"
+                                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                        id="hoOrcDestino">
+                                        <f:selectItems
+                                            value="#{transferenciaBemHierarquiaEncerradaControlador.hierarquiasOrcamentariaDestino}"/>
+                                        <p:ajax event="change"
+                                                process="@this gridDestino"
+                                                listener="#{transferenciaBemHierarquiaEncerradaControlador.listenerUnidadeOrcDestino(transfVo)}"
+                                                update="tipo-transf"/>
+                                    </h:selectOneMenu>
+
+                                    <h:outputText value="Responsável pela Unidade:"/>
+                                    <h:outputText id="responsavelDestino"
+                                                  styleClass="negrito"
+                                                  value="#{transfVo.responsavelDestino.nome}"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+
+                            <h:panelGrid columns="3" styleClass="mtop05">
+                                <fc:outputLabelObrigatorio for="descricao"
+                                                           value="Descrição:"/>
+                                <p:inputTextarea
+                                    title="Digite a descrição da solicitação de transferência de bem."
+                                    value="#{transfVo.descricao}"
+                                    maxlength="255"
+                                    id="descricao"
+                                    style="margin-left: 100px"
+                                    cols="70"
+                                    rows="4"
+                                    autoResize="true"
+                                    counterTemplate="{0} Caracteres Restantes."
+                                    counter="counter-descricao"/>
+                                <h:outputText id="counter-descricao"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+
+                            <p:dataTable
+                                value="#{transfVo.bens}"
+                                var="bem"
+                                styleClass="mtop05"
+                                rowIndexVar="rowIx"
+                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                rows="10"
+                                rowsPerPageTemplate="10, 50,100,200,300"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                paginator="true"
+                                emptyMessage="Nenhum bem encontrado.">
+                                <p:column headerText="Bem" style="text-align: left">
+                                    <h:outputText
+                                        value="#{bem.identificacao} - #{bem.descricaoParaAutoComplete}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial" style="text-align: left">
+                                    <h:outputText value="#{bem.ultimoEstado.grupoBem}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Administrativa" style="text-align: left">
+                                    <h:outputText value="#{bem.administrativa}"/>
+                                </p:column>
+                                <p:column headerText="Ajustes (R$)" style="width: 10%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.valorDosAjustes}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right;">
+                                            <h:outputText
+                                                styleClass="negrito"
+                                                value="#{transfVo.valorTotalAjuste}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                                <p:column headerText="Valor do Bem (R$)" style="text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.valorOriginal}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right;">
+                                            <h:outputText
+                                                styleClass="negrito"
+                                                value="#{transfVo.valorTotalOriginal}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </div>
+                                    </f:facet>
+                                </p:column>
+                            </p:dataTable>
+                        </div>
+                    </p:dataGrid>
+                </p:outputPanel>
+
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             onstart="aguarde.show()"
+                             process="Formulario"
+                             disabled="#{transferenciaBemHierarquiaEncerradaControlador.assistente.bloquearAcoesTela}"
+                             actionListener="#{transferenciaBemHierarquiaEncerradaControlador.salvar()}"
+                             styleClass="mtop10 prioritario operacao"/>
+        </h:form>
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <h:form id="FormularioPesquisa">
+
+                <div class="modal-header alert-info" style="text-align: center">
+                    <div class="centralizado ">
+                        <strong> #{transferenciaBemHierarquiaEncerradaControlador.assistente.descricaoProcesso}</strong>
+                    </div>
+                </div>
+
+                <div class="modal-body" style="text-align: center">
+                    <div
+                        style="#{transferenciaBemHierarquiaEncerradaControlador.assistente.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/>
+                    </div>
+                    <div
+                        style="#{transferenciaBemHierarquiaEncerradaControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{transferenciaBemHierarquiaEncerradaControlador.assistente.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="#{transferenciaBemHierarquiaEncerradaControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                            <div class="bar"
+                                 style="width: #{transferenciaBemHierarquiaEncerradaControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+                    <br/>
+                </div>
+            </h:form>
+        </div>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  height="470"
+                  resizable="false"
+                  widgetVar="dlgSelecionarTransf"
+                  closable="false">
+            <h:form id="form-transf">
+                <legend class="legenda mbot02">
+                    Unidades de Origem para Transferência
+                </legend>
+
+                <div style="text-align: center" class="mtop05">
+                    <p:dataTable paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{transferenciaBemHierarquiaEncerradaControlador.hierarquiasOrigemBens}"
+                                 selection="#{transferenciaBemHierarquiaEncerradaControlador.unidadeAdministrativaSelecionada}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Unidades&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="hoAdm"
+                                 rowKey="#{hoAdm.id}">
+                        <p:column selectionMode="single" style="width:35px;"/>
+                        <p:column headerText="Unidade de Origem"
+                                  style="text-align: left;">
+                            <h:outputText value="#{hoAdm}"/>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     process="@this :form-transf"
+                                     update=":Formulario:panel-bens"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{transferenciaBemHierarquiaEncerradaControlador.confirmarSelecaoUnidadeOrigem()}"
+                                     styleClass="mtop10 padrao prioritario"/>
+
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{transferenciaBemHierarquiaEncerradaControlador.cancelarSelecaoUnidadeOrigem()}"
+                                     styleClass="mtop10 padrao mlef05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

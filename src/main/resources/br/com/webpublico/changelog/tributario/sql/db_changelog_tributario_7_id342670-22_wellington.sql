@@ -1,0 +1,23 @@
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 1, 'ZC', 'Zona Consolidada');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 2, 'ZEC', 'Zona em Consolidação');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 3, 'ZQU', 'Zona de Qualificação Urbana');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 4, 'ZOT', 'Zona de Ordenamento Territorial');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 5, 'ZVAA', 'Zona de Alta Vulnerabilidade Ambiental');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 6, 'ZVAM', 'Zona de Média Vulnerabilidade Ambiental');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 7, 'ZVAB', 'Zona de Baixa Vulnerabilidade Ambiental');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 8, 'ZIHCPAPAC',
+        'Zona de Interesse Histórico Cultural - Primeiro arruamento/ Plano Acauã Ribeiro;');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 9, 'ZIHCPPCAU',
+        'Zona de Interesse Histórico Cultural - Plano Penápolis: Conjunto Arquitetônico e Urbanístico;');
+INSERT INTO ZONA (ID, CODIGO, SIGLA, DESCRICAO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 10, 'ZIHCPPC',
+        'Zona de Interesse Histórico Cultural - Plano Penápolis: Conjunto ZIHC (Plano Penápolis: Traçado Urbanístico e paisagístico);');

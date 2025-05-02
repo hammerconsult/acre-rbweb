@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+
+            <fc:cabecalhoPretty controlador="#{mapaComparativoTecnicaPrecoControlador}"
+                                origem="#{mapaComparativoTecnicaPrecoControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Mapa Comparativo Técnica e Preço">
+
+                <p:tabView id="tabGeral">
+                    <p:ajax event="tabChange"
+                            process="@this"
+                            listener="#{mapaComparativoTecnicaPrecoControlador.onTabChange}"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"/>
+
+                    <p:tab title="Dados Gerais" id="tab-dados-gerais">
+                        <p:outputPanel id="panel-mapa-comparativo-tecnica-preco">
+                            <h:panelGrid columns="2">
+                                <fc:outputLabelObrigatorio value="Licitação: "/>
+                                <h:panelGrid columns="3"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:autoComplete queryDelay="1000" id="licitacao"
+                                                    title="Digite a licitação que deseja pesquisar."
+                                                    value="#{mapaComparativoTecnicaPrecoControlador.selecionado.licitacao}"
+                                                    completeMethod="#{mapaComparativoTecnicaPrecoControlador.buscarLicitacoes}"
+                                                    converter="#{licitacaoControlador.converterGenerico}"
+                                                    disabled="#{mapaComparativoTecnicaPrecoControlador.isOperacaoEditar()}"
+                                                    var="lic"
+                                                    dropdown="true"
+                                                    panelStyle="max-width: 800px;max-height: 250px"
+                                                    maxResults="50"
+                                                    forceSelection="true"
+                                                    itemValue="#{lic.id}"
+                                                    itemLabel="#{lic}"
+                                                    size="70"
+                                                    styleClass="mrig05">
+                                        <p:ajax event="itemSelect"
+                                                listener="#{mapaComparativoTecnicaPrecoControlador.processarLicitacaoSelecionada()}"
+                                                process="@this"
+                                                update=":Formulario:tabGeral:panel-mapa-comparativo-tecnica-preco"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"/>
+                                    </p:autoComplete>
+
+                                    <fc:botaoInformacao id="bt-info"
+                                                        styleClassBotao="icone-30"
+                                                        detalhes="Para consultar licitações específicas, digite o número da licitação ou ano ou descrição do processo de compra.
+                                                     &lt;br/>Está consultando somente licitações com tipo de avaliação: técnica e preço."/>
+                                </h:panelGrid>
+
+                                <h:outputLabel value="Data: "
+                                               rendered="#{mapaComparativoTecnicaPrecoControlador.selecionado.licitacao ne null}"/>
+                                <h:outputText value="#{mapaComparativoTecnicaPrecoControlador.selecionado.data}"
+                                              rendered="#{mapaComparativoTecnicaPrecoControlador.selecionado.licitacao ne null}"
+                                              styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </h:panelGrid>
+
+                            <p:outputPanel rendered="#{mapaComparativoTecnicaPrecoControlador.selecionado.licitacao ne null}">
+                                <div class="alert alert-block mtop05"
+                                     style="text-align: center; font-weight: bold; font-size: 16px; padding-top: 8px; padding-bottom: 8px; margin-bottom: 5px;">
+                                    <h:outputText
+                                        value="#{mapaComparativoTecnicaPrecoControlador.mensagemTipoApuracao}"/>
+                                </div>
+
+                                <ui:repeat value="#{mapaComparativoTecnicaPrecoControlador.propostasProcessadas}"
+                                           var="proposta">
+
+                                    <div class="alert alert-info">
+                                        <h:outputText value="#{proposta.fornecedor.nome}"
+                                                      styleClass="destaque"/>
+
+                                        <h:outputText
+                                            value="Nota Técnica: #{mapaComparativoTecnicaPrecoControlador.retornarNotaTecnicaDaProposta(proposta.fornecedor)}
+                                       :: Índice Técnico: #{mapaComparativoTecnicaPrecoControlador.getIndiceTecnico(proposta.fornecedor)}"
+                                            styleClass="destaque" style="float: right"/>
+                                    </div>
+
+                                    <h:dataTable id="tabela-itens"
+                                                 styleClass="table mtop05 mbot30"
+                                                 columnClasses="width70, width70, width70, none, width150, width150, width150, width150, width70"
+                                                 value="#{mapaComparativoTecnicaPrecoControlador.getItensMapaPorFornecedor(proposta.fornecedor)}"
+                                                 var="itemMapa">
+
+                                        <h:column>
+                                            <f:facet name="header">Detalhes</f:facet>
+                                            <p:commandButton process="@none"
+                                                             id="bt-ver-cotacao"
+                                                             icon="ui-icon-lupa"
+                                                             styleClass="icone-20"
+                                                             update="@none"
+                                                             onclick="window.open('#{request.contextPath}/licitacao/proposta-fornecedor/ver/#{itemMapa.propostaFornecedor.id}/','_blank');"/>
+                                        </h:column>
+                                        <p:column
+                                            rendered="#{mapaComparativoTecnicaPrecoControlador.isApuracaoPrecoLote()}">
+                                            <f:facet name="header">Itens</f:facet>
+                                            <p:commandButton icon="ui-icon-search"
+                                                             styleClass="icone-20"
+                                                             title="Clique para visualizar o motivo de alteração da situação do item."
+                                                             actionListener="#{mapaComparativoTecnicaPrecoControlador.buscarItensPropostaFornecedor(itemMapa)}"
+                                                             process="@this"
+                                                             update=":form-itens-lote"
+                                                             onclick="aguarde.show();"
+                                                             oncomplete="aguarde.hide(); dialogItensLote.show();"/>
+                                        </p:column>
+                                        <h:column>
+                                            <f:facet name="header">Nº Lote</f:facet>
+                                            <h:outputText value="#{itemMapa.numeroLote}"/>
+                                        </h:column>
+                                        <h:column>
+                                            <f:facet name="header">Nº Item</f:facet>
+                                            <h:outputText value="#{itemMapa.numeroItem}"
+                                                          rendered="#{itemMapa.hasItemMapaItemProcesso()}"/>
+                                        </h:column>
+                                        <h:column>
+                                            <f:facet name="header">Descrição</f:facet>
+                                            <h:outputText value="#{itemMapa.descricao}"/>
+                                        </h:column>
+                                        <h:column>
+                                            <f:facet name="header">Valor (R$)</f:facet>
+                                            <fc:output-mascara-unidade-medida value="#{itemMapa.valor}"
+                                                                              tipoMascara="#{itemMapa.itemMapaComparativoTecnicaPrecoItemProcesso.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"/>
+
+
+                                        </h:column>
+                                        <h:column>
+                                            <f:facet name="header">Nota Preço</f:facet>
+                                            <h:outputText
+                                                value="#{itemMapa.notaPreco}"/>
+                                        </h:column>
+                                        <h:column>
+                                            <f:facet name="header">Classificação Final</f:facet>
+                                            <h:outputText
+                                                value="#{itemMapa.notaClassificacaoFinal}"/>
+                                        </h:column>
+                                        <h:column>
+                                            <f:facet name="header">Situação</f:facet>
+                                            <h:selectOneMenu value="#{itemMapa.situacaoItem}"
+                                                             disabled="#{itemMapa.hasPrecoPropostoMaiorQueReservado() or !itemMapa.hasPreco()}">
+                                                <f:selectItems
+                                                    value="#{mapaComparativoTecnicaPrecoControlador.situacoesItem}"/>
+                                                <p:ajax event="change"
+                                                        listener="#{mapaComparativoTecnicaPrecoControlador.abrirJustificativa(itemMapa)}"
+                                                        process="@this" update=":formJustificativa"
+                                                        onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                                            </h:selectOneMenu>
+                                        </h:column>
+                                        <h:column>
+                                            <f:facet name="header">Justificativa</f:facet>
+                                            <p:commandButton id="bt-edicao-justificativa"
+                                                             styleClass="icone-20 mlef05"
+                                                             icon="ui-icon-pencil"
+                                                             actionListener="#{mapaComparativoTecnicaPrecoControlador.selecionarItemMapa(itemMapa)}"
+                                                             rendered="#{itemMapa.hasJustificativa()}"
+                                                             title="#{itemMapa.justificativa}"
+                                                             process="@this"
+                                                             update=":formJustificativa"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide(); dialogJustificativa.show();"/>
+                                        </h:column>
+                                    </h:dataTable>
+                                </ui:repeat>
+
+                                <h:panelGrid columns="1">
+                                    <h:outputText styleClass="negrito"
+                                                  value="Índice Técnico = Nota Técnica do Fornecedor / Maior Nota Técnica da Licitação."/>
+                                    <h:outputText styleClass="negrito"
+                                                  value="Nota Preço = (Preço da Menor Proposta / Preço da Proposta) x Nota Menor Proposta (Definido na Solicitação de Compra)."/>
+                                    <h:outputText styleClass="negrito"
+                                                  value="Classificação Final = (Índice Técnico * Peso Técnico) + (Nota Preço * Peso Preço)."/>
+                                </h:panelGrid>
+                            </p:outputPanel>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Histórico do Processo"
+                           titleStyle="background: #d9edf7" id="tab-historico" rendered="#{mapaComparativoTecnicaPrecoControlador.operacaoEditar}">
+                        <fa:historico-processo-licitatorio
+                            filtroProcesso="#{mapaComparativoTecnicaPrecoControlador.filtroHistoricoProcesso}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{mapaComparativoTecnicaPrecoControlador}"
+                             desabilitaSalvar="#{mapaComparativoTecnicaPrecoControlador.isLicitacaoAdjudicadaAndHomologada()}"/>
+        </h:form>
+
+        <p:dialog header="Justificativa"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  closable="false"
+                  widgetVar="dialogJustificativa">
+            <h:form id="formJustificativa">
+                <p:outputPanel id="panelJustificativa">
+                    <div class="mbot10">
+                        <h:panelGrid columns="1">
+                            <h:outputText
+                                value="#{mapaComparativoTecnicaPrecoControlador.itemMapaSelecionado.propostaFornecedor.fornecedor.nome}"
+                                styleClass="destaque"/>
+
+                            <h:outputText
+                                value="#{mapaComparativoTecnicaPrecoControlador.itemMapaSelecionado.descricao}
+                            - #{mapaComparativoTecnicaPrecoControlador.itemMapaSelecionado.situacaoItem.descricao}"
+                                styleClass="destaque"/>
+                        </h:panelGrid>
+                    </div>
+
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Justificativa: "/>
+                        <h:panelGrid columns="2"
+                                     cellpadding="0"
+                                     cellspacing="0">
+                            <p:inputTextarea title="Digite a justificativa do item."
+                                             value="#{mapaComparativoTecnicaPrecoControlador.itemMapaSelecionado.justificativa}"
+                                             id="justificativaItemMapa"
+                                             cols="70"
+                                             maxlength="255"
+                                             autoResize="true"
+                                             counterTemplate="{0} Caracteres Restantes."
+                                             counter="counter-justificativa-item-mapa"/>
+                            <h:outputText id="counter-justificativa-item-mapa"
+                                          style="color: #497692"
+                                          styleClass="mlef05"/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+
+                    <div class="centralizado mtop10">
+                        <p:commandButton value="Confirmar"
+                                         title="Clique para fechar."
+                                         icon="ui-icon-check"
+                                         styleClass="padrao mrig05"
+                                         actionListener="#{mapaComparativoTecnicaPrecoControlador.confirmarJustificativa()}"
+                                         process="@this :formJustificativa"
+                                         update=":Formulario:tabGeral:panel-mapa-comparativo-tecnica-preco"
+                                         onclick="aguarde.show();"
+                                         oncomplete="aguarde.hide();"/>
+                    </div>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Itens do Lote"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dialogItensLote"
+                  width="1200"
+                  height="450"
+                  closable="false">
+            <h:form id="form-itens-lote">
+                <h:outputText rendered="#{mapaComparativoTecnicaPrecoControlador.habilitarEdicaoJustificativa}">
+                    <div class="ui-message-warn"
+                         style="text-align: center; font-size: 14px; padding: 4px; margin: 0px!important;">
+                        <h:outputText
+                            value="Existem itens com o valor total maior que o valor cotado, é necessário informar uma justificativa para cada item."/>
+                    </div>
+                </h:outputText>
+
+
+                <fa:tabelaItensDoLote itensDoLote="#{mapaComparativoTecnicaPrecoControlador.itensPropostaFornecedor}"
+                                      permiteInformarJustificativa="#{mapaComparativoTecnicaPrecoControlador.habilitarEdicaoJustificativa}"/>
+
+                <div class="alinhamentoCentralizado mtop10">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     onclick="aguarde.show();"
+                                     rendered="#{mapaComparativoTecnicaPrecoControlador.habilitarEdicaoJustificativa}"
+                                     oncomplete="aguarde.hide();"
+                                     actionListener="#{mapaComparativoTecnicaPrecoControlador.salvarSelecionadoAndJustificativas()}"
+                                     title="Clique para Confirmar."
+                                     styleClass="padrao mtop05 mrig05"/>
+
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide(); dialogItensLote.hide();"
+                                     title="Clique para Confirmar."
+                                     rendered="#{!mapaComparativoTecnicaPrecoControlador.habilitarEdicaoJustificativa}"
+                                     styleClass="padrao mtop05 mrig05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,527 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelatorioConsultaIntegralDebitos" pageWidth="842" pageHeight="595" orientation="Landscape" whenNoDataType="AllSectionsNoDetail" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+	<property name="ireport.zoom" value="1.5"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<subDataset name="ContribuinteLancamentodoDebito">
+		<parameter name="PARCELA_ID" class="java.lang.Long">
+			<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+		</parameter>
+		<queryString>
+			<![CDATA[SELECT P.ID,
+        coalesce(PF.NOME, pj.razaosocial) as nome,
+        coalesce(PF.CPF, pj.cnpj) as cpjcnpj,
+        PJ.NOMEFANTASIA,
+        CASE WHEN PF.ID IS NOT NULL THEN 'Fisíca' ELSE 'Jurídica' END TIPOPESSOA
+    FROM CALCULOPESSOA CP
+   INNER JOIN VALORDIVIDA VD ON CP.CALCULO_ID = VD.CALCULO_ID
+   INNER JOIN PARCELAVALORDIVIDA PVD ON PVD.VALORDIVIDA_ID = VD.ID
+   INNER JOIN PESSOA P ON CP.PESSOA_ID = P.ID
+   LEFT JOIN PESSOAFISICA PF ON PF.ID = P.ID
+   left join pessoajuridica pj on  pj.id = p.id
+ WHERE PVD.ID = $P{PARCELA_ID}]]>
+		</queryString>
+		<field name="ID" class="java.math.BigDecimal"/>
+		<field name="NOME" class="java.lang.String"/>
+		<field name="CPJCNPJ" class="java.lang.String"/>
+		<field name="NOMEFANTASIA" class="java.lang.String"/>
+		<field name="TIPOPESSOA" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="ContribuintesdoCadastro">
+		<parameter name="PARCELA_ID" class="java.lang.Long">
+			<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+		</parameter>
+		<queryString>
+			<![CDATA[SELECT P.ID,
+       coalesce(PF.NOME, PJ.RAZAOSOCIAL) as nome,
+       coalesce(PF.CPF, pj.cnpj) as cpfcnpj,
+       PJ.NOMEFANTASIA,
+       CASE WHEN PF.ID IS NOT NULL THEN 'Fisíca' ELSE 'Jurídica' END TIPOPESSOA,
+       PARCELA_ID
+   FROM (
+SELECT VD.ID VALORDIVIDA_ID, CE.ID CADASTRO_ID, CE.PESSOA_ID, PVD.ID PARCELA_ID
+   FROM CADASTROECONOMICO CE
+  INNER JOIN CALCULO C ON C.CADASTRO_ID = CE.ID
+  INNER JOIN VALORDIVIDA VD ON VD.CALCULO_ID = C.ID
+  INNER JOIN PARCELAVALORDIVIDA PVD ON PVD.VALORDIVIDA_ID = VD.ID
+UNION
+SELECT VD.ID VALORDIVIDA_ID, CR.ID CADASTRO_ID, CR_PROP.PESSOA_ID, PVD.ID PARCELA_ID
+   FROM CADASTRORURAL CR
+  INNER JOIN PROPRIEDADE CR_PROP ON CR_PROP.IMOVEL_ID = CR.ID
+  INNER JOIN CALCULO C ON C.CADASTRO_ID = CR.ID
+  INNER JOIN VALORDIVIDA VD ON VD.CALCULO_ID = C.ID
+  INNER JOIN PARCELAVALORDIVIDA PVD ON PVD.VALORDIVIDA_ID = VD.ID
+WHERE CR_PROP.FINALVIGENCIA IS NULL OR CR_PROP.FINALVIGENCIA <= SYSDATE
+UNION
+SELECT VD.ID VALORDIVIDA_ID, CI.ID CADASTRO_ID, CI_PROP.PESSOA_ID, PVD.ID PARCELA_ID
+   FROM CADASTROIMOBILIARIO CI
+  INNER JOIN PROPRIEDADE CI_PROP ON CI_PROP.IMOVEL_ID = CI.ID
+  INNER JOIN CALCULO C ON C.CADASTRO_ID = CI.ID
+  INNER JOIN VALORDIVIDA VD ON VD.CALCULO_ID = C.ID
+  INNER JOIN PARCELAVALORDIVIDA PVD ON PVD.VALORDIVIDA_ID = VD.ID
+WHERE CI_PROP.FINALVIGENCIA IS NULL OR CI_PROP.FINALVIGENCIA <= SYSDATE) CADASTROPESSOA
+ INNER JOIN PESSOA P ON CADASTROPESSOA.PESSOA_ID = P.ID
+ LEFT JOIN PESSOAFISICA PF ON PF.ID = P.ID
+ LEFT JOIN PESSOAJURIDICA PJ ON  PJ.ID = P.ID
+WHERE CADASTROPESSOA.PARCELA_ID =  $P{PARCELA_ID}]]>
+		</queryString>
+		<field name="ID" class="java.math.BigDecimal"/>
+		<field name="NOME" class="java.lang.String"/>
+		<field name="CPFCNPJ" class="java.lang.String"/>
+		<field name="NOMEFANTASIA" class="java.lang.String"/>
+		<field name="TIPOPESSOA" class="java.lang.String"/>
+	</subDataset>
+	<parameter name="BRASAO" class="java.lang.String"/>
+	<parameter name="USUARIO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FILTROS" class="java.lang.String">
+		<defaultValueExpression><![CDATA["Nenhum critério selecionado"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="MODULO" class="java.lang.String"/>
+	<parameter name="SECRETARIA" class="java.lang.String"/>
+	<parameter name="NOMERELATORIO" class="java.lang.String"/>
+	<parameter name="CONDICAO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" "]]></defaultValueExpression>
+	</parameter>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT VD.ID ID_VALORDIVIDA,
+                        D.ID ID_DIVIDA,
+                        D.DESCRICAO DESCRICAO_DIVIDA,
+                        EX.ANO ANO_EXERCICIO,
+                        CLC.SUBDIVIDA SD,
+                        CASE
+                           WHEN CI.ID IS NOT NULL THEN 'CADASTRO IMOBILIÁRIO'
+                           WHEN CE.ID IS NOT NULL THEN 'CADASTRO ECONÔMICO'
+                           WHEN CR.ID IS NOT NULL THEN 'CADASTRO RURAL'
+                           ELSE 'CONTRIBUINTE GERAL'
+                        END TIPOCADASTRO,
+                        COALESCE(CI.INSCRICAOCADASTRAL, COALESCE(CE.INSCRICAOCADASTRAL, COALESCE(CR.NUMEROINCRA, COALESCE(PF.CPF, PJ.CNPJ)))) INSCRICAO,
+                        VD.VALOR,
+                        VD.EMISSAO EMISSAO,
+                        CLC.ID CALCULO_ID,
+                        PVD.ID PARCELA_ID
+                    FROM VALORDIVIDA VD
+                   INNER JOIN PARCELAVALORDIVIDA PVD ON PVD.VALORDIVIDA_ID = VD.ID
+                   INNER JOIN DIVIDA D ON VD.DIVIDA_ID = D.ID
+                   INNER JOIN EXERCICIO EX ON EX.ID = VD.EXERCICIO_ID
+                   INNER JOIN CALCULO CLC ON CLC.ID = VD.CALCULO_ID
+                   INNER JOIN CALCULOPESSOA CLC_P ON CLC_P.ID = (SELECT MAX(ID) FROM CALCULOPESSOA S_CLC_P WHERE S_CLC_P.CALCULO_ID = CLC.ID)
+                   LEFT JOIN PESSOAFISICA PF ON PF.ID = CLC_P.PESSOA_ID
+                   LEFT JOIN PESSOAJURIDICA PJ ON PJ.ID = CLC_P.PESSOA_ID
+                   LEFT JOIN CADASTROIMOBILIARIO CI ON CLC.CADASTRO_ID = CI.ID
+                   LEFT JOIN CADASTROECONOMICO CE ON CLC.CADASTRO_ID = CE.ID
+                   left join cadastrorural cr on clc.cadastro_id = cr.id
+                 WHERE 1 = 1 $P!{CONDICAO}]]>
+	</queryString>
+	<field name="ID_VALORDIVIDA" class="java.lang.Long"/>
+	<field name="ID_DIVIDA" class="java.lang.Long"/>
+	<field name="DESCRICAO_DIVIDA" class="java.lang.String"/>
+	<field name="ANO_EXERCICIO" class="java.math.BigDecimal"/>
+	<field name="SD" class="java.math.BigDecimal"/>
+	<field name="TIPOCADASTRO" class="java.lang.String"/>
+	<field name="INSCRICAO" class="java.lang.String"/>
+	<field name="VALOR" class="java.math.BigDecimal"/>
+	<field name="EMISSAO" class="java.sql.Timestamp"/>
+	<field name="CALCULO_ID" class="java.lang.Long"/>
+	<field name="PARCELA_ID" class="java.lang.Long"/>
+	<variable name="TOTAL_ITEM" class="java.lang.String"/>
+	<group name="Divida" minHeightToStartNewPage="1">
+		<groupExpression><![CDATA[$F{DESCRICAO_DIVIDA}]]></groupExpression>
+		<groupHeader>
+			<band height="13">
+				<textField isBlankWhenNull="true">
+					<reportElement positionType="Float" x="69" y="3" width="323" height="10" printWhenGroupChanges="Divida"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{DESCRICAO_DIVIDA}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement positionType="Float" x="2" y="3" width="68" height="10" printWhenGroupChanges="Divida"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true" isItalic="true" isUnderline="true"/>
+					</textElement>
+					<text><![CDATA[Tipo de Dívida:]]></text>
+				</staticText>
+				<textField isBlankWhenNull="true">
+					<reportElement positionType="Float" x="482" y="3" width="168" height="10" printWhenGroupChanges="Divida"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{TIPOCADASTRO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement positionType="Float" x="394" y="3" width="86" height="10" printWhenGroupChanges="Divida"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true" isItalic="true" isUnderline="true"/>
+					</textElement>
+					<text><![CDATA[Tipo de Cadastro: ]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<pageHeader>
+		<band height="65" splitType="Stretch">
+			<staticText>
+				<reportElement positionType="Float" x="58" y="3" width="494" height="18" printWhenGroupChanges="Divida"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA MUNICIPAL DE RIO BRANCO]]></text>
+			</staticText>
+			<line>
+				<reportElement positionType="Float" x="0" y="54" width="802" height="1" printWhenGroupChanges="Divida"/>
+			</line>
+			<image>
+				<reportElement positionType="Float" x="2" y="2" width="45" height="50" printWhenGroupChanges="Divida"/>
+				<imageExpression><![CDATA[$P{BRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+			<textField isStretchWithOverflow="true">
+				<reportElement positionType="Float" x="65" y="57" width="736" height="8" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<font fontName="Arial" size="6" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{FILTROS}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="2" y="57" width="60" height="8" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="6" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Critérios Utilizados:]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true">
+				<reportElement positionType="Float" x="58" y="21" width="351" height="16" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<font fontName="Arial" size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{SECRETARIA}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true">
+				<reportElement positionType="Float" x="58" y="37" width="351" height="12" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<font fontName="Arial" size="10" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{NOMERELATORIO}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<detail>
+		<band height="116" splitType="Stretch">
+			<staticText>
+				<reportElement mode="Opaque" x="2" y="2" width="799" height="9" backcolor="#CCCCCC"/>
+				<textElement/>
+				<text><![CDATA[]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="2" y="50" width="200" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="true" isItalic="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Contribuinte(s) do Lançamento do Débito]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="3" y="60" width="100" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="124" y="60" width="250" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Nome / Razão Social]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="400" y="60" width="80" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Tipo de Pessoa]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="124" y="29" width="250" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Nome / Razão Social]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="400" y="29" width="80" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Tipo de Pessoa]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="3" y="29" width="100" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="2" y="20" width="153" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="true" isItalic="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Contribuinte(s) do Cadastro]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" mode="Transparent" x="2" y="11" width="71" height="10" printWhenGroupChanges="Divida"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Courier New" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ID_VALORDIVIDA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="110" y="11" width="45" height="10" printWhenGroupChanges="Divida"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Courier New" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ANO_EXERCICIO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="189" y="11" width="13" height="10" printWhenGroupChanges="Divida"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Courier New" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SD}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="233" y="11" width="56" height="10" printWhenGroupChanges="Divida"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Courier New" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{INSCRICAO}]]></textFieldExpression>
+			</textField>
+			<textField pattern=" #,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="311" y="11" width="58" height="10" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Courier New" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd/MM/yyyy" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="634" y="11" width="56" height="10" printWhenGroupChanges="Divida"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Courier New" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EMISSAO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="733" y="11" width="68" height="10" printWhenGroupChanges="Divida"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Courier New" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CALCULO_ID}]]></textFieldExpression>
+			</textField>
+			<componentElement>
+				<reportElement positionType="Float" x="1" y="71" width="800" height="12" printWhenGroupChanges="Divida"/>
+				<jr:list xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd" printOrder="Vertical">
+					<datasetRun subDataset="ContribuinteLancamentodoDebito">
+						<datasetParameter name="PARCELA_ID">
+							<datasetParameterExpression><![CDATA[$F{PARCELA_ID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:listContents height="12" width="800">
+						<textField isBlankWhenNull="true">
+							<reportElement positionType="Float" x="123" y="1" width="250" height="10" printWhenGroupChanges="Divida"/>
+							<textElement>
+								<font fontName="Courier New" size="8"/>
+							</textElement>
+							<textFieldExpression><![CDATA[$F{NOME}]]></textFieldExpression>
+						</textField>
+						<textField pattern="" isBlankWhenNull="true">
+							<reportElement positionType="Float" x="3" y="1" width="100" height="10" printWhenGroupChanges="Divida"/>
+							<textElement>
+								<font fontName="Courier New" size="8"/>
+							</textElement>
+							<textFieldExpression><![CDATA[$F{CPJCNPJ}]]></textFieldExpression>
+						</textField>
+						<line>
+							<reportElement positionType="Float" x="1" y="11" width="797" height="1" printWhenGroupChanges="Divida"/>
+							<graphicElement>
+								<pen lineWidth="0.5"/>
+							</graphicElement>
+						</line>
+						<textField>
+							<reportElement positionType="Float" x="400" y="1" width="80" height="10" printWhenGroupChanges="Divida"/>
+							<textElement>
+								<font fontName="Courier New" size="8"/>
+							</textElement>
+							<textFieldExpression><![CDATA[$F{TIPOPESSOA}]]></textFieldExpression>
+						</textField>
+					</jr:listContents>
+				</jr:list>
+			</componentElement>
+			<componentElement>
+				<reportElement positionType="Float" x="2" y="39" width="800" height="11" printWhenGroupChanges="Divida"/>
+				<jr:list xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd" printOrder="Vertical">
+					<datasetRun subDataset="ContribuintesdoCadastro">
+						<datasetParameter name="PARCELA_ID">
+							<datasetParameterExpression><![CDATA[$F{PARCELA_ID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:listContents height="11" width="800">
+						<textField isBlankWhenNull="true">
+							<reportElement positionType="Float" x="122" y="0" width="250" height="10" printWhenGroupChanges="Divida"/>
+							<textElement>
+								<font fontName="Courier New" size="8"/>
+							</textElement>
+							<textFieldExpression><![CDATA[$F{NOME}]]></textFieldExpression>
+						</textField>
+						<textField pattern="" isBlankWhenNull="true">
+							<reportElement positionType="Float" x="3" y="0" width="100" height="10" printWhenGroupChanges="Divida"/>
+							<textElement>
+								<font fontName="Courier New" size="8"/>
+							</textElement>
+							<textFieldExpression><![CDATA[$F{CPFCNPJ}]]></textFieldExpression>
+						</textField>
+						<line>
+							<reportElement positionType="Float" x="0" y="10" width="797" height="1" printWhenGroupChanges="Divida"/>
+							<graphicElement>
+								<pen lineWidth="0.5"/>
+							</graphicElement>
+						</line>
+						<textField isBlankWhenNull="true">
+							<reportElement positionType="Float" x="400" y="0" width="80" height="10" printWhenGroupChanges="Divida"/>
+							<textElement verticalAlignment="Top">
+								<font fontName="Courier New" size="8"/>
+							</textElement>
+							<textFieldExpression><![CDATA[$F{TIPOPESSOA}]]></textFieldExpression>
+						</textField>
+					</jr:listContents>
+				</jr:list>
+			</componentElement>
+			<staticText>
+				<reportElement positionType="Float" x="2" y="2" width="71" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Valor Dívida ID]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="110" y="2" width="45" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Exercício]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="189" y="2" width="13" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[SD]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="233" y="2" width="56" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Inscrição]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="311" y="2" width="58" height="10" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Valor]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="634" y="2" width="56" height="10" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Emissão]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="733" y="2" width="68" height="10" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Calculo ID]]></text>
+			</staticText>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="105" width="801" height="10"/>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="PARCELA_ID">
+					<subreportParameterExpression><![CDATA[$F{PARCELA_ID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelatorioConsultaIntegralDebitos_DAMs.jasper"]]></subreportExpression>
+			</subreport>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="94" width="801" height="10"/>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="PARCELA_ID">
+					<subreportParameterExpression><![CDATA[$F{PARCELA_ID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelatorioConsultaIntegralDebitos_Parcelas.jasper"]]></subreportExpression>
+			</subreport>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="83" width="801" height="10"/>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="PARCELA_ID">
+					<subreportParameterExpression><![CDATA[$F{PARCELA_ID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelatorioConsultaIntegralDebitos_Item_ValorDivida.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="14" splitType="Stretch">
+			<line>
+				<reportElement positionType="Float" x="0" y="1" width="802" height="1" printWhenGroupChanges="Divida"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<textField>
+				<reportElement positionType="Float" x="2" y="3" width="260" height="11" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial" size="9" isBold="false" isStrikeThrough="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["WebPúblico - Módulo: " + $P{MODULO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement positionType="Float" x="289" y="3" width="512" height="11" printWhenGroupChanges="Divida"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font fontName="Arial" size="9" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Usuário: " + $P{USUARIO} + " - Emitido em " + new SimpleDateFormat("dd/MM/yyyy").format(new Date()) + " às " + new SimpleDateFormat("HH").format(new Date()) + "h" + new SimpleDateFormat("mm").format(new Date()) + " - Página: " + $V{PAGE_NUMBER} + " de " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<noData>
+		<band height="12">
+			<staticText>
+				<reportElement positionType="Float" x="0" y="0" width="273" height="12" printWhenGroupChanges="Divida"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Nenhum registro encontrado, de acordo com os critérios utilizados.]]></text>
+			</staticText>
+		</band>
+	</noData>
+</jasperReport>

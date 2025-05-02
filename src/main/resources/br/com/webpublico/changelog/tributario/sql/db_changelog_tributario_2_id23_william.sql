@@ -1,0 +1,1 @@
+update processojudicial set TIPOACAOPROCESSOJUDICIAL = 'PETICAO';

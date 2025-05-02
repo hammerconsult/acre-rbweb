@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+<ui:define name="body">
+<script type="text/javascript">
+    function insertAtCursor(valor) {
+        try {
+            conteudos.editor.execCommand("inserthtml", valor, null, "inserthtml");
+            conteudos.focus();
+        } catch (err) {
+            alert(err.description);
+        }
+    }
+</script>
+<fc:aguarde widgetVar="statusDialog" texto="Procurando os fiscais"/>
+<h:form id="Formulario">
+    <fc:cabecalhoPretty origem="#{programacaoFiscalControlador.caminhoPadrao}listar/"
+                        controlador="#{programacaoFiscalControlador}"/>
+    <p:tabView id="dadosProgramacao">
+        <p:tab title="Programação Fiscal" id="tabProgramacao">
+            <p:outputPanel id="panelProgramacao">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Número: "/>
+                    <h:outputText
+                        value="#{programacaoFiscalControlador.selecionado.numero eq null ? 'Gerado automaticamente ao salvar.' : programacaoFiscalControlador.selecionado.numero}"
+                        styleClass="azulnegrito"/>
+
+                    <h:outputText value="Situação: "/>
+                    <h:selectOneMenu id="situacaoprogramacao"
+                                     value="#{programacaoFiscalControlador.selecionado.situacao}"
+                                     disabled="true">
+                        <f:selectItems value="#{programacaoFiscalControlador.situacoesProgramacao}"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Data Programada: "/>
+                    <h:panelGrid columns="4" id="panelPeriodo" cellpadding="0" cellspacing="0">
+                        <p:calendar id="calendarDataProgDe" pattern="dd/MM/yyyy" onkeyup="mascara(this, Data)"
+                                    maxlength="10"
+                                    value="#{programacaoFiscalControlador.selecionado.dataInicio}"/>
+                        <p:spacer width="5px"/>
+                        <h:outputText value=" Até: "/>
+                        <p:calendar id="calendarDataProgAte" pattern="dd/MM/yyyy" onkeyup="mascara(this, Data)"
+                                    maxlength="10"
+                                    value="#{programacaoFiscalControlador.selecionado.dataFinal}"/>
+                    </h:panelGrid>
+
+                    <h:outputText value="Data Criação: "/>
+                    <p:calendar id="dataCriacao" pattern="dd/MM/yyyy" onkeyup="mascara(this, Data)" maxlength="10"
+                                value="#{programacaoFiscalControlador.selecionado.dataCriacao}" disabled="true"/>
+
+                    <h:outputText value="Usuário Logado: "/>
+                    <h:outputText value="#{programacaoFiscalControlador.usuarioSistema.pessoaFisica.nome}"/>
+
+                    <h:outputText value="Denúncia Espontânea: "/>
+                    <h:selectBooleanCheckbox value="#{programacaoFiscalControlador.selecionado.denunciaEspontanea}"
+                                             styleClass="mtop05 mbot05"/>
+
+                    <fc:outputLabelObrigatorio value="Descrição: "/>
+                    <p:inputTextarea title="Digite a descrição da programação fiscal"
+                                     value="#{programacaoFiscalControlador.selecionado.descricao}"
+                                     id="descricao" cols="70" rows="3"/>
+                </h:panelGrid>
+            </p:outputPanel>
+        </p:tab>
+        <p:tab title="Anexos">
+            <p:outputPanel id="panelAnexo">
+                <p:panel id="arquivo" header="Anexos">
+                    <p:fileUpload multiple="true"
+                                  cancelLabel="Cancelar"
+                                  sizeLimit="10485760"
+                                  invalidSizeMessage="Arquivo maior que 10 MB"
+                                  label="Selecione..."
+                                  mode="advanced"
+                                  uploadLabel="Upload Arquivo"
+                                  update="panelAnexo"
+                                  id="upload"
+                                  fileUploadListener="#{programacaoFiscalControlador.assistenteArquivo.handleFileUpload}"/>
+                </p:panel>
+                <p:dataTable paginator="true"
+                             id="tabela-arquivos"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{programacaoFiscalControlador.selecionado.detentorArquivoComposicao.arquivosComposicao}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;spanclass='titulo-tabela mrig10'>ARQUIVOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="arquivoComposicao">
+                    <p:column headerText="Ações"
+                              style="text-align: center; width: 5%; ">
+                        <h:panelGrid columns="2">
+                            <p:commandButton rendered="#{arquivoComposicao.arquivo.id eq null}"
+                                             id="downloadLink" ajax="false"
+                                             icon="ui-icon-arrowthickstop-1-s"
+                                             title="Download do Arquivo"
+                                             process="@form" update="@this"
+                                             styleClass="mrig05"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()">
+                                <p:fileDownload
+                                        value="#{programacaoFiscalControlador.assistenteArquivo.getStream(arquivoComposicao)}"/>
+                            </p:commandButton>
+                            <p:outputPanel rendered="#{arquivoComposicao.arquivo.id ne null}">
+                                <a href='${facesContext.externalContext.requestContextPath}/arquivos/#{arquivoComposicao.arquivo.nome}?id=#{arquivoComposicao.arquivo.id}'>
+                                    <p:button icon="ui-icon-arrowthickstop-1-s"
+                                              styleClass="mrig05"
+                                              title="Download do Arquivo"/>
+                                </a>
+                            </p:outputPanel>
+                            <p:commandButton icon="ui-icon-trash"
+                                             update="tabela-arquivos"
+                                             process="@this"
+                                             styleClass="mrig05"
+                                             actionListener="#{programacaoFiscalControlador.assistenteArquivo.removerArquivo(arquivoComposicao)}"
+                                             onclick="if(!confirm('Tem certeza que deseja remover este registro?')) {return true} else {statusDialog.show();}"
+                                             oncomplete="statusDialog.hide();"/>
+                        </h:panelGrid>
+                    </p:column>
+                    <p:column headerText="Descrição" style="width: 95%;">
+                        <h:outputText value="#{arquivoComposicao.arquivo.descricao}" size="100"/>
+                    </p:column>
+                </p:dataTable>
+            </p:outputPanel>
+        </p:tab>
+    </p:tabView>
+        <br/>
+        <p:panel header="Ações Fiscais" id="panelAcoesFiscais">
+            <h:panelGrid columns="3" styleClass="verticalAlignTop">
+                <h:panelGrid columns="1" style="height: 30px; vertical-align: middle !important;">
+                    <fc:outputLabelObrigatorio value="Cadastro Econômico:"/>
+                </h:panelGrid>
+                <fc:novoAutocompleteCadastroEconomico caminhoAtual="#{programacaoFiscalControlador.urlAtual}"
+                                                      mostraBotaoNovo="false"
+                                                      size="100"
+                                                      mostraBotaoEdita="false"
+                                                      value="#{programacaoFiscalControlador.cadastroEconomico}" id="cad"
+                                                      situacoesPossiveis="#{programacaoFiscalControlador.situacoesDisponiveis}"
+                                                      mostraSituacoes="false"
+                                                      listenerItemSelect="#{programacaoFiscalControlador.atualizaForm()}"
+                                                      permiteAlterarSituacoes="false"
+                        />
+                <p:commandButton value="Selecionar mais de um Cadastro Econômico"
+                                 update=":Formulario_dialog:panelDialog"
+                                 onclick="dialog.show()"
+                                 styleClass="padrao"
+                                 icon="ui-icon-search"/>
+            </h:panelGrid>
+            <p:commandButton id="cbAdicionarCMC" value="Adicionar"
+                             styleClass="padrao prioritario"
+                             disabled="#{programacaoFiscalControlador.selecionado.situacao eq 'CANCELADO'}"
+                             actionListener="#{programacaoFiscalControlador.addAcaoFiscal}"
+                             update=":Formulario:panelAcoesFiscais"
+                             icon="ui-icon-circle-plus"/>
+
+            <p:dataTable id="acoesfiscais" style="text-align: center;" emptyMessage="Nenhum registro encontrado"
+                         styleClass="mtop05"
+                         value="#{programacaoFiscalControlador.selecionado.acoesFiscais}" var="acoes">
+                <p:column headerText="Cadastro Econômico" style="width: 120px">
+                    <h:outputText value="#{programacaoFiscalControlador.inscricaoCadastralCMC(acoes)}"/>
+                </p:column>
+                <p:column headerText="Nome" style="text-align: left">
+                    <h:outputText value="#{programacaoFiscalControlador.nomeCMC(acoes)}"/>
+                </p:column>
+                <p:column headerText="Período de Fiscalização - De" style="width: 150px">
+                    <h:outputText value="#{acoes.dataLevantamentoInicial}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Período de Fiscalização - Até" style="width: 150px">
+                    <h:outputText value="#{acoes.dataLevantamentoFinal}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Situação" style="width: 100px">
+                    <h:outputText value="#{acoes.situacaoAcaoFiscal.descricao}"/>
+                </p:column>
+                <p:column headerText="Designar" style="width: 70px">
+                    <p:commandButton icon="ui-icon-pencil" onstart="statusDialog.show()"
+                                     oncomplete="statusDialog.hide(); dialogDesignar.show();"
+                                     update=":Formulario:acoesfiscais :Formulario:dadosProgramacao :formDesignar:fiscais :formDesignar:panelPrazoFiscal :formDesignar:panelPeriodoFiscal"
+                                     actionListener="#{programacaoFiscalControlador.selecionarAcaoFiscal(acoes)}"
+                                     disabled="#{acoes.id eq null or acoes.situacaoAcaoFiscal ne 'PROGRAMADO'}"
+                                     styleClass="#{acoes.id ne null and acoes.situacaoAcaoFiscal eq 'PROGRAMADO' ? 'prioritario': ''}">
+                        <f:attribute name="acaoFiscal" value="#{acoes}"/>
+                    </p:commandButton>
+                </p:column>
+                <p:column headerText="Imprimir OS" style="width: 70px">
+                    <p:commandButton icon="ui-icon-print"
+                                     update=":Formulario:acoesfiscais, :formImprimirDocto"
+                                     onstart="statusDialog.show()"
+                                     oncomplete="statusDialog.hide(); dialogImprimirDocto.show()"
+                                     actionListener="#{programacaoFiscalControlador.gerarDocumentoOS(acoes)}"
+                                     styleClass="#{acoes.id ne null and acoes.situacaoAcaoFiscal eq 'DESIGNADO' ? 'prioritario': ''}"
+                                     disabled="#{acoes.id eq null or (acoes.situacaoAcaoFiscal eq 'CANCELADO' or acoes.situacaoAcaoFiscal eq 'PROGRAMADO')}">
+                        <f:attribute name="acaoFiscal" value="#{acoes}"/>
+                    </p:commandButton>
+                </p:column>
+                <p:column headerText="Cancelar" style="width: 70px">
+                    <p:commandButton icon="ui-icon-cancel"
+                                     actionListener="#{programacaoFiscalControlador.selecionarAcaoFiscal(acoes)}"
+                                     onstart="statusDialog.show()"
+                                     disabled="#{programacaoFiscalControlador.desabilitaCancelamento(acoes)}"
+                                     oncomplete="statusDialog.hide(); dlgCancelamento.show()"
+                                     update=":Formulario:acoesfiscais">
+                        <f:attribute name="acaoFiscal" value="#{acoes}"/>
+                    </p:commandButton>
+                </p:column>
+                <p:column headerText="Excluir" style="width: 70px">
+                    <p:commandButton icon="ui-icon-trash"
+                                     actionListener="#{programacaoFiscalControlador.excluirAcaoFiscal}" title="Remover"
+                                     disabled="#{acoes.situacaoAcaoFiscal eq 'CANCELADO' or acoes.situacaoAcaoFiscal eq 'DESIGNADO' or acoes.situacaoAcaoFiscal eq 'REABERTO' or acoes.situacaoAcaoFiscal eq 'CONCLUIDO' or acoes.situacaoAcaoFiscal eq 'EXECUTANDO'}"
+                                     update=":Formulario:acoesfiscais"
+                                     onclick="if(!confirm('Deseja excluir este registro da lista?')) return false;">
+                        <f:attribute name="removeItem" value="#{acoes}" id="removeItem"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+        </p:panel>
+
+    <div align="left" class="mtop05">
+        <p:commandButton ajax="false" id="salvar"
+                         value="Salvar"
+                         disabled="#{programacaoFiscalControlador.selecionado.situacao eq 'CANCELADO'}"
+                         icon="ui-icon-disk"
+                         styleClass="operacao prioritario"
+                         action="#{programacaoFiscalControlador.salvar}"/>
+        <p:commandButton ajax="false"
+                         id="cancelar"
+                         icon="ui-icon-cancel"
+                         value="Fechar"
+                         styleClass="operacao"
+                         action="lista"/>
+    </div>
+</h:form>
+
+
+<p:dialog widgetVar="dialog"
+          position="center"
+          dynamic="true"
+          style="position: fixed !important;"
+          modal="true"
+          width="900"
+          header="Selecionar Cadastros Econômico">
+    <h:form id="Formulario_dialog">
+        <p:panel id="panelDialog" styleClass="mbot05" style="overflow: scroll; width: 100%; max-height: 500px">
+
+            <h:panelGrid columns="3">
+                <h:outputLabel value="Serviço:"/>
+                <p:autoComplete queryDelay="1000" id="servicos"
+                                value="#{programacaoFiscalControlador.servico}"
+                                size="110"
+                                forceSelection="true"
+                                style="white-space: pre-wrap !important;"
+                                converter="#{programacaoFiscalControlador.converterServico}"
+                                completeMethod="#{programacaoFiscalControlador.completaServicos}"
+                                var="servico"
+                                maxResults="10"
+                                itemLabel="#{servico.toStringAutoComplete}"
+                                itemValue="#{servico.id}"/>
+                <p:commandButton actionListener="#{programacaoFiscalControlador.adicionaListaServicos}"
+                                 value="Adicionar"
+                                 ajax="true"
+                                 icon="ui-icon-circle-plus"
+                                 title="Adicionar"
+                                 styleClass="padrao"
+                                 update="panelDialog"/>
+            </h:panelGrid>
+            <p:dataTable id="tabelaServicos"
+                         styleClass="mtop05 mbot05"
+                         rendered="#{programacaoFiscalControlador.mostraListaServicos}"
+                         value="#{programacaoFiscalControlador.servicosSelecionados}"
+                         var="serv">
+                <p:column headerText="Código" style="width: 10%; text-align: center">
+                    <h:outputLabel value="#{serv.codigo}"/>
+                </p:column>
+                <p:column headerText="Descrição">
+                    <h:outputLabel value="#{serv.nome}"/>
+                </p:column>
+                <p:column headerText="Operação" style="width: 5%; text-align: center">
+                    <p:commandButton icon="ui-icon-trash"
+                                     actionListener="#{programacaoFiscalControlador.removeItemListaServicosSelecionados}"
+                                     title="Remover"
+                                     update="@form">
+                        <f:attribute name="removeItem" value="#{serv}" id="removeItem"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+            <h:panelGrid columns="2">
+                <h:outputText value="Classificação da Atividade:"/>
+                <h:selectOneMenu title="Selecione a Classificação da Atividade"
+                                 value="#{programacaoFiscalControlador.classificacaoAtividade}"
+                                 id="classificacaoatividade">
+                    <f:selectItems value="#{programacaoFiscalControlador.classificacaoDaAtividade}"/>
+                </h:selectOneMenu>
+                <h:outputText value="Endereco:"/>
+                <p:autoComplete queryDelay="1000" id="endereco"
+                                value="#{programacaoFiscalControlador.endereco}"
+                                completeMethod="#{programacaoFiscalControlador.completaEndereco}"
+                                forceSelection="true"
+                                var="endereco"
+                                itemLabel="#{endereco}"
+                                itemValue="#{endereco}" size="70">
+                </p:autoComplete>
+                <h:outputText value="Bairro:"/>
+                <p:autoComplete queryDelay="1000" id="bairro"
+                                value="#{programacaoFiscalControlador.bairro}"
+                                completeMethod="#{programacaoFiscalControlador.completaBairro}"
+                                forceSelection="true"
+                                var="bairro"
+                                itemLabel="#{bairro}"
+                                itemValue="#{bairro}" size="50">
+                </p:autoComplete>
+                <h:outputText value="Situacao"/>
+                <h:selectOneMenu id="situacao" value="#{programacaoFiscalControlador.situacao}">
+                    <f:selectItems value="#{programacaoFiscalControlador.situacoes}"/>
+                </h:selectOneMenu>
+                <h:outputText value="Faturamento:"/>
+                <h:panelGroup id="groupFaturamento">
+                    <h:panelGrid columns="4">
+                        <h:outputText value="Data Inicial:"/>
+                        <p:calendar value="#{programacaoFiscalControlador.dataInicial}"
+                                    onkeyup="mascara(this, Data)"
+                                    maxlength="10">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </p:calendar>
+                        <h:outputText value="Data Final:"/>
+                        <p:calendar value="#{programacaoFiscalControlador.dataFinal}"
+                                    onkeyup="mascara(this, Data)"
+                                    maxlength="10">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </p:calendar>
+                        <h:outputText value="Valor Inicial:"/>
+                        <p:inputText value="#{programacaoFiscalControlador.valorInicial}"/>
+                        <h:outputText value="Valor Final:"/>
+                        <p:inputText value="#{programacaoFiscalControlador.valorFinal}"/>
+                    </h:panelGrid>
+                </h:panelGroup>
+            </h:panelGrid>
+
+
+            <h:panelGrid columns="3">
+                <p:commandButton value="Filtrar"
+                                 actionListener="#{programacaoFiscalControlador.selecionarCMCs}"
+                                 update="cmc panelDialog" icon="ui-icon-search"
+                                 onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                 styleClass="padrao prioritario"/>
+                <p:commandButton value="Limpar Filtros" actionListener="#{programacaoFiscalControlador.limparFiltros}"
+                                 styleClass="padrao" icon="ui-icon-clear"
+                                 update=":Formulario_dialog:panelDialog"/>
+            </h:panelGrid>
+            <p:dataTable id="cmc"
+                         style="text-align: center;"
+                         styleClass="mtop05"
+                         emptyMessage="Nenhum registro encontrado"
+                         value="#{programacaoFiscalControlador.listaCadastroEconomico}"
+                         var="cmc"
+                         rowKey="#{cmc}"
+                         selection="#{programacaoFiscalControlador.listaCmc}"
+                         paginator="true"
+                         rows="10"
+                         paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                         rowsPerPageTemplate="10,50,100">
+                <f:facet name="header">
+                    <h:outputText value="Lista de Cadastros Econômico Pesquisados"/>
+                </f:facet>
+                <p:column selectionMode="multiple"/>
+                <p:column headerText="Cadastro Econômico">
+                    <h:outputText value="#{cmc.inscricaoCadastral}"/>
+                </p:column>
+                <p:column headerText="Situação">
+                    <h:outputText
+                            value="#{programacaoFiscalControlador.ultimaSituacaoCadastro(cmc).situacaoCadastral}"/>
+                </p:column>
+                <p:column headerText="Nome/Razão Social">
+                    <h:outputText value="#{cmc.pessoa.nome}"/>
+                </p:column>
+                <p:column headerText="CPF/CNPJ">
+                    <h:outputText value="#{cmc.pessoa.cpf_Cnpj}"/>
+                </p:column>
+                <p:column headerText="Nome Fantasia">
+                    <h:outputText value="#{cmc.pessoa.nomeFantasia}"
+                                  rendered="#{programacaoFiscalControlador.instanciaPJ(cmc.pessoa)}"/>
+                </p:column>
+                <p:column headerText="Endereços">
+                    <ui:repeat value="#{programacaoFiscalControlador.enderecosDaPessoa(cmc.pessoa)}" var="endereco">
+                        <h:outputText value="#{endereco}"/><br/>
+                    </ui:repeat>
+                </p:column>
+            </p:dataTable>
+        </p:panel>
+        <p:commandButton value="Confirmar" styleClass="operacao prioritario" icon="ui-icon-check"
+                         onclick="dialog.hide()"
+                         update=":Formulario" actionListener="#{programacaoFiscalControlador.addAllAcaoFiscal}"/>
+        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialog.hide()"
+                         styleClass="operacao"/>
+    </h:form>
+</p:dialog>
+<p:dialog id="dialogDlg" width="800" modal="true" widgetVar="dialogDesignar" header="Designar Fiscais"
+          position="center"
+          style="position: fixed !important; max-height: 400px !important; overflow: auto !important;"
+          resizable="false">
+    <h:form id="formDesignar">
+        <p:panel styleClass="mbot05" >
+            <p:dataTable id="fiscais" style="text-align: center;" emptyMessage="Nenhum registro encontrado"
+                         styleClass="mbot05"
+                         selection="#{programacaoFiscalControlador.arrayListaUsuarios}"
+                         value="#{programacaoFiscalControlador.listaUsuarioSistema}" var="fis" rowKey="#{fis}">
+                <f:facet name="header">
+                    <h:outputText value="Fiscais"/>
+                </f:facet>
+                <p:column selectionMode="multiple" style="width: 30px"/>
+                <p:column headerText="Nome" filterBy="#{fis.pessoaFisica.nome}">
+                    <h:outputText value="#{fis.pessoaFisica.nome}"/>
+                </p:column>
+                <p:column headerText="Login" filterBy="#{fis.login}">
+                    <h:outputText value="#{fis.login}"/>
+                </p:column>
+            </p:dataTable>
+
+            <table border="0" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td width="50%">
+                        <p:panel header="Prazo do Fiscal" id="panelPrazoFiscal">
+                            <h:panelGrid columns="3">
+                                <h:outputText value="De: "/>
+                                <p:calendar value="#{programacaoFiscalControlador.acaoFiscalSelecionado.dataInicial}"
+                                            id="dataInicialPra" pattern="dd/MM/yyyy" onkeyup="mascara(this, Data)"
+                                            maxlength="10">
+                                    <p:ajax event="dateSelect"
+                                            listener="#{programacaoFiscalControlador.calculaDataFinalPrazo}"
+                                            update=":formDesignar:dataFinalPra"/>
+                                    <p:ajax event="blur"
+                                            listener="#{programacaoFiscalControlador.calculaDataFinalPrazo(null)}"
+                                            process="@this" update=":formDesignar:dataFinalPra"/>
+                                </p:calendar>
+                                <p:spacer/>
+
+                                <h:outputText value="Até: "/>
+                                <p:calendar id="dataFinalPra"
+                                            value="#{programacaoFiscalControlador.acaoFiscalSelecionado.dataFinal}"
+                                            pattern="dd/MM/yyyy" disabled="true" onkeyup="mascara(this, Data)"
+                                            maxlength="10"/>
+                                <p:spacer/>
+                            </h:panelGrid>
+                        </p:panel>
+                    </td>
+                    <td width="5px">
+                    </td>
+                    <td>
+                        <p:panel header="Período de Fiscalização" id="panelPeriodoFiscal">
+                            <h:panelGrid columns="3">
+                                <h:outputText value="De: "/>
+                                <p:calendar
+                                        value="#{programacaoFiscalControlador.acaoFiscalSelecionado.dataLevantamentoInicial}"
+                                        id="dataInicialPer" pattern="dd/MM/yyyy" onkeyup="mascara(this, Data)"
+                                        maxlength="10"/>
+                                <p:spacer/>
+                                <h:outputText value="Até: "/>
+                                <p:calendar
+                                        value="#{programacaoFiscalControlador.acaoFiscalSelecionado.dataLevantamentoFinal}"
+                                        id="dataFinalPer" pattern="dd/MM/yyyy" onkeyup="mascara(this, Data)"
+                                        maxlength="10"/>
+                                <p:spacer/>
+                            </h:panelGrid>
+                        </p:panel>
+                    </td>
+                </tr>
+            </table>
+        </p:panel>
+        <p:commandButton value="Confirmar" styleClass="operacao prioritario" icon="ui-icon-check"
+                         onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                         update=":Formulario"
+                         actionListener="#{programacaoFiscalControlador.designarAcaoFiscal}"/>
+        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialogDesignar.hide()"
+                         styleClass="operacao"/>
+    </h:form>
+</p:dialog>
+
+<p:dialog id="dlgCancelamentoDlg" width="630" modal="true" widgetVar="dlgCancelamento" header="Cancelamento"
+          position="center"
+          style="position: fixed !important;"
+          resizable="false">
+    <h:form id="formCancelamento">
+        <p:panel styleClass="mbot05">
+            <h:panelGrid columns="2">
+                <fc:outputLabelObrigatorio value="Motivo: "/>
+                <p:inputTextarea id="motivo" value="#{programacaoFiscalControlador.acaoFiscalSelecionado.conclusao}"
+                                 rows="4" cols="70" maxHeight="50"/>
+            </h:panelGrid>
+        </p:panel>
+        <p:commandButton value="Confirmar" styleClass="padrao prioritario" icon="ui-icon-check"
+                         update=":Formulario"
+                         actionListener="#{programacaoFiscalControlador.cancelarAcaoFiscal}"/>
+        <p:commandButton value="Fechar" styleClass="padrao" icon="ui-icon-close"
+                         onclick="dlgCancelamento.hide()"/>
+    </h:form>
+</p:dialog>
+<p:dialog id="dialogImprimirDoctoDlg" width="1000" height="500" modal="true" widgetVar="dialogImprimirDocto"
+          position="center"
+          style="position: fixed !important;"
+          header="Impressão de Documentos" resizable="false">
+    <h:form id="formImprimirDocto">
+        <h:panelGrid style="text-align: center; width: 100%; font-weight: bold;"
+                     rendered="#{programacaoFiscalControlador.desabilitaEditorDocumento}">
+            <div class="ui-messages-info ui-corner-all">
+                <div class="ui-messages-info-icon"/>
+                &nbsp;
+                Impossível fazer alteração! Não é permitido fazer qualquer alteração no documento, pois o tipo de documento #{programacaoFiscalControlador.documentoOficial.modeloDoctoOficial.tipoDoctoOficial.descricao} não permite.
+            </div>
+        </h:panelGrid>
+        <p:panel style="overflow-y: auto;
+                        overflow-x: hidden;
+                        max-height: 500px !important;"
+                 styleClass="mbot05">
+            <p:editor value="#{programacaoFiscalControlador.documentoOficial.conteudo}"
+                      id="modelo" width="940"
+                      disabled="#{programacaoFiscalControlador.desabilitaEditorDocumento}"
+                      height="430" widgetVar="conteudos"/>
+        </p:panel>
+
+        <div style="width: 100%; text-align: center">
+            <fc:botaoTargetBlank actionListener="#{programacaoFiscalControlador.imprimirDocumentoOS()}" label="Gerar"
+                                 styleClass="operacao prioritario" imprimeNoDialog="true"/>
+
+            <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialogImprimirDocto.hide()"
+                             styleClass="operacao"/>
+        </div>
+    </h:form>
+</p:dialog>
+<p:dialog id="dialogConfirmaRefiscalizacaoDlg" width="400" modal="true" widgetVar="dialogConfirmaRefiscalizacao"
+          position="center"
+          style="position: fixed !important;"
+          header="Refiscalização?" resizable="false">
+    <h:form id="formConfirmaRefiscalizacao">
+        <p:panel styleClass="mbot05">
+            <h:outputText
+                    value="Foi encontrada uma fiscalização para o Cadastro Econômico selecionado, em outra programação no mesmo período informado."/>
+            <br/><br/>
+            <h:outputText value="Caso seja uma refiscalização, clique em confirmar." styleClass="negrito"/>
+            <br/><br/>
+        </p:panel>
+        <p:commandButton value="Confirmar" styleClass="prioritario padrao" icon="ui-icon-check"
+                         onclick="dialogConfirmaRefiscalizacao.hide(); dialogLoginSupervisor.show()"/>
+
+        <p:commandButton value="Fechar" icon="ui-icon-close"
+                         onclick="dialogConfirmaRefiscalizacao.hide()"
+                         styleClass="padrao"/>
+    </h:form>
+</p:dialog>
+
+<p:dialog id="dialogLoginSupervisorDlg" width="400" modal="true"
+          position="center"
+          style="position: fixed !important;"
+          widgetVar="dialogLoginSupervisor" header="Liberar" resizable="false">
+    <h:form id="formLoginSupervisor">
+        <p:panel styleClass="mbot05">
+            <h:outputText value="Entre com Login e Senha de Supervisor."/>
+            <br/><br/>
+            <h:panelGrid columns="2">
+                <fc:outputLabelObrigatorio value="Login: "/>
+                <p:inputText value="#{programacaoFiscalControlador.loginSupervisor}" maxlength="20" size="25"
+                             autocomplete="off"
+                             id="loginAutorizacao"/>
+
+                <fc:outputLabelObrigatorio value="Senha: "/>
+                <p:password value="#{programacaoFiscalControlador.senhaSupervisor}" maxlength="20" size="25"
+                            autocomplete="off"
+                            id="senhaAutorizacao"/>
+
+                <!-- gambi para não completar automaticamente a senha quando salva no browser -->
+                <h:inputSecret value="#{programacaoFiscalControlador.senhaSupervisor}"
+                               id="password" label="password" maxlength="20" style="height: 1px; width: 1px; border: 0"
+                               readonly="true"/>
+                <p:spacer/>
+            </h:panelGrid>
+        </p:panel>
+
+        <div style="text-align: center">
+            <p:commandButton value="OK" styleClass="padrao prioritario"
+                             update=":Formulario"
+                             icon="ui-icon-check"
+                             actionListener="#{programacaoFiscalControlador.validaUsuarioSupervisor()}"/>
+            <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialogLoginSupervisor.hide()"
+                             styleClass="padrao"/>
+        </div>
+    </h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>
+</html>

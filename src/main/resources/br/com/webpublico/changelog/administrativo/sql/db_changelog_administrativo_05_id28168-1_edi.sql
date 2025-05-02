@@ -1,0 +1,2 @@
+delete usuariounidadeorganizacio where unidadeorganizacional_id = 8756991;
+delete usuariounidadeorganizacio where unidadeorganizacional_id = 733427534

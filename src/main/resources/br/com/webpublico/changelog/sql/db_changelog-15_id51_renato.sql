@@ -1,0 +1,1 @@
+update acaoppa set responsavel_id =98763027  where codigo = '004' and id = 113765162

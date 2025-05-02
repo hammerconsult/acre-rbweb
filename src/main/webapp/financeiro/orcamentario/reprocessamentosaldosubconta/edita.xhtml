@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:panel header="Reprocessamento de Saldo Financeiro">
+
+                <h:panelGrid columns="2" id="gridFiltros">
+                    <h:outputText value="Data Inicial: "/>
+                    <p:calendar id="dtInicial"
+                                value="#{reprocessamentoSaldoSubContaControlador.assistente.dataInicial}"
+                                navigator="true"
+                                size="12"
+                                pattern="dd/MM/yyyy"
+                                title="Informe a data Inicial."
+                                onkeypress="mascara(this, mdata)">
+                        <p:ajax event="valueChange"
+                                update="@this"/>
+                        <p:ajax event="dateSelect"
+                                update="@this"/>
+                    </p:calendar>
+
+                    <h:outputText value="Data Final: "/>
+                    <p:calendar title="Selecione a data final."
+                                id="dataFinal"
+                                size="12"
+                                navigator="true"
+                                value="#{reprocessamentoSaldoSubContaControlador.assistente.dataFinal}"
+                                pattern="dd/MM/yyyy"
+                                onkeypress="mascara(this, mdata)"/>
+
+                    <h:outputText value="Excluir Saldos?"/>
+                    <p:selectBooleanCheckbox value="#{reprocessamentoSaldoSubContaControlador.assistente.excluirSaldos}"
+                                             id="cbExcluirSaldo"
+                                             title="Marque se deseja excluir os saldos do período."/>
+
+                    <h:outputText value="Conta Bancária: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="cbe"
+                                    size="70"
+                                    title="Informe uma conta bancária."
+                                    value="#{reprocessamentoSaldoSubContaControlador.assistente.contaBancariaEntidade}"
+                                    completeMethod="#{reprocessamentoSaldoSubContaControlador.completarContaBancaria}"
+                                    converter="#{contaBancariaEntidadeControlador.converterGenerico}"
+                                    var="cbe"
+                                    itemValue="#{cbe.id}"
+                                    itemLabel="#{cbe}"
+                                    maxResults="10"
+                                    onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'subconta_input', true, false, true)">
+                        <p:ajax event="itemSelect" update=":Formulario:subconta" process="@this"/>
+                    </p:autoComplete>
+
+                    <h:outputText value="Conta Financeira: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="subconta"
+                                    size="70"
+                                    title="Informe uma conta financeira."
+                                    value="#{reprocessamentoSaldoSubContaControlador.assistente.subConta}"
+                                    completeMethod="#{reprocessamentoSaldoSubContaControlador.completarContaFinanceira}"
+                                    converter="#{contaFinanceiraControlador.converterGenerico}"
+                                    var="sub"
+                                    itemValue="#{sub.id}"
+                                    itemLabel="#{sub}"
+                                    maxResults="10"
+                                    onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'cdest_input', true, false, true)">
+                        <p:ajax event="itemSelect" update=":Formulario:cdest" process="@this"/>
+                    </p:autoComplete>
+
+                    <h:outputText value="Conta de Destinação de Recursos: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="cdest"
+                                    size="70"
+                                    title="Selecione uma Conta de Destinação de Recursos."
+                                    value="#{reprocessamentoSaldoSubContaControlador.assistente.contaDeDestinacao}"
+                                    completeMethod="#{reprocessamentoSaldoSubContaControlador.completarContasDeDestinacao}"
+                                    converter="#{planoDeContasWizardControlador.converterConta}"
+                                    disabled="#{reprocessamentoSaldoSubContaControlador.assistente.subConta eq null}"
+                                    var="font"
+                                    itemValue="#{font.id}"
+                                    itemLabel="#{font}"
+                                    maxResults="10">
+                    </p:autoComplete>
+                </h:panelGrid>
+
+                <p:poll interval="1"
+                        widgetVar="poll"
+                        listener="#{reprocessamentoSaldoSubContaControlador.consultarReprocessamento()}"
+                        update=":formDialogProgressBar"
+                        autoStart="false"/>
+            </p:panel>
+
+            <p:commandButton value="Reprocessar"
+                             styleClass="operacao prioritario mtop05"
+                             id="btnReprocessamento"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             icon="ui-icon-transferthick-e-w"
+                             title="Clique para Reprocessar o saldo."
+                             actionListener="#{reprocessamentoSaldoSubContaControlador.reprocessar}"/>
+
+            <p:commandButton value="Cancelar"
+                             id="cbCancelar"
+                             styleClass="mtop10 mlef05"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             style="height: 30px;"
+                             icon="ui-icon-cancel"
+                             title="Clique para cancelar e retornar a página anterior."
+                             actionListener="#{reprocessamentoSaldoSubContaControlador.cancelar()}"/>
+        </h:form>
+
+        <p:dialog widgetVar="dialogProgressBar"
+                  width="800"
+                  closable="false"
+                  showHeader="false"
+                  modal="true"
+                  hideEffect="clip"
+                  resizable="false"
+                  position="center"
+                  dynamic="true">
+            <h:form id="formDialogProgressBar">
+                <div class="alert alert-info centralizado mtop05">
+                    <strong>Aguarde, </strong>reprocessamento saldo financeiro está sendo executado...
+                </div>
+
+                <p:panel style="text-align: center; width: 100%; border: 0px;"
+                         visible="#{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.calculando}"
+                         id="panelBarra">
+
+                    <h:outputText
+                        styleClass="negrito"
+                        value="#{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.mensagem}"
+                        escape="false"/>
+
+                    <br/><br/>
+                    <div class="progress progress-bar active" id="barraProgresso">
+                        <div class="bar"
+                             style="width: #{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.porcentagemDoCalculo}%;">
+                        </div>
+                    </div>
+
+                    <h:outputText
+                        value="#{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.porcentagemDoCalculo}"
+                        styleClass="negrito">
+                        <f:convertNumber type="number" maxFractionDigits="2"/>
+                    </h:outputText>
+                    <h:outputText value="%"/>
+
+                    <div class="negrito mtop05">
+                        <h:outputText
+                            styleClass="mlef05"
+                            value="#{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.processados}"/>
+                        de
+                        <h:outputText
+                            styleClass="mrig05"
+                            value="#{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.total}"/>
+                    </div>
+
+                    <br/>
+                    <h:outputText
+                        styleClass="cinzaEscuro"
+                        value="Tempo Decorrido: #{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.tempoDecorrido}"/>
+
+                    <br/>
+                    <h:outputText
+                        styleClass="cinzaEscuro"
+                        value="Tempo Estimado: #{reprocessamentoSaldoSubContaControlador.assistente.assistenteBarraProgresso.tempoEstimado}"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

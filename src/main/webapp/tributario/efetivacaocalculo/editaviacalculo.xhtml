@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+        >
+
+<ui:composition template="/corpo.xhtml">
+<ui:define name="body">
+
+<script type="text/javascript">
+
+    function pisca(indice) {
+        var nome = ".target" + indice;
+        $(nome).effect( "highlight",{color:"#B0C4DE"}, 1000 );
+    }
+</script>
+<h:form id="Formulario">
+    <div align="right" class="mbot05">
+
+            <p:button value="Novo"
+                      id="btNovo"
+                      href="../"
+                      style="height: 30px;"
+                      icon="ui-icon-circle-plus"
+                      title="Clique para inserir um novo registro"
+                      disabled="#{!autorizacao.isPodeEditar(request)}"
+                    />
+    </div>
+    <p:panel header="Efetivação de Cálculos">
+            <h:panelGrid columns="2">
+                <h:outputText value="Dívida: "/>
+                <h:outputText value="#{dividaIPTUControlador.efetivacaoIPTU.divida}" styleClass="negrito"/>
+                <h:outputText value="Exercício: "/>
+                <h:outputText id="exercicio" value="#{dividaIPTUControlador.efetivacaoIPTU.exercicio}"
+                             styleClass="negrito"
+                             converter="#{dividaIPTUControlador.converterExercicio}"/>
+            </h:panelGrid>
+        <p:dataTable value="#{dividaIPTUControlador.efetivacaoIPTU.processos}" var="target"
+                     id="tabelaalvo"
+                     rowStyleClass="target#{target.ordem}"
+                     emptyMessage="Nenhum Registro Listado">
+            <f:facet name="header">
+                <h:outputText value="Selecionados"/>
+            </f:facet>
+            <p:column headerText="Ordem">
+                <h:outputText value="#{target.ordem}" />
+            </p:column>
+            <p:column headerText="Lançamento">
+                <h:outputText value="#{target.dataLancamento}"  >
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+            </p:column>
+            <p:column headerText="Descrião">
+                <h:outputText value="#{target.descricao}"/>
+            </p:column>
+
+        </p:dataTable>
+        <br/>
+        <p:panel style="text-align: center">
+            <p:outputPanel
+                    rendered="#{dividaIPTUControlador.efetivacaoIPTU.processos.size() ne null and dividaIPTUControlador.efetivacaoIPTU.processos.size() ne 0}">
+                <div class="alert alert-info">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>Atenção!</strong> <br/> Os processos serão efetivados na order selecionada.<br/>
+                    <small>*A ordem começa a partir do número ZERO</small>
+                </div>
+            </p:outputPanel>
+            <p:outputPanel
+                    rendered="#{dividaIPTUControlador.efetivacaoIPTU.processos.size() eq null or dividaIPTUControlador.efetivacaoIPTU.processos.size() eq 0}">
+                <div class="alert">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>Atenção!</strong><br/> Para efetivar um Processo de Cálculo de I.P.T.U selecione ao menos um processo.
+                </div>
+            </p:outputPanel>
+            <br/>
+            <p:commandButton value="Efetivar"
+                             actionListener="#{dividaIPTUControlador.validaDebitosDoExercicio}"
+                             icon="ui-icon-circle-triangle-e"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             disabled="#{dividaIPTUControlador.efetivacaoIPTU.processos.size() eq null or dividaIPTUControlador.efetivacaoIPTU.processos.size() eq 0}"
+                             styleClass="operacao #{dividaIPTUControlador.efetivacaoIPTU.processos.size() gt 0 ? 'prioritario' : ''} "
+                    />
+        </p:panel>
+
+    </p:panel>
+    <fc:aguarde/>
+</h:form>
+<p:confirmDialog
+        message="O processo de efetivação de débitos pode levar alguns minutos, tem certeza que deseja continuar?"
+        widgetVar="confirmaProcesso">
+    <h:form>
+        <p:commandButton value="Sim" action="#{dividaIPTUControlador.efetiva}" ajax="false"/>
+        <p:commandButton value="Não" onclick="confirmaProcesso.hide()"/>
+    </h:form>
+</p:confirmDialog>
+<p:dialog modal="true" widgetVar="confirmaDebito" showHeader="false" style="max-width: 800px !important">
+    <h:form style="font-size: 12px;">
+        <div class="alert alert-block">
+            <h4>Atenção!</h4>
+            Já existem débitos de I.P.T.U para o exercício informado.
+            Ao continuar os débitos em aberto que entrarem em conflito com os que estão sendo gerados serão sobrepostos.<br/>
+            Os débitos gerados a partir desse processo serão os vigentes.<br/>
+            Os débitos já existentes que tem uma ou mais parcelas pagas não serão sebrepostos.
+            <br/>
+
+            <div class="alinhamentoCentralizado">
+                <h:panelGrid columns="2" style="width: 100%; margin-top: 30px;">
+                    <p:commandButton styleClass="operacao" icon="ui-icon-notice"
+                                     value="Quero continuar e sobrepor os débitos"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     ajax="false"
+                                     action="#{dividaIPTUControlador.cancela}"
+                                     style="padding: 5px !important"/>
+                    <p:commandButton styleClass="operacao" icon="ui-icon-cancel"
+                                     style="padding: 5px !important" onclick="confirmaDebito.hide()"
+                                     value="Quero Cancelar a efetivação"/>
+                </h:panelGrid>
+
+            </div>
+        </div>
+    </h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>
+</html>

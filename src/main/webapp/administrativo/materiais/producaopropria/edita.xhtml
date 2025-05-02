@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+    >
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty origem="#{producaoControlador.caminhoPadrao}listar/"
+                                controlador="#{producaoControlador}"/>
+            <p:tabView id="tabViewPrincipal">
+                <p:tab title="Cadastro de Produção" id="tabDados">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio for="dataProducao" value="Data da Produção:"/>
+                        <p:calendar id="dataProducao"
+                                    title="Informe a data de produção"
+                                    onkeypress="mascara(this, Data)"
+                                    value="#{producaoControlador.selecionado.dataProducao}"
+                                    pattern="dd/MM/yyyy"
+                                    navigator="true"
+                                    locale="pt_BR"
+                                    maxlength="10"
+                                    size="10"/>
+
+                        <fc:outputLabelObrigatorio value="Unidade Administrativa:"/>
+                        <p:outputPanel style="border: 0;">
+                            <p:autoComplete queryDelay="1000"
+                                            id="unidadeorganizacional"
+                                            title="Informe a unidade organizacional."
+                                            value="#{producaoControlador.hierarquia}"
+                                            completeMethod="#{hierarquiaOrganizacionalControlador.buscarHierarquiaOrganizacionalAdministrativaPorCodigoOrDescricaoAndDataComLocalDeEstoqueOndeUsuarioEhGestor}"
+                                            converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                            var="ho"
+                                            itemLabel="#{ho}"
+                                            itemValue="#{ho.id}"
+                                            forceSelection="true"
+                                            maxResults="10"
+                                            size="70">
+                                <p:ajax event="itemSelect" process="@this" update="@this"/>
+                            </p:autoComplete>
+                        </p:outputPanel>
+                    </h:panelGrid>
+                </p:tab>
+
+                <p:tab title="Materiais Produzidos" id="tabMaterial">
+                    <p:outputPanel id="panelMaterial">
+                        <h:panelGrid id="gridItemProduzido" columns="2">
+                            <fc:outputLabelObrigatorio value="Local de Estoque:" for="localestoqueitem"/>
+                            <h:panelGroup>
+                                <p:autoComplete queryDelay="1000" id="localestoqueitem"
+                                                value="#{producaoControlador.itemProduzidoSelecionado.localEstoqueOrcamentario.localEstoque}"
+                                                completeMethod="#{producaoControlador.completaLocalEstoque}"
+                                                var="local"
+                                                itemLabel="#{local.toStringAutoComplete()}"
+                                                itemValue="#{local.id}"
+                                                title="Digite a descrição do local de estoque para recuperar."
+                                                converter="#{localEstoqueControlador.converterGenerico}"
+                                                size="70">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            update="undorg unidadeorcamentaria"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </p:autoComplete>
+
+                                <fc:botaoInformacao id="botaoInformaLocal"
+                                                    detalhes="O local de estoque para produtos produzidos deve ser do tipo Produtos Acabados Principal"/>
+                            </h:panelGroup>
+
+                            <fc:outputLabelObrigatorio value="Unidade Administrativa: "/>
+                            <h:outputText id="undorg" styleClass="negrito"
+                                          value="#{producaoControlador.hierarquiaAdministrativa}"/>
+
+                            <fc:outputLabelObrigatorio value="Unidade Orçamentária: "/>
+                            <h:panelGroup>
+                                <h:selectOneMenu id="unidadeorcamentaria"
+                                                 value="#{producaoControlador.itemProduzidoSelecionado.localEstoqueOrcamentario.unidadeOrcamentaria}"
+                                                 converter="#{unidadeOrganizacionalControlador.converterGenerico}"
+                                                 styleClass="mrig05">
+                                    <f:selectItems value="#{producaoControlador.hierarquiasOrcamentarias}"/>
+                                    <p:ajax event="valueChange" process="@this" update="@this"/>
+                                </h:selectOneMenu>
+                                <fc:botaoInformacao id="UnidadeOrcamentariaInfo"
+                                                    detalhes="Serão apresentadas somente unidades orçamentárias vinculadas a unidade administrativa do local de estoque selecionado."/>
+                            </h:panelGroup>
+
+                            <fc:outputLabelObrigatorio value="Material Produzido: " for="material"/>
+                            <p:autoComplete queryDelay="1000" id="material"
+                                            value="#{producaoControlador.itemProduzidoSelecionado.material}"
+                                            completeMethod="#{materialControlador.completarMaterialDeferidoInativoPorDescricaoECodigo}"
+                                            var="mat" size="70"
+                                            itemLabel="#{mat.toStringAutoComplete()}"
+                                            itemValue="#{mat.id}"
+                                            converter="#{materialControlador.converterGenerico}">
+                                <p:ajax event="itemSelect" onstart="aguarde.show();" oncomplete="aguarde.hide();"
+                                        update=":Formulario:tabViewPrincipal:panelMaterial" process="@this"/>
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio id="fclblLote" value="Lote:" for="loteestoque"
+                                                       rendered="#{producaoControlador.exibirInputLoteMaterialItemProduzido()}"/>
+                            <p:autoComplete queryDelay="1000" id="loteestoque"
+                                            value="#{producaoControlador.itemProduzidoSelecionado.loteMaterial}"
+                                            completeMethod="#{producaoControlador.completaLoteItemProduzido}"
+                                            var="lote"
+                                            itemLabel="#{lote.identificacao} - Validade: #{lote.validade}"
+                                            itemValue="#{lote.id}"
+                                            size="70"
+                                            process="@this"
+                                            converter="#{loteMaterialControlador.converterGenerico}"
+                                            rendered="#{producaoControlador.exibirInputLoteMaterialItemProduzido()}">
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Quantidade: " for="quantidade"/>
+                            <p:inputText id="quantidade"
+                                         size="10"
+                                         value="#{producaoControlador.itemProduzidoSelecionado.quantidade}">
+                                <p:ajax event="valueChange" process="@this" update="@this"/>
+                            </p:inputText>
+
+                            <fc:outputLabelObrigatorio value="Valor:" for="valor"/>
+                            <p:inputText id="valor"
+                                         size="10"
+                                         value="#{producaoControlador.itemProduzidoSelecionado.valor}"
+                                         converter="moneyConverter" onkeydown="mascaraMonetaria(this);">
+                                <p:ajax event="valueChange" process="@this" update="@this"/>
+                            </p:inputText>
+
+                        </h:panelGrid>
+
+                        <p:commandButton
+                            value="#{producaoControlador.editandoItem ? 'Confirmar' : 'Adicionar Material Produzido'}"
+                            icon="ui-icon-plus"
+                            actionListener="#{producaoControlador.adicionarItemProduzido()}"
+                            update=":Formulario:tabViewPrincipal:panelMaterial"
+                            styleClass="mtop10 "
+                            onclick="aguarde.show();"
+                            oncomplete="aguarde.hide()"/>
+
+                        <p:commandButton value="Cancelar Edição"
+                                         rendered="#{producaoControlador.editandoItem}"
+                                         actionListener="#{producaoControlador.cancelarEdicao()}"
+                                         icon="ui-icon-cancel"
+                                         ajax="false"
+                                         update=":Formulario:tabViewPrincipal:panelMaterial"
+                                         styleClass="mtop10 mlef05"
+                                         process="@none"
+                                         onclick="aguarde.show();"/>
+
+                        <p:dataTable paginator="true"
+                                     id="tabela-materiais"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{producaoControlador.selecionado.itemsProduzidos}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais Produzidos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="item">
+
+                            <p:column headerText="Ações" style="text-align: center; width: 90px;">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 title="Clique para alterar este registro."
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide();"
+                                                 actionListener="#{producaoControlador.editarItemProduzido(item)}"
+                                                 process="@this"
+                                                 update=":Formulario:tabViewPrincipal:panelMaterial"
+                                                 styleClass="mrig05"/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 process="@this"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{producaoControlador.removerItemProduzido(item)}"
+                                                 title="Clique para remover este registro."
+                                                 update="tabela-materiais"/>
+                            </p:column>
+
+                            <p:column headerText="Insumos" style="text-align: center; width: 30px;">
+                                <p:commandButton icon="ui-icon-categorias"
+                                                 process="@this"
+                                                 update="tabela-materiais"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="dialogItensAplicados.show(); aguarde.hide();"
+                                                 actionListener="#{producaoControlador.manipularInsumos(item)}"
+                                                 title="Clique para informar os insumos vinculados a este material."
+                                                 styleClass="mrig05"/>
+                            </p:column>
+                            <p:column headerText="Local do Estoque" style="text-align: left;">
+                                <h:outputText value="#{item.localEstoque}"/>
+                            </p:column>
+                            <p:column headerText="Unidade Orçamentária" style="text-align: left;">
+                                <h:outputText value="#{producaoControlador.hierarquiaOrcamentaria(item.localEstoqueOrcamentario.unidadeOrcamentaria)}"/>
+                            </p:column>
+                            <p:column headerText="Material" style="text-align: left;">
+                                <h:outputText value="#{item.material}"/>
+                            </p:column>
+                            <p:column headerText="Lote Material" style="text-align: left;">
+                                <h:outputText
+                                    value="#{item.material.controleDeLote eq true ? item.loteMaterial : 'não requer lote'}"/>
+                            </p:column>
+                            <p:column headerText="Quantidade" style="text-align: center;">
+                                <h:outputText value="#{item.quantidade}"/>
+                            </p:column>
+                            <p:column headerText="Valor Unitário" style="text-align: right;">
+                                <h:outputText value="#{item.valor}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column headerText="Valor Total" style="text-align: right;">
+                                <h:outputText value="#{item.valorFinanceiroTotal}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:columnGroup id="total" type="footer">
+                                <p:row>
+                                    <p:column styleClass="azulnegrito" colspan="8" style="text-align:right"
+                                              footerText="Total Geral"/>
+                                    <p:column styleClass="azulnegrito" style="text-align: right;"
+                                              footerText="#{producaoControlador.selecionado.valorTotalItensProduzidos()}"/>
+                                </p:row>
+                            </p:columnGroup>
+                        </p:dataTable>
+
+                        <p:dialog header="Insumos"
+                                  modal="true"
+                                  dynamic="true"
+                                  position="center"
+                                  style="position: fixed !important;"
+                                  resizable="false"
+                                  width="800"
+                                  widgetVar="dialogItensAplicados"
+                                  closable="false">
+                            <p:outputPanel id="popInsumoProducao">
+                                <h:panelGrid id="gridInsumoProducao" columns="2">
+                                    <fc:outputLabelObrigatorio value="Local de Estoque:" for="localestoqueinsumo"/>
+                                    <p:autoComplete queryDelay="1000"
+                                                    id="localestoqueinsumo"
+                                                    value="#{producaoControlador.insumoProducaoSelecionado.localEstoqueOrcamentario.localEstoque}"
+                                                    completeMethod="#{producaoControlador.completaLocalEstoque}"
+                                                    var="local"
+                                                    process="@this"
+                                                    title="Digite a descrição do local de estoque para recuperar."
+                                                    itemLabel="#{local.toStringAutoComplete()}"
+                                                    itemValue="#{local.id}"
+                                                    converter="#{localEstoqueControlador.converterGenerico}"
+                                                    size="70">
+                                        <p:ajax event="itemSelect" process="@this"
+                                                update=":Formulario:tabViewPrincipal:popInsumoProducao"/>
+                                    </p:autoComplete>
+
+                                    <fc:outputLabelObrigatorio value="Unidade Administrativa: "/>
+                                    <h:outputText id="undorgInsumo" styleClass="negrito"
+                                                  value="${producaoControlador.hierarquiaAdministrativaInsumo}"/>
+
+                                    <fc:outputLabelObrigatorio value="Unidade Orçamentária: "/>
+                                    <h:selectOneMenu id="unidadeorcamentariainsumo"
+                                                     value="#{producaoControlador.insumoProducaoSelecionado.localEstoqueOrcamentario.unidadeOrcamentaria}"
+                                                     converter="#{unidadeOrganizacionalControlador.converterGenerico}">
+                                        <f:selectItems value="#{producaoControlador.hierarquiasOrcamentarias}"/>
+                                        <p:ajax event="valueChange" process="@this" update="@this"/>
+                                    </h:selectOneMenu>
+
+                                    <fc:outputLabelObrigatorio value="Insumo: " for="insumo"/>
+                                    <p:autoComplete queryDelay="1000" id="insumo"
+                                                    value="#{producaoControlador.insumoProducaoSelecionado.material}"
+                                                    completeMethod="#{producaoControlador.completaMaterialInsumo}"
+                                                    var="mat" size="70"
+                                                    itemLabel="#{mat.toStringAutoComplete()}"
+                                                    itemValue="#{mat.id}"
+                                                    converter="#{materialControlador.converterGenerico}">
+                                        <p:ajax event="itemSelect" onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"
+                                                listener="#{producaoControlador.recuperarEstoque()}"
+                                                update="quantidadeestoque"
+                                                process="@this"/>
+                                    </p:autoComplete>
+
+                                    <h:outputText value="Quantidade em Estoque:"/>
+                                    <h:outputText id="quantidadeestoque" styleClass="negrito"
+                                                  value="${producaoControlador.quantidadeEmEstoque}"/>
+
+                                    <fc:outputLabelObrigatorio id="fclblLoteInsumo" value="Lote:"
+                                                               for="loteestoqueinsumo"
+                                                               rendered="#{producaoControlador.exibirInputLoteMaterialInsumoProducao()}"/>
+                                    <p:autoComplete queryDelay="1000" id="loteestoqueinsumo"
+                                                    value="#{producaoControlador.insumoProducaoSelecionado.loteMaterial}"
+                                                    completeMethod="#{producaoControlador.completaLoteInsumoProducao}"
+                                                    var="lote"
+                                                    itemLabel="#{lote.identificacao} - Validade: #{lote.validade}"
+                                                    itemValue="#{lote.id}"
+                                                    size="70"
+                                                    process="@this"
+                                                    converter="#{loteMaterialControlador.converterGenerico}"
+                                                    rendered="#{producaoControlador.exibirInputLoteMaterialInsumoProducao()}"/>
+
+                                    <fc:outputLabelObrigatorio value="Quantidade: " for="quantidadeInsumo"/>
+                                    <p:inputText id="quantidadeInsumo"
+                                                 size="10"
+                                                 value="#{producaoControlador.insumoProducaoSelecionado.quantidade}">
+                                        <p:ajax event="valueChange" process="@this" update="quantidadeInsumo"/>
+                                    </p:inputText>
+
+                                </h:panelGrid>
+
+                                <div class="mtop10">
+                                    <p:commandButton
+                                        value="#{producaoControlador.editandoInsumo ? 'Confirmar' : 'Adicionar'}"
+                                        icon="#{producaoControlador.editandoInsumo ? 'ui-icon-check' : 'ui-icon-plus'}"
+                                        actionListener="#{producaoControlador.adicionarInsumoProducao()}"
+                                        update="popInsumoProducao"
+                                        process="popInsumoProducao"
+                                        styleClass="padrao"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"/>
+
+                                    <p:commandButton value="Cancelar"
+                                                     icon="ui-icon-close"
+                                                     actionListener="#{producaoControlador.cancelarEdicaoInsumo()}"
+                                                     update="popInsumoProducao"
+                                                     process="@this"
+                                                     styleClass="padrao"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     rendered="#{producaoControlador.editandoInsumo}"/>
+                                </div>
+
+                                <p:dataTable id="tableInsumo"
+                                             paginator="true"
+                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             rowIndexVar="rowIx"
+                                             styleClass="mtop05"
+                                             emptyMessage="Não foram localizados registros para serem apresentados"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Insumo&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                             rowsPerPageTemplate="10,25,50,100"
+                                             value="#{producaoControlador.itemProduzidoSelecionado.insumosAplicados}"
+                                             var="ia">
+                                    <p:column style="width: 20px" headerText="Editar / Excluir">
+                                        <p:commandButton
+                                            icon="ui-icon-pencil"
+                                            actionListener="#{producaoControlador.editarInsumoProducao(ia)}"
+                                            update=":Formulario:tabViewPrincipal:popInsumoProducao"
+                                            process="@this"
+                                            styleClass="mrig05"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+
+                                        <p:commandButton
+                                            icon="ui-icon-trash"
+                                            process="@this"
+                                            actionListener="#{producaoControlador.removerInsumoProducao(ia)}"
+                                            onclick="if (!confirm('Tem certeza que deseja excluir este registro?'))
+                                                     return false;"
+                                            update="tableInsumo"/>
+                                    </p:column>
+                                    <p:column headerText="Insumo" style="text-align: left;">
+                                        <h:outputText value="#{ia.insumoProducao.material}"/>
+                                    </p:column>
+                                    <p:column headerText="Lote" style="text-align: left;">
+                                        <h:outputText value="#{ia.insumoProducao.identificacaoDoLote()}"/>
+                                    </p:column>
+                                    <p:column headerText="Local de Estoque" style="text-align: left;">
+                                        <h:outputText value="#{ia.insumoProducao.localEstoque.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Quantidade" style="width: 20px; text-align: center">
+                                        <h:outputText value="#{ia.insumoProducao.quantidade}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+
+                            <div style="text-align: center; margin-top: 15px;">
+                                <p:commandButton value="OK" icon="ui-icon-check"
+                                                 onclick="dialogItensAplicados.hide();"
+                                                 process="@this"
+                                                 actionListener="#{producaoControlador.novoItemProduzidoComProducao()}"
+                                                 update=":Formulario:tabViewPrincipal:panelMaterial"/>
+                            </div>
+                        </p:dialog>
+                    </p:outputPanel>
+                </p:tab>
+            </p:tabView>
+
+            <fc:rodapePretty controlador="#{producaoControlador}"
+                             desabilitaSalvar="#{producaoControlador.editandoProducao}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

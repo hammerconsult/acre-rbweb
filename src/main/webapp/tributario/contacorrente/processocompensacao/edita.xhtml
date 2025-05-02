@@ -1,0 +1,659 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{compensacaoControlador}"
+                                origem="#{compensacaoControlador.caminhoPadrao}/listar/"/>
+            <p:dialog modal="true" widgetVar="statusDialog" header="Carregando... "
+                      draggable="false" closable="false" resizable="false">
+                <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+            </p:dialog>
+            <p:panel
+                header="Processo de Compensação de Débitos">
+                <h:panelGrid columns="6" style="width: 50%">
+                    <h:outputText value="Exercício"/>
+                    <h:outputText value="Código"/>
+                    <h:outputText value="Data"/>
+                    <h:outputText value="Protocolo"/>
+                    <h:outputText value="Situação"/>
+                    <h:outputText value="Usuário"/>
+                    <p:inputText size="4" value="#{compensacaoControlador.selecionado.exercicio}"
+                                 styleClass="campo-bloqueado" readonly="true"/>
+                    <p:inputText id="codigo" size="10"
+                                 value="#{compensacaoControlador.selecionado.codigo}"
+                                 title="Código do Processo de Débitos"
+                                 styleClass="campo-bloqueado"
+                                 readonly="true"/>
+
+                    <p:inputText id="data" size="10"
+                                 readonly="true"
+                                 styleClass="campo-bloqueado"
+                                 value="#{compensacaoControlador.selecionado.lancamento}"
+                                 title="Data do Processo de Débitos">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </p:inputText>
+
+                    <p:inputText id="protocolo"
+                                 value="#{compensacaoControlador.selecionado.numeroProtocolo}"
+                                 title="Digite o número do protocolo"
+                    />
+                    <p:inputText title="Situação do Processo de Débitos"
+                                 value="#{compensacaoControlador.selecionado.situacao.descricao}"
+                                 styleClass="azulnegrito"
+                                 readonly="true"/>
+                    <p:inputText title="Usuário responsável pelo Processo de Débitos"
+                                 value="#{compensacaoControlador.selecionado.usuarioIncluiu.login}"
+                                 styleClass="amarelonegrito" readonly="true"/>
+
+
+                </h:panelGrid>
+                <p:tabView id="tabView" styleClass="mtop10">
+                    <p:tab title="Processo">
+                        <h:panelGrid columns="1">
+                            <h:outputText value="Ato Legal"/>
+                            <p:autoComplete queryDelay="1000" id="atoLegal" maxResults="10"
+                                            forceSelection="true"
+                                            completeMethod="#{compensacaoControlador.completarAtoLegal}"
+                                            value="#{compensacaoControlador.selecionado.atoLegal}"
+                                            converter="#{compensacaoControlador.converterAtoLegal}"
+                                            var="atoLegal"
+                                            itemLabel="#{atoLegal.nome} #{atoLegal.numero}"
+                                            itemValue="#{atoLegal.id}"
+                                            size="105"
+                                            title="Informe o Ato Legal que define este processo">
+                                <p:ajax process="@this" event="itemSelect" update="@this"/>
+                            </p:autoComplete>
+                        </h:panelGrid>
+
+                        <h:panelGrid columns="1" style="width: 70%">
+                            <fc:outputLabelObrigatorio value="Motivo ou Fundamentação Legal"/>
+                            <p:inputTextarea value="#{compensacaoControlador.selecionado.motivo}"
+                                             style="width: 70%;">
+                                <p:ajax process="@this" event="blur"/>
+                            </p:inputTextarea>
+                        </h:panelGrid>
+
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Data da Compensação:"/>
+                            <p:calendar value="#{compensacaoControlador.selecionado.dataCompensacao}"
+                                        pattern="dd/MM/yyyy"
+                                        onkeyup="mascara(this, Data)"
+                                        maxlength="10" showOn="button" size="12"/>
+
+                            <h:outputText value="Data de Bloqueio:"/>
+                            <p:calendar value="#{compensacaoControlador.selecionado.dataBloqueio}"
+                                        pattern="dd/MM/yyyy"
+                                        onkeyup="mascara(this, Data)"
+                                        maxlength="10" showOn="button" size="12"/>
+                        </h:panelGrid>
+
+                        <h:panelGrid columns="2" id="tipoCadastro">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Contribuinte:"/>
+                                <fc:novoAutocompletePessoa id="contribuinte"
+                                                           caminhoAtual="#{compensacaoControlador.caminhoPadrao}novo/"
+                                                           value="#{compensacaoControlador.selecionado.pessoa}"
+                                                           disabled="#{!empty compensacaoControlador.parcelasContaCorrente}"
+                                                           mostraBotaoInfo="false" mostraBotaoEdita="false"
+                                                           completeMethod="#{compensacaoControlador.completarPessoasComContaCorrente}"
+                                                           mostraBotaoNovo="false"
+                                                           listenerItemSelect="#{compensacaoControlador.buscarContaCorrenteTributaria}"
+                                                           mostraSituacoes="false"
+                                                           situacoesPossiveis="#{novoComponentePesquisaPessoaControlador.situacaoPorDescricao('ATIVO')}"
+                                                           update="@form"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Consulta de Débitos"
+                                         icon="ui-icon-search"
+                                         process="@form"
+                                         styleClass="operacao mtop05 mbot05"
+                                         onclick="aguarde.show()"
+                                         disabled="#{empty compensacaoControlador.parcelasContaCorrente}"
+                                         actionListener="#{compensacaoControlador.inicializarConsultaDeDebitos()}"
+                                         oncomplete="dialogo.show(); aguarde.hide()" update=":FormDialog"/>
+
+                        <p:commandButton value="Limpar Dados"
+                                         icon="ui-icon-document"
+                                         process="@form"
+                                         styleClass="operacao mtop05 mbot05"
+                                         onclick="aguarde.show()"
+                                         disabled="#{!empty compensacaoControlador.selecionado.itens}"
+                                         oncomplete="aguarde.hide()" update="@form"
+                                         actionListener="#{compensacaoControlador.limparDados()}"/>
+
+                        <p:outputPanel id="tabelaCreditos">
+                            <table class="igualDataTable">
+                                <thead>
+                                <tr>
+                                    <td colspan="15">
+                                        Créditos da Arrecadação
+                                    </td>
+                                </tr>
+                                </thead>
+                                <tr>
+                                    <th style="text-align: center">
+                                        <p:commandButton icon="ui-icon-check"
+                                                         styleClass="vinteLarguraVinteAltura"
+                                                         rendered="#{compensacaoControlador.containsTodosParcelaCredito()}"
+                                                         actionListener="#{compensacaoControlador.removerTodosParcelaCredito()}"
+                                                         update="@form"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"/>
+                                        <p:commandButton value=" "
+                                                         styleClass="vinteLarguraVinteAltura"
+                                                         rendered="#{!compensacaoControlador.containsTodosParcelaCredito()}"
+                                                         actionListener="#{compensacaoControlador.adicionarTosoParcelaCredito()}"
+                                                         update="@form"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"/>
+                                    </th>
+                                    <th style="text-align: left">Cadastro</th>
+                                    <th style="text-align: left">Referência</th>
+                                    <th style="text-align: left">Dívida</th>
+                                    <th style="text-align: center">Exercício</th>
+                                    <th style="text-align: center">Parcela</th>
+                                    <th style="text-align: center">Vencimento</th>
+                                    <th style="text-align: center">Pagamento</th>
+                                    <th style="text-align: center">Tipo de Débito</th>
+                                    <th style="text-align: right">Valor</th>
+                                    <th style="text-align: right">Valor Pago</th>
+                                    <th style="text-align: center">Situação</th>
+                                    <th style="text-align: right">Diferença</th>
+                                    <th style="text-align: right">Compensado</th>
+                                    <th style="text-align: right">Dif. Atualizada</th>
+                                </tr>
+                                <ui:repeat value="#{compensacaoControlador.parcelasContaCorrente}"
+                                           varStatus="index"
+                                           var="credito">
+                                    <tr>
+                                        <td style="text-align: center">
+                                            <p:commandButton icon="ui-icon-check"
+                                                             styleClass="vinteLarguraVinteAltura"
+                                                             rendered="#{compensacaoControlador.containsParcelaCredito(credito)}"
+                                                             actionListener="#{compensacaoControlador.removerParcelaCredito(credito)}"
+                                                             update="@form"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"/>
+                                            <p:commandButton value=" "
+                                                             styleClass="vinteLarguraVinteAltura"
+                                                             rendered="#{!compensacaoControlador.containsParcelaCredito(credito)}"
+                                                             actionListener="#{compensacaoControlador.adicionarParcelaCredito(credito)}"
+                                                             update="@form"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"/>
+                                        </td>
+                                        <td style="text-align: left">
+                                            <h:outputText value="#{credito.resultadoParcela.cadastro}"/>
+                                        </td>
+                                        <td style="text-align: left">
+                                            <h:outputText value="#{credito.resultadoParcela.referencia}"/>
+                                        </td>
+                                        <td style="text-align: left">
+                                            <h:outputText value="#{credito.resultadoParcela.divida}"/>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{credito.resultadoParcela.exercicio}"/>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{credito.resultadoParcela.parcela}"/>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{credito.resultadoParcela.vencimento}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{credito.resultadoParcela.pagamento}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{credito.resultadoParcela.tipoDeDebito}"/>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{credito.resultadoParcela.valorTotal}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{credito.resultadoParcela.valorPago}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{credito.resultadoParcela.situacaoDescricaoEnum}"/>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{credito.valorDiferenca}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{credito.valorCompesado}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{credito.valorDiferencaAtualizada}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </table>
+                        </p:outputPanel>
+                        <br/>
+                        <table style="width: 40%; border: 0">
+                            <tr>
+                                <td style="width: 100%;">
+                                    <table style="width: 100%; text-align: right;"
+                                           class="table table-bordered mtop10">
+                                        <tr>
+                                            <td colspan="2" style="text-align: center">
+                                                <h:outputText value="Totais"
+                                                              style="color: steelblue; font-weight: bold"/>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <h:outputText value="Valor a Compensar"/>
+                                            </td>
+                                            <td style="text-align: right">
+                                                <h:outputText value="#{compensacaoControlador.selecionado.valorCreditoCompensar}"
+                                                              readonly="true"
+                                                              styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <h:outputText value="Valor Compensado:"/>
+                                            </td>
+                                            <td style="text-align: right">
+                                                <h:outputText value="#{compensacaoControlador.selecionado.valorCompensado}"
+                                                              readonly="true"
+                                                              styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <h:outputText value="Valor Residual do Crédito:"/>
+                                            </td>
+                                            <td style="text-align: right">
+                                                <h:outputText value="#{compensacaoControlador.selecionado.valorCompensar}"
+                                                              readonly="true"
+                                                              styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <br/>
+                        <p:outputPanel id="tabelaItens">
+                            <table class="igualDataTable">
+                                <thead>
+                                <tr>
+                                    <td colspan="13">
+                                        Débitos do Processo
+                                    </td>
+                                </tr>
+                                </thead>
+                                <tr>
+                                    <th style="text-align: left">Cadastro</th>
+                                    <th style="text-align: left">Referência</th>
+                                    <th style="text-align: left">Dívida</th>
+                                    <th style="text-align: center">Exercício</th>
+                                    <th style="text-align: center">Parcela</th>
+                                    <th style="text-align: center">Vencimento</th>
+                                    <th style="text-align: center">Tipo de Débito</th>
+                                    <th style="text-align: right">Valor</th>
+                                    <th style="text-align: center">Situação</th>
+                                    <th style="text-align: right">Valor Compensado</th>
+                                    <th style="text-align: right">Residual da Parcela</th>
+                                    <th style="text-align: center">Remover</th>
+                                </tr>
+                                <ui:repeat value="#{compensacaoControlador.selecionado.itens}"
+                                           varStatus="index"
+                                           var="item">
+                                    <tr>
+                                        <td style="text-align: left">
+                                            <h:outputText value="#{item.resultadoParcela.cadastro}"/>
+                                        </td>
+                                        <td style="text-align: left">
+                                            <h:outputText value="#{item.referencia}"/>
+                                        </td>
+                                        <td style="text-align: left">
+                                            <h:outputText value="#{item.resultadoParcela.divida}"/>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{item.resultadoParcela.exercicio}"/>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{item.resultadoParcela.parcela}"/>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{item.parcela.vencimento}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{item.resultadoParcela.tipoDeDebito}"/>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{item.resultadoParcela.valorTotal}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: center">
+                                            <h:outputText value="#{item.resultadoParcela.situacaoDescricaoEnum}"/>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{item.valorCompensado}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right">
+                                            <h:outputText value="#{item.valorResidual}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td align="center">
+                                            <p:commandButton
+                                                onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                actionListener="#{compensacaoControlador.removerItem(item)}"
+                                                disabled="#{!compensacaoControlador.habilitarBotaoSalvar()}"
+                                                icon="ui-icon-trash"
+                                                oncomplete="aguarde.hide()"
+                                                update="@form">
+                                            </p:commandButton>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </table>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Arquivos">
+                        <p:fileUpload multiple="true" cancelLabel="Cancelar"
+                                      sizeExceedMessage="Arquivo Maior que 10 MB."
+                                      label="Selecione..."
+                                      uploadLabel="Upload Arquivo" update="tabelaArquivosProcesso" sizeLimit="15728640"
+                                      id="cfileUpload"
+                                      rendered="#{compensacaoControlador.selecionado.situacao eq 'EM_ABERTO'}"
+                                      fileUploadListener="#{compensacaoControlador.uploadArquivo}"/>
+                        <br/>
+                        <p:dataTable id="tabelaArquivosProcesso" var="arq"
+                                     value="#{compensacaoControlador.selecionado.arquivos}"
+                                     emptyMessage="Nenhum arquivo informado.">
+                            <p:column headerText="Nome">
+                                <h:outputText value="${arq.arquivo.nome}"/>
+                            </p:column>
+                            <p:column headerText="Tamanho" style="text-align: center; width: 100px">
+                                <h:outputText value="${arq.arquivo.tamanho} Kb"/>
+                            </p:column>
+                            <p:column headerText="Download" style="text-align: center; width: 80px">
+                                <a target="_blank" style="display: #{arq.id ne null ? 'block' : 'none'}"
+                                   href='${facesContext.externalContext.requestContextPath}/arquivos/#{arq.arquivo.nome}?id=#{arq.arquivo.id}'>
+                                    <h:outputText value="Download"/>
+                                </a>
+                            </p:column>
+                            <p:column headerText="Remover" style="text-align: center; width: 30px">
+                                <p:commandButton icon="ui-icon-trash" title="Remover" id="btRemoveAnexo"
+                                                 update="tabelaArquivosProcesso"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 disabled="#{!compensacaoControlador.habilitarBotaoSalvar()}"
+                                                 actionListener="#{compensacaoControlador.removerArquivo(arq)}">
+                                </p:commandButton>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+            <p:commandButton id="salvar" value="Salvar" action="#{compensacaoControlador.salvar}"
+                             icon="ui-icon-disk" title="Clique para salvar o registro"
+                             disabled="#{!compensacaoControlador.habilitarBotaoSalvar()}"
+                             style="height: 30px;"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="mtop10 mrig05 prioritario"/>
+            <p:commandButton id="cancelar" value="Fechar" action="lista" ajax="false" icon="ui-icon-cancel"
+                             styleClass="mtop10"
+                             style="height: 30px;"
+            />
+        </h:form>
+        <p:dialog draggable="false"
+                  id="dialog" width="1100" height="550"
+                  dynamic="true"
+                  position="center"
+                  modal="true"
+                  style="position: fixed !important;"
+                  widgetVar="dialogo" header="Consultar Débitos" resizable="true" closable="false">
+            <h:form id="FormDialog">
+                <p:panel header="Filtros">
+                    <h:panelGrid columns="2" id="gridFiltros">
+                        <h:outputText value="Descrição da Dívida: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        value="#{compensacaoControlador.filtroDivida}"
+                                        completeMethod="#{compensacaoControlador.completarDivida}"
+                                        converter="#{compensacaoControlador.converterDivida}"
+                                        var="divida"
+                                        maxResults="10"
+                                        itemLabel="#{divida.descricao}"
+                                        itemValue="#{divida.id}"
+                                        size="60">
+                            <p:ajax event="itemSelect" update="gridFiltros"/>
+                        </p:autoComplete>
+                        <h:outputText value="Situação da Dívida: "/>
+                        <h:panelGrid columns="9">
+                            <h:outputText value="Do Exercício: "/>
+                            <p:selectBooleanCheckbox
+                                value="#{compensacaoControlador.dividaDoExercicio}">
+                                <p:ajax update="gridFiltros"/>
+                            </p:selectBooleanCheckbox> &nbsp;
+                            <h:outputText value="Dívida Ativa: "/>
+                            <p:selectBooleanCheckbox
+                                value="#{compensacaoControlador.dividaAtiva}">
+                                <p:ajax update="gridFiltros"/>
+                            </p:selectBooleanCheckbox> &nbsp;
+                            <h:outputText value="Dívida Ativa Ajuizada: "/>
+                            <p:selectBooleanCheckbox
+                                value="#{compensacaoControlador.dividaAtivaAzuijada}">
+                                <p:ajax update="gridFiltros"/>
+                            </p:selectBooleanCheckbox> &nbsp;
+                        </h:panelGrid>
+                        <h:outputText value="Exercício: "/>
+                        <h:panelGrid columns="6">
+                            <fc:exercicioInicialFinal
+                                exercicioInicial="#{compensacaoControlador.filtroExercicioInicio}"
+                                exercicioFinal="#{compensacaoControlador.filtroExercicioFinal}"/>
+                        </h:panelGrid>
+
+                        <h:outputText value="Date de Vencimento Inicial:"/>
+                        <p:calendar value="#{compensacaoControlador.vencimentoInicial}"
+                                    pattern="dd/MM/yyyy"
+                                    onkeyup="mascara(this, Data)" maxlength="10" showOn="button" size="12">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:calendar>
+                        <h:outputText value="Date de Vencimento Final:"/>
+                        <p:calendar value="#{compensacaoControlador.vencimentoFinal}"
+                                    pattern="dd/MM/yyyy"
+                                    onkeyup="mascara(this, Data)" maxlength="10" showOn="button" size="12">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:calendar>
+
+                    </h:panelGrid>
+                    <p:separator styleClass="mtop10 mbot10"/>
+                    <h:panelGrid columns="4">
+                        <p:commandButton
+                            onstart="aguarde.show()"
+                            onsuccess="aguarde.hide()"
+                            value="Pesquisar" icon="ui-icon-search" styleClass="operacao prioritario"
+                            actionListener="#{compensacaoControlador.pesquisar()}"
+                            update=":FormDialog"/>
+                        <p:commandButton value="Limpar Campos/Tabela" style="width: 200px;" icon="ui-icon-document"
+                                         styleClass="operacao" onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                         actionListener="#{compensacaoControlador.inicializarFiltros()}"
+                                         update=":FormDialog"/>
+                        <p:commandButton styleClass="icone_verde operacao"
+                                         onstart="aguarde.show()"
+                                         onsuccess="aguarde.hide()"
+                                         value="Adicionar"
+                                         title="Clique para adicionar as parcelas selecionadas no processo de débitos"
+                                         icon="ui-icon-circle-plus"
+                                         actionListener="#{compensacaoControlador.adicionarParcelas()}"
+                                         update="@form"/>
+                        <p:commandButton value="Fechar" icon="ui-icon-closethick" styleClass="operacao"
+                                         onclick="dialogo.hide(); aguarde.show()" oncomplete="aguarde.hide()"
+                                         update=":Formulario"/>
+                    </h:panelGrid>
+                </p:panel>
+                <table style="width: 40%; border: 0">
+                    <tr>
+                        <td style="width: 100%;">
+                            <table style="width: 100%; text-align: right;"
+                                   class="table table-bordered mtop10">
+                                <tr>
+                                    <td colspan="2" style="text-align: center">
+                                        <h:outputText value="Totais"
+                                                      style="color: steelblue; font-weight: bold"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h:outputText value="Valor a Compensar"/>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="#{compensacaoControlador.selecionado.valorCreditoCompensar}"
+                                                      readonly="true"
+                                                      styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h:outputText value="Valor Compensado:"/>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="#{compensacaoControlador.selecionado.valorCompensado}"
+                                                      readonly="true"
+                                                      styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h:outputText value="Valor Residual do Crédito:"/>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="#{compensacaoControlador.selecionado.valorCompensar}"
+                                                      readonly="true"
+                                                      styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h:outputText value="Valor Total Selecionado:"/>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText value="#{compensacaoControlador.valorSelecionado}"
+                                                      readonly="true"
+                                                      styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <p:dataTable id="tabelaConsultas" rows="10" var="parcela"
+                             widgetVar="tabela"
+                             styleClass="mtop10"
+                             emptyMessage="Nenhuma parcela encontrada" paginator="true"
+                             paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink}
+                                 {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             rowsPerPageTemplate="10,50,100"
+                             value="#{compensacaoControlador.resultadoConsulta}">
+                    <f:facet name="header">
+                        <p:outputPanel>
+                            <h:outputText value="Busca: "/>
+                            <h:inputText id="globalFilter" onkeyup="tabela.filter()" size="70"/>
+                        </p:outputPanel>
+                    </f:facet>
+
+                    <p:column style="width: 5%; text-align: center;">
+                        <p:commandButton icon="ui-icon-check"
+                                         styleClass="vinteLarguraVinteAltura"
+                                         rendered="#{compensacaoControlador.containsParcelaFiltro(parcela)}"
+                                         actionListener="#{compensacaoControlador.removerParcelaFiltro(parcela)}"
+                                         update="@form"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"/>
+                        <p:commandButton value=" "
+                                         styleClass="vinteLarguraVinteAltura"
+                                         rendered="#{!compensacaoControlador.containsParcelaFiltro(parcela)}"
+                                         actionListener="#{compensacaoControlador.adicionarParcelaFiltro(parcela)}"
+                                         update="@form"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"/>
+                    </p:column>
+
+                    <p:column headerText="Cadastro">
+                        <h:outputText
+                            value="#{parcela.cadastro} #{parcela.tipoCadastro eq 'ECONOMICO' ? '(Cadastro Econômico)' : parcela.tipoCadastro eq 'IMOBILIARIO' ? '(Cadastro Imobiliario)' :  parcela.tipoCadastro eq 'RURAL' ? '(Cadastro Rural)' : '(Contribuinte Geral)'}"/>
+                    </p:column>
+                    <p:column headerText="Dívida">
+                        <h:outputText value="#{parcela.divida}"/>
+                    </p:column>
+                    <p:column headerText="Referência">
+                        <h:outputText value="#{parcela.referencia}"/>
+                    </p:column>
+                    <p:column headerText="Exercício">
+                        <h:outputText value="#{parcela.exercicio}"/>
+                    </p:column>
+                    <p:column headerText="Vencimento">
+                        <h:outputText value="#{parcela.vencimento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Parcela">
+                        <h:outputText value="#{parcela.parcela}"/>
+                    </p:column>
+                    <p:column headerText="Valor (R$)">
+                        <h:outputText value="#{parcela.valorTotal}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Tipo">
+                        <h:outputText value="#{parcela.tipoDeDebito}"/>
+                    </p:column>
+                    <p:column headerText="Última Situação">
+                        <h:outputText value="#{parcela.situacaoDescricaoEnum}"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

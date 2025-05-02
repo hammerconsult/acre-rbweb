@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerSalvar;
+            function acompanharSalvar() {
+                timerSalvar = setInterval(
+                    function () {
+                    rcAtualizaCompFutures();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timerSalvar);
+                rcFinalizaFutureSalvar();
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                aguarde.show();
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{parecerBaixaPatrimonialControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                actionListener="#{parecerBaixaPatrimonialControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                update=":FormularioSalvar"
+                actionListener="#{parecerBaixaPatrimonialControlador.finalizarProcesssoSalvar}"
+                name="rcFinalizaFutureSalvar"/>
+
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{parecerBaixaPatrimonialControlador.consultarFutureSalvar}"
+                name="rcAtualizaCompFutures"/>
+
+
+            <fc:cabecalhoPretty controlador="#{parecerBaixaPatrimonialControlador}"
+                                origem="#{parecerBaixaPatrimonialControlador.caminhoPadrao}listar/"/>
+
+            <p:panel id="panelPrincipal" header="Parecer de Baixa de Bem Imóvel">
+                <p:tabView id="tabViewPrincipal">
+                    <p:tab title="Dados do Parecer" id="tabParecer">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Código:"/>
+                            <h:outputLabel
+                                value="#{parecerBaixaPatrimonialControlador.selecionado.codigo == null ? 'Gerado automaticamente ao salvar.' : parecerBaixaPatrimonialControlador.selecionado.codigo}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Data:"/>
+                            <h:outputLabel value="#{parecerBaixaPatrimonialControlador.selecionado.dateParecer}"
+                                           styleClass="negrito">
+                                <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                            </h:outputLabel>
+
+                            <h:outputLabel value="Parecerista:"/>
+                            <h:outputLabel id="parecerista"
+                                           value="#{parecerBaixaPatrimonialControlador.selecionado.parecerista.pessoaFisica}"
+                                           styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="Solicitação de Baixa:"/>
+                            <h:panelGroup>
+                                <p:autoComplete queryDelay="1000"
+                                                id="solicitacao"
+                                                completeMethod="#{parecerBaixaPatrimonialControlador.completarSolicitacaoQueNaoTemParecerMovel}"
+                                                value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa}"
+                                                var="sol"
+                                                itemLabel="#{sol}"
+                                                itemValue="#{sol.id}"
+                                                converter="#{solicitacaoBaixaPatrimonialControlador.converterGenerico}"
+                                                process="@this"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 800px"
+                                                size="70">
+                                    <p:ajax event="itemSelect"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            process="@this"
+                                            update=":Formulario:tabViewPrincipal:panelBaixa :Formulario:tabViewPrincipal:panelUpload panelCamposSol"
+                                            listener="#{parecerBaixaPatrimonialControlador.recuperarDadosSolicitacao()}"/>
+                                </p:autoComplete>
+
+                                <p:outputPanel id="panelCamposSol">
+                                    <fc:visualizarCampos
+                                        objeto="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa}"
+                                        disabled="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa eq null}"/>
+                                </p:outputPanel>
+                            </h:panelGroup>
+
+                            <fc:outputLabelObrigatorio value="Situação do Parecer:"/>
+                            <h:selectOneMenu id="situacao-parecer"
+                                             value="#{parecerBaixaPatrimonialControlador.selecionado.situacaoParecer}">
+                                <f:selectItems value="#{parecerBaixaPatrimonialControlador.situacoesDoParecer}"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio value="Justificativa:"/>
+                            <h:panelGrid columns="2"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea title="Digite a justificativa do parecer."
+                                                 value="#{parecerBaixaPatrimonialControlador.selecionado.justificativa}"
+                                                 id="justificativa"
+                                                 maxlength="255"
+                                                 cols="70"
+                                                 rows="3"
+                                                 autoResize="true" counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-justificativa"/>
+                                <h:outputText id="counter-justificativa"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </p:tab>
+
+                    <p:tab title="Dados da Solicitação" id="tabSolicitacao">
+                        <p:outputPanel id="panelBaixa">
+
+                            <h:panelGrid columns="2"
+                                         rendered="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa ne null}">
+                                <h:outputText value="Código:"/>
+                                <h:outputText id="numeroSol"
+                                              value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.codigo}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Data:"/>
+                                <h:outputText
+                                    value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.dataSolicitacao}"
+                                    styleClass="negrito">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputText value="Situação:"/>
+                                <h:outputText id="situacaoSol"
+                                              value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.situacao.descricao}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Usuário:"/>
+                                <h:outputText id="usuario"
+                                              value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.usuarioSistema.pessoaFisica}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText value="Tipo de Baixa: "/>
+                                <h:outputText id="tipo-baixa"
+                                              value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.tipoBaixa.descricao}"
+                                              styleClass="negrito"/>
+
+                                <h:outputText
+                                    rendered="#{!parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.tipoBaixaAlienacao}"
+                                    value="Unidade Administrativa:"/>
+                                <h:outputText id="acUnidadeOrganizacionalPesquisa"
+                                              rendered="#{!parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.tipoBaixaAlienacao}"
+                                              styleClass="negrito"
+                                              value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.hierarquiaAdministrativa}"/>
+
+                                <h:outputText value="Motivo:"/>
+                                <p:inputTextarea styleClass="negrito"
+                                                 value="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.motivo}"
+                                                 id="motivo"
+                                                 rows="3"
+                                                 cols="70"
+                                                 style="box-shadow: none !important;"
+                                                 readonly="true"/>
+                            </h:panelGrid>
+
+                            <p:dataTable id="tableencontrados"
+                                         value="#{parecerBaixaPatrimonialControlador.bensSolicitacaoBaixa}"
+                                         rendered="#{!parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.isTipoBaixaAlienacao()}"
+                                         var="bem"
+                                         styleClass="mtop02"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rows="10"
+                                         rowsPerPageTemplate="10,50,100,200,300"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         paginator="true"
+                                         emptyMessage="Não foram localizados registros para serem apresentados.">
+                                <p:column style="width:16px" headerText="Detalhes">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Registro Patrimonial" style="width: 5%; text-align: left">
+                                    <h:outputText value="#{bem.identificador}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" style="width: 30%; text-align: left">
+                                    <h:outputText value="#{bem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial" style="width: 30%; text-align: left">
+                                    <h:outputText value="#{bem.grupoPatrimonial}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária" style="width: 20%; text-align: left">
+                                    <p:column headerText="Unidade Orçamentária"
+                                              style="width: 10%; text-align: left;">
+                                        <h:outputText value="#{bem.unidadeOrcamentaria}"/>
+                                    </p:column>
+                                </p:column>
+                                <p:column headerText="Valor Original (R$)" style="width: 10%; text-align: right">
+                                    <h:outputText value="#{bem.valorOriginal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor Ajustes (R$)" style="width: 10%; text-align: right">
+                                    <h:outputText value="#{bem.valorAjuste}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+
+                                <p:rowExpansion>
+                                    <ad:detalhes-estado-bem
+                                        estadoBem="#{parecerBaixaPatrimonialControlador.getUltimoEstadoBem(bem.idBem)}"/>
+                                </p:rowExpansion>
+                            </p:dataTable>
+
+
+                            <p:dataTable id="tb-unidades"
+                                         value="#{parecerBaixaPatrimonialControlador.bensDaUnidade}"
+                                         var="unidadeAdm"
+                                         rendered="#{parecerBaixaPatrimonialControlador.selecionado.solicitacaoBaixa.isTipoBaixaAlienacao()}"
+                                         emptyMessage="Nenhum unidade com bens para solicitação de baixa encontrado."
+                                         styleClass="mtop10"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginator="true"
+                                         rows="10"
+                                         rowsPerPageTemplate="10,25,50"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Unidades&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            >
+                                <p:column style="width:16px" headerText="Bens">
+                                    <p:rowToggler/>
+                                </p:column>
+                                <p:column headerText="Unidade Administrativa" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{unidadeAdm.hierarquiaAdministrativa}"/>
+                                </p:column>
+                                <p:rowExpansion>
+                                    <p:dataTable id="tb-item-solicitacao"
+                                                 value="#{unidadeAdm.bensAgrupados}"
+                                                 var="item"
+                                                 emptyMessage="Nenhum bem encontrado."
+                                                 rowIndexVar="rowIx"
+                                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                 paginator="true"
+                                                 rows="10"
+                                                 rowsPerPageTemplate="10,25,50,100"
+                                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    >
+                                        <p:column headerText="Bem" styleClass="alinhamentoEsquerda">
+                                            <h:outputText value="#{item.bem}"/>
+                                        </p:column>
+                                        <p:column headerText="Estado do Bem" styleClass="alinhamentoEsquerda">
+                                            <h:outputText
+                                                value="#{item.estadoBem}"/>
+                                        </p:column>
+                                        <p:column headerText="Data de Aquisição"
+                                                  styleClass="alinhamentoCentralizado">
+                                            <h:outputText
+                                                value="#{item.dataAquisicao}"
+                                                converter="javax.faces.DateTime"/>
+                                        </p:column>
+                                        <p:column headerText="Unidade Orçamentária"
+                                                  styleClass="alinhamentoEsquerda">
+                                            <h:outputText
+                                                value="#{item.unidadeOrcamentaria}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor Original" styleClass="alinhamentoDireita">
+                                            <h:outputText value="#{item.valorOriginal}">
+                                                <f:convertNumber pattern="R$ ###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor Depreciação" styleClass="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{item.valorDepreciacao}">
+                                                <f:convertNumber pattern="R$ ###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor Amortização" styleClass="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{item.valorAmortizacao}">
+                                                <f:convertNumber pattern="R$ ###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor Exaustão" styleClass="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{item.valorExaustao}">
+                                                <f:convertNumber pattern="R$ ###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor Ajuste de Perdas"
+                                                  styleClass="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{item.valorAjustePerda}">
+                                                <f:convertNumber pattern="R$ ###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor Líquido" styleClass="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{item.valorLiquido}">
+                                                <f:convertNumber pattern="R$ ###,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <p:outputPanel id="panelUpload">
+                            <fc:filesUploadWP selecionado="#{parecerBaixaPatrimonialControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             id="btn-salvar"
+                             onstart="aguarde.show()"
+                             title="Clique para salvar o registro."
+                             process=":Formulario"
+                             actionListener="#{parecerBaixaPatrimonialControlador.salvar()}"
+                             styleClass="mtop10 prioritario operacao"/>
+
+            <p:commandButton value="Cancelar"
+                             icon="ui-icon-cancel"
+                             id="btn-cancelar"
+                             onstart="aguarde.show"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar a operação."
+                             actionListener="#{parecerBaixaPatrimonialControlador.cancelar()}"
+                             styleClass="mtop10 mlef05 operacao"/>
+
+
+        </h:form>
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Parecer da Baixa de Bens Imóveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{parecerBaixaPatrimonialControlador.assistenteBarraProgresso.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{parecerBaixaPatrimonialControlador.assistenteBarraProgresso.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{parecerBaixaPatrimonialControlador.assistenteBarraProgresso.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{parecerBaixaPatrimonialControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{parecerBaixaPatrimonialControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{parecerBaixaPatrimonialControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{parecerBaixaPatrimonialControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Consulta de Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/> <br/><br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

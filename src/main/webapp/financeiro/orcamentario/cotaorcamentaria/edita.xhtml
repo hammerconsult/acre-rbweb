@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{grupoCotaORCControlador}"
+                    origem="#{grupoCotaORCControlador.caminhoPadrao}novo/"/>
+
+            <p:panel header="Cadastro de Cota Orçamentária">
+                <h:panelGrid columns="2" cellpadding="2">
+
+                    <fc:outputLabelObrigatorio value="Grupo Orçamentário: "/>
+                    <p:autoComplete queryDelay="1000" id="AutogrupoOrcamentario"
+                                    title="Informe o Grupo Orçamentário."
+                                    forceSelection="true"
+                                    value="#{grupoCotaORCControlador.selecionado.grupoOrcamentario}"
+                                    size="70"
+                                    disabled="#{grupoCotaORCControlador.selecionado.id ne null}"
+                                    completeMethod="#{grupoCotaORCControlador.completaGrupoOrcamentario}"
+                                    converter="#{grupoCotaORCControlador.converterGrupoOrcamentario}"
+                                    var="grupo"
+                                    itemValue="#{grupo.id}"
+                                    itemLabel="#{grupo.codigo} - #{grupo.descricao}">
+                        <p:ajax event="itemSelect"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                update=":Formulario:painelInfo :Formulario:cotas"
+                                listener="#{grupoCotaORCControlador.cotasOrcamentarias}"/>
+                    </p:autoComplete>
+                </h:panelGrid>
+                <br/>
+                <p:panel id="cotas"
+                         visible="#{grupoCotaORCControlador.liberaDistribuicao}">
+                    <p:dataTable id="tableCotas" var="cota"
+                                 value="#{grupoCotaORCControlador.selecionado.cotaOrcamentaria}"
+                                 rowStyleClass="#{empty indice or indice mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="12"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>COTAS ORÇAMENTÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="indice">
+
+                        <p:column headerText="Mês" style="text-align: left">
+                            <h:outputText value="#{cota.mes.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Percentual (%)"
+                                  style="text-align: right">
+                            <p:outputPanel id="panelValPerc">
+                                <p:inputText id="valPerc" value="#{cota.percentual}" size="10">
+                                    <p:ajax event="valueChange"
+                                            listener="#{grupoCotaORCControlador.calculaPorPercentual(cota)}"
+                                            update="panelValProg :Formulario:painelInfo"
+                                            process="@this"/>
+                                    <p:ajax event="blur"
+                                            listener="#{grupoCotaORCControlador.calculaPorPercentual(cota)}"
+                                            update="panelValProg :Formulario:painelInfo"
+                                            process="@this"/>
+                                </p:inputText>
+                            </p:outputPanel>
+                        </p:column>
+                        <p:column headerText="Valor Programado (R$)"  style="text-align: right">
+                            <p:outputPanel id="panelValProg">
+                                <p:inputText id="valProg" value="#{cota.valorProgramado}"
+                                             size="20"
+                                             onkeydown="mascaraPonto(this)"
+                                             onblur="setaFoco('Formulario:tableCotas:'+#{indice+1}+':valPerc')"
+                                             converter="#{grupoCotaORCControlador.moneyConverter}">
+                                    <p:ajax event="valueChange"
+                                            listener="#{grupoCotaORCControlador.calcularPercentualPorProgramado(cota)}"
+                                            update="panelValPerc panelValProg :Formulario:painelInfo"
+                                            process="@this"/>
+                                    <p:ajax event="blur"
+                                            listener="#{grupoCotaORCControlador.calcularPercentualPorProgramado(cota)}"
+                                            update="panelValPerc panelValProg :Formulario:painelInfo"
+                                            process="@this"/>
+                                </p:inputText>
+                            </p:outputPanel>
+                        </p:column>
+                        <p:column headerText="Valor Utilizado (R$)" style="text-align: right">
+                            <h:outputText value="#{cota.valorUtilizado}"
+                                          converter="#{grupoCotaORCControlador.moneyConverter}"/>
+                        </p:column>
+                        <p:column style="text-align: right">
+                            <f:facet name="header">
+                                <h:panelGrid columns="2">
+                                    <p:commandButton value="Recalcular"
+                                                     icon="ui-icon-calculator"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para recalcular os valores."
+                                                     rendered="#{grupoCotaORCControlador.operacaoEditar}"
+                                                     process="@this"
+                                                     actionListener="#{grupoCotaORCControlador.calcularSaldoCumulativo()}"
+                                                     update="tableCotas :Formulario:saldoGrupo"/>
+                                    <h:outputText value="Saldo (R$)"/>
+                                </h:panelGrid>
+                            </f:facet>
+                            <h:outputText value="#{cota.saldo}" converter="#{grupoCotaORCControlador.moneyConverter}"/>
+                        </p:column>
+                    </p:dataTable>
+                    <br/>
+                    <p:outputPanel id="painelInfo">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Total Percentual: "/>
+                            <h:panelGrid columns="2">
+                                <h:outputText id="totalPerc"
+                                              value="#{grupoCotaORCControlador.somaTotaisPercentuais()} %"
+                                              styleClass="negrito">
+                                    <f:convertNumber type="percent"/>
+                                              </h:outputText>
+
+                                <p:outputPanel rendered="#{!grupoCotaORCControlador.validarCemPorcento()}"
+                                               style="font-size: 10px;">
+                                    <div class="ui-messages-warn ui-corner-all">
+                                        <div class="ui-messages-warn-icon"/>
+                                        &nbsp;
+                                        <strong> Alerta!</strong> Percentual total excedeu 100%.
+                                    </div>
+                                </p:outputPanel>
+                            </h:panelGrid>
+
+                            <h:outputText value="Total do Grupo: "/>
+                            <h:outputText id="totalGrupo"
+                                          value="#{grupoCotaORCControlador.saldoGrupoOrc}"
+                                          converter="#{grupoCotaORCControlador.moneyConverter}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Total Programado: "/>
+                            <h:outputText id="totalProg"
+                                          value="#{grupoCotaORCControlador.somaTotaisProgramados()}"
+                                          converter="#{grupoCotaORCControlador.moneyConverter}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Valor Utilizado: "/>
+                            <h:outputText id="totalUtil"
+                                          value="#{grupoCotaORCControlador.somaTotaisUtilizados()}"
+                                          converter="#{grupoCotaORCControlador.moneyConverter}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Saldo do Grupo: "/>
+                            <h:outputText value="#{grupoCotaORCControlador.saldoRestante}"
+                                          id="saldoGrupo"
+                                          converter="#{grupoCotaORCControlador.moneyConverter}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Diferença: "
+                                          rendered="#{!grupoCotaORCControlador.possuiValorUtilizado()}"/>
+                            <h:outputText value="#{grupoCotaORCControlador.calculaDiferenca()}"
+                                          converter="#{grupoCotaORCControlador.moneyConverter}"
+                                          styleClass="negrito"
+                                          rendered="#{!grupoCotaORCControlador.possuiValorUtilizado()}"/>
+                        </h:panelGrid>
+                    </p:outputPanel>
+                </p:panel>
+            </p:panel>
+            <fc:rodapePretty controlador="#{grupoCotaORCControlador}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function acompanharGeracao() {
+                var timer;
+                console.log('acompanhando exportação de dados');
+                timer = setInterval(function () {
+                    var futureDados = getElement('Formulario:futures-concluidas');
+                    rcAtualizaCompFutures();
+                    console.log('Terminou? ', futureDados.value);
+                    if (futureDados.value == 'true') {
+                        clearInterval(timer);
+
+                        rcTerminaProcesso();
+                    }
+                }, 1000);
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand process="@this"
+                             update=":Formulario:futures-concluidas :form-acompanhamento"
+                             name="rcAtualizaCompFutures"/>
+            <p:remoteCommand process="@this"
+                             update=":form-acompanhamento"
+                             name="rcTerminaProcesso"
+                             actionListener="#{qualificacaoCadastralControlador.terminarProcesso()}"/>
+
+            <h:inputHidden id="futures-concluidas"
+                           value="#{qualificacaoCadastralControlador.futureConcluida}"/>
+
+            <fc:cabecalhoPretty origem="#{qualificacaoCadastralControlador.caminhoPadrao}listar/"
+                                controlador="#{qualificacaoCadastralControlador}"/>
+            <p:tabView id="tb-view-geral">
+                <p:tab title="Qualificações Cadastrais">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Data de Envio:"/>
+                        <h:outputText value="#{qualificacaoCadastralControlador.selecionado.dataEnvio}"
+                                      styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                        </h:outputText>
+                        <fc:outputLabelObrigatorio value="Entidade:"/>
+                        <p:autoComplete queryDelay="1000" id="orgao"
+                                        rendered="#{qualificacaoCadastralControlador.selecionado.id eq null}"
+                                        value="#{qualificacaoCadastralControlador.selecionado.hierarquiaOrganizacional}"
+                                        converter="#{qualificacaoCadastralControlador.converterHierarquiaOrganizacional}"
+                                        completeMethod="#{qualificacaoCadastralControlador.completaHierarquia}"
+                                        forceSelection="true"
+                                        size="70"
+                                        dropdown="true"
+                                        var="h"
+                                        maxResults="50"
+                                        itemLabel="#{h}"
+                                        itemValue="#{h.id}">
+                        </p:autoComplete>
+                        <h:outputText value="#{qualificacaoCadastralControlador.selecionado.hierarquiaOrganizacional}"
+                                      styleClass="negrito"
+                                      rendered="#{qualificacaoCadastralControlador.selecionado.id ne null}"/>
+                        <fc:outputLabelObrigatorio value="Responsável:"/>
+                        <fc:novoAutocompletePessoa value="#{qualificacaoCadastralControlador.selecionado.responsavel}"
+                                                   caminhoAtual="#{qualificacaoCadastralControlador.caminhoOrigem}"
+                                                   id="pessoa" juridica="false" mostraBotaoEdita="false"
+                                                   mostraBotaoNovo="false"
+                                                   mostraBotoes="false"
+                                                   situacoesPossiveis="#{novoComponentePesquisaPessoaControlador.situacaoPorDescricao('ATIVO')}"
+                                                   mostraSituacoes="false"/>
+
+                    </h:panelGrid>
+
+                    <p:panel rendered="#{qualificacaoCadastralControlador.selecionado.id ne null}" header="Filtros">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Status:"/>
+                            <p:selectOneMenu value="#{qualificacaoCadastralControlador.processadoRejeitado}">
+                                <f:selectItems value="#{qualificacaoCadastralControlador.processadosRejeitados}"/>
+                            </p:selectOneMenu>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Filtrar"
+                                         id="cbFiltrar"
+                                         styleClass="mtop10 mlef05"
+                                         style="height: 30px;"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         icon="ui-icon-search"
+                                         title="Clique para filtrar os dados"
+                                         update="func"
+                                         actionListener="#{qualificacaoCadastralControlador.filtrar()}"/>
+                    </p:panel>
+
+                    <p:dataTable id="func"
+                                 var="pessoa"
+                                 value="#{qualificacaoCadastralControlador.pessoas}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop10"
+                                 rowStyleClass="#{pessoa.processadoRejeitado eq 'QUALIFICADO' ? (!empty pessoa.retornos ? 'fundo-laranja' : 'fundo-verde') :
+                                                  pessoa.processadoRejeitado eq 'PENDENTE' ?  (!empty pessoa.retornos ? 'fundo-vermelho' : null)
+                                                  : null}"
+                                 paginator="true"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10 maiuscula'>FUNCIONÁRIOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100">
+                        <p:column headerText="CPF" style="width: 10%;">
+                            <h:outputText value="#{pessoa.cpfComPontuacao}"/>
+                        </p:column>
+                        <p:column headerText="NIS" style="width: 10%;">
+                            <h:outputText value="#{pessoa.nis}"/>
+                        </p:column>
+                        <p:column headerText="Nome do Funcionário">
+                            <h:outputText value="#{pessoa.nomeFuncionario}"/>
+                        </p:column>
+                        <p:column headerText="Data de Nascimento" style="width: 10%;">
+                            <h:outputText value="#{pessoa.dataNascimento}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Status">
+                            <h:outputText value="#{pessoa.processadoRejeitado.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Motivos" style="width: 2%" styleClass="centralizado">
+                            <p:commandButton id="btvisualizarItem"
+                                             title="Clique aqui para visualizar os motivos."
+                                             disabled="#{empty pessoa.retornos}"
+                                             actionListener="#{qualificacaoCadastralControlador.atribuirQualificacaoCadastralPessoa(pessoa)}"
+                                             update=":form-dialog-retornos"
+                                             process="@this"
+                                             onclick="dialogRetornos.show()"
+                                             icon="ui-icon-search"
+                                             styleClass="mrig05"/>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:commandButton value="Exportar"
+                                     id="cbExportar"
+                                     styleClass="mtop10 mlef05 mrig05 prioritario"
+                                     style="height: 30px;"
+                                     icon="ui-icon-arrowthickstop-1-s"
+                                     title="Clique para exportar os dados"
+                                     onclick="if(!confirm('Tem certeza que deseja exportar os dados?')) { return false }"
+                                     actionListener="#{qualificacaoCadastralControlador.exportar()}"/>
+
+                    <p:commandButton value="Importar Retorno"
+                                     id="cbImportar"
+                                     rendered="#{qualificacaoCadastralControlador.selecionado.id ne null}"
+                                     styleClass="mtop10 mrig05"
+                                     style="height: 30px;"
+                                     icon="ui-icon-arrowthickstop-1-n"
+                                     title="Clique para exportar os dados"
+                                     onclick="aguarde.show()"
+                                     oncomplete="dialogImportacao.show(); aguarde.hide()"/>
+
+                    <fc:rodapePretty ocultarSalvar="true"
+                                     controlador="#{qualificacaoCadastralControlador}"/>
+
+                    <fc:botaoTargetBlank
+                        actionListener="#{qualificacaoCadastralControlador.gerarRelatorio()}"
+                        label="Gerar Relatório"
+                        rendered="#{qualificacaoCadastralControlador.selecionado.id ne null}"
+                        styleClass="mtop10 mlef05 mrig05"
+                        style="height: 30px;"
+                        icon="ui-icon-print"
+                        title="Clique para Gerar o Relatório"
+                        imprimeNoDialog="true"/>
+                </p:tab>
+                <p:tab title="Anexos">
+                    <p:outputPanel id="panel-arquivos">
+                        <p:dataTable id="tabela-arquivos"
+                                     var="arq"
+                                     value="#{qualificacaoCadastralControlador.selecionado.detentorArquivoComposicao.arquivosComposicao}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop10"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10 maiuscula'>ARQUIVOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Ações"
+                                      style="text-align: center; width: 3%; ">
+                                <h:panelGrid columns="2">
+                                    <p:commandButton ajax="false"
+                                                     icon="ui-icon-arrowthickstop-1-s"
+                                                     styleClass="prioritario"
+                                                     onclick="PrimeFaces.monitorDownload(start, stop)">
+                                        <p:fileDownload
+                                            value="#{qualificacaoCadastralControlador.recuperarArquivoParaDownload(arq.arquivo)}"/>
+                                    </p:commandButton>
+
+                                    <p:commandButton icon="ui-icon-close"
+                                                     update="tabela-arquivos"
+                                                     process="@this"
+                                                     actionListener="#{qualificacaoCadastralControlador.assistenteDetentorArquivoComposicao.removerArquivo(arq)}"
+                                                     onclick="if(!confirm('Tem certeza que deseja remover este registro?')) { return false } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"/>
+                                </h:panelGrid>
+                            </p:column>
+                            <p:column headerText="Descrição" style="width: 55%;">
+                                <h:outputText value="#{arq.arquivo.descricao}" size="100"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+            </p:tabView>
+
+        </h:form>
+
+        <p:dialog widgetVar="dialogImportacao"
+                  header="Importar Retorno"
+                  modal="true"
+                  position="center"
+                  style="position: fixed !important;width: 500px"
+                  resizable="false"
+                  closable="true">
+            <h:form id="form-dialog-importacao">
+                <p:outputPanel id="arquivoRetorno">
+                    <p:fileUpload multiple="false"
+                                  cancelLabel="Cancelar"
+                                  sizeExceedMessage="Arquivo Maior que 15 MB."
+                                  label="Selecione..."
+                                  uploadLabel="Upload Arquivo"
+                                  sizeLimit="10485760"
+                                  dragDropSupport="true"
+                                  invalidFileMessage="Formato de arquivo inválido."
+                                  style="width: 500px"
+                                  process="@this"
+                                  auto="true"
+                                  onstart="dialogImportacao.hide(); dlgAcompanhamento.show()"
+                                  id="btUpload"
+                                  allowTypes="/(\.|\/)(PROCESSADO|REJEITADO)$/"
+                                  fileUploadListener="#{qualificacaoCadastralControlador.importar}"/>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogRetornos"
+                  header="Retornos"
+                  onHide="#{qualificacaoCadastralControlador.cancelarQualificacaoCadastralPessoa()}"
+                  modal="true"
+                  position="center"
+                  style="position: fixed !important;width: 500px"
+                  resizable="false"
+                  closable="true">
+            <h:form id="form-dialog-retornos">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Nome do Funcionário:"/>
+                    <h:outputText
+                        value="#{qualificacaoCadastralControlador.qualificacaoCadastralPessoa.nomeFuncionario}"
+                        styleClass="negrito"/>
+                </h:panelGrid>
+
+                <p:panel id="visualizar-motivos" style="border: none">
+                    <p:dataTable id="retornos"
+                                 var="ret"
+                                 value="#{qualificacaoCadastralControlador.qualificacaoCadastralPessoa.retornos}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop10"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10 maiuscula'>RETORNOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100">
+                        <p:column headerText="Motivo">
+                            <h:outputText value="#{ret.descricaoInconsistencia}"/>
+                            <h:outputText rendered="#{!empty ret.observacao}" value=" - #{ret.observacao}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dlg-acompanhamento"
+                  widgetVar="dlgAcompanhamento"
+                  width="800"
+                  closable="false"
+                  resizable="false"
+                  modal="true"
+                  position="center"
+                  dynamic="true"
+                  header="Acompanhamento do processo">
+            <h:form id="form-acompanhamento">
+                <p:outputPanel id="opp-acompanhamento">
+                    <div class="progress progress-striped active progress-success" id="barraProgressoGeral">
+                        <div class="bar"
+                             style="width: #{qualificacaoCadastralControlador.assistenteBarraProgresso.porcentagemDoCalculo}%"></div>
+                    </div>
+                    <div class="centralizado" id="tipoProcesso">
+                        <strong>#{qualificacaoCadastralControlador.assistenteBarraProgresso.descricaoProcesso}</strong><br/>
+                    </div>
+                    <div id="tabela-estimativa">
+                        <table style="width: 100%; text-align: center">
+                            <tr>
+                                <td>
+                                    <h:outputText
+                                        value="#{qualificacaoCadastralControlador.assistenteBarraProgresso.calculados}"/>
+                                    de
+                                    <h:outputText
+                                        value="#{qualificacaoCadastralControlador.assistenteBarraProgresso.total}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText
+                                        value="Tempo Decorrido #{qualificacaoCadastralControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText
+                                        value="Tempo Estimado #{qualificacaoCadastralControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogClasse"
+                  modal="true"
+                  closable="false"
+                  showHeader="false"
+                  resizable="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formClasse">
+                <center>
+                    <p:panel header="Classe de Pessoa" styleClass="mtop05 mbot05">
+
+                        <br/>
+                        <h:outputText styleClass="amarelonegrito"
+                                      escape="false"
+                                      value="#{qualificacaoCadastralControlador.linkConfiguracaoRH()}"/>
+
+                        <h:panelGrid columns="4" styleClass="mtop20 mtop10">
+                            <p:commandButton id="btnSim"
+                                             value="SIM"
+                                             icon="ui-icon-check"
+                                             styleClass="padrao"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update=":Formulario"
+                                             title="Clique para realizar a exportação."
+                                             actionListener="#{qualificacaoCadastralControlador.exportarSemVerificarClasses()}"/>
+
+                            <p:commandButton id="btnNao"
+                                             value="NÃO"
+                                             styleClass="padrao mlef05"
+                                             onstart="dialogRetencao.hide();aguarde.show()"
+                                             icon="ui-icon-cancel"
+                                             title="Clique para cancelar a exportação."
+                                             actionListener="#{qualificacaoCadastralControlador.cancelar()}"/>
+                        </h:panelGrid>
+                    </p:panel>
+                </center>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

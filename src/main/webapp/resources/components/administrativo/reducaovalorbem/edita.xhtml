@@ -1,0 +1,1372 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+>
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="controlador" required="true"
+                  type="br.com.webpublico.controle.AbstractReducaoValorBemControlador"/>
+</cc:interface>
+
+<cc:implementation>
+    <style type="text/css">
+        table.gridtable {
+            font-size: 11px;
+            color: #000000;
+            border-width: 1px;
+            border-color: #92b8d3;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        table.gridtable th {
+            font-family: Lucida Grande, Tahoma, Verdana, Arial, Sans-Serif;
+            color: #1d5987;
+            border-width: 1px;
+            padding: 8px;
+            border-style: solid;
+            border-color: #92b8d3;
+            border-top: none;
+            background-color: #d0e5f5;
+            font-weight: normal;
+            padding: 4px;
+        }
+
+        table.gridtable td {
+            border-width: 1px;
+            padding: 8px;
+            border-style: solid;
+            border-color: #92b8d3;
+            background-color: #ffffff;
+            text-align: center;
+        }
+
+        table.gridtable caption {
+            padding: 3px;
+        }
+    </style>
+    <script type="text/javascript">
+        var timer;
+
+        function getElement(id) {
+            return document.getElementById(id);
+        }
+
+        window.onload = function () {
+            buscarBensAoEditar();
+        }
+
+        function openDialog(id) {
+            $(id).modal({backdrop: 'static', keyboard: false});
+            $(id).modal('show');
+        }
+
+        function closeDialog(id) {
+            $(id).modal('hide');
+        }
+
+        function estornarProcesso() {
+            pararTimer();
+            rcIniciarEstornoProcesso();
+        }
+
+        var timerPersistencia;
+        function acompanharPersistencia() {
+            timerPersistencia = setInterval(function () {
+                consultarFuturePersistencia();
+            }, 1000);
+        }
+
+        function pararTimerPersitencia() {
+            clearInterval(timerPersistencia);
+        }
+
+        function acompanharConsultaBens(id) {
+            var timer;
+            timer = setInterval(function () {
+                rcAtualizaCompFutures();
+                var futureBens = getElement(id + ':Formulario:future-bens');
+                if (futureBens.value == 'true') {
+                    clearInterval(timer);
+                    rcIniciarReducaoValorBem();
+                }
+            }, 1000);
+        }
+
+        function acompanharSimulacaoReducaoValorBem(id) {
+            var timer;
+            timer = setInterval(function () {
+                rcAtualizaCompFutures();
+                var futureProcessamento = getElement(id + ':Formulario:future-processamento');
+                if (futureProcessamento.value == 'true') {
+                    clearInterval(timer);
+
+                    rcFinalizarSimulacaoReducaoValorBem();
+                }
+            }, 1000);
+        }
+
+        function acompanharEstorno() {
+            timer = setInterval(function () {
+                rcAcompanharEstorno();
+            }, 1000);
+        }
+
+        function acompanharPreparaEstorno() {
+            timer = setInterval(function () {
+                rcAcompanharPreparaEstorno();
+            }, 1000);
+        }
+
+        function pararTimer() {
+            clearInterval(timer);
+        }
+
+        function atualizarForm() {
+            atualizarFormulario();
+        }
+
+    </script>
+
+    <h:form id="Formulario">
+        <p:remoteCommand
+            update=":#{cc.attrs.id}:FormularioPersistencia"
+            name="consultarFuturePersistencia"
+            actionListener="#{cc.attrs.controlador.consultarFuturePersistencia()}"/>
+
+        <p:remoteCommand
+            id="btnBuscarBensAoEditar"
+            name="buscarBensAoEditar"
+            actionListener="#{cc.attrs.controlador.recuperarProcessoReducaoValorBemNoEditar(cc.attrs.id)}"/>
+
+        <p:remoteCommand
+            process=":#{cc.attrs.id}:Formulario:futures :#{cc.attrs.id}:FormularioAcompanhamento :#{cc.attrs.id}:FormularioPersistencia"
+            update=":#{cc.attrs.id}:Formulario:futures :#{cc.attrs.id}:FormularioAcompanhamento :#{cc.attrs.id}:FormularioPersistencia"
+            name="rcAtualizaCompFutures"/>
+
+        <p:remoteCommand
+            process=":#{cc.attrs.id}:Formulario"
+            update=":#{cc.attrs.id}:Formulario"
+            name="atualizarFormulario"/>
+
+        <p:remoteCommand name="rcIniciarReducaoValorBem"
+                         actionListener="#{cc.attrs.controlador.simularReducaoValorBem(cc.attrs.id)}"/>
+
+        <p:remoteCommand name="rcFinalizarSimulacaoReducaoValorBem"
+                         update=":#{cc.attrs.id}:Formulario"
+                         actionListener="#{cc.attrs.controlador.finalizarSimulacaoReducaoValorBem()}"
+                         onstart="closeDialog(dialogAcompanhamento); aguarde.show();" oncomplete="aguarde.hide();"/>
+
+        <p:remoteCommand name="rcIniciarEstornoProcesso"
+                         actionListener="#{cc.attrs.controlador.estornar()}"/>
+
+        <p:remoteCommand
+            name="rcAcompanharEstorno"
+            process="@this" update=":#{cc.attrs.id}:FormularioEstorno"
+            actionListener="#{cc.attrs.controlador.acompanharEstorno()}"/>
+        <p:remoteCommand
+            name="rcAcompanharPreparaEstorno"
+            process="@this" update=":#{cc.attrs.id}:FormularioEstorno"
+            actionListener="#{cc.attrs.controlador.acompanharPreparaEstorno()}"/>
+
+        <p:outputPanel id="futures">
+            <h:inputHidden id="future-bens"
+                           value="#{cc.attrs.controlador.futureBensConcluida}"/>
+            <h:inputHidden id="future-processamento"
+                           value="#{cc.attrs.controlador.futureProcessamentoConcluida}"/>
+        </p:outputPanel>
+
+        <fc:cabecalhoPretty controlador="#{cc.attrs.controlador}"
+                            origem="#{cc.attrs.controlador.caminhoPadrao}ver/#{cc.attrs.controlador.selecionado.id}/"/>
+
+        <p:panel
+            header="#{cc.attrs.controlador.selecionado.tipoReducao.descricao} de Bens #{cc.attrs.controlador.selecionado.tipoBem.descricao}">
+            <h:panelGrid columns="2">
+                <h:outputLabel value="Código: " for="codigo"/>
+                <h:outputText id="codigo"
+                              value="#{cc.attrs.controlador.selecionado.codigo != null ?
+                    cc.attrs.controlador.selecionado.codigo : 'Gerado automaticamente ao processar'}"
+                              styleClass="negrito"/>
+
+                <h:outputLabel value="Data de Lançamento: " for="dataLancamento"/>
+                <h:outputText id="dataLancamento"
+                              value="#{cc.attrs.controlador.selecionado.dataLancamento}"
+                              styleClass="negrito">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+
+                <h:outputLabel value="Data de Operação: " for="data"/>
+                <h:outputText id="data"
+                              value="#{cc.attrs.controlador.selecionado.data}"
+                              styleClass="negrito">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+
+                <h:outputLabel value="Usuário: "
+                               for="usuario"/>
+                <h:outputText id="usuario"
+                              value="#{cc.attrs.controlador.selecionado.usuarioSistema.pessoaFisica}"
+                              styleClass="negrito"/>
+
+                <h:outputText value="Situação: "/>
+                <h:outputText value="#{cc.attrs.controlador.selecionado.situacao.descricao}"
+                              styleClass="negrito"/>
+
+                <fc:outputLabelObrigatorio value="Unidade Orçamentária: " for="hierarquiaOrcamentaria"
+                                           rendered="#{cc.attrs.controlador.isOperacaoNovo()}"/>
+                <p:autoComplete queryDelay="1000"
+                                id="hierarquiaOrcamentaria"
+                                title="Informe a Unidade Orçamentária."
+                                value="#{cc.attrs.controlador.selecionado.hierarquiaOrcamentaria}"
+                                completeMethod="#{cc.attrs.controlador.completarUnidadeOrcamentaria}"
+                                rendered="#{cc.attrs.controlador.isOperacaoNovo()}"
+                                disabled="#{cc.attrs.controlador.bloquearOpcoesDaTela}"
+                                var="unidade"
+                                size="70"
+                                dropdown="true"
+                                panelStyle="max-height: 250px;max-width: 800px"
+                                process="@this"
+                                maxResults="50"
+                                itemLabel="#{unidade}"
+                                itemValue="#{unidade.id}"
+                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                    <p:ajax event="itemSelect" process="@this" update="@this"
+                            onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                </p:autoComplete>
+
+                <h:outputText value="Unidade Orçamentária: " rendered="#{cc.attrs.controlador.isOperacaoEditar()}"/>
+                <h:outputText id="hierarquiaOrcamentariaLbl"
+                              rendered="#{cc.attrs.controlador.isOperacaoEditar()}"
+                              value="#{cc.attrs.controlador.selecionado.hierarquiaOrcamentaria}"
+                              styleClass="negrito"/>
+            </h:panelGrid>
+
+            <p:commandButton id="pesquisar"
+                             value="Pesquisar"
+                             disabled="#{cc.attrs.controlador.bloquearOpcoesDaTela}"
+                             rendered="#{cc.attrs.controlador.isOperacaoNovo()}"
+                             styleClass="operacao prioritario mtop10"
+                             onclick="aguarde.show()"
+                             icon="ui-icon-search"
+                             actionListener="#{cc.attrs.controlador.pesquisarBens(cc.attrs.id)}"
+                             update=":#{cc.attrs.id}:FormularioAcompanhamento"/>
+
+            <p:tabView id="tabView"
+                       activeIndex="#{cc.attrs.controlador.indiceAba}"
+                       styleClass="mtop10">
+                <p:tab id="tabReduzir"
+                       rendered="#{cc.attrs.controlador.isEmElaboracao() or cc.attrs.controlador.isEmAndamento()}"
+                       title="A #{cc.attrs.controlador.selecionado.tipoReducao.segundaDescricao}">
+                    <p:outputPanel id="panelReduzir">
+                        <p:dataTable id="tabelaBensReduzir"
+                                     paginator="true"
+                                     rendered="#{cc.attrs.controlador.futureBensConcluida}"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{cc.attrs.controlador.selecionado.reducoesOrdenadas}"
+                                     rows="50"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>BENS A #{cc.attrs.controlador.selecionado.tipoReducao.segundaDescricao.toUpperCase()}
+                                             &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="50,100,150,200"
+                                     var="reducao">
+                            <p:column headerText="Registro Patrimonial"
+                                      filterBy="#{reducao.bem.identificacao}"
+                                      filterMatchMode="contains"
+                                      style="width: 5%; text-align: center;">
+                                <h:outputText value="#{reducao.bem.identificacao}"/>
+                            </p:column>
+
+                            <p:column headerText="Descrição do Bem"
+                                      filterBy="#{reducao.bem.descricao}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{reducao.bem.descricao}"/>
+                            </p:column>
+
+                            <p:column headerText="Grupo Patrimonial"
+                                      filterBy="#{reducao.estadoResultante.grupoBem}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{reducao.estadoResultante.grupoBem}"/>
+                            </p:column>
+                            <p:column
+                                headerText="Valor do Bem"
+                                filterBy="#{reducao.estadoResultante.valorOriginal}"
+                                filterMatchMode="contains"
+                                style="width: 5%; text-align: center;">
+                                <h:outputText value="#{reducao.estadoResultante.valorOriginal}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.valorOriginalReducao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                            <p:column
+                                headerText="Valor a #{cc.attrs.controlador.selecionado.tipoReducao.segundaDescricao}"
+                                filterBy="#{reducao.valorDoLancamento}"
+                                filterMatchMode="contains"
+                                style="width: 5%; text-align: center;">
+                                <h:outputText value="#{reducao.valorDoLancamento}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.valorTotalAReduzir}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab id="tabReduzirVer"
+                       rendered="#{cc.attrs.controlador.isConcluida() or cc.attrs.controlador.isEstornoEmAndamento()}"
+                       title="#{cc.attrs.controlador.selecionado.tipoReducao.terceiraDescricao}s">
+                    <p:outputPanel id="panelReduzirVer">
+                        <p:dataTable id="tabelaBensReduzirVer"
+                                     paginator="true"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{cc.attrs.controlador.model}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>BENS #{cc.attrs.controlador.selecionado.tipoReducao.terceiraDescricao.toUpperCase()}S
+                                             &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="50,100,150,200"
+                                     var="loteReducaoValorBem"
+                                     lazy="true">
+
+                            <p:column headerText="Registro Patrimonial"
+                                      filterBy="#{loteReducaoValorBem.bem.identificacao}"
+                                      filterMatchMode="contains"
+                                      style="width: 5%; text-align: center;">
+                                <h:outputText value="#{loteReducaoValorBem.bem.identificacao}"/>
+                            </p:column>
+
+                            <p:column headerText="Descrição do Bem"
+                                      filterStyle="width: 90% !important;"
+                                      filterBy="#{loteReducaoValorBem.bem.descricao}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{loteReducaoValorBem.bem.descricao}"/>
+                            </p:column>
+
+                            <p:column headerText="Grupo Patrimonial"
+                                      filterStyle="width: 90% !important;"
+                                      filterBy="#{loteReducaoValorBem.estadoResultante.grupoBem.codigo}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{loteReducaoValorBem.estadoResultante.grupoBem}"/>
+                            </p:column>
+                            <p:column
+                                headerText="Valor do Bem"
+                                filterBy="#{loteReducaoValorBem.estadoResultante.valorOriginal}"
+                                filterMatchMode="contains"
+                                style="width: 5%; text-align: center;">
+                                <h:outputText value="#{loteReducaoValorBem.estadoResultante.valorOriginal}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.valorOriginalReducao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                            <p:column
+                                headerText="Valor #{cc.attrs.controlador.selecionado.tipoReducao.terceiraDescricao} (R$)"
+                                filterBy="#{loteReducaoValorBem.valorDoLancamento}"
+                                filterMatchMode="contains"
+                                style="width: 5%; text-align: center;">
+                                <h:outputText value="#{loteReducaoValorBem.valorDoLancamento}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.valorTotalAReduzir}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab id="tabInconsistencias" title="Inconsistências">
+                    <p:outputPanel id="panelInconsistencias">
+                        <p:dataTable id="tabelaInconsistencias"
+                                     paginator="true"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{cc.attrs.controlador.selecionado.logReducaoOuEstorno.mensagens}"
+                                     rows="50"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>INCONSISTÊNCIAS &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="50,100,150,200"
+                                     var="msg">
+                            <p:column headerText="Registro Patrimonial"
+                                      filterBy="#{msg.bem.identificacao}"
+                                      filterMatchMode="contains"
+                                      style="width: 5%; text-align: center;">
+                                <h:outputText value="#{msg.bem.identificacao}"/>
+                            </p:column>
+
+                            <p:column headerText="Descrição do Bem"
+                                      filterBy="#{msg.bem.descricao}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{msg.bem.descricao}"/>
+                            </p:column>
+
+                            <p:column headerText="Mensagem"
+                                      filterBy="#{msg.mensagem}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{msg.mensagem}" escape="false"/>
+                            </p:column>
+
+                            <p:column headerText="Valor (R$)"
+                                      filterBy="#{msg.valor}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{msg.valor}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab id="tabResidual" title="Residual">
+                    <p:outputPanel id="panelResidual">
+                        <p:dataTable id="tabelaResidual"
+                                     paginator="true"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{cc.attrs.controlador.selecionado.bensResidualOrdenados}"
+                                     rows="50"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>BENS QUE ATINGIRAM O VALOR RESIDUAL&lt;/span>
+                                             {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="50,100,150,200"
+                                     var="residual">
+                            <p:column headerText="Registro Patrimonial"
+                                      filterBy="#{residual.bem.identificacao}"
+                                      filterMatchMode="contains"
+                                      styleClass="width100">
+                                <h:outputText value="#{residual.bem.identificacao}"/>
+                            </p:column>
+                            <p:column headerText="Descrição"
+                                      filterBy="#{residual.bem.descricao}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{residual.bem.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Grupo Patrimonial"
+                                      filterBy="#{residual.grupoBem}"
+                                      filterMatchMode="contains">
+                                <h:outputText value="#{residual.grupoBem}"/>
+                            </p:column>
+                            <p:column headerText="Valor Original (R$)"
+                                      filterBy="#{residual.valorOriginal}"
+                                      filterMatchMode="contains"
+                                      styleClass="alinhamentoDireita width70">
+                                <h:outputText value="#{residual.valorOriginal}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.selecionado.residualValorTotalOriginal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                            <p:column headerText="Valor Líquido (R$)"
+                                      filterBy="#{residual.valorLiquido}"
+                                      filterMatchMode="contains"
+                                      styleClass="alinhamentoDireita width70">
+                                <h:outputText value="#{residual.valorLiquido}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.selecionado.residualValorTotalLiquido}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab id="tabNaAplicaveis" title="Não Aplicáveis">
+                    <p:outputPanel id="panelNaoAplicaveis">
+                        <p:dataTable id="tabelaNaoAplicaveis"
+                                     paginator="true"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{cc.attrs.controlador.selecionado.gruposBemNaoAplicavel}"
+                                     rows="50"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>BENS NÃO APLICÁVEIS&lt;/span>
+                                             {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="50,100,150,200"
+                                     var="grupoNaoAplicavel">
+                            <p:column headerText="Grupo Patrimonial"
+                                      filterBy="#{grupoNaoAplicavel}"
+                                      filterMatchMode="contains"
+                                      style="width: 5%; text-align: center;">
+                                <h:outputText value="#{grupoNaoAplicavel}"/>
+                            </p:column>
+
+                            <p:column headerText="Bens">
+                                <p:dataTable
+                                    value="#{cc.attrs.controlador.selecionado.getBenNaoAplicaveisPorGrupoBem(grupoNaoAplicavel)}"
+                                    var="bemNaoAplicaval">
+                                    <p:column headerText="Registro Patrimonial"
+                                              filterBy="#{bemNaoAplicaval.identificacao}"
+                                              filterMatchMode="contains"
+                                              style="width: 5%; text-align: center;">
+                                        <h:outputText value="#{bemNaoAplicaval.identificacao}"/>
+                                    </p:column>
+
+                                    <p:column headerText="Descrição"
+                                              filterBy="#{bemNaoAplicaval.descricao}"
+                                              filterMatchMode="contains">
+                                        <h:outputText value="#{bemNaoAplicaval.descricao}"/>
+                                    </p:column>
+
+                                    <p:column headerText="Valor (R$)"
+                                              filterBy="#{bemNaoAplicaval.valorOriginal}"
+                                              filterMatchMode="contains"
+                                              styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{bemNaoAplicaval.valorOriginal}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:column>
+
+                            <p:column headerText="Total Por Grupo Patrimonial"
+                                      style="width: 5%; text-align: center;">
+                                <h:outputText
+                                    value="#{cc.attrs.controlador.selecionado.getBenNaoAplicaveisPorGrupoBem(grupoNaoAplicavel).size()}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab id="tabInformacoesGerais" title="Informações Gerais">
+                    <p:outputPanel id="panelInformacoesGerais">
+                        <table class="gridtable" style="width: 400px; ">
+                            <tr>
+                                <th class="alinhamentoEsquerda negrito">Bens #{cc.attrs.controlador.selecionado.tipoBem.descricao} Originais</th>
+                                <th class="alinhamentoDireita negrito">Quantidade</th>
+                                <th class="alinhamentoDireita negrito">Valor (R$)</th>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda">Depreciáveis</td>
+                                <td class="alinhamentoDireita">#{cc.attrs.controlador.selecionado.quantidadeDepreciacao}</td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.selecionado.valorDepreciacao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda">Exauríveis</td>
+                                <td class="alinhamentoDireita">#{cc.attrs.controlador.selecionado.quantidadeExaustao}</td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.selecionado.valorExaustao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda">Amortizáveis</td>
+                                <td class="alinhamentoDireita">#{cc.attrs.controlador.selecionado.quantidadeAmortizacao}</td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.selecionado.valorAmortizacao}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda">Inconsistentes</td>
+                                <td class="alinhamentoDireita">#{cc.attrs.controlador.selecionado.logReducaoOuEstorno.mensagens.size()}</td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.selecionado.valorTotalInconsistencia}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda">Residual</td>
+                                <td class="alinhamentoDireita">#{cc.attrs.controlador.selecionado.bensResidual.size()}</td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.selecionado.residualValorTotalOriginal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda">Não Aplicáveis</td>
+                                <td class="alinhamentoDireita">#{cc.attrs.controlador.selecionado.bensNaoAplicaveis.size()}</td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{cc.attrs.controlador.selecionado.valorTotalNaoAplicavel}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda negrito">Total Geral</td>
+                                <td class="alinhamentoDireita negrito">#{cc.attrs.controlador.quantidadeGeral}</td>
+                                <td class="alinhamentoDireita negrito">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalGeral}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="alinhamentoEsquerda negrito" colspan="3">(-) Ajustes Mensais</th>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda">A #{cc.attrs.controlador.selecionado.tipoReducao.segundaDescricao}</td>
+                                <td class="alinhamentoDireita">#{cc.attrs.controlador.quantidadeReducoes}</td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalAReduzir}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="alinhamentoEsquerda negrito">Total Geral</td>
+                                <td class="alinhamentoDireita negrito">#{cc.attrs.controlador.quantidadeReducoes}</td>
+                                <td class="alinhamentoDireita negrito">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalAReduzir}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab id="tabEstorno" title="Estorno"
+                       rendered="#{cc.attrs.controlador.isEstornada() or cc.attrs.controlador.isEstornoEmAndamento()}">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Data: "/>
+                        <h:outputText
+                            value="#{cc.attrs.controlador.loteEstorno.dataEstorno}"
+                            styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText value="Usuário: "/>
+                        <h:outputText
+                            styleClass="negrito"
+                            value="#{cc.attrs.controlador.loteEstorno.usuarioDoEstorno.pessoaFisica.nome}"/>
+
+                        <h:outputText value="Bens Estornados: "/>
+                        <h:outputText
+                            styleClass="negrito"
+                            value="#{cc.attrs.controlador.quantidadeReducoesEstorno}"/>
+
+                        <h:outputText value="Valor Total Estornado: "/>
+                        <h:outputText
+                            styleClass="negrito"
+                            value="#{cc.attrs.controlador.valorTotalEstornado}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </h:panelGrid>
+
+                    <p:tabView id="tabViewEstorno" styleClass="mtop10">
+                        <p:tab id="tabBensEstornados" title="Bens Estornados">
+                            <p:dataTable
+                                value="#{cc.attrs.controlador.modelEstorno}"
+                                var="estorno"
+                                paginator="true"
+                                rowIndexVar="rowIx"
+                                rows="10"
+                                lazy="true"
+                                paginatorPosition="top"
+                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                styleClass="mtop05"
+                                emptyMessage="Não foram localizados registros para serem apresentados"
+                                paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens Estornados #{cc.attrs.controlador.selecionado.tipoReducao.terceiraDescricao.toUpperCase()}S
+                                             &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                rowsPerPageTemplate="50,100,150,200">
+
+                                <p:column headerText="Registro Patrimonial"
+                                          style="width: 30px;"
+                                          filterStyle="width: 90% !important;"
+                                          filterBy="#{estorno.bem.identificacao}"
+                                          filterMatchMode="contains">
+                                    <h:outputLabel value="#{estorno.bem.identificacao}"/>
+                                </p:column>
+                                <p:column headerText="Descrição"
+                                          style="text-align: left"
+                                          filterStyle="width: 100% !important;"
+                                          filterBy="#{estorno.bem.descricao}"
+                                          filterMatchMode="contains">
+                                    <h:outputLabel value="#{estorno.bem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Valor Estornado (R$)"
+                                          filterStyle="width: 90% !important;"
+                                          filterBy="#{estorno.valorDoLancamento}"
+                                          filterMatchMode="contains"
+                                          style="width: 30px; text-align: right; ">
+                                    <h:outputLabel value="#{estorno.valorDoLancamento}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputLabel>
+                                    <f:facet name="footer">
+                                        <h:outputLabel
+                                            styleClass="negrito"
+                                            value="#{cc.attrs.controlador.valorTotalEstornado}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputLabel>
+                                    </f:facet>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+
+                        <p:tab id="tabInconsistenciasEstorno" title="Inconsistências do Estorno">
+                            <p:dataTable id="tabelaInconsistenciasEstorno"
+                                         paginator="true"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{cc.attrs.controlador.loteEstorno.logReducaoOuEstorno.mensagens}"
+                                         rows="50"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>INCONSISTÊNCIAS DO ESTORNO
+                                             &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="50,100,150,200"
+                                         var="msg">
+                                <p:column headerText="Registro Patrimonial"
+                                          filterBy="#{msg.bem.identificacao}"
+                                          filterMatchMode="contains"
+                                          style="width: 5%; text-align: center;">
+                                    <h:outputText value="#{msg.bem.identificacao}"/>
+                                </p:column>
+
+                                <p:column headerText="Descrição do Bem"
+                                          filterBy="#{msg.bem.descricao}"
+                                          filterMatchMode="contains">
+                                    <h:outputText value="#{msg.bem.descricao}"/>
+                                </p:column>
+
+                                <p:column headerText="Mensagem"
+                                          filterBy="#{msg.mensagem}"
+                                          filterMatchMode="contains">
+                                    <h:outputText value="#{msg.mensagem}" escape="false"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+                    </p:tabView>
+
+                    <p:outputPanel rendered="#{cc.attrs.controlador.hasBensNaoContabilizadosEstorno()}">
+                        <div class="alert alert-danger"
+                             align="center"
+                             style="padding: 1%; font-size: 13px">
+                            <strong>Atenção!</strong> O processo foi interrompido por algum motivo, clique em 'Continuar Estorno' para continuar de onde parou.
+                        </div>
+
+                        <p:commandButton value="Continuar Estorno"
+                                         icon="ui-icon-estornar"
+                                         title="Clique para continuar o estorno do processo."
+                                         onstart="aguarde.show();"
+                                         onclick="if (!confirm('Tem certeza que deseja continuar o estorno desse processo?'))return false;"
+                                         styleClass="operacao prioritario mrig05 mtop10"
+                                         style=" height: 30px"
+                                         actionListener="#{cc.attrs.controlador.estornarEmAndamento()}"/>
+
+                        <p:commandButton value="Verificar Valores"
+                                         icon="ui-icon-search"
+                                         process="@this"
+                                         title="Clique para verificar os valores."
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         style=" height: 30px"
+                                         actionListener="#{cc.attrs.controlador.abrirDlgValoresContabilizados(cc.attrs.id)}"
+                                         styleClass="operacao mrig05 mtop10"/>
+
+                        <p:commandButton value="Relatório de Integração Contábil"
+                                         icon="ui-icon-print"
+                                         styleClass="operacao mtop10"
+                                         style="height: 30px"
+                                         actionListener="#{relatorioConferenciaReducaoValorBemContabilControlador.gerarRelatorio(cc.attrs.controlador.selecionado)}"
+                                         title="Clique para gerar o Relatório"/>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab id="tabAnexos" title="Anexos">
+                    <p:outputPanel id="panelAnexos">
+                        <fc:fileUploadWP selecionado="#{cc.attrs.controlador.selecionado}"
+                                         allowTypes="/(\.|\/)(gif|jpe?g|png|pdf|doc|docx|xls|xlsx|txt)$/"/>
+                    </p:outputPanel>
+                </p:tab>
+            </p:tabView>
+        </p:panel>
+
+        <p:outputPanel rendered="#{!cc.attrs.controlador.hasBensNaoContabilizadosReducao()}">
+            <div style="text-align: left;">
+                <p:commandButton value="Salvar"
+                                 id="processar-salvar"
+                                 styleClass="mtop10 mrig05 prioritario operacao"
+                                 icon="ui-icon-disk"
+                                 rendered="#{cc.attrs.controlador.isOperacaoNovo() and cc.attrs.controlador.isEmElaboracao()}"
+                                 title="Clique para salvar a redução dos bens."
+                                 disabled="#{cc.attrs.controlador.assistenteMovimentacao.bloquearAcoesTela}"
+                                 actionListener="#{cc.attrs.controlador.processarAndSalvar()}"
+                                 onclick="if (!confirm('Este processo poderá demorar alguns minutos.'))return false;"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"/>
+
+                <p:commandButton value="Processar e Concluir"
+                                 id="processar-concluir"
+                                 styleClass="mtop10 mrig05 prioritario operacao"
+                                 icon="ui-icon-disk"
+                                 rendered="#{cc.attrs.controlador.isOperacaoEditar() and cc.attrs.controlador.isEmElaboracao() or cc.attrs.controlador.isEmAndamento()}"
+                                 disabled="#{cc.attrs.controlador.assistenteMovimentacao.bloquearAcoesTela}"
+                                 title="Clique para processar e salvar a redução dos bens."
+                                 update=":#{cc.attrs.id}:FormularioPersistencia"
+                                 actionListener="#{cc.attrs.controlador.processarAndConcluir()}"
+                                 onclick="if (!confirm('Tem certeza que deseja concliur este processo?'))return false;"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"/>
+
+                <p:commandButton value="Estornar"
+                                 icon="ui-icon-arrowrefresh-1-w"
+                                 rendered="#{cc.attrs.controlador.isOperacaoEditar() and cc.attrs.controlador.isConcluida()}"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"
+                                 styleClass="mtop10 mrig05 prioritario"
+                                 style="height: 30px;"
+                                 actionListener="#{cc.attrs.controlador.solicitarEstorno()}"/>
+
+                <p:commandButton value="Cancelar"
+                                 id="cancelar"
+                                 style="height: 30px;"
+                                 styleClass="mtop10"
+                                 icon="ui-icon-cancel"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"
+                                 title="Clique para cancelar e retornar a página anterior"
+                                 actionListener="#{cc.attrs.controlador.cancelar()}"
+                                 immediate="true"/>
+            </div>
+        </p:outputPanel>
+
+        <p:outputPanel rendered="#{cc.attrs.controlador.hasBensNaoContabilizadosReducao()}">
+            <div class="alert alert-danger"
+                 align="center"
+                 style="padding: 1%; font-size: 13px">
+                <strong>Atenção!</strong> O processo foi interrompido por algum motivo, clique em 'Continuar Processamento' para continuar de onde parou.
+            </div>
+
+            <p:commandButton
+                value="Continuar Processamento"
+                icon="ui-icon-check"
+                styleClass="operacao prioritario mrig05 mtop10"
+                style="height: 30px"
+                actionListener="#{cc.attrs.controlador.concluir()}"
+                onclick="if (!confirm('Tem certeza que deseja continuar?'))return false;"
+                oncomplete="aguarde.hide()"/>
+
+            <p:commandButton value="Verificar Valores"
+                             icon="ui-icon-search"
+                             process="@this"
+                             title="Clique para verificar os valores estornados."
+                             onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             style="height: 30px"
+                             actionListener="#{cc.attrs.controlador.abrirDlgValoresContabilizados(cc.attrs.id)}"
+                             styleClass="operacao mrig05 mtop10"/>
+
+            <p:commandButton value="Relatório de Integração Contábil"
+                             icon="ui-icon-print"
+                             styleClass="operacao mtop10"
+                             style="height: 30px"
+                             actionListener="#{relatorioConferenciaReducaoValorBemContabilControlador.gerarRelatorio(cc.attrs.controlador.selecionado)}"
+                             title="Clique para gerar o Relatório"/>
+
+            <p:commandButton value="Cancelar"
+                             style="height: 30px"
+                             styleClass="mlef05 mtop10"
+                             icon="ui-icon-cancel"
+                             onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             title="Clique para cancelar e retornar a página anterior"
+                             actionListener="#{cc.attrs.controlador.cancelar()}"
+                             immediate="true"/>
+        </p:outputPanel>
+    </h:form>
+
+    <div id="dialogAcompanhamento" class="modal hide fade">
+        <div class="modal-header alert-info" style="text-align: center">
+
+            <p:outputPanel rendered="#{cc.attrs.controlador.isOperacaoNovo()}">
+                <div class="centralizado ">
+                    Os bens serão carregados para conferência, sendo salvos após clicar no botão "Salvar"
+                </div>
+            </p:outputPanel>
+
+            <p:outputPanel rendered="#{cc.attrs.controlador.isOperacaoEditar()}">
+                <div class="centralizado ">
+                    Os bens serão carregados para conferência, sendo
+                    <strong>#{cc.attrs.controlador.selecionado.tipoReducao.terceiraDescricao.toLowerCase()}s</strong>
+                    após clicar no botão "Processar e Concluir"
+                </div>
+            </p:outputPanel>
+        </div>
+        <div class="modal-body" style="text-align: center">
+            <h:form id="FormularioAcompanhamento">
+                <p:outputPanel id="panelBarraProgresso">
+                    <h:outputText
+                        value="#{cc.attrs.controlador.assistenteMovimentacao.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{cc.attrs.controlador.assistenteMovimentacao.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/>
+                    </div>
+                    <div
+                        style="#{cc.attrs.controlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{cc.attrs.controlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active" id="barraProgresso">
+                            <div class="bar"
+                                 style="width: #{cc.attrs.controlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+                </p:outputPanel>
+            </h:form>
+        </div>
+    </div>
+
+    <div id="dialogPersistencia" class="modal hide fade">
+        <div class="modal-header alert-info" style="text-align: center">
+            <div class="centralizado ">
+                Salvando <strong>#{cc.attrs.controlador.selecionado.tipoReducao.descricao}</strong> de
+                <strong>Bens #{cc.attrs.controlador.selecionado.tipoBem.descricao}</strong>
+            </div>
+        </div>
+        <h:form id="FormularioPersistencia">
+            <div class="modal-body" style="text-align: center">
+
+                <h:outputText
+                    value="#{cc.attrs.controlador.assistenteMovimentacao.descricaoProcesso}"/>
+                <br/>
+                <div
+                    style="#{cc.attrs.controlador.assistenteMovimentacao.total == 0 and cc.attrs.controlador.futurePersistencia ne null ? 'display: block' : 'display: none'}">
+                    <h:graphicImage
+                        value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                        styleClass="mtop05"/>
+                </div>
+                <div
+                    style="#{cc.attrs.controlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                    <h:outputText
+                        value="#{cc.attrs.controlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>%
+
+                    <div class="progress progress-striped active">
+                        <div class="bar"
+                             style="width: #{cc.attrs.controlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                    </div>
+                </div>
+            </div>
+
+
+        </h:form>
+    </div>
+
+    <div id="dialogAlertaInconsistenciaAoSalvar" class="modal hide fade">
+        <h:form id="FormularioAlertaInconsistencia">
+            <div class="modal-body" style="text-align: center">
+                <div class="alert alert-warning">
+                    <strong>Atenção!</strong> Foram encontradas inconsistências, caso deseje salvar clique em continuar, caso não queira salvar clique em cancelar.
+                </div>
+            </div>
+
+            <div class="modal-footer" style="text-align: center">
+                <div class="centralizado ">
+                    <p:commandButton value="Continuar"
+                                     styleClass="operacao mtop10 mrig05 prioritario"
+                                     icon="ui-icon-check"
+                                     title="Clique para salvar a redução dos bens, mesmo contendo inconsistências."
+                                     actionListener="#{cc.attrs.controlador.salvar()}"
+                                     disabled="#{cc.attrs.controlador.assistenteMovimentacao.bloquearAcoesTela}"
+                                     onclick="closeDialog(dialogAlertaInconsistenciaAoSalvar)"
+                                     update=":#{cc.attrs.id}:FormularioPersistencia"
+                                     onstart="aguarde.show();"
+                                     oncomplete="aguarde.hide();"/>
+
+                    <p:commandButton value="Cancelar"
+                                     style="height: 30px;"
+                                     styleClass="operacao mtop10"
+                                     icon="ui-icon-cancel"
+                                     title="Clique para cancelar"
+                                     onclick="closeDialog(dialogAlertaInconsistenciaAoSalvar)"
+                                     immediate="true"/>
+                </div>
+            </div>
+        </h:form>
+    </div>
+
+    <div id="dialogAlertaInconsistenciaAoProcessar" class="modal hide fade">
+        <h:form id="FormularioAlertaInconsistenciaAoProcessar">
+            <div class="modal-body" style="text-align: center">
+                <div class="alert alert-warning">
+                    <strong>Atenção!</strong> Foram encontradas inconsistências, caso deseje processar clique em continuar, caso não queira processar clique em cancelar.
+                </div>
+            </div>
+
+            <div class="modal-footer" style="text-align: center">
+                <div class="centralizado ">
+                    <p:commandButton value="Continuar"
+                                     styleClass="operacao mtop10 mrig05 prioritario"
+                                     icon="ui-icon-check"
+                                     title="Clique para salvar e processar a redução dos bens, mesmo contendo inconsistências."
+                                     actionListener="#{cc.attrs.controlador.concluir()}"
+                                     onclick="closeDialog(dialogAlertaInconsistenciaAoProcessar)"
+                                     update=":#{cc.attrs.id}:FormularioPersistencia"
+                                     onstart="aguarde.show();"
+                                     oncomplete="aguarde.hide();"/>
+
+                    <p:commandButton value="Cancelar"
+                                     style="height: 30px;"
+                                     styleClass="operacao mtop10"
+                                     icon="ui-icon-cancel"
+                                     title="Clique para cancelar"
+                                     onclick="closeDialog(dialogAlertaInconsistenciaAoProcessar)"
+                                     immediate="true"/>
+                </div>
+            </div>
+        </h:form>
+    </div>
+
+    <div id="dialogEstorno" class="modal hide fade">
+        <div class="modal-header alert-info" style="text-align: center">
+            <div class="centralizado ">
+                Estorno de <strong>#{cc.attrs.controlador.selecionado.tipoReducao.descricao}</strong> de
+                <strong>Bens #{cc.attrs.controlador.selecionado.tipoBem.descricao}</strong>
+            </div>
+        </div>
+        <h:form id="FormularioEstorno">
+            <div class="modal-body" style="text-align: center">
+                <h:outputText escape="false"
+                              value="#{cc.attrs.controlador.assistenteMovimentacao.descricaoProcesso}"/>
+                <br/>
+
+                <div
+                    style="#{cc.attrs.controlador.assistenteMovimentacao.total eq null ? 'display: block' : 'display: none'}">
+                    <h:graphicImage
+                        value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                        styleClass="mtop05"/>
+                </div>
+                <div
+                    style="#{cc.attrs.controlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                    <h:outputText
+                        value="#{cc.attrs.controlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>%
+
+                    <div class="progress progress-striped active">
+                        <div class="bar"
+                             style="width: #{cc.attrs.controlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer" style="text-align: center">
+                <div class="centralizado ">
+                    <p:button value="Visualizar Processo"
+                              icon="ui-icon-eye"
+                              styleClass="operacao"
+                              rendered="#{cc.attrs.controlador.futureEstornoConcluida()}"
+                              href="#{cc.attrs.controlador.caminhoPadrao}ver/#{cc.attrs.controlador.selecionado.id}"/>
+                </div>
+            </div>
+        </h:form>
+    </div>
+
+    <div id="dialogConfirmaEstorno" class="modal hide fade">
+        <h:form id="FormularioConfirmaEstorno">
+            <div class="modal-body alert-info" style="text-align: center">
+                A Data da #{cc.attrs.controlador.selecionado.tipoReducao.descricao} é
+
+                <h:outputText value="#{cc.attrs.controlador.selecionado.dataLancamento}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText> e a Data do Estorno é
+
+                <h:outputText value="#{sistemaControlador.dataOperacao}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>, tem certeza que deseja estornar nessa data?
+            </div>
+
+            <div class="modal-footer" style="text-align: center">
+                <div class="centralizado ">
+                    <p:commandButton value="Sim"
+                                     icon="ui-icon-check"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="operacao prioritario"
+                                     onclick="closeDialog(dialogConfirmaEstorno)"
+                                     actionListener="#{cc.attrs.controlador.prepararEstorno()}"/>
+
+                    <p:commandButton value="Não"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     title="Clique para cancelar operação"
+                                     icon="ui-icon-cancel"
+                                     styleClass="operacao mlef05"
+                                     onclick="closeDialog(dialogConfirmaEstorno)"/>
+                </div>
+            </div>
+        </h:form>
+    </div>
+
+    <p:dialog modal="true"
+              dynamic="true"
+              position="top"
+              style="position: fixed !important; margin-top: 35px"
+              draggable="false"
+              resizable="false"
+              showHeader="false"
+              width="900"
+              widgetVar="dlgValoresContabilizado"
+              closable="false">
+        <h:form id="formValoresContabilizado">
+            <legend class="legenda mbot02">Valores Contabilizados
+                <p:commandButton icon="ui-icon-close"
+                                 title="Clique para fechar."
+                                 process="@this"
+                                 style="float: right !important;"
+                                 styleClass="mtop10 botao-transparente"
+                                 onclick="aguarde.show();"
+                                 oncomplete="aguarde.hide();dlgValoresContabilizado.hide();"/>
+            </legend>
+
+            <div align="center" class="alert alert-block" style="font-size: 12px; padding: 1%">
+                Alguns bens não foram contabilizados. Clique na aba 'Bens' para mais detalhes.
+            </div>
+
+            <p:tabView>
+                <p:tab title="Valores">
+                    <p:scrollPanel mode="native" style="height: 400px">
+                        <table class="gridtable">
+                            <tr>
+                                <th class="alinhamentoEsquerda negrito">Grupo</th>
+                                <th class="alinhamentoDireita negrito">#{cc.attrs.controlador.selecionado.tipoReducao.descricao} (R$)</th>
+                                <th class="alinhamentoDireita negrito">Bens Móveis (R$)</th>
+                                <th class="alinhamentoDireita negrito">Grupo Patrimonial (R$)</th>
+                                <th class="alinhamentoDireita negrito">Contábil (R$)</th>
+                                <th class="alinhamentoDireita negrito">Diferença (R$)</th>
+                            </tr>
+                            <ui:repeat value="#{cc.attrs.controlador.valoresContabilizados}" var="vlCont">
+                                <tr>
+                                    <td class="alinhamentoEsquerda">
+                                        <h:outputText value="#{vlCont.grupo}"/>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText value="#{vlCont.reducao}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText value="#{vlCont.bensMoveis}"
+                                                      styleClass="#{vlCont.hasDiferencaBensMoveis() ? 'vermelhonegrito' : ''}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText value="#{vlCont.grupoBem}"
+                                                      styleClass="#{vlCont.hasDiferencaGrupoBem() ? 'vermelhonegrito' : ''}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText value="#{vlCont.contabil}"
+                                                      styleClass="#{vlCont.hasDiferencaContabil() ? 'vermelhonegrito' : ''}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText value="#{vlCont.diferenca}"
+                                                      styleClass="#{vlCont.hasDiferenca() ? 'vermelhonegrito' : ''}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="Total de Grupos #{cc.attrs.controlador.valoresContabilizados.size()}"
+                                        styleClass="negrito"/>
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalReducao}"
+                                                  styleClass="negrito">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalBensMoveis}"
+                                                  styleClass="negrito">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalGrupoPatrimonial}"
+                                                  styleClass="negrito">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalContabil}"
+                                                  styleClass="negrito">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText value="#{cc.attrs.controlador.valorTotalDiferenca}"
+                                                  styleClass="negrito">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </p:scrollPanel>
+                </p:tab>
+
+                <p:tab title="Bens">
+                    <h:outputLabel value="Mostrar Todos Registros "/>
+                    <p:selectBooleanButton
+                        label="Mostrar todos os registros independentente de contabilizado ou não."
+                        value="#{cc.attrs.controlador.mostrarTodosRegistroReducaoValorBemContabil}"
+                        onLabel=""
+                        style="width: 30px"
+                        styleClass="botao-transparente"
+                        offLabel=""
+                        onIcon="ui-icon-check"
+                        offIcon="ui-icon-close">
+                        <p:ajax update="panelBensContabilizados" process=":#{cc.attrs.id}:formValoresContabilizado"/>
+                    </p:selectBooleanButton>
+
+                    <p:outputPanel id="panelBensContabilizados">
+                        <p:scrollPanel mode="native" style="max-height: 300px" styleClass="mtop03"
+                                       rendered="#{cc.attrs.controlador.isEmAndamento()}">
+                            <table class="gridtable">
+                                <tr>
+                                    <th class="alinhamentoDireita negrito">Reg. Patrimonial</th>
+                                    <th class="alinhamentoEsquerda negrito">Descrição</th>
+                                    <th class="alinhamentoDireita negrito">Valor (R$)</th>
+                                </tr>
+                                <ui:repeat value="#{cc.attrs.controlador.reducoesValorBemContabil}" var="bemNaoCont">
+                                    <tr style="#{cc.attrs.controlador.mostrarTodosRegistroReducaoValorBemContabil ? 'none': bemNaoCont.isContabilizado() ? 'display: none':''}">
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{bemNaoCont.bem.identificacao}"
+                                                          styleClass="#{bemNaoCont.isContabilizado() ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                                        </td>
+                                        <td class="alinhamentoEsquerda">
+                                            <h:outputText value="#{bemNaoCont.bem.descricao}"/>
+                                        </td>
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{bemNaoCont.valor}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                <tr>
+                                    <td class="alinhamentoDireita" colspan="2">
+                                        Total
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText value="#{cc.attrs.controlador.valorTotalBensContabilizados}"
+                                                      styleClass="negrito">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </table>
+                        </p:scrollPanel>
+
+                        <p:scrollPanel mode="native" style="max-height: 300px" styleClass="mtop03"
+                                       rendered="#{cc.attrs.controlador.isEstornoEmAndamento()}">
+                            <table class="gridtable">
+                                <tr>
+                                    <th class="alinhamentoDireita negrito">Reg. Patrimonial</th>
+                                    <th class="alinhamentoEsquerda negrito">Descrição</th>
+                                    <th class="alinhamentoDireita negrito">Valor (R$)</th>
+                                </tr>
+                                <ui:repeat value="#{cc.attrs.controlador.reducoesValorBemEstornoContabil}"
+                                           var="bemNaoContEst">
+                                    <tr style="#{cc.attrs.controlador.mostrarTodosRegistroReducaoValorBemContabil ? 'none': bemNaoContEst.isContabilizado() ? 'display: none':''}">
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{bemNaoContEst.bem.identificacao}"
+                                                          styleClass="#{bemNaoContEst.isContabilizado() ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                                        </td>
+                                        <td class="alinhamentoEsquerda">
+                                            <h:outputText value="#{bemNaoContEst.bem.descricao}"/>
+                                        </td>
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{bemNaoContEst.valor}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                <tr>
+                                    <td class="alinhamentoDireita" colspan="2">
+                                        Total
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <h:outputText
+                                            value="#{cc.attrs.controlador.valorTotalBensContabilizadosEstorno}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </table>
+                        </p:scrollPanel>
+                    </p:outputPanel>
+                </p:tab>
+            </p:tabView>
+        </h:form>
+    </p:dialog>
+</cc:implementation>
+</html>

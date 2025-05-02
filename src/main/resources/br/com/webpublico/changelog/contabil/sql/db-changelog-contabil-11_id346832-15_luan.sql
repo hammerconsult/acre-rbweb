@@ -1,0 +1,35 @@
+DECLARE
+texto CLOB := '<div class="post-content"><hr>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/Cartilha-Rio-Branco-Mais-Limpa.pdf" target="_blank">CARTILHA RIO BRANCO MAIS LIMPA</a></strong>&nbsp;(Lei nº 2.093 de 22 de dezembro de 2014)</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2017-LEI-Nº-2.263-de-15-de-dezembro-de-2017-Torna-obrigatória-a-indicação-do-número-de-telefone-nas-placas.pdf" target="_blank">LEI Nº 2.263 DE 15 DE DEZEMBRO DE 2017</a></strong></p>
+<p style="text-align: justify;">“Torna obrigatória a indicação do número de telefone para reclamações nas placas sinalizadoras de vagas especiais de estacionamento.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2017-LEI-Nº-2.247-de-01-de-setembro-de-2017-obrigatoriedade-dos-estabelecimentos-comerciais-de-afixar-em-locais-visíveis-os-números-de-taxi-e-moto-taxi.pdf" target="_blank">LEI Nº 2.247 DE 01 DE SETEMBRO DE 2017</a></strong></p>
+<p style="text-align: justify;">“Dispõe sobre a obrigatoriedade dos estabelecimentos comerciais que servem bebidas alcoólicas de afixar em cardápios e demais locais visíveis os números de telefones de cooperativas ou centrais de táxi e dá outras providências.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2016-LEI-Nº-2.165-de-13-de-Janeiro-de-2016-Torna-obrigatória-a-exibição-de-vídeos-educativos-antidrogas-em-eventos..pdf" target="_blank">LEI Nº 2.165 DE 13 DE JANEIRO DE 2016</a></strong></p>
+<p style="text-align: justify;">“Torna obrigatória a exibição de vídeos educativos antidrogas nas aberturas de shows e eventos culturais no Município de Rio Branco e dá outras providências.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/Lei_2.093-2014-_Rio_Branco_mais_limpa.pdf" target="_blank">LEI Nº 2.093 DE 22 DE DEZEMBRO DE 2014</a></strong></p>
+<p style="text-align: justify;">“Dispõe sobre a divulgação de anúncios e instalação de engenhos publicitários no Município de Rio Branco e dá outras providências.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2014-LEI-Nº-2.073-DE-21-DE-JULHO-DE-2014-Dispõe-sobre-a-valorização-das-pessoas-da-raça-negra-nas-peças-publicitárias-da-Administração-Municipal.pdf" target="_blank">LEI Nº 2.073 DE 21 DE JULHO DE 2014</a></strong></p>
+<p style="text-align: justify;">“Dispõe sobre a valorização das pessoas da raça negra nas peças publicitárias de órgãos da Administração Municipal.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2014-DECRETO-Nº-803-2014-Regulamenta-a-Lei-nº-2.020-2013-fixação-de-placa.pdf" target="_blank">DECRETO Nº 803 DE 18 DE JUNHO DE 2014</a></strong></p>
+<p style="text-align: justify;">“Regulamenta a Lei Municipal nº 2.020, de 22 de novembro de 2013, que determina a fixação de placa de advertência sobre a exploração sexual de crianças e adolescentes, e dá outras providências”.</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2013-LEI-Nº-2.020-DE-22.11.2013-Placa-de-Exploração-Sexual.pdf" target="_blank">LEI Nº 2.020 DE 22 DE NOVEMBRO DE 2013</a></strong></p>
+<p style="text-align: justify;">“Determina a fixação de placa de advertência sobre a exploração sexual de crianças e adolescentes, e dá outras providências.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2013-DECRETO-Nº-1663-2013-Regulamenta-a-Lei-Municipal-n.º-1.865-2011-Publicidade-e-Propaganda.pdf" target="_blank">DECRETO Nº 1.663 DE 25 DE JULHO DE 2013</a></strong></p>
+<p style="text-align: justify;">“Regulamenta a Lei Municipal n.º 1.865, de 30 de novembro de 2011 sobre a veiculação de publicidade e propaganda através dos veículos de transporte público individual de passageiros, espécie táxi, no Município de Rio Branco.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2012-LEI-Nº-1.918-de-05.07.2012-DISPÕE-SOBRE-FIXAÇÃO-DE-PLACA-INFORMATIVA-NO-INTERIOR-DOS-TRANSPORTES-COLETIVOS.pdf" target="_blank">LEI Nº 1.918 DE 05 DE JULHO DE 2012</a></strong></p>
+<p style="text-align: justify;">“Dispõe sobre a fixação de placa informativa no interior dos transportes coletivos do Município de Rio Branco-Acre”.</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2011-LEI-Nº-1.866-de-30.11.2011-ISENÇÃO-DA-TAXA-DE-ANUNCIO-TÁXI.pdf" target="_blank">LEI Nº 1.866 DE 30 DE NOVEMBRO DE 2011</a></strong></p>
+<p style="text-align: justify;">“Dispõe sobre a isenção da taxa de fiscalização de anúncios para os contribuintes que veicularem gratuitamente propaganda institucional nos veículos de transporte individual de passageiros, tipo táxi, pelo período de 02 (dois) meses.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2011-LEI-Nº-1.865-de-30.11.2011-PUBLICIDADE-E-PROPAGANDA-NOS-TÁXIS.pdf" target="_blank">LEI Nº 1.865 DE 30 DE NOVEMBRO DE 2011</a></strong></p>
+<p style="text-align: justify;">“Dispõe sobre a veiculação de publicidade e propaganda através dos veículos de transporte público individual de passageiros, do tipo táxi, no Município de Rio Branco.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2011-LEI-Nº-1.852-de-13.07.2011-Implantação-de-Banners-contendo-placas-de-transito-nas-escolas.pdf" target="_blank">LEI Nº 1.852 DE 13 DE JULHO DE 2011</a></strong></p>
+<p style="text-align: justify;">“Dispõe sobre a implantação de banners contendo placas de trânsito no interior das escolas municipais e privadas do Município de Rio Branco, com caráter educativo e informativo.”</p>
+<p style="text-align: justify;"><strong><a href="http://portalcgm.riobranco.ac.gov.br/lai/wp-content/uploads/2015/06/2006-LEI-Nº-1.607-de-16.08.2006-Espaço-destinado-ao-Disque-Denuncia-nos-Veiculos.pdf" target="_blank">LEI Nº 1.607 DE 16 DE OUTUBRO DE 2006</a></strong></p>
+<p style="text-align: justify;">“Ficam as empresas que operam no Sistema de Transporte Coletivo do Município de Rio Branco, obrigadas a destinar espaço no interior de seus veículos, destinado à divulgação de números de telefone do Disque-denúncia Nacional da Secretaria Especial de Direitos Humanos e demais instituições que atuam no enfrentamento a violência contra a criança e adolescente.”</p>
+</div>';
+BEGIN
+update PAGINAPREFEITURAPORTAL
+set CONTEUDOHTML = texto
+where NOME = 'Publicidade e Propaganda' and CHAVE = 'publicidade-propaganda';
+END;

@@ -1,0 +1,1 @@
+update unidadeorganizacional set enderecodesc = 'RUA RUI BARBOSA, 285', contabancaria = '908207', agenciabancaria = '35505'

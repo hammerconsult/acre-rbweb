@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario" style="background-color: #EAF0F7!important;">
+
+            <div style="text-align: center!important; ">
+
+                <img src="/img/graph.jpg" width="40" height="40" alt="imagem de um gráfico"
+                     style="margin-top: 10px!important;"/>
+
+                <h1>Dashboard de Protocolos</h1>
+
+                <p:commandButton value="Buscar Informações"
+                                 icon="ui-icon-search"
+                                 styleClass="icone_azul"
+                                 update="@none"
+                                 process="@none"
+                                 id="btnBuscar"
+                                 style=" height: 32px;"
+                                 onclick="pesquisar();"/>
+
+                <p:commandButton value="Limpar"
+                                 icon="ui-icon-clear"
+                                 styleClass="icone_azul"
+                                 update="@none"
+                                 process="@none"
+                                 id="btnLimpar"
+                                 style=" height: 32px;"
+                                 onclick="limpar();"/>
+
+            </div>
+
+            <table style="width: 100%!important; " id="tabela">
+                <tr style="width: 100%!important;">
+                    <td style="width: 50%!important;vertical-align: top!important;">
+                        <div class="thumbnail" style="background-color: white!important; margin: 2%!important;">
+                            <div style="height: 250px !important;">
+                                <canvas id="chartProtocoloGerados"></canvas>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="width: 50%!important;vertical-align: top!important;">
+                        <div class="thumbnail" style="background-color: white!important; margin: 2%!important; ">
+                            <div style="height: 250px !important;">
+                                <canvas id="chartProtocoloArquivado"></canvas>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr style="width: 100%!important;  ">
+                    <td style="width: 50%!important;vertical-align: top!important;">
+                        <div class="thumbnail" style="background-color: white!important;margin: 2%!important; height: 430px !important;">
+                            <div style="height: 400px !important;">
+                                <canvas id="chartProtocoloFinalizado"></canvas>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="width: 50%!important;vertical-align: top!important;">
+                        <div class="thumbnail" style="background-color: white!important; margin: 2%!important; height: 430px !important;">
+                            <div style="height: 400px !important;">
+                                <div class="btn-group pull-left">
+                                    <button type="button" class="btn btn-primary active" id="procentagem"
+                                            onclick="atribuirTipo(true)">Porcentagem
+                                    </button>
+                                    <button type="button" class="btn btn-primary" id="quantidade"
+                                            onclick="atribuirTipo(false)">Quantidade
+                                    </button>
+                                </div>
+                                <canvas id="chartProtocoloTodos"></canvas>
+                            </div>
+                        </div>
+                    </td>
+
+                </tr>
+            </table>
+        </h:form>
+
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/chart_js/dist/Chart.js"></script>
+
+        <script type="text/javascript">
+            var charProtocoloGerados = null;
+            var charProtocoloArquivados = null;
+            var charProtocoloFinalizados = null;
+            var charProtocoloTodos = null;
+            var porcentagem = true;
+
+            window.onload = function () {
+                jQuery('#Formulario\\:btnLimpar').addClass('ui-state-disabled');
+                pesquisar()
+            }
+
+            function atribuirTipo(valor) {
+                this.porcentagem = valor;
+
+                if (porcentagem == true) {
+                    jQuery('#procentagem').addClass('active');
+                    jQuery('#quantidade').removeClass('active');
+                } else {
+                    jQuery('#procentagem').removeClass('active');
+                    jQuery('#quantidade').addClass('active');
+                }
+
+            }
+
+
+            function limpar() {
+                try {
+                    if (this.charProtocoloGerados != null) {
+                        this.charProtocoloGerados.destroy();
+                    }
+                    if (this.charProtocoloArquivados != null) {
+                        this.charProtocoloArquivados.destroy();
+                    }
+                    if (this.charProtocoloFinalizados != null) {
+                        this.charProtocoloFinalizados.destroy();
+                    }
+                    if (this.charProtocoloTodos != null) {
+                        this.charProtocoloTodos.destroy();
+                    }
+
+                } catch (exception_var_1) {
+                    console.log(exception_var_1)
+                }
+                jQuery('#Formulario\\:btnBuscar').removeClass('ui-state-disabled');
+                jQuery('#Formulario\\:btnLimpar').addClass('ui-state-disabled');
+            }
+
+            function pesquisar() {
+                realizarBusca();
+            }
+
+            function realizarBusca() {
+                aguarde.show();
+
+                jQuery('#Formulario\\:btnBuscar').addClass('ui-state-disabled');
+                jQuery('#Formulario\\:btnLimpar').removeClass('ui-state-disabled');
+
+                var chartProtocoloGerados = document.getElementById("chartProtocoloGerados");
+                if (chartProtocoloGerados != null) {
+                    chartProtocoloGerados = chartProtocoloGerados.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/protocolo-gerado',
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetorno(chartProtocoloGerados, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+
+                var chartProtocoloArquivado = document.getElementById("chartProtocoloArquivado");
+                if (chartProtocoloArquivado != null) {
+                    chartProtocoloArquivado = chartProtocoloArquivado.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/protocolo-arquivado',
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoArquivado(chartProtocoloArquivado, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+                var chartProtocoloFinalizado = document.getElementById("chartProtocoloFinalizado");
+                if (chartProtocoloFinalizado != null) {
+                    chartProtocoloFinalizado = chartProtocoloFinalizado.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/protocolo-finalizado',
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoFinalizado(chartProtocoloFinalizado, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+                var chartProtocoloTodos = document.getElementById("chartProtocoloTodos");
+                if (chartProtocoloTodos != null) {
+                    chartProtocoloTodos = chartProtocoloTodos.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/protocolo-por-situacao?&amp;porcentagem=' + porcentagem,
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoTodos(chartProtocoloTodos, JSON.parse(retorno));
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+            }
+
+            function tratarRetorno(chartProtocoloGerados, retorno) {
+                this.charProtocoloGerados = new Chart(chartProtocoloGerados, retorno);
+                tratarValoresRetorno(retorno);
+            }
+
+            function tratarRetornoArquivado(chartProtocoloArquivado, retorno) {
+                this.charProtocoloArquivados = new Chart(chartProtocoloArquivado, retorno);
+                tratarValoresRetorno(retorno);
+            }
+
+            function tratarRetornoFinalizado(chartProtocoloFinalizado, retorno) {
+                this.charProtocoloFinalizados = new Chart(chartProtocoloFinalizado, retorno);
+                tratarValoresRetorno(retorno);
+
+            }
+
+            function tratarRetornoTodos(chartProtocoloTodos, retorno) {
+                this.charProtocoloTodos = new Chart(chartProtocoloTodos, retorno);
+
+                retorno.options.tooltips = {
+                    callbacks: {
+                        label: function (t, d) {
+                            if (porcentagem == true) {
+                                return formatarValorPorcentagemDashboard(retorno.data.datasets[0].data[t.index]);
+                            } else {
+                                return formatarValorInteiroDashboard(retorno.data.datasets[0].data[t.index]);
+                            }
+                        }
+
+                    }
+                };
+
+
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom'
+                };
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+                aguarde.hide();
+            }
+
+            function tratarValoresRetorno(retorno) {
+                retorno.options.tooltips = {
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorInteiroDashboard(t.yLabel);
+                        }
+                    }
+                };
+
+                retorno.options.scales = {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorInteiroDashboard(value);
+                            }
+                        }
+                    }]
+                };
+
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+            }
+
+
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

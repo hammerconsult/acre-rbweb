@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:panel header="Consulta de Processo de Regularização de Construção" id="panelConsulta">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Cadastro Imobiliário:"/>
+                    <p:autoComplete queryDelay="1000" id="cadastroimobiliario"
+                                    title="Selecione um Cadastro Imobiliário"
+                                    value="#{consultaProcRegularizaConstrucaoControlador.cadastroImobiliario}"
+                                    completeMethod="#{componentePesquisaCadastroImobiliarioControlador.completaCadastroImobiliarioAtivosJDBC}"
+                                    var="c"
+                                    dropdown="true"
+                                    size="70"
+                                    itemLabel="#{c.inscricaoCadastral}"
+                                    itemValue="#{c.id}"
+                                    converter="#{componentePesquisaCadastroImobiliarioControlador.converterCadastroImobiliario}">
+                        <p:ajax event="itemSelect" process="@this" update="@form"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{consultaProcRegularizaConstrucaoControlador.selecionarCadastroImobiliario()}"/>
+                    </p:autoComplete>
+
+                    <h:outputLabel value="Proprietário:"/>
+                    <ui:repeat
+                        value="#{consultaProcRegularizaConstrucaoControlador.cadastroImobiliario.getPropriedadeVigente()}"
+                        var="prop">
+                        <h:outputText
+                            value="#{prop.pessoa.nome} (#{prop.pessoa.cpf_Cnpj})"
+                            styleClass="negrito"/><br/>
+                    </ui:repeat>
+
+                    <h:outputLabel value="Área Construída:"/>
+                    <h:outputLabel
+                        value="#{consultaProcRegularizaConstrucaoControlador.cadastroImobiliario.areaTotalConstruida}"
+                        styleClass="negrito">
+                        <f:convertNumber pattern="###,##0.00"/>
+                        m²
+                    </h:outputLabel>
+                </h:panelGrid>
+                <p:panel style="text-align: center; border: 0 !important">
+                    <p:commandButton id="btPesquisa"
+                                     icon="ui-icon-search"
+                                     title="Pesquisar"
+                                     value="Pesquisar"
+                                     update=":Formulario:tabelaProcessos"
+                                     onclick="aguarde.show()"
+                                     onsuccess="aguarde.hide()"
+                                     process="@this"
+                                     actionListener="#{consultaProcRegularizaConstrucaoControlador.consultar()}"
+                                     styleClass="operacao prioritario"/>
+                    <br/>
+                </p:panel>
+
+                <p:dataTable value="#{consultaProcRegularizaConstrucaoControlador.processos}"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             paginator="true" rows="10"
+                             paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             rowsPerPageTemplate="10,50,100"
+                             var="proc"
+                             id="tabelaProcessos"
+                             emptyMessage="Nenhum registro encontrado">
+                    <p:column headerText="Proc. Reg.">
+                        <h:outputText value="#{proc.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Exercício" style="text-align: center">
+                        <h:outputText value="#{proc.exercicio}"/>
+                    </p:column>
+                    <p:column headerText="Data do Processo" style="text-align: center">
+                        <h:outputText value="#{proc.dataCriacao}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor (UFM)" style="text-align: right">
+                        <h:outputText value="-" rendered="#{proc.ultimoAlvara eq null}"/>
+                        <h:outputText value="#{proc.ultimoAlvara.processoCalcAlvaConstHabi.calculosAlvaraConstrucaoHabitese.get(0).valorUFM}" rendered="#{proc.ultimoAlvara ne null}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Vencimento" style="text-align: center">
+                        <h:outputText value="-"
+                                      rendered="#{proc.ultimoAlvara eq null}"/>
+                        <h:outputText
+                            value="#{proc.ultimoAlvara.dataVencimentoCartaz}"
+                            rendered="#{proc.ultimoAlvara ne null}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="DAM Alvará" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         process="@this"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{!consultaProcRegularizaConstrucaoControlador.canEmitirDAMAlvara(proc)}"
+                                         actionListener="#{consultaProcRegularizaConstrucaoControlador.emitirDAMAlvara(proc)}"
+                                         title="Imprimir o DAM do Alvará"
+                                         icon="ui-icon-print"/>
+                    </p:column>
+                    <p:column headerText="DAM Habite-se" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         process="@this"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{!consultaProcRegularizaConstrucaoControlador.canEmitirDAMHabitse(proc)}"
+                                         actionListener="#{consultaProcRegularizaConstrucaoControlador.emitirDAMHabitese(proc)}"
+                                         title="Imprimir o DAM do Habite-se"
+                                         icon="ui-icon-print"/>
+                    </p:column>
+                    <p:column headerText="DAM Vistoria" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         process="@this"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{!consultaProcRegularizaConstrucaoControlador.canEmitirDAMTaxaVistoria(proc)}"
+                                         actionListener="#{consultaProcRegularizaConstrucaoControlador.emitirDAMAlvara(proc)}"
+                                         title="Imprimir o DAM da Vistoria"
+                                         icon="ui-icon-print"/>
+                    </p:column>
+                    <p:column headerText="Alvará" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         process="@this"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{!consultaProcRegularizaConstrucaoControlador.canImprimirAlvara(proc)}"
+                                         actionListener="#{consultaProcRegularizaConstrucaoControlador.imprimirAlvara(proc)}"
+                                         title="Imprimir o Alvará"
+                                         icon="ui-icon-print"/>
+                    </p:column>
+                    <p:column headerText="Habite-se" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         process="@this"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{!consultaProcRegularizaConstrucaoControlador.canImprimirHabitese(proc)}"
+                                         actionListener="#{consultaProcRegularizaConstrucaoControlador.imprimirHabitese(proc)}"
+                                         title="Imprimir o Habite-se"
+                                         icon="ui-icon-print"/>
+                    </p:column>
+                    <p:column headerText="Recibo" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         disabled="true"
+                                         title="Visualizar os Recibos de Impressão"
+                                         icon="ui-icon-document"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+        <p:dialog
+            header="Escolha o Habite-se"
+            modal="true" widgetVar="dlgEscolherHabitese" width="650" height="150"
+            id="dialogEscolherHabitese">
+            <h:form id="formularioEmitirDam">
+                <p:dataTable value="#{consultaProcRegularizaConstrucaoControlador.habitesesDisponiveis}"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             paginator="true" rows="10"
+                             paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             rowsPerPageTemplate="10,50,100"
+                             var="habi"
+                             emptyMessage="Nenhum registro encontrado">
+                    <p:column headerText="Código">
+                        <h:outputText value="#{habi.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Protocólo">
+                        <h:outputText value="#{habi.numeroProtocolo}/#{habi.anoProtocolo}"/>
+                    </p:column>
+                    <p:column headerText="Data Lançamento" style="text-align: center">
+                        <h:outputText value="#{habi.dataLancamento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Valor (UFM)" style="text-align: right">
+                        <h:outputText value="0">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="DAM Habite-se" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         process="@this"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{habi.situacao ne 'EFETIVADO'}"
+                                         actionListener="#{consultaProcRegularizaConstrucaoControlador.emitirDAMHabitese(habi)}"
+                                         title="Imprimir o DAM do Habite-se"
+                                         icon="ui-icon-print"/>
+                    </p:column>
+                    <p:column headerText="Habite-se" style="text-align: center">
+                        <p:commandButton styleClass="wp-botao-tabela"
+                                         process="@this"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{habi.situacao ne 'FINALIZADO'}"
+                                         actionListener="#{consultaProcRegularizaConstrucaoControlador.imprimirHabitese(habi)}"
+                                         title="Imprimir o Habite-se"
+                                         icon="ui-icon-print"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

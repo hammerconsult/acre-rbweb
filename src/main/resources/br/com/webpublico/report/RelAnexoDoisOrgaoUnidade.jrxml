@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelAnexoDoisOrgaoUnidade" pageWidth="842" pageHeight="595" orientation="Landscape" whenNoDataType="AllSectionsNoDetail" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+	<property name="ireport.zoom" value="2.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["/home/major/NetBeansProjects/sistemas/implantarProtocolo/webpublico/src/java/br/com/webpublico/report/"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="ANO_EXERCICIO" class="java.lang.String"/>
+	<parameter name="EXERCICIO_ID" class="java.lang.Long"/>
+	<parameter name="USER" class="java.lang.String"/>
+	<parameter name="SQL" class="java.lang.String">
+		<defaultValueExpression><![CDATA["where 1=1"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DATA" class="java.lang.String"/>
+	<parameter name="CONFIGURACAO_CABECALHO" class="br.com.webpublico.entidades.ConfiguracaoCabecalho"/>
+	<queryString>
+		<![CDATA[select
+     conta_codigo,
+     trim(conta_descricao) as conta_descricao,
+     ORG_CODIGO,
+     trim(ORG_DESCRICAO)as ORG_DESCRICAO,
+     sum(receita_valor)as receita_valor,
+     sum(receita_valor_rep)as receita_valor_rep,
+     nivel
+from(WITH filho(id_conta,conta_sup,conta_codigo,conta_descricao,receita_id,receita_loa,receita_entidade,receita_valor,receita_valor_rep)as(
+     select conta.id,conta.SUPERIOR_ID,conta.CODIGO,conta.DESCRICAO,receita.ID,receita.LOA_ID,receita.ENTIDADE_ID,receita.valor,receita.valor from conta
+     INNER JOIN RECEITALOA receita on receita.CONTADERECEITA_ID=conta.ID
+     INNER JOIN LOA lo on lo.ID = receita.LOA_ID
+     INNER JOIN LDO ld on ld.ID = lo.LDO_ID and ld.EXERCICIO_ID=$P{EXERCICIO_ID}
+     UNION all
+     select sup.ID,sup.SUPERIOR_ID,sup.CODIGO,sup.DESCRICAO,receita.ID,receita.LOA_ID,COALESCE(receita.ENTIDADE_ID, f.receita_entidade),receita.valor,f.receita_valor_rep from filho f
+     INNER JOIN conta sup on f.conta_sup = sup.ID
+     LEFT JOIN RECEITALOA receita on sup.ID =receita.CONTADERECEITA_ID)
+select DISTINCT(id_conta),conta_sup,conta_codigo,conta_descricao,ho_org.codigo AS ORG_CODIGO,ho_org.descricao AS ORG_DESCRICAO,receita_id,receita_loa,receita_entidade,receita_valor,receita_valor_rep, nivelestrutura(conta_codigo,'.')as nivel from filho
+INNER JOIN HIERARQUIAORGANIZACIONAL ho_und on receita_entidade = ho_und.SUBORDINADA_ID
+       and to_date($P{DATA},'dd/mm/yyyy') between trunc(ho_und.iniciovigencia) and  coalesce(trunc(ho_und.fimvigencia), to_date($P{DATA},'dd/mm/yyyy'))
+       and ho_und.TIPOHIERARQUIAORGANIZACIONAL = 'ORCAMENTARIA'
+INNER JOIN HIERARQUIAORGANIZACIONAL ho_org on ho_und.SUPERIOR_ID = ho_org.SUBORDINADA_ID
+       and to_date($P{DATA},'dd/mm/yyyy') between trunc(ho_org.iniciovigencia) and  coalesce(trunc(ho_org.fimvigencia), to_date($P{DATA},'dd/mm/yyyy'))
+       and ho_org.TIPOHIERARQUIAORGANIZACIONAL = 'ORCAMENTARIA'
+$P!{SQL}
+order by filho.conta_codigo)reg
+group by
+     conta_codigo,
+     conta_descricao,
+     ORG_CODIGO,
+     ORG_DESCRICAO,
+     nivel
+order by
+      ORG_CODIGO,
+      ORG_DESCRICAO,
+      conta_codigo,
+      conta_descricao,
+      nivel]]>
+	</queryString>
+	<field name="CONTA_CODIGO" class="java.lang.String"/>
+	<field name="CONTA_DESCRICAO" class="java.lang.String"/>
+	<field name="ORG_CODIGO" class="java.lang.String"/>
+	<field name="ORG_DESCRICAO" class="java.lang.String"/>
+	<field name="RECEITA_VALOR" class="java.math.BigDecimal"/>
+	<field name="RECEITA_VALOR_REP" class="java.math.BigDecimal"/>
+	<field name="NIVEL" class="java.math.BigDecimal"/>
+	<variable name="RECEITA_VALOR_1" class="java.math.BigDecimal" resetType="Group" resetGroup="GROUP_ORGAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{CONTA_CODIGO}.substring(0,1).equals("9")? $F{RECEITA_VALOR}.multiply(new BigDecimal("-1")):$F{RECEITA_VALOR}]]></variableExpression>
+	</variable>
+	<variable name="NIVEL" class="java.lang.String">
+		<variableExpression><![CDATA[$F{CONTA_CODIGO}.split("\\.")]]></variableExpression>
+	</variable>
+	<variable name="NIVELCT" class="java.lang.String"/>
+	<variable name="CONTA_CODIGO_1" class="java.lang.Integer" resetType="Group" resetGroup="GROUP_ORGAO" calculation="DistinctCount">
+		<variableExpression><![CDATA[$F{CONTA_CODIGO}]]></variableExpression>
+	</variable>
+	<group name="GROUP_ORGAO" isStartNewPage="true">
+		<groupExpression><![CDATA[$F{ORG_CODIGO}]]></groupExpression>
+		<groupHeader>
+			<band height="68">
+				<textField isBlankWhenNull="true">
+					<reportElement x="32" y="42" width="100" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{ORG_CODIGO}]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="true">
+					<reportElement x="134" y="42" width="421" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{ORG_DESCRICAO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="2" y="57" width="83" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Código]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="96" y="57" width="100" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Descrição]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="0" y="42" width="31" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Orgão:]]></text>
+				</staticText>
+				<line>
+					<reportElement x="0" y="67" width="802" height="1"/>
+				</line>
+				<line>
+					<reportElement x="0" y="55" width="802" height="1"/>
+				</line>
+				<textField>
+					<reportElement x="702" y="18" width="100" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Exercício "+$P{ANO_EXERCICIO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="42" y="18" width="660" height="10"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[ANEXO 02 - RECEITA SEGUNDO AS CATEGORIAS ECONÔMICAS]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="42" y="0" width="513" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$P{CONFIGURACAO_CABECALHO}.getTitulo()]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="627" y="28" width="175" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Anexo 02 R - ORGÃO, da lei 4320/64]]></text>
+				</staticText>
+				<image isUsingCache="true">
+					<reportElement x="2" y="0" width="40" height="42"/>
+					<imageExpression><![CDATA[$P{CONFIGURACAO_CABECALHO}.getLogoInputStream()]]></imageExpression>
+				</image>
+				<staticText>
+					<reportElement x="644" y="57" width="68" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[FONTE]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="713" y="57" width="88" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[CAT. ECONÔMICA]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="547" y="57" width="88" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[DESDOBRAMENTO]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="16">
+				<textField pattern="#,##0.00" isBlankWhenNull="true">
+					<reportElement x="690" y="3" width="111" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{RECEITA_VALOR_1}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="635" y="3" width="55" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Total Orgão]]></text>
+				</staticText>
+				<line>
+					<reportElement x="0" y="2" width="802" height="1"/>
+				</line>
+				<line>
+					<reportElement x="0" y="13" width="802" height="1"/>
+				</line>
+				<break>
+					<reportElement x="0" y="14" width="100" height="1"/>
+				</break>
+				<subreport>
+					<reportElement x="0" y="16" width="802" height="0"/>
+					<subreportParameter name="EXERCICIO_ID">
+						<subreportParameterExpression><![CDATA[$P{EXERCICIO_ID}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="SUBREPORT_DIR">
+						<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="SQL">
+						<subreportParameterExpression><![CDATA[$P{SQL}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="DATA">
+						<subreportParameterExpression><![CDATA[$P{DATA}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="ORG_CODIGO">
+						<subreportParameterExpression><![CDATA[$F{ORG_CODIGO}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelAnexoDoisOrgaoUnidade_SubUnidades.jasper"]]></subreportExpression>
+				</subreport>
+			</band>
+		</groupFooter>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="10">
+			<textField>
+				<reportElement x="0" y="0" width="85" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTA_CODIGO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="91" y="0" width="465" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTA_DESCRICAO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="556" y="0" width="79" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()>=3]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTA_CODIGO}.substring(0,1).equals("9")? $F{RECEITA_VALOR_REP}.multiply(new BigDecimal("-1")):$F{RECEITA_VALOR_REP}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="636" y="0" width="76" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()==2]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTA_CODIGO}.substring(0,1).equals("9")? $F{RECEITA_VALOR_REP}.multiply(new BigDecimal("-1")):$F{RECEITA_VALOR_REP}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="713" y="0" width="88" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()==1]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTA_CODIGO}.substring(0,1).equals("9")? $F{RECEITA_VALOR_REP}.multiply(new BigDecimal("-1")):$F{RECEITA_VALOR_REP}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="10">
+			<textField>
+				<reportElement x="702" y="0" width="60" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="761" y="0" width="40" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="2" y="0" width="276" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{USER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+</jasperReport>

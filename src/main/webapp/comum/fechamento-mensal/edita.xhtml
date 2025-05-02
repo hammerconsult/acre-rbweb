@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty origem="#{fechamentoMensalControlador.caminhoPadrao}listar/" controlador="#{fechamentoMensalControlador}"/>
+            <p:panel header="Fechamentos Mensais do Exercício #{fechamentoMensalControlador.selecionado.exercicio}">
+                <table>
+                    <tr>
+                        <td>
+                            <h:outputText value=" "/>
+                        </td>
+                        <td>
+                            <h:outputText value="Contabilidade: " styleClass="negrito"/>
+                        </td>
+                    </tr>
+
+                    <ui:repeat value="#{fechamentoMensalControlador.selecionado.meses}" var="mes">
+                        <tr>
+                            <td>
+                                <h:outputText value="#{mes.mes.descricao}: " styleClass="negrito"/>
+                            </td>
+                            <td>
+                                <h:selectOneMenu value="#{mes.situacaoContabil}">
+                                    <f:selectItems value="#{fechamentoMensalControlador.situacoes}"/>
+                                </h:selectOneMenu>
+                            </td>
+                            <td>
+                                <p:commandButton id="btn-agendamento"
+                                                 icon="#{mes.tipoSituacaoAgendamento eq null ? 'ui-icon-plus' : (mes.tipoSituacaoAgendamento.aguardando ? 'ui-icon-pencil' : 'ui-icon-search')}"
+                                                 title="Clique para #{mes.tipoSituacaoAgendamento eq null ? 'agendar o' : (mes.tipoSituacaoAgendamento.aguardando ? 'editar o agendamento do' : 'ver o agendamento do')} reprocessamento contábil automático."
+                                                 disabled="#{!mes.situacaoContabil.isAberto() and mes.tipoSituacaoAgendamento eq null}"
+                                                 actionListener="#{fechamentoMensalControlador.atribuirFechamentoMes(mes)}"
+                                                 process="@this"
+                                                 update=":formAgendamento"
+                                                 onclick="aguarde.show();"
+                                                 style="height: 30px"
+                                                 styleClass="prioritario"/>
+                            </td>
+                        </tr>
+                    </ui:repeat>
+                </table>
+            </p:panel>
+            <fc:rodapePretty controlador="#{fechamentoMensalControlador}"/>
+        </h:form>
+
+        <p:dialog widgetVar="dialogNovoAgendamento"
+                  modal="false"
+                  closable="false"
+                  resizable="false"
+                  dynamic="false"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formAgendamento">
+                <p:panel header="Novo Agendamento de Reprocessamento Contábil Automático">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Situação: "/>
+                        <h:outputText styleClass="negrito"
+                                      value="#{fechamentoMensalControlador.fechamentoMensalMes.tipoSituacaoAgendamento eq null ? '' : fechamentoMensalControlador.fechamentoMensalMes.tipoSituacaoAgendamento.descricao}"/>
+
+                        <h:outputText value="Data Inicial do Reprocessamento: "/>
+                        <h:outputText styleClass="negrito"
+                                      value="#{fechamentoMensalControlador.fechamentoMensalMes.dataInicialReprocessamento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText value="Data Final do Reprocessamento: "/>
+                        <h:outputText styleClass="negrito"
+                                      value="#{fechamentoMensalControlador.fechamentoMensalMes.dataFinalReprocessamento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <fc:outputLabelObrigatorio value="Data do Agendamento"/>
+                        <p:calendar title="Informe a data e a hora em que o reprocessamento será executado."
+                                    value="#{fechamentoMensalControlador.fechamentoMensalMes.dataAgendamento}"
+                                    onkeypress="mascara(this, mDataHora)"
+                                    maxlength="16"
+                                    size="16"
+                                    style="text-align: right"
+                                    autocomplete="off"
+                                    navigator="true" pattern="dd/MM/yyyy HH:mm"/>
+                    </h:panelGrid>
+                </p:panel>
+                <center>
+                    <p:commandButton value="Salvar"
+                                     icon="ui-icon-disk"
+                                     rendered="#{fechamentoMensalControlador.fechamentoMensalMes.tipoSituacaoAgendamento ne null
+                                                 and !fechamentoMensalControlador.fechamentoMensalMes.tipoSituacaoAgendamento.aguardando}"
+                                     onclick="if (!confirm('Este agendamento já foi executado, deseja realizar outro agendamento para o mesmo mês?')) {return false; } else {aguarde.show();}"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="operacao mtop05 mlef05"
+                                     actionListener="#{fechamentoMensalControlador.salvarEAgendarFechamentoMes()}"
+                                     disabled="#{!fechamentoMensalControlador.fechamentoMensalMes.situacaoContabil.aberto}"
+                                     update=":Formulario"/>
+
+                    <p:commandButton value="Salvar"
+                                     icon="ui-icon-disk"
+                                     rendered="#{fechamentoMensalControlador.fechamentoMensalMes.tipoSituacaoAgendamento eq null
+                                                 or fechamentoMensalControlador.fechamentoMensalMes.tipoSituacaoAgendamento.aguardando}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="operacao mtop05 mlef05"
+                                     actionListener="#{fechamentoMensalControlador.salvarEAgendarFechamentoMes()}"
+                                     disabled="#{!fechamentoMensalControlador.fechamentoMensalMes.situacaoContabil.aberto}"
+                                     update=":Formulario"/>
+
+                    <p:commandButton value="Remover"
+                                     icon="ui-icon-trash"
+                                     onclick="if (!confirm('Tem certeza que deseja remover este agendamento?')) {return false; } else {aguarde.show();}"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="operacao mtop05 mlef05"
+                                     actionListener="#{fechamentoMensalControlador.removerAgendamentoFechamentoMes()}"
+                                     disabled="#{!fechamentoMensalControlador.fechamentoMensalMes.situacaoContabil.aberto}"
+                                     update=":Formulario"/>
+
+                    <p:commandButton value="Voltar"
+                                     icon="ui-icon-arrowreturnthick-1-e"
+                                     ajax="true"
+                                     onclick="aguarde.show(); dialogNovoAgendamento.hide()"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="operacao mtop05 mlef05"
+                                     actionListener="#{fechamentoMensalControlador.cancelarFechamentoMes()}"
+                                     update=":Formulario"/>
+                </center>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

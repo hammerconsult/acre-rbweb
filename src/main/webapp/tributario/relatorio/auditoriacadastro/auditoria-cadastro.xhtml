@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+            var timerConsulta;
+            var timerConsultaPaginada;
+            var timerGeracaoRelatorio;
+
+            function acompanhaConsultaRelatorio() {
+                timerConsulta = setInterval(function () {
+                    atualizarCompQueryRelatorio();
+                }, 1000);
+            }
+
+            function terminaConsultaRelatorio() {
+                clearInterval(timerConsulta);
+                finalizarConsultaRelatorio();
+            }
+
+            function acompanhaConsultaPaginada() {
+                timerConsultaPaginada = setInterval(function () {
+                    atualizarQueryPaginacao();
+                }, 1000);
+            }
+
+            function terminaConsultaPaginacao() {
+                clearInterval(timerConsultaPaginada);
+                finalizaConsultaPaginacao();
+                myAguarde.hide();
+                aguarde.show();
+            }
+
+            function acompanhaGeracaoRelatorio() {
+                timerGeracaoRelatorio = setInterval(function () {
+                    consultarAndamentoRelatorio();
+                }, 1000);
+            }
+
+            function terminaGeracaoRelatorio() {
+                clearInterval(timerGeracaoRelatorio);
+                finalizaGeracaoRelatorio();
+                myAguarde.hide();
+                $('#modalDownload').modal('show');
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":formAguarde"
+                process="@this"
+                actionListener="#{relatorioAuditoriaCadastroControlador.consultarAndamentoQueryRelatorio()}"
+                name="atualizarCompQueryRelatorio"/>
+
+            <p:remoteCommand
+                process="@this"
+                actionListener="#{relatorioAuditoriaCadastroControlador.finalizarConsultaRelatorio()}"
+                name="finalizarConsultaRelatorio"/>
+
+            <p:remoteCommand
+                update=":formAguarde"
+                process="@this"
+                actionListener="#{relatorioAuditoriaCadastroControlador.consultarAndamentoQueryPaginacao()}"
+                name="atualizarQueryPaginacao"/>
+
+            <p:remoteCommand
+                process="@this"
+                actionListener="#{relatorioAuditoriaCadastroControlador.finalizarConsultaPaginacao()}"
+                name="finalizaConsultaPaginacao"/>
+
+            <p:remoteCommand
+                update=":formAguarde"
+                process="@this"
+                actionListener="#{relatorioAuditoriaCadastroControlador.consultarGeracaoRelatorio()}"
+                name="consultarAndamentoRelatorio"/>
+
+            <p:remoteCommand
+                process="@this"
+                actionListener="#{relatorioAuditoriaCadastroControlador.finalizarGeracaoRelatorio()}"
+                name="finalizaGeracaoRelatorio"/>
+
+            <p:watermark value="Todos..." for="compromissario"/>
+            <p:watermark value="Todos..." for="bairro"/>
+            <p:watermark value="Todos..." for="logradouro"/>
+            <p:watermark value="Todos..." for="proprietario"/>
+            <p:watermark value="Todos..." for="usuario"/>
+
+            <p:panel header="Histórico e Auditoria dos Cadastros" id="panelGeral">
+                <p:outputPanel id="panelFiltros">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Tipo de Cadastro: "
+                                                   style="#{relatorioAuditoriaCadastroControlador.styleCampoTipoCadastro}"/>
+                        <h:selectOneMenu id="tipoCadastro"
+                                         value="#{relatorioAuditoriaCadastroControlador.assistente.tipoCadastroTributario}"
+                                         title="Selecione o tipo de cadastro tributário">
+                            <f:selectItems value="#{relatorioAuditoriaCadastroControlador.tiposCadastro}"/>
+                            <p:ajax
+                                update=":Formulario:panelFiltros"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{relatorioAuditoriaCadastroControlador.limparCamposPorTipoCadastro()}"/>
+                        </h:selectOneMenu>
+                    </h:panelGrid>
+
+                    <h:panelGrid columns="5">
+                        <fc:outputLabelObrigatorio value="Data da Revisão: "/>
+                        <h:outputLabel value="Inicial: "
+                                       style="#{relatorioAuditoriaCadastroControlador.styleCampoDataRevisao}"/>
+                        <p:calendar id="dataInicial"
+                                    pattern="dd/MM/yyyy"
+                                    onkeypress="mascara(this, mdata)"
+                                    navigator="true"
+                                    title="Informe a data inicial."
+                                    size="12"
+                                    maxlength="10"
+                                    showOn="button"
+                                    value="#{relatorioAuditoriaCadastroControlador.assistente.dataInicial}"/>
+
+                        <h:outputLabel value="Final: " style="color: grey" styleClass="mlef20"/>
+                        <p:calendar id="dataFinal"
+                                    pattern="dd/MM/yyyy"
+                                    title="Informe a data final."
+                                    onkeypress="mascara(this, mdata)"
+                                    navigator="true"
+                                    size="12"
+                                    maxlength="10"
+                                    showOn="button"
+                                    value="#{relatorioAuditoriaCadastroControlador.assistente.dataFinal}"/>
+                    </h:panelGrid>
+
+                    <h:panelGrid columns="2">
+                        <h:outputLabel value="Usuário: " for="usuario"
+                                       style="#{relatorioAuditoriaCadastroControlador.styleCampoUsuario}"/>
+                        <p:autoComplete id="usuario"
+                                        value="#{relatorioAuditoriaCadastroControlador.assistente.usuarioSistema}"
+                                        completeMethod="#{relatorioAuditoriaCadastroControlador.completarUsuarioSistema}"
+                                        converter="#{usuarioSistemaControlador.converterGenerico}"
+                                        var="ta"
+                                        itemLabel="#{ta}"
+                                        itemValue="#{ta.id}"
+                                        size="70"
+                                        title="Selecione um tipo autônomo."
+                                        maxResults="10"/>
+
+                        <h:outputLabel value="Tipo de Movimento: " for="tipoMovimento"
+                                       style="#{relatorioAuditoriaCadastroControlador.styleCampoTipoMovimento}"/>
+                        <h:selectOneMenu id="tipoMovimento"
+                                         value="#{relatorioAuditoriaCadastroControlador.assistente.tipoMovimento}"
+                                         title="Selecione um tipo de movimento da auditoria.">
+                            <f:selectItems value="#{relatorioAuditoriaCadastroControlador.tiposMovimentos}"/>
+                        </h:selectOneMenu>
+                    </h:panelGrid>
+
+                    <h:panelGrid columns="2"
+                                 rendered="#{relatorioAuditoriaCadastroControlador.renderizarPanelCadastroImobiliario()}">
+                        <h:outputLabel value="Setor: " for="setorInicial" style="margin-right: 65px"/>
+                        <h:panelGroup>
+                            <h:outputLabel value="Inicial: " style="color: grey"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.setorInicial}"
+                                         maxlength="3"
+                                         id="setorInicial"
+                                         title="Informe o número inicial do setor."/>
+
+                            <h:outputLabel value="Final: " style="color: grey" styleClass="mlef20"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.setorFinal}"
+                                         maxlength="3"
+                                         id="setorFinal"
+                                         title="Informe o número final do setor."/>
+                        </h:panelGroup>
+
+                        <h:outputLabel value="Quadra: " for="quadraInicial"/>
+                        <h:panelGroup>
+                            <h:outputLabel value="Inicial: " style="color: grey"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.quadraInicial}"
+                                         maxlength="4"
+                                         id="quadraInicial"
+                                         title="Informe o número inicial da quadra."/>
+
+                            <h:outputLabel value="Final: " style="color: grey" styleClass="mlef20"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.quadraFinal}"
+                                         maxlength="4"
+                                         id="quadraFinal"
+                                         title="Informe o número final da quadra."/>
+                        </h:panelGroup>
+
+                        <h:outputLabel value="Lote: " for="loteInicial"/>
+                        <h:panelGroup>
+                            <h:outputLabel value="Inicial: " style="color: grey"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.loteInicial}"
+                                         maxlength="4"
+                                         id="loteInicial"
+                                         title="Informe o número inicial do lote."/>
+
+                            <h:outputLabel value="Final: " style="color: grey" styleClass="mlef20"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.loteFinal}"
+                                         maxlength="4"
+                                         id="loteFinal"
+                                         title="Informe o número final do lote."/>
+                        </h:panelGroup>
+
+                        <h:outputLabel value="Inscrição: " for="inscricaoInicial"/>
+                        <h:panelGroup>
+                            <h:outputLabel value="Inicial: " style="color: grey"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.inscricaoBciInicial}"
+                                         maxlength="15"
+                                         id="inscricaoInicial"
+                                         title="Informe o número inicial da inscrição."/>
+
+                            <h:outputLabel value="Final: " style="color: grey" styleClass="mlef20"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.inscricaoBciFinal}"
+                                         maxlength="15"
+                                         id="inscricaoFinal"
+                                         title="Informe o número final da inscrição."/>
+                        </h:panelGroup>
+
+                        <h:outputLabel value="Bairro: " for="bairro"/>
+                        <p:autoComplete id="bairro"
+                                        value="#{relatorioAuditoriaCadastroControlador.assistente.bairro}"
+                                        completeMethod="#{relatorioAuditoriaCadastroControlador.completarBairro}"
+                                        converter="#{bairroControlador.converterGenerico}"
+                                        var="b"
+                                        itemLabel="#{b}"
+                                        itemValue="#{b.id}"
+                                        size="70"
+                                        title="Selecione um bairro."
+                                        maxResults="10">
+                            <p:ajax onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    event="itemSelect"
+                                    process="@this"
+                                    update="logradouro"/>
+                        </p:autoComplete>
+
+                        <h:outputLabel value="Logradouro: " for="logradouro"/>
+                        <p:autoComplete id="logradouro"
+                                        value="#{relatorioAuditoriaCadastroControlador.assistente.logradouro}"
+                                        completeMethod="#{relatorioAuditoriaCadastroControlador.completarLogradouro}"
+                                        converter="#{logradouroControlador.converterGenerico}"
+                                        var="l"
+                                        itemLabel="#{l}"
+                                        itemValue="#{l.id}"
+                                        size="70"
+                                        title="Selecione um logradouro."
+                                        maxResults="10"/>
+
+
+                        <h:outputLabel value="Proprietário: " for="proprietario"/>
+                        <p:autoComplete id="proprietario"
+                                        value="#{relatorioAuditoriaCadastroControlador.assistente.proprietario}"
+                                        completeMethod="#{relatorioAuditoriaCadastroControlador.completarProprietario}"
+                                        converter="#{relatorioAuditoriaCadastroControlador.converterProprietario}"
+                                        var="p"
+                                        itemLabel="#{p}"
+                                        itemValue="#{p.id}"
+                                        size="70"
+                                        title="Selecione um proprietário."
+                                        maxResults="10"/>
+
+                        <h:outputLabel value="Compromissário: " for="compromissario"/>
+                        <p:autoComplete id="compromissario"
+                                        value="#{relatorioAuditoriaCadastroControlador.assistente.compromissario}"
+                                        completeMethod="#{relatorioAuditoriaCadastroControlador.completarCompromissario}"
+                                        converter="#{relatorioAuditoriaCadastroControlador.converterCompromissario}"
+                                        var="c"
+                                        itemLabel="#{c}"
+                                        itemValue="#{c.id}"
+                                        size="70"
+                                        title="Selecione um compromissário."
+                                        maxResults="10"/>
+                    </h:panelGrid>
+
+
+                    <h:panelGrid columns="2"
+                                 rendered="#{relatorioAuditoriaCadastroControlador.renderizarPanelCadastroEconomico()}">
+                        <h:outputLabel value="Inscrição: " for="inscricaoBceInicial"/>
+                        <h:panelGroup>
+                            <h:outputLabel value="Inicial: " style="color: grey"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.inscricaoBceInicial}"
+                                         maxlength="8"
+                                         size="15"
+                                         id="inscricaoBceInicial"
+                                         title="Informe o número inicial da inscrição."/>
+
+                            <h:outputLabel value="Final: " style="color: grey" styleClass="mlef20"/>
+                            <p:inputText value="#{relatorioAuditoriaCadastroControlador.assistente.inscricaoBceFinal}"
+                                         maxlength="8"
+                                         size="15"
+                                         id="inscricaoBceFinal"
+                                         title="Informe o número final da inscrição."/>
+                        </h:panelGroup>
+
+                        <h:outputLabel value="Classificação Atividade: " for="classificacao"/>
+                        <h:selectOneMenu id="classificacao"
+                                         value="#{relatorioAuditoriaCadastroControlador.assistente.classificacaoAtividade}"
+                                         title="Selecione uma classificação da atividade.">
+                            <f:selectItems value="#{relatorioAuditoriaCadastroControlador.classificacoesAtividades}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputLabel value="Grau de Risco: " for="grauDeRisco"/>
+                        <h:selectOneMenu id="grauDeRisco"
+                                         value="#{relatorioAuditoriaCadastroControlador.assistente.grauDeRisco}"
+                                         title="Selecione um grau de risco da atividade.">
+                            <f:selectItems value="#{relatorioAuditoriaCadastroControlador.grausDeRisco}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputLabel value="Natureza Jurídica: " for="grauDeRisco"/>
+                        <h:selectOneMenu id="naturezaJuridica"
+                                         value="#{relatorioAuditoriaCadastroControlador.assistente.naturezaJuridica}"
+                                         converter="#{naturezaJuridicaControlador.converterGenerico}"
+                                         title="Selecione uma natureza jurídica.">
+                            <f:selectItems value="#{relatorioAuditoriaCadastroControlador.naturezasJuridica}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputLabel value="Tipo de Autônomo: " for="tipoAutonomo"/>
+                        <h:selectOneMenu value="#{relatorioAuditoriaCadastroControlador.assistente.tipoAutonomo}"
+                                         converter="#{tipoAutonomoControlador.converterGenerico}"
+                                         id="tipoAutonomo">
+                            <f:selectItems value="#{relatorioAuditoriaCadastroControlador.listarTiposAutonomos()}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputLabel value="MEI: "/>
+                        <p:selectBooleanCheckbox value="#{relatorioAuditoriaCadastroControlador.assistente.mei}"
+                                                 id="mei"/>
+                    </h:panelGrid>
+
+                    <h:panelGrid columns="2"
+                                 rendered="#{relatorioAuditoriaCadastroControlador.renderizarPanelCadastroContribuinte()}">
+                        <h:outputLabel value="Pessoa: " style="margin-right: 55px"/>
+                        <fc:novoAutocompletePessoa value="#{relatorioAuditoriaCadastroControlador.assistente.pessoa}"
+                                                   caminhoAtual="/relatorio-auditoria-cadastro/"
+                                                   mostraBotaoEdita="false"
+                                                   mostraBotaoNovo="false"
+                                                   id="pessoa"/>
+                    </h:panelGrid>
+                </p:outputPanel>
+
+                <div align="left">
+                    <p:commandButton id="btnPesquisar"
+                                     value="Pesquisar"
+                                     styleClass="padrao prioritario mtop10 mrig05"
+                                     actionListener="#{relatorioAuditoriaCadastroControlador.pesquisar()}"
+                                     icon="ui-icon-search"
+                                     process="@form"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     title="Clique para pesquisar os registros na tabela auditoria."/>
+
+                    <p:commandButton id="btnLimpar"
+                                     value="Limpar Filtros"
+                                     styleClass="padrao mtop10 mrig05"
+                                     actionListener="#{relatorioAuditoriaCadastroControlador.limparCampos()}"
+                                     process="@this :Formulario:panelGeral"
+                                     update=":Formulario:panelGeral"
+                                     icon="ui-icon-clear"
+                                     title="Clique para limpar os filtros informados."
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"/>
+
+                    <p:commandButton id="btnIniciarConsultaSintetico"
+                                     value="Emitir Relatório Sintético"
+                                     styleClass="padrao mtop10 mrig05"
+                                     actionListener="#{relatorioAuditoriaCadastroControlador.iniciarConsultaRelatorioSintetico()}"
+                                     process="@form"
+                                     update=":formAguarde"
+                                     icon="ui-icon-print"
+                                     title="Clique para iniciar a consulta para relatório sintético."
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"/>
+
+                    <p:commandButton id="btnIniciarConsultaAnalitica"
+                                     value="Emitir Relatório Analítico"
+                                     styleClass="padrao mtop10"
+                                     actionListener="#{relatorioAuditoriaCadastroControlador.iniciarConsultaRelatorioAnalitico()}"
+                                     process="@form"
+                                     update=":formAguarde"
+                                     icon="ui-icon-print"
+                                     title="Clique para iniciar a consulta para relatório analítico."
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"/>
+                </div>
+
+                <p:outputPanel id="tabelaMovimentos">
+                    <table class="table table-hover mtop03" style="border : solid #d3d3d3 1px">
+                        <thead>
+                        <tr style="height: 30px; font-size: 12px; background: #d9edf7; color: #3a87ad" class="negrito">
+                            <td colspan="9" style="text-align: center">
+                                HISTÓRICO DE ALTERAÇÕES
+                            </td>
+                        </tr>
+                        <tr style="background: #d3d3d3">
+                            <th class="alinhamentoCentralizado">Ver Cadastro</th>
+                            <th class="alinhamentoCentralizado">Histórico</th>
+                            <th class="alinhamentoEsquerda">Usuário</th>
+                            <th class="alinhamentoEsquerda">Data da Revisão</th>
+                            <th class="alinhamentoEsquerda">Hora da Revisão</th>
+                            <th class="alinhamentoEsquerda">Tipo de Movimento</th>
+                            <th class="alinhamentoEsquerda">Tipo de Cadastro</th>
+                            <th class="alinhamentoEsquerda">Cadastro</th>
+                            <th class="alinhamentoEsquerda">Detalhe</th>
+                        </tr>
+                        </thead>
+
+                        <ui:repeat value="#{relatorioAuditoriaCadastroControlador.assistente.auditoriaCadastros}"
+                                   var="aud">
+                            <tr>
+                                <td class="alinhamentoCentralizado">
+                                    <fc:botaoTargetBlank id="btnRedirecionar"
+                                                         actionListener="#{relatorioAuditoriaCadastroControlador.redirecionarParaCadastro(aud)}"
+                                                         icon="ui-icon-search"
+                                                         style="width: 25px!important;min-width: 25px!important;height: 25px!important;min-height: 25px!important;"
+                                                         process="@this"
+                                                         update="@none"
+                                                         title="Clique para visualizar os dados cadastrais no período selecionado."/>
+                                </td>
+                                <td class="alinhamentoCentralizado">
+                                    <p:commandButton icon="ui-icon-clock"
+                                                     onstart="aguarde.show()"
+                                                     actionListener="#{relatorioAuditoriaCadastroControlador.selecionarRevisao(aud)}"
+                                                     disabled="#{aud.tipoMovimento eq 'Inclusão'}"
+                                                     process="@this :Formulario:tabelaMovimentos"
+                                                     title="Clique para visualizar o histórico de aletação deste cadastro."/>
+                                </td>
+                                <td class="alinhamentoEsquerda">#{aud.usuarioSistema}</td>
+                                <td class="alinhamentoEsquerda">
+                                    <h:outputLabel value="#{aud.dataRevisao}">
+                                        <f:convertDateTime type="date"/>
+                                    </h:outputLabel>
+                                </td>
+                                <td class="alinhamentoEsquerda">
+                                    <h:outputLabel value="#{aud.dataRevisao}">
+                                        <f:convertDateTime pattern="HH:mm:ss"/>
+                                    </h:outputLabel>
+                                </td>
+                                <td class="alinhamentoEsquerda">#{aud.tipoMovimento}</td>
+                                <td class="alinhamentoEsquerda">#{aud.tipoCadastroAsString}</td>
+                                <td class="alinhamentoEsquerda">#{aud.inscricao}</td>
+                                <td class="alinhamentoEsquerda">#{aud.detalhe}</td>
+                            </tr>
+                        </ui:repeat>
+                    </table>
+
+                    <p:outputPanel
+                        rendered="#{empty relatorioAuditoriaCadastroControlador.assistente.auditoriaCadastros}">
+                        <div align="center" style="border: solid #d3d3d3 1px; border-top: 0">
+                            <br/>Não foram localizados registros para serem apresentados<br/><br/>
+                        </div>
+                    </p:outputPanel>
+
+                    <fc:paginacao
+                        process="@this :Formulario:tabelaMovimentos"
+                        update=":Formulario:tabelaMovimentos"
+                        quantidadeRegistroPorPagina="#{relatorioAuditoriaCadastroControlador.assistente.totalRegistroPorPagina}"
+                        metodoBusca="#{relatorioAuditoriaCadastroControlador.executarConsulta()}"
+                        assistente="#{relatorioAuditoriaCadastroControlador.assistente}"/>
+                </p:outputPanel>
+            </p:panel>
+        </h:form>
+
+        <div id="modalDownload"
+             class="modal hide fade"
+             tabindex="-1"
+             role="dialog"
+             aria-labelledby="modalDownload"
+             aria-hidden="true">
+            <h:form id="form-download">
+
+                <div class="modal-header alert alert-info" align="center">
+                    Impressão de Relatório
+                </div>
+
+                <div class="modal-body" align="center">
+                    <h4>
+                        Relatório gerado com sucesso!
+                    </h4>
+
+                    <fc:botaoTargetBlank
+                        actionListener="#{relatorioAuditoriaCadastroControlador.baixarPDF()}"
+                        style="height: 30px"
+                        styleClass="mtop10 mrig05"
+                        label="Emitir Relatório"
+                        process="@this"
+                        update="@none"
+                        title="Clique para emitir o relatório gerado."/>
+                </div>
+
+                <div class="modal-footer" align="left">
+                    <p:commandButton
+                        icon="ui-icon-close"
+                        style="width: 20px !important;"
+                        styleClass="botao-transparente"
+                        process="@none"
+                        update="@none"
+                        oncomplete="$('#modalDownload').modal('hide')"/>
+                </div>
+            </h:form>
+        </div>
+
+        <p:dialog modal="true"
+                  widgetVar="myAguarde"
+                  style="position: fixed !important; z-index: 99999999 !important;"
+                  position="center"
+                  width="200"
+                  showHeader="false"
+                  draggable="false"
+                  closable="false"
+                  resizable="false">
+            <h:form id="formAguarde">
+                <div align="center">
+                    <h:outputText value="#{relatorioAuditoriaCadastroControlador.assistente.mensagem}"
+                                  style="color: darkgray"/>
+                    <br/><br/>
+                    <h:graphicImage value="/img/ajaxloading.gif"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog
+            id="dlg-historico"
+            widgetVar="dlgHistorico"
+            modal="true"
+            position="center"
+            width="1200"
+            onShow="redimensionarAlturaDialog(this.id)"
+            style="position: fixed !important;"
+            showHeader="false"
+            resizable="false"
+            closable="false">
+            <div class="modal-header" align="left">
+                <button type="button"
+                        onclick="dlgHistorico.hide()"
+                        class="close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h2>
+                    <h:outputLabel value="Detalhes do Histórico do Cadastro" styleClass="azul maiusculo"/>
+                </h2>
+            </div>
+            <div id="dadosDialog"></div>
+            <h:form id="form-historico">
+                <h:inputHidden value="#{relatorioAuditoriaCadastroControlador.htmlHistorico}" id="inputHtmlHistorico"/>
+                <p:remoteCommand update="@form" actionListener="#{relatorioAuditoriaCadastroControlador.gerarPdfDoHistorico()}"
+                                 name="imprimirHistorico"/>
+                <div class="modal-footer" style="text-align: left !important;">
+                    <p:commandButton onclick="copiarDadosHtml(); imprimirHistorico();"
+                                     value="Emitir"
+                                     styleClass="operacao prioritario"
+                                     icon="ui-icon-print"/>
+                </div>
+
+                <script type="application/javascript">
+                    function copiarDadosHtml() {
+                        $('#form-historico\\:inputHtmlHistorico').val(document.getElementById('divHistorico').innerHTML);
+                    }
+                </script>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

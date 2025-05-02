@@ -1,0 +1,204 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui">
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="documentoFiscal" required="true"/>
+    <cc:attribute name="renderizarCampos" required="true"/>
+    <cc:attribute name="hasPagamentoNaoEstornado" default="false"/>
+    <cc:attribute name="update" required="true"/>
+    <cc:attribute name="process" default="@this"/>
+    <cc:attribute name="contaExtraInss" required="true"/>
+    <cc:attribute name="contaExtraIrrf" required="true"/>
+    <cc:attribute name="canEditarEventoR2010" required="true"/>
+    <cc:attribute name="canEditarEventoR4020" required="true"/>
+</cc:interface>
+<cc:implementation>
+    <h:panelGrid columns="2" styleClass="mtop10"
+                 rendered="#{cc.attrs.renderizarCampos and cc.attrs.documentoFiscal ne null}">
+        <h:outputText value="Possui retenção previdenciária? "
+                      rendered="#{cc.attrs.renderizarCampos and cc.attrs.documentoFiscal ne null}"/>
+        <p:selectBooleanCheckbox
+            value="#{cc.attrs.documentoFiscal.retencaoPrevidenciaria}"
+            disabled="#{!cc.attrs.canEditarEventoR2010}"
+            rendered="#{cc.attrs.renderizarCampos and cc.attrs.documentoFiscal ne null}">
+            <p:ajax event="change" process="#{cc.attrs.process}" update="#{cc.attrs.update}"
+                    listener="#{cc.attrs.documentoFiscal.limparCamposDocumentoFiscalEventosReinf2000(cc.attrs.contaExtraInss, cc.attrs.hasPagamentoNaoEstornado)}"/>
+        </p:selectBooleanCheckbox>
+
+        <h:outputText value="Optante Simples Nacional/Imune/Isento? "
+                      rendered="#{cc.attrs.renderizarCampos and cc.attrs.documentoFiscal ne null}"/>
+        <p:selectBooleanCheckbox
+            value="#{cc.attrs.documentoFiscal.optanteSimplesNacional}"
+            disabled="#{!cc.attrs.canEditarEventoR4020}"
+            rendered="#{cc.attrs.renderizarCampos and cc.attrs.documentoFiscal ne null}">
+            <p:ajax event="change" process="#{cc.attrs.process}" update="#{cc.attrs.update}"
+                    listener="#{cc.attrs.documentoFiscal.limparCamposDocumentoFiscalEventosReinf4000(cc.attrs.contaExtraIrrf, cc.attrs.hasPagamentoNaoEstornado)}"/>
+        </p:selectBooleanCheckbox>
+    </h:panelGrid>
+
+    <h:panelGroup id="groupReinf2010" styleClass="mtop10"
+                  rendered="#{cc.attrs.documentoFiscal.retencaoPrevidenciaria and cc.attrs.renderizarCampos}">
+        <co:titulo-panel titulo="EFD-Reinf/Evento R-2010 (Retenção de Contribuição Previdenciária - Serviços Tomados)"/>
+        <p:outputPanel rendered="#{!cc.attrs.canEditarEventoR2010}">
+        <div class="col-md-12 alert alert-success">
+            <p> Já foi <span class="negrito"> enviado com sucesso </span> para a REINF os dados do evento R-2010 e não deve ser alterado. </p>
+        </div>
+        </p:outputPanel>
+        <h:panelGrid columns="5">
+            <fc:outputLabelObrigatorio value="Tipo de Serviço Reinf: "/>
+            <h:selectOneMenu id="tipoServicoReinf"
+                             title="Informe o Tipo de serviço REINF do Documento Fiscal"
+                             style="width: 127px"
+                             styleClass="mlef05"
+                             disabled="#{!cc.attrs.canEditarEventoR2010}"
+                             value="#{cc.attrs.documentoFiscal.tipoServicoReinf}">
+                <f:selectItems value="#{liquidacaoControlador.tipoServicoReinf}"/>
+            </h:selectOneMenu>
+            <co:botao_informacao styleClass="mlef05"
+                                 descricao="Obrigatório quando documento possuir retenção previdenciária."/>
+
+            <h:outputText value="Conta Extraorçamentária: " styleClass="mlef10"/>
+            <h:outputText value="#{cc.attrs.documentoFiscal.contaExtra}"
+                          styleClass="mlef05 negrito"/>
+        </h:panelGrid>
+
+        <h:panelGrid columns="6">
+            <fc:outputLabelObrigatorio value="Vlr. Base Cálc. INSS: "/>
+            <p:inputText title="Informe o valor da Retenção"
+                         value="#{cc.attrs.documentoFiscal.valorBaseCalculo}"
+                         disabled="#{cc.attrs.hasPagamentoNaoEstornado or !cc.attrs.canEditarEventoR2010}"
+                         onkeydown="mascara(this, mvalor);"
+                         onclick="this.select();"
+                         onblur="mascara(this, mvalor);"
+                         onfocus="this.select();"
+                         converter="moedaConverter"
+                         styleClass="mlef05">
+                <p:ajax event="blur" process="@this" update="idValorRetido idPorcentagem"
+                        listener="#{cc.attrs.documentoFiscal.calcularPorcentagemEValorRetidoInss()}"/>
+            </p:inputText>
+
+            <fc:outputLabelObrigatorio value="% INSS Retido: "
+                                       styleClass="mlef05"/>
+            <p:inputText value="#{cc.attrs.documentoFiscal.porcentagemRetencaoMaxima}"
+                         disabled="#{cc.attrs.hasPagamentoNaoEstornado or !cc.attrs.canEditarEventoR2010}"
+                         id="idPorcentagem"
+                         title="Informe a porcentagem da Retenção"
+                         converter="porcentagemConverter"
+                         styleClass="mlef05"
+                         style="text-align: right"
+                         size="10">
+                <p:ajax event="blur" process="@this" update="idValorRetido idPorcentagem"
+                        listener="#{cc.attrs.documentoFiscal.calcularValorRetidoInss()}"/>
+            </p:inputText>
+
+            <fc:outputLabelObrigatorio value="Vlr. INSS Retido: "
+                                       styleClass="mlef05"/>
+            <p:inputText title="Informe o valor."
+                         id="idValorRetido"
+                         value="#{cc.attrs.documentoFiscal.valorRetido}"
+                         disabled="#{cc.attrs.hasPagamentoNaoEstornado or !cc.attrs.canEditarEventoR2010}"
+                         onkeydown="mascara(this, mvalor);"
+                         onclick="this.select();"
+                         onblur="mascara(this, mvalor);"
+                         onfocus="this.select();"
+                         styleClass="mlef05"
+                         converter="moedaConverter">
+                <p:ajax event="blur" process="@this" update="idPorcentagem"
+                        listener="#{cc.attrs.documentoFiscal.calcularPorcentagemInss()}"/>
+            </p:inputText>
+        </h:panelGrid>
+
+        <h:panelGrid columns="2">
+            <h:outputText value="Matrícula da Obra (CEI/CNO): "/>
+            <p:inputText value="#{cc.attrs.documentoFiscal.matriculaObra}"
+                         disabled="#{!cc.attrs.canEditarEventoR2010}"/>
+        </h:panelGrid>
+    </h:panelGroup>
+
+    <h:panelGroup id="groupReinf4020" styleClass="mtop10"
+                  rendered="#{!cc.attrs.documentoFiscal.optanteSimplesNacional
+                                          and cc.attrs.renderizarCampos
+                                          and cc.attrs.documentoFiscal ne null}">
+        <co:titulo-panel titulo="EFD-Reinf/Eventos Série R-4000 (Retenção de IRPJ)"/>
+        <p:outputPanel rendered="#{!cc.attrs.canEditarEventoR4020}">
+            <div class="col-md-12 alert alert-success">
+                <p> Já foi <span class="negrito"> enviado com sucesso </span> para a REINF os dados do evento R-4020 e não deve ser alterado. </p>
+            </div>
+        </p:outputPanel>
+        <h:panelGrid columns="2">
+            <fc:outputLabelObrigatorio value="Natureza de Rendimentos: "/>
+            <h:panelGrid cellpadding="0" cellspacing="0" columns="2">
+                <p:autoComplete queryDelay="1000"
+                                title="Informe uma natureza de rendimentos."
+                                var="nrr"
+                                value="#{cc.attrs.documentoFiscal.naturezaRendimentoReinf}"
+                                completeMethod="#{liquidacaoControlador.completarNaturezasDosRendimentosREINF}"
+                                converter="#{naturezaRendimentoReinfControlador.converterGenerico}"
+                                disabled="#{!cc.attrs.canEditarEventoR4020}"
+                                maxResults="30"
+                                panelStyle="max-height: 250px"
+                                dropdown="true"
+                                itemValue="#{nrr.id}"
+                                itemLabel="#{nrr.toStringAutoComplete()}"
+                                size="70"
+                                styleClass="mrig05">
+                    <p:ajax event="itemSelect" process="@this"/>
+                </p:autoComplete>
+                <co:botao_informacao styleClass="mlef05"
+                                     descricao="Obrigatório quando documento possuir retenção previdenciária de IR, CSLL, COFINS, PIS/PASEP, Agreg."/>
+            </h:panelGrid>
+            <h:outputText value="Conta Extraorçamentária: "/>
+            <h:outputText value="#{cc.attrs.documentoFiscal.contaExtraIrrf}"
+                          styleClass="negrito"/>
+        </h:panelGrid>
+
+        <h:panelGrid columns="6">
+            <h:outputText value="Vlr. Base Cálc. IR: "/>
+            <h:outputText id="vlrBaseCalculoIR"
+                          disabled="#{cc.attrs.hasPagamentoNaoEstornado or !cc.attrs.canEditarEventoR4020}"
+                          value="#{cc.attrs.documentoFiscal.valorBaseCalculoIrrf}"
+                          styleClass="negrito"
+                          converter="moneyConverter"/>
+
+            <fc:outputLabelObrigatorio value="% IR Retido: "
+                                       styleClass="mlef05"/>
+            <p:inputText value="#{cc.attrs.documentoFiscal.porcentagemRetencaoMaximaIrrf}"
+                         disabled="#{cc.attrs.hasPagamentoNaoEstornado or !cc.attrs.canEditarEventoR4020}"
+                         id="idPorcentagem4020"
+                         title="Informe a porcentagem."
+                         converter="porcentagemConverter"
+                         styleClass="mlef05"
+                         style="text-align: right"
+                         size="10">
+                <p:ajax event="blur" process="@this" update="idValorRetido4020 idPorcentagem4020"
+                        listener="#{cc.attrs.documentoFiscal.calcularValorRetidoIrrf()}"/>
+            </p:inputText>
+
+            <fc:outputLabelObrigatorio value="Vlr. IR Retido: "
+                                       styleClass="mlef05"/>
+            <p:inputText title="Informe o valor."
+                         id="idValorRetido4020"
+                         value="#{cc.attrs.documentoFiscal.valorRetidoIrrf}"
+                         disabled="#{cc.attrs.hasPagamentoNaoEstornado or !cc.attrs.canEditarEventoR4020}"
+                         onkeydown="mascara(this, mvalor);"
+                         onclick="this.select();"
+                         onblur="mascara(this, mvalor);"
+                         onfocus="this.select();"
+                         styleClass="mlef05"
+                         converter="moedaConverter">
+                <p:ajax event="blur" process="@this" update="idPorcentagem4020"
+                        listener="#{cc.attrs.documentoFiscal.calcularPorcentagemIrrf()}"/>
+            </p:inputText>
+        </h:panelGrid>
+    </h:panelGroup>
+</cc:implementation>
+</html>

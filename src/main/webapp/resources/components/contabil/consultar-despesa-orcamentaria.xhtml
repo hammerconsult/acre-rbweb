@@ -1,0 +1,220 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="value" required="true"/>
+    <cc:attribute name="update"/>
+    <cc:attribute name="process" default="@this"/>
+    <cc:attribute name="disabled" default="false"/>
+    <cc:attribute name="actionListener" method-signature="void selecionar(javax.faces.event.ActionEvent)"/>
+    <cc:attribute name="tiposContaDespesa" default="#{null}" type="java.util.List"/>
+    <cc:attribute name="unidadeOrganizacional" default="#{null}" type="br.com.webpublico.entidades.UnidadeOrganizacional"/>
+    <cc:attribute name="recuperarSomenteUnidadeLogada" default="#{true}" type="java.lang.Boolean"/>
+    <cc:attribute name="mostrarArvoreExpandida" default="#{true}" type="java.lang.Boolean"/>
+    <cc:attribute name="permiteFiltrarTodasUnidades" default="#{false}" type="java.lang.Boolean"/>
+</cc:interface>
+
+<!-- IMPLEMENTATION -->
+<cc:implementation>
+    <f:event type="preRenderComponent"
+             listener="#{consultarDespesaOrcamentariaControlador.setIdComponente(cc.clientId)}"/>
+    <f:event type="preRenderComponent"
+             listener="#{consultarDespesaOrcamentariaControlador.setRecuperarSomenteUnidadeLogada(cc.attrs.recuperarSomenteUnidadeLogada)}"/>
+    <f:event type="preRenderComponent"
+             listener="#{consultarDespesaOrcamentariaControlador.setMostrarArvoreExpandida(cc.attrs.mostrarArvoreExpandida)}"/>
+    <f:event type="preRenderComponent"
+             listener="#{consultarDespesaOrcamentariaControlador.setTiposContaDespesa(cc.attrs.tiposContaDespesa)}"/>
+    <f:event type="preRenderComponent"
+             listener="#{consultarDespesaOrcamentariaControlador.setUnidadeOrganizacional(cc.attrs.unidadeOrganizacional)}"/>
+
+    <h:outputText value="#{consultarDespesaOrcamentariaControlador.atribuirVariaveisEditando(cc.attrs.value)}" />
+
+    <p:remoteCommand process="#{cc.attrs.process}"
+                     oncomplete="aguarde.hide(); painelInformacoes.show();"
+                     actionListener="#{cc.attrs.actionListener}"
+                     rendered="#{cc.attrs.actionListener ne null}"
+                     update="#{cc.attrs.update}"
+                     name="executarMetodo">
+    </p:remoteCommand>
+
+    <p:remoteCommand process="@this"
+                     onstart="aguarde.show()"
+                     oncomplete="#{cc.attrs.actionListener eq null ? 'painelInformacoes.show(); aguarde.hide();' : 'executarMetodo();'}"
+                     name="setar">
+        <f:setPropertyActionListener value="#{consultarDespesaOrcamentariaControlador.despesaORC}"
+                                     target="#{cc.attrs.value}"/>
+    </p:remoteCommand>
+
+    <h:panelGroup >
+        <p:inputText styleClass="mrig05"
+                     size="20"
+                     readonly="true"
+                     title="Este campo é somente leitura. Utilize os botões ao lado para pesquisar a dotação orçamentária e/ou limpar respectivamente."
+                     id="codigo-dotacao-orcamentaria"
+                     value="#{consultarDespesaOrcamentariaControlador.codigoReduzidoDespesaOrc}"/>
+
+        <p:commandButton onclick="aguarde.show()"
+                         oncomplete="aguarde.hide(); dialogDespesaOrcamentaria.show()"
+                         process="@this"
+                         disabled="#{cc.attrs.disabled}"
+                         styleClass="mrig05"
+                         update=":#{cc.clientId}:form-despesa-orcamentaria"
+                         actionListener="#{consultarDespesaOrcamentariaControlador.montarArvoreDespesaOrcamentaria()}"
+                         icon="ui-icon-search"/>
+
+        <p:commandButton process="@this"
+                         title="Clique para limpar o código reduzido da dotação orçamentária."
+                         styleClass="mrig05"
+                         onclick="executarMetodo();"
+                         disabled="#{cc.attrs.disabled}"
+                         update="codigo-dotacao-orcamentaria :#{cc.clientId}:bt-info-dotacao-orcamentaria"
+                         actionListener="#{consultarDespesaOrcamentariaControlador.limparSelecaoDotacaoOrcamentaria}"
+                         icon="ui-icon-clear">
+            <f:setPropertyActionListener value="#{null}"
+                                         target="#{cc.attrs.value}"/>
+        </p:commandButton>
+
+        <p:commandButton process="@this"
+                         update="@none"
+                         styleClass="mrig05"
+                         id="bt-info-dotacao-orcamentaria"
+                         disabled="#{consultarDespesaOrcamentariaControlador.vwHierarquiaDespesaORC eq null}"
+                         title="Clique para mostrar/ocultar os detalhes da dotação orçamentária selecionada."
+                         icon="ui-icon-eye"/>
+
+        <script type="text/javascript">
+            function posicionarDivInformacao(id) {
+                var divInfo = document.getElementById(id);
+                var left = parseInt(divInfo.offsetLeft);
+                left += 5;
+                divInfo.style.left = ''.concat(left, 'px');
+            }
+        </script>
+
+        <p:overlayPanel for="bt-info-dotacao-orcamentaria"
+                        at="left top"
+                        my="right top"
+                        onShow="posicionarDivInformacao(this.id)"
+                        widgetVar="painelInformacoes"
+                        style="border : solid #497692 2px;"
+                        styleClass="semSombra">
+            <h:panelGrid id="grid-info-dotacao-orcamentaria" columns="2">
+                <h:outputText value="Órgão: " style="font-weight: bold"/>
+                <h:outputText value="#{consultarDespesaOrcamentariaControlador.vwHierarquiaDespesaORC.orgao}"/>
+
+                <h:outputText value="Unidade: " style="font-weight: bold"/>
+                <h:outputText value="#{consultarDespesaOrcamentariaControlador.vwHierarquiaDespesaORC.unidade}"/>
+
+                <h:outputText value="Funcional: " style="font-weight: bold"/>
+                <h:outputText value="#{consultarDespesaOrcamentariaControlador.vwHierarquiaDespesaORC.subAcao}"/>
+
+                <h:outputText value="Natureza da Despesa: " style="font-weight: bold"/>
+                <h:outputText value="#{consultarDespesaOrcamentariaControlador.vwHierarquiaDespesaORC.conta}"/>
+            </h:panelGrid>
+        </p:overlayPanel>
+    </h:panelGroup>
+
+    <p:dialog header="Despesa Orçamentária"
+              modal="true"
+              dynamic="true"
+              position="center"
+              style="position: fixed !important; z-index: 9999999999999"
+              draggable="false"
+              resizable="false"
+              widgetVar="dialogDespesaOrcamentaria"
+              closable="false"
+              appendToBody="true">
+        <h:form id="form-despesa-orcamentaria">
+            <div class="ui-message-info" style="padding: 4px; font-size: 12px; margin: 0px!important;">
+                <h:outputText value="Filtrando as dotações orçamentárias da unidade logada: "/>
+                <h:outputText styleClass="negrito"
+                              value="#{sistemaControlador.unidadeOrganizacionalOrcamentoCorrente}"/>
+            </div>
+
+            <h:panelGrid columns="2" cellpadding="0" cellspacing="0" styleClass="mtop05">
+                <h:outputLabel value="Expanção Filtro:"
+                               rendered="#{cc.attrs.permiteFiltrarTodasUnidades}"/>
+                <h:selectOneRadio value="#{consultarDespesaOrcamentariaControlador.recuperarSomenteUnidadeLogada}"
+                                  rendered="#{cc.attrs.permiteFiltrarTodasUnidades}">
+                    <f:selectItem itemValue="#{true}" itemLabel="Somente unidade logada"/>
+                    <f:selectItem itemValue="#{false}" itemLabel="Todas as unidades"/>
+                    <f:ajax event="valueChange"
+                            listener="#{consultarDespesaOrcamentariaControlador.mudouTipoBuscaUnidade}"
+                            execute="@this"
+                            render="idArvore"/>
+                </h:selectOneRadio>
+
+                <h:outputLabel value="Filtro: "/>
+                <h:panelGrid columns="2"
+                             cellspacing="0"
+                             cellpadding="0">
+                    <h:inputText value="#{consultarDespesaOrcamentariaControlador.filtro}"
+                                 id="conteudoFiltro"
+                                 autocomplete="off"
+                                 styleClass="mrig05"
+                                 size="50"
+                                 style="border : solid #497692 1px;">
+                    </h:inputText>
+                    <p:commandButton icon="ui-icon-search"
+                                     process="@this conteudoFiltro"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="padrao"
+                                     update="idArvore"
+                                     actionListener="#{consultarDespesaOrcamentariaControlador.filtrar}"
+                                     value="Filtrar"/>
+                </h:panelGrid>
+            </h:panelGrid>
+
+            <div style="height: 400px; overflow-y: auto!important; overflow-x: hidden!important; border : solid #497692 1px;"
+                 class="mtop05">
+                <div style="float: right;">
+                    <fc:ajaxLoader16x16/>
+                </div>
+
+                <p:tree id="idArvore"
+                        expanded="true"
+                        value="#{consultarDespesaOrcamentariaControlador.raizDespesaOrcamentaria}"
+                        var="n"
+                        style="width: 100%; border: 0px"
+                        selection="#{consultarDespesaOrcamentariaControlador.nodeSelecionado}"
+                        selectionMode="single"
+                        cache="false">
+
+                    <p:treeNode expandedIcon="ui-icon ui-icon-folder-open"
+                                collapsedIcon="ui-icon ui-icon-folder-collapsed">
+                        <h:outputText value="#{n}" style="width: 600px"/>
+                    </p:treeNode>
+                </p:tree>
+            </div>
+
+            <div style="text-align: center" class="mtop05">
+                <p:commandButton icon="ui-icon-check"
+                                 value="Ok"
+                                 actionListener="#{consultarDespesaOrcamentariaControlador.confirmarSelecaoDespesaOrcamentaria}"
+                                 process="form-despesa-orcamentaria"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="mrig05 padrao"/>
+
+                <p:commandButton icon="ui-icon-close"
+                                 styleClass="padrao"
+                                 process="@none"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 onclick="dialogDespesaOrcamentaria.hide()"
+                                 value="Cancelar"/>
+            </div>
+        </h:form>
+    </p:dialog>
+</cc:implementation>
+</html>

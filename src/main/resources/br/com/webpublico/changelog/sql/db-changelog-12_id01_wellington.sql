@@ -1,0 +1,1 @@
+ update calculomultafiscalizacao set acaofiscal_id = null

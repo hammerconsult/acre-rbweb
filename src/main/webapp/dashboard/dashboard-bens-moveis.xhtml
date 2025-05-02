@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <div class="col-md-12 text-raleway painelGraficos" style="background-color: #eaeaea!important;">
+                <div class="col-md-12 centralizado mbot10">
+                    <h1>BENS MÓVEIS</h1>
+                </div>
+                <div class="col-md-4 painel-grafico grafico1">
+                    <div class="ibox">
+                        <div class="ibox-content">
+                            <div class="row" style="height: 400px !important;">
+                                <canvas id="chartAquisicaoIncorporacao"></canvas>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 painel-grafico grafico2">
+                    <div class="ibox">
+                        <div class="ibox-content">
+                            <div class="row" style="height: 400px !important;">
+                                <canvas id="chartCedidosPorOrgao"></canvas>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 painel-grafico grafico3">
+                    <div class="ibox">
+                        <div class="ibox-content">
+                            <div class="row" style="height: 400px !important;">
+                                <canvas id="chartMoveisPorEstado"></canvas>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 painel-grafico grafico4">
+                    <div class="ibox">
+                        <div class="ibox-content">
+                            <div class="row" style="height: 400px !important;">
+                                <canvas id="chartMoveisPorSituacao"></canvas>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </h:form>
+
+        <script src="#{facesContext.externalContext.requestContextPath}/resources/js/chart_js/dist/Chart.js"></script>
+
+        <script type="text/javascript">
+
+
+            window.onload = function () {
+                pesquisar()
+            };
+
+
+            function mudarPainelParaDoze() {
+                $(".painel-grafico").removeClass("col-md-4")
+                $(".painel-grafico").removeClass("col-md-6")
+                $(".painel-grafico").addClass("col-md-12")
+            }
+
+
+            function apresentar() {
+
+                toggleCabecalho();
+                toggleRodape();
+                mudarPainelParaDoze();
+                $(".botoes-grafico-padrao").addClass("hidden");
+                $(".botoes-grafico-tela-cheia").removeClass("hidden");
+            }
+
+
+            function removerApresentar() {
+                toggleCabecalho();
+                toggleRodape();
+                mudarPainelParaDoze();
+                $(".painel-grafico").removeClass("hidden");
+                $(".botoes-grafico-padrao").removeClass("hidden");
+                $(".botoes-grafico-tela-cheia").addClass("hidden");
+            }
+
+            function pesquisar() {
+                fixaPorcentagem();
+                realizarBuscar();
+                mudarPainelParaDoze();
+            }
+
+            function fixaPorcentagem() {
+                // Show tooltips always even the stats are zero
+
+                Chart.pluginService.register({
+                    beforeRender: function (chart) {
+                        if (chart.config.options.showAllTooltips) {
+                            // create an array of tooltips
+                            // we can't use the chart tooltip because there is only one tooltip per chart
+                            chart.pluginTooltips = [];
+                            chart.config.data.datasets.forEach(function (dataset, i) {
+                                chart.getDatasetMeta(i).data.forEach(function (sector, j) {
+                                    chart.pluginTooltips.push(new Chart.Tooltip({
+                                        _chart: chart.chart,
+                                        _chartInstance: chart,
+                                        _data: chart.data,
+                                        _options: chart.options.tooltips,
+                                        _active: [sector]
+                                    }, chart));
+                                });
+                            });
+
+                            // turn off normal tooltips
+                            chart.options.tooltips.enabled = false;
+                        }
+                    },
+                    afterDraw: function (chart, easing) {
+                        if (chart.config.options.showAllTooltips) {
+                            // we don't want the permanent tooltips to animate, so don't do anything till the animation runs atleast once
+                            if (!chart.allTooltipsOnce) {
+                                if (easing !== 1)
+                                    return;
+                                chart.allTooltipsOnce = true;
+                            }
+
+                            // turn on tooltips
+                            chart.options.tooltips.enabled = true;
+                            Chart.helpers.each(chart.pluginTooltips, function (tooltip) {
+                                tooltip.initialize();
+                                tooltip.update();
+                                // we don't actually need this since we are not animating tooltips
+                                tooltip.pivot();
+                                tooltip.transition(easing).draw();
+                            });
+                            chart.options.tooltips.enabled = false;
+                        }
+                    }
+                });
+            }
+
+            function realizarBuscar() {
+                aguarde.show();
+
+                var chartAquisicaoIncorporacao = document.getElementById("chartAquisicaoIncorporacao");
+                if (chartAquisicaoIncorporacao != null) {
+                    chartAquisicaoIncorporacao = chartAquisicaoIncorporacao.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/bensmoveis-aquisicao-incorporacao',
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoAquisicaoIncorporacao(chartAquisicaoIncorporacao, JSON.parse(retorno));
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+                var chartCedidosPorOrgao = document.getElementById("chartCedidosPorOrgao");
+                if (chartCedidosPorOrgao != null) {
+                    chartCedidosPorOrgao = chartCedidosPorOrgao.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/bensmoveis-cedidos',
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoCedidosPorOrgao(chartCedidosPorOrgao, JSON.parse(retorno));
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+                var chartMoveisPorEstado = document.getElementById("chartMoveisPorEstado");
+                if (chartMoveisPorEstado != null) {
+                    chartMoveisPorEstado = chartMoveisPorEstado.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/bensmoveis-estados',
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoMoveisPorEstado(chartMoveisPorEstado, JSON.parse(retorno));
+                            aguarde.hide();
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+
+                var chartMoveisPorSituacao = document.getElementById("chartMoveisPorSituacao");
+                if (chartMoveisPorSituacao != null) {
+                    chartMoveisPorSituacao = chartMoveisPorSituacao.getContext("2d")
+
+                    $.ajax({
+                        url: #{facesContext.externalContext.requestContextPath}'/spring/dashboard-administrativo/bensmoveis-conservacao',
+                        type: 'POST',
+                        data: '',
+                        success: function (retorno) {
+                            tratarRetornoBensMoveisPorSituacao(chartMoveisPorSituacao, JSON.parse(retorno));
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            aguarde.hide();
+                        }
+                    });
+                }
+            }
+
+            function tratarRetornoAquisicaoIncorporacao(chartAquisicaoIncorporacao, retorno) {
+                this.chartAquisicaoIncorporacao = new Chart(chartAquisicaoIncorporacao, retorno);
+
+                retorno.options.tooltips = {
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorInteiroDashboard(retorno.data.datasets[t.datasetIndex].data[t.index]);
+                        }
+                    }
+                };
+                retorno.options.scales = {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorInteiroDashboard(value);
+                            }
+                        }
+                    }]
+                };
+
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom'
+                };
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+                retorno.options.title = {
+                    display: true,
+                    text: "Bens Móveis Ingressados no Patrimônio",
+                    fontSize: 20
+                };
+            }
+
+
+            function tratarRetornoCedidosPorOrgao(chartCedidosPorOrgao, retorno) {
+                this.chartCedidosPorOrgao = new Chart(chartCedidosPorOrgao, retorno);
+
+                retorno.options.tooltips = {
+
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorInteiroDashboard(retorno.data.datasets[t.datasetIndex].data[t.index]);
+                        }
+                    }
+                };
+                retorno.options.scales = {
+                    xAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorInteiroDashboard(value);
+                            }
+                        }
+                    }]
+                };
+
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom'
+                };
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+                retorno.options.title = {
+                    display: true,
+                    text: "Bens Móveis Cedidos Por Órgão",
+                    fontSize: 20
+                };
+            }
+
+            function tratarRetornoMoveisPorEstado(chartMoveisPorEstado, retorno) {
+                this.chartMoveisPorEstado = new Chart(chartMoveisPorEstado, retorno);
+
+                retorno.options.tooltips = {
+
+                    callbacks: {
+                        label: function (t, d) {
+                            return formatarValorInteiroDashboard(retorno.data.datasets[t.datasetIndex].data[t.index]);
+                        }
+                    }
+                };
+                retorno.options.scales = {
+                    xAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function (value, index, values) {
+                                return formatarValorInteiroDashboard(value);
+                            }
+                        }
+                    }]
+                };
+
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom'
+                };
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+                retorno.options.title = {
+                    display: true,
+                    text: "Bens Móveis Por Órgão",
+                    fontSize: 20
+                };
+            }
+
+            function tratarRetornoBensMoveisPorSituacao(chartMoveisPorSituacao, retorno) {
+                this.chartMoveisPorSituacao = new Chart(chartMoveisPorSituacao, retorno);
+
+                retorno.options.showAllTooltips = true;
+                retorno.options.tooltips = {
+                    callbacks: {
+                        label: function (tooltipItem, data) {
+                            //get the concerned dataset
+                            var dataset = data.datasets[tooltipItem.datasetIndex];
+                            //calculate the total of this data set
+                            var total = dataset.data.reduce(function (previousValue, currentValue, currentIndex, array) {
+                                return previousValue + currentValue;
+                            });
+                            //get the current items value
+                            var currentValue = dataset.data[tooltipItem.index];
+                            //calculate the precentage based on the total and current item, also this does a rough rounding to give a whole number
+                            var percentage = Math.floor(((currentValue / total) * 100) + 0.5);
+
+                            return percentage + "%";
+                        }
+                    }
+                };
+                retorno.options.legend = {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        generateLabels: function (chart) {
+                            var data = chart.data;
+                            if (data.labels.length &amp;&amp; data.datasets.length) {
+                                return data.labels.map(function (label, i) {
+                                    var meta = chart.getDatasetMeta(0);
+                                    var ds = data.datasets[0];
+                                    var arc = meta.data[i];
+                                    var custom = arc &amp;&amp; arc.custom || {};
+                                    var getValueAtIndexOrDefault = Chart.helpers.getValueAtIndexOrDefault;
+                                    var arcOpts = chart.options.elements.arc;
+                                    var fill = custom.backgroundColor ? custom.backgroundColor : getValueAtIndexOrDefault(ds.backgroundColor, i, arcOpts.backgroundColor);
+                                    var stroke = custom.borderColor ? custom.borderColor : getValueAtIndexOrDefault(ds.borderColor, i, arcOpts.borderColor);
+                                    var bw = custom.borderWidth ? custom.borderWidth : getValueAtIndexOrDefault(ds.borderWidth, i, arcOpts.borderWidth);
+
+                                    // We get the value of the current label
+                                    var value = chart.config.data.datasets[arc._datasetIndex].data[arc._index];
+
+                                    return {
+                                        // Instead of `text: label,`
+                                        // We add the value to the string
+                                        text: label + " : " + formatarValorInteiroDashboard(value),
+                                        fillStyle: fill,
+                                        strokeStyle: stroke,
+                                        lineWidth: bw,
+                                        hidden: isNaN(ds.data[i]) || meta.data[i].hidden,
+                                        index: i
+                                    };
+                                });
+                            } else {
+                                return [];
+                            }
+                        }
+                    }
+                };
+                retorno.options.responsive = true;
+                retorno.options.maintainAspectRatio = false;
+                retorno.options.title = {
+                    display: true,
+                    text: "Bens Móveis Por Situação De Conservação",
+                    fontSize: 20
+                };
+            }
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,1215 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function iniciarImportacao() {
+                dialogProgressBar.show();
+                timer = setInterval(function () {
+                    verificarImportacao();
+                }, 1000);
+            }
+
+            function terminarImportacao() {
+                clearInterval(timer);
+                dialogProgressBar.hide();
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand name="verificarImportacao"
+                             process="@this"
+                             update=":formDialogProgressBar"
+                             actionListener="#{analiseContabilControlador.finalizarImportacao}"/>
+
+
+            <p:panel header="Análise Contábil" styleClass="mtop10">
+                <h:panelGrid columns="2">
+
+                    <fc:outputLabelObrigatorio value="Data Inicial: "/>
+                    <p:calendar id="dataInicial"
+                                value="#{analiseContabilControlador.selecionado.dataInicial}"
+                                onkeyup="mascara(this, mdata)"
+                                size="10"
+                                pattern="dd/MM/yyyy" locale="pt_BR" navigator="true"/>
+
+                    <fc:outputLabelObrigatorio value="Data Final: "/>
+                    <p:calendar id="dataFinal"
+                                value="#{analiseContabilControlador.selecionado.dataFinal}"
+                                onkeyup="mascara(this, mdata)"
+                                size="10"
+                                pattern="dd/MM/yyyy" locale="pt_BR" navigator="true"/>
+
+                    <h:outputText value="Tipo: "/>
+                    <p:selectManyCheckbox value="#{analiseContabilControlador.tiposSelecionados}"
+                                          layout="pageDirection">
+                        <f:selectItems value="#{analiseContabilControlador.tipos}"
+                                       var="tipop" itemLabel="&lt;b>#{tipop.descricao}&lt;/b>"
+                                       itemValue="#{tipop.name()}"/>
+                        <p:ajax event="change" update="@form" process="@form"/>
+                    </p:selectManyCheckbox>
+
+                    <h:outputLabel value="Unidade Organizacional: "/>
+                    <p:autoComplete queryDelay="1000" id="completaUO"
+                                    completeMethod="#{analiseContabilControlador.completarUnidadeOrganizacional}"
+                                    value="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional}"
+                                    var="hie"
+                                    title="Informe a unidade organizacional."
+                                    maxResults="10"
+                                    itemLabel="#{hie}"
+                                    itemValue="#{hie.id}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    size="70">
+                        <p:ajax event="itemSelect" update=":Formulario" process="@form"/>
+                    </p:autoComplete>
+
+                    <h:outputText value="Mostrar somente inconsistências?"/>
+                    <p:selectBooleanCheckbox
+                        value="#{analiseContabilControlador.selecionado.mostrarSomenteInsconsistencia}">
+                        <p:ajax event="change" process="@form" update="@form"/>
+                    </p:selectBooleanCheckbox>
+
+                    <h:outputText value="Buscar somente contas com movimentação (Saldo orçamentário e Saldo financeiro)?"/>
+                    <p:selectBooleanCheckbox
+                        value="#{analiseContabilControlador.selecionado.buscarSomenteContasComMovimentacao}">
+                        <p:ajax event="change" process="@form" update="@form"/>
+                    </p:selectBooleanCheckbox>
+
+                    <h:outputText value="Gerar Saldos?"
+                                  rendered="#{sistemaControlador.usuarioCorrente.admin}"/>
+                    <p:selectBooleanCheckbox
+                        rendered="#{sistemaControlador.usuarioCorrente.admin}"
+                        value="#{analiseContabilControlador.selecionado.gerarSaldo}">
+                        <p:ajax event="change" process="@form" update="@form"/>
+                    </p:selectBooleanCheckbox>
+
+                    <h:outputText value="Quantidade de registros?"
+                                  rendered="#{analiseContabilControlador.selecionado.gerarSaldo}"/>
+                    <p:inputText value="#{analiseContabilControlador.selecionado.quantidadeRegistros}"
+                                 rendered="#{analiseContabilControlador.selecionado.gerarSaldo}">
+                        <p:ajax event="blur" update="@this" process="@this"/>
+                    </p:inputText>
+
+                    <h:outputText value="Quantidade de concorrências?"
+                                  rendered="#{analiseContabilControlador.selecionado.gerarSaldo}"/>
+                    <p:inputText value="#{analiseContabilControlador.selecionado.quantidadeConcorrencia}"
+                                 rendered="#{analiseContabilControlador.selecionado.gerarSaldo}">
+                        <p:ajax event="blur" update="@this" process="@this"/>
+                    </p:inputText>
+                </h:panelGrid>
+
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 100%">
+                            <h:panelGrid columns="6">
+
+                                <p:commandButton value="Iniciar Validação"
+                                                 actionListener="#{analiseContabilControlador.iniciar}"
+                                                 icon="ui-icon-refresh"
+                                                 title="Clique para iniciar a validação."
+                                                 style="height: 30px; width: 150px"
+                                                 styleClass="mtop10"
+                                                 update="@this"
+                                                 process="@this :Formulario"/>
+
+                                <p:commandButton value="Gerar Saldo"
+                                                 actionListener="#{analiseContabilControlador.gerarSaldo()}"
+                                                 icon="ui-icon-document"
+                                                 rendered="#{sistemaControlador.usuarioCorrente.admin and analiseContabilControlador.selecionado.gerarSaldo}"
+                                                 title="Clique para gerar saldos aleatórios."
+                                                 style="height: 30px; width: 150px"
+                                                 styleClass="mtop10"
+                                                 update="@this"
+                                                 process="@this :Formulario"/>
+
+                                <p:commandButton value="Salvar"
+                                                 actionListener="#{analiseContabilControlador.salvarMovimentos()}"
+                                                 icon="ui-icon-disk"
+                                                 rendered="#{sistemaControlador.usuarioCorrente.admin}"
+                                                 title="Clique para salvar movimentos."
+                                                 style="height: 30px; width: 150px"
+                                                 styleClass="mtop10"
+                                                 update="@this"
+                                                 process="@this :Formulario"/>
+
+                                <p:commandButton value="Gerar PDF"
+                                                 actionListener="#{analiseContabilControlador.gerarRelatorioPDF()}"
+                                                 icon="ui-icon-print"
+                                                 title="Clique para visualizar mensagens."
+                                                 style="height: 30px; width: 150px"
+                                                 styleClass="mtop10"
+                                                 update="@this"
+                                                 process="@this :Formulario"/>
+
+                                <p:commandButton value="Gerar Excel"
+                                                 ajax="false"
+                                                 icon="ui-icon-excel"
+                                                 id="bt-gerar-excel"
+                                                 style="height: 30px;"
+                                                 styleClass="padrao mtop10 mrig05"
+                                                 title="Clique para fazer o download do arquivo.">
+                                    <p:fileDownload value="#{analiseContabilControlador.gerarRelatorioExcel()}"/>
+                                </p:commandButton>
+
+                                <p:commandButton value="Mensagens"
+                                                 actionListener="#{analiseContabilControlador.exibirMensagens}"
+                                                 icon="ui-icon-document"
+                                                 title="Clique para visualizar mensagens."
+                                                 style="height: 30px; width: 150px"
+                                                 styleClass="mtop10"
+                                                 update="@this"
+                                                 process="@this :Formulario"/>
+                            </h:panelGrid>
+                        </td>
+                    </tr>
+                </table>
+
+                <p:panel header="Gerar Saldo Orçamentário"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.isMostrarGerarSaldoOrcamentario()}">
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.gerarSaldoOrcamentarios.size()}</h1>
+
+                    <p:commandButton value="Novo"
+                                     styleClass="padrao"
+                                     icon="ui-icon-check"
+                                     rendered="#{analiseContabilControlador.analiseGerarSaldoOrcamentario eq null}"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@form"
+                                     update="@form"
+                                     actionListener="#{analiseContabilControlador.novoGerarSaldoOrcamentario()}"/>
+
+                    <h:panelGrid columns="2" rendered="#{analiseContabilControlador.analiseGerarSaldoOrcamentario ne null}">
+                        <fc:outputLabelObrigatorio value="Tipo: "/>
+                        <h:selectOneMenu value="#{analiseContabilControlador.analiseGerarSaldoOrcamentario.tipoCredito}">
+                            <f:selectItems value="#{analiseContabilControlador.buscarTipoOperacaoORC()}"/>
+                            <p:ajax event="change"
+                                    update="@this"
+                                    process="@this"/>
+                        </h:selectOneMenu>
+
+                        <fc:outputLabelObrigatorio value="Operação: "/>
+                        <h:selectOneMenu value="#{analiseContabilControlador.analiseGerarSaldoOrcamentario.operacaoOrc}">
+                            <f:selectItems value="#{analiseContabilControlador.buscarOperacaoORC()}"/>
+                            <p:ajax event="change"
+                                    update="@this"
+                                    process="@this"/>
+                        </h:selectOneMenu>
+
+                        <fc:outputLabelObrigatorio value="Valor: "/>
+                        <fc:inputMoeda value="#{analiseContabilControlador.analiseGerarSaldoOrcamentario.valor}"
+                                       title="Informe o Valor."/>
+
+                        <fc:outputLabelObrigatorio value="Data: "/>
+                        <p:calendar value="#{analiseContabilControlador.analiseGerarSaldoOrcamentario.data}"
+                                    onkeyup="mascara(this, mdata)"
+                                    size="10"
+                                    pattern="dd/MM/yyyy" locale="pt_BR" navigator="true"/>
+                    </h:panelGrid>
+
+                    <p:commandButton value="Adicionar"
+                                     styleClass="padrao"
+                                     icon="ui-icon-check"
+                                     rendered="#{analiseContabilControlador.analiseGerarSaldoOrcamentario ne null}"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@form"
+                                     update="@form"
+                                     actionListener="#{analiseContabilControlador.adicionarGerarSaldoOrcamentario()}"/>
+
+                    <p:dataTable value="#{analiseContabilControlador.selecionado.gerarSaldoOrcamentarios}"
+                                 var="itemGerarSaldo"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="Mostrando {startRecord} a {endRecord} de {totalRecords} registros."
+                                 emptyMessage="Nenhum registro encontrado.">
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{itemGerarSaldo.unidade}"/>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGerarSaldo.data}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Operação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGerarSaldo.operacaoOrc}"/>
+                        </p:column>
+                        <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGerarSaldo.tipoCredito}"/>
+                        </p:column>
+                        <p:column headerText="Valor" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGerarSaldo.valor}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column>
+                            <p:dataTable value="#{itemGerarSaldo.fontes}"
+                                         var="itemSaldoOrcamentoFonte"
+                                         paginator="true"
+                                         styleClass="mtop10"
+                                         rowsPerPageTemplate="10,25,50,100, 1000"
+                                         rows="150"
+                                         paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="Mostrando {startRecord} a {endRecord} de {totalRecords} registros."
+                                         emptyMessage="Nenhum registro encontrado.">
+                                <p:column style="width: 40px" headerText="Saldos">
+                                    <p:rowToggler />
+                                </p:column>
+                                <p:column headerText="Despesa" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemSaldoOrcamentoFonte.fonte.despesaORC}"/>
+                                </p:column>
+                                <p:column headerText="Fonte" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemSaldoOrcamentoFonte.fonte}"/>
+                                </p:column>
+                                <p:rowExpansion>
+                                    <p:dataTable value="#{itemSaldoOrcamentoFonte.saldos}"
+                                                 var="itemSaldoOrcamentoGerado"
+                                                 paginator="true"
+                                                 styleClass="mtop10"
+                                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                                 rows="150"
+                                                 paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                 currentPageReportTemplate="Mostrando {startRecord} a {endRecord} de {totalRecords} registros."
+                                                 emptyMessage="Nenhum registro encontrado.">
+
+                                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                                            <h:outputText value="#{itemSaldoOrcamentoGerado.unidade}"/>
+                                        </p:column>
+                                        <p:column headerText="Data" styleClass="alinhamentoEsquerda">
+                                            <h:outputText value="#{itemSaldoOrcamentoGerado.data}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Valor" styleClass="alinhamentoDireita">
+                                            <h:outputText value="#{itemSaldoOrcamentoGerado.valor}"
+                                                          converter="moedaConverter"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:rowExpansion>
+                            </p:dataTable>
+                        </p:column>
+                    </p:dataTable>
+
+                </p:panel>
+
+                <p:panel header="Saldo Grupo Bens Estoque"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.grupoBemEstoque ne null and analiseContabilControlador.selecionado.grupoBemEstoque.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.grupoBemEstoque.size()}</h1>
+
+                    <p:dataTable value="#{analiseContabilControlador.selecionado.grupoBemEstoque}"
+                                 var="itemGrupoBemEstoque"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>VALORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Detalhes" styleClass="alinhamentoEsquerda">
+                            <p:commandButton value=""
+                                             icon="ui-icon-export-pdf"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 30px; height: 30px"
+                                             styleClass="mtop10 mlef05"
+                                             actionListener="#{analiseContabilControlador.gerarPDFGrupoBemEstoque(itemGrupoBemEstoque)}"/>
+                        </p:column>
+
+                        <p:column headerText="Grupo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemEstoque.grupoMaterial}"/>
+                        </p:column>
+
+
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{itemGrupoBemEstoque.unidadeOrganizacional}"/>
+                        </p:column>
+
+                        <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemEstoque.tipoEstoque.descricao}"/>
+                        </p:column>
+
+                        <p:column headerText="Tipo Operação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemEstoque.tipoOperacaoBensEstoque.descricao}"/>
+                        </p:column>
+
+                        <p:column headerText="Saldo Anterior" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemEstoque.saldoAnterior}"
+                                          rendered="#{itemGrupoBemEstoque.saldoAnterior ne null}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. de Débito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemEstoque.totalMovimentoDebito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. de Crédito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemEstoque.totalMovimentoCredito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov." styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemEstoque.totalMovimentoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemEstoque.saldoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Diferença" styleClass="alinhamentoDireita width200">
+                            <h:outputText value="#{itemGrupoBemEstoque.diferenca}"
+                                          styleClass="#{itemGrupoBemEstoque.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <p:panel header="Saldo Grupo Bens Imóveis"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.grupoBemImovel ne null and analiseContabilControlador.selecionado.grupoBemImovel.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.grupoBemImovel.size()}</h1>
+
+                    <p:dataTable value="#{analiseContabilControlador.selecionado.grupoBemImovel}"
+                                 var="itemGrupoBemImovel"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>VALORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Detalhes" styleClass="alinhamentoEsquerda">
+                            <p:commandButton value=""
+                                             icon="ui-icon-export-pdf"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 30px; height: 30px"
+                                             styleClass="mtop10 mlef05"
+                                             actionListener="#{analiseContabilControlador.gerarPDFGrupoBemImovel(itemGrupoBemImovel)}"/>
+                        </p:column>
+
+                        <p:column headerText="Grupo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemImovel.grupoBem}"/>
+                        </p:column>
+
+
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{itemGrupoBemImovel.unidadeOrganizacional}"/>
+                        </p:column>
+
+                        <p:column headerText="Tipo Grupo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemImovel.tipoGrupo.descricao}"/>
+                        </p:column>
+
+                        <p:column headerText="Tipo Operação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemImovel.tipoOperacaoBensImoveis.descricao}"/>
+                        </p:column>
+
+                        <p:column headerText="Saldo Anterior" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemImovel.saldoAnterior}"
+                                          rendered="#{itemGrupoBemImovel.saldoAnterior ne null}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Débito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemImovel.totalMovimentoDebito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Crédito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemImovel.totalMovimentoCredito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov." styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemImovel.totalMovimentoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemImovel.saldoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Diferença" styleClass="alinhamentoDireita width200">
+                            <h:outputText value="#{itemGrupoBemImovel.diferenca}"
+                                          styleClass="#{itemGrupoBemImovel.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <p:panel header="Saldo Grupo Bens Móveis"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.grupoBemMovel ne null and analiseContabilControlador.selecionado.grupoBemMovel.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.grupoBemMovel.size()}</h1>
+
+                    <p:dataTable value="#{analiseContabilControlador.selecionado.grupoBemMovel}"
+                                 var="itemGrupoBemMovel"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>VALORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Detalhes" styleClass="alinhamentoEsquerda">
+                            <p:commandButton value=""
+                                             icon="ui-icon-export-pdf"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 30px; height: 30px"
+                                             styleClass="mtop10 mlef05"
+                                             actionListener="#{analiseContabilControlador.gerarPDFGrupoBem(itemGrupoBemMovel)}"/>
+                        </p:column>
+
+                        <p:column headerText="Grupo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemMovel.grupoBem}"/>
+                        </p:column>
+
+
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{itemGrupoBemMovel.unidadeOrganizacional}"/>
+                        </p:column>
+
+                        <p:column headerText="Tipo Grupo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemMovel.tipoGrupo.descricao}"/>
+                        </p:column>
+
+                        <p:column headerText="Natureza" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemGrupoBemMovel.natureza.descricao}"/>
+                        </p:column>
+
+                        <p:column headerText="Saldo Anterior" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemMovel.saldoAnterior}"
+                                          rendered="#{itemGrupoBemMovel.saldoAnterior ne null}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Débito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemMovel.totalMovimentoDebito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Crédito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemMovel.totalMovimentoCredito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov." styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemMovel.totalMovimentoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemGrupoBemMovel.saldoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Diferença" styleClass="alinhamentoDireita width200">
+                            <h:outputText value="#{itemGrupoBemMovel.diferenca}"
+                                          styleClass="#{itemGrupoBemMovel.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <p:panel header="Saldo Dívida Pública"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.dividaPublica ne null and analiseContabilControlador.selecionado.dividaPublica.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.dividaPublica.size()}</h1>
+
+                    <p:dataTable value="#{analiseContabilControlador.selecionado.dividaPublica}"
+                                 var="itemDividaPublica"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>VALORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Detalhes" styleClass="alinhamentoEsquerda">
+                            <p:commandButton value=""
+                                             icon="ui-icon-export-pdf"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 30px; height: 30px"
+                                             styleClass="mtop10 mlef05"
+                                             actionListener="#{analiseContabilControlador.gerarPDFDividaPublica(itemDividaPublica)}"/>
+                        </p:column>
+
+                        <p:column headerText="Dívida Pública" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemDividaPublica.dividapublica}"/>
+                        </p:column>
+
+
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{itemDividaPublica.unidadeOrganizacional}"/>
+                        </p:column>
+
+                        <p:column headerText="Fonte" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemDividaPublica.contaDeDestinacao.fonteDeRecursos}"/>
+                        </p:column>
+
+                        <p:column headerText="Saldo Anterior" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemDividaPublica.saldoAnterior}"
+                                          rendered="#{itemDividaPublica.saldoAnterior ne null}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Débito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemDividaPublica.totalMovimentoDebito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Crédito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemDividaPublica.totalMovimentoCredito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemDividaPublica.saldoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Diferença" styleClass="alinhamentoDireita width200">
+                            <h:outputText value="#{itemDividaPublica.diferenca}"
+                                          styleClass="#{itemDividaPublica.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <p:panel header="Saldo Extraorcamentário"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.extraOrcamentario ne null and analiseContabilControlador.selecionado.extraOrcamentario.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.extraOrcamentario.size()}</h1>
+
+                    <p:dataTable value="#{analiseContabilControlador.selecionado.extraOrcamentario}"
+                                 var="itemExtra"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>VALORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemExtra.contaExtraorcamentaria}"/>
+                        </p:column>
+
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{itemExtra.unidadeOrganizacional}"/>
+                        </p:column>
+
+                        <p:column headerText="Fonte" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{itemExtra.contaDeDestinacao.fonteDeRecursos}"/>
+                        </p:column>
+
+                        <p:column headerText="Saldo Anterior" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemExtra.saldoAnterior.valor}"
+                                          rendered="#{itemExtra.saldoAnterior ne null}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Débito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemExtra.totalMovimentoDebito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Crédito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemExtra.totalMovimentoCredito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemExtra.totalMovimentoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{itemExtra.saldoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Diferença" styleClass="alinhamentoDireita width200">
+                            <h:outputText value="#{itemExtra.diferenca}"
+                                          styleClass="#{itemExtra.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <p:panel header="Balancete Siconfi"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.siconfi ne null and analiseContabilControlador.selecionado.siconfi.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.siconfi.size()}</h1>
+
+                    <p:dataTable id="tabelaContasBalanceteSiconfi"
+                                 value="#{analiseContabilControlador.selecionado.siconfi}"
+                                 var="contaSiconfi"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>VALORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Detalhes" styleClass="alinhamentoEsquerda">
+                            <p:commandButton value=""
+                                             icon="ui-icon-export-pdf"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 30px; height: 30px"
+                                             styleClass="mtop10 mlef05"
+                                             actionListener="#{analiseContabilControlador.gerarPDFContabilSiconfi(contaSiconfi, false)}"/>
+
+                            <p:commandButton value=""
+                                             icon="ui-icon-export-pdf"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 30px; height: 30px"
+                                             styleClass="mtop10 mlef05"
+                                             actionListener="#{analiseContabilControlador.gerarPDFContabilSiconfi(contaSiconfi, true)}"/>
+                        </p:column>
+
+                        <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{contaSiconfi.conta}"/>
+                        </p:column>
+
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{contaSiconfi.unidadeOrganizacional}"/>
+                        </p:column>
+
+                        <p:column headerText="Saldo Siconfi Anterior" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaSiconfi.saldoAnterior}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Débito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaSiconfi.totalMovimentoDebito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Crédito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaSiconfi.totalMovimentoCredito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaSiconfi.totalMovimentoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Siconfi Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaSiconfi.saldoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Contábil Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaSiconfi.saldoContabilAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Diferença" styleClass="alinhamentoDireita width200">
+                            <h:outputText value="#{contaSiconfi.diferenca}"
+                                          styleClass="#{contaSiconfi.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <p:panel header="Balancete Contábil"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.contabil ne null and analiseContabilControlador.selecionado.contabil.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.contabil.size()}</h1>
+
+                    <p:dataTable id="tabelaContasBalancete"
+                                 value="#{analiseContabilControlador.selecionado.contabil}"
+                                 var="contaContabil"
+                                 paginator="true"
+                                 styleClass="mtop10"
+                                 rowsPerPageTemplate="10,25,50,100, 1000"
+                                 rows="150"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>VALORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column headerText="Detalhes" styleClass="alinhamentoEsquerda">
+                            <p:commandButton value=""
+                                             icon="ui-icon-export-pdf"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             style="width: 30px; height: 30px"
+                                             styleClass="mtop10 mlef05"
+                                             actionListener="#{analiseContabilControlador.gerarPDFContabil(contaContabil)}"/>
+                        </p:column>
+
+                        <p:column headerText="Conta" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{contaContabil.conta}"/>
+                        </p:column>
+
+                        <p:column headerText="Unidade" styleClass="alinhamentoEsquerda"
+                                  rendered="#{analiseContabilControlador.selecionado.hierarquiaOrganizacional eq null}">
+                            <h:outputText value="#{contaContabil.unidadeOrganizacional}"/>
+                        </p:column>
+
+                        <p:column headerText="Saldo Anterior" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaContabil.saldoAnterior}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Débito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaContabil.totalMovimentoDebito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Crédito" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaContabil.totalMovimentoCredito}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Total Mov. Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaContabil.totalMovimentoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{contaContabil.saldoAtual}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                        <p:column headerText="Diferença" styleClass="alinhamentoDireita width200">
+                            <h:outputText value="#{contaContabil.diferenca}"
+                                          styleClass="#{contaContabil.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"
+                                          converter="moedaConverter"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <p:panel header="Financeiro"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.financeiro ne null and analiseContabilControlador.selecionado.financeiro.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.financeiro.size()}</h1>
+                    <ui:repeat value="#{analiseContabilControlador.selecionado.financeiro}" var="itemFinanceiro">
+                        <hr class="mtop10"></hr>
+                        <table>
+                            <tr>
+                                <td><h:outputText value="Conta Financeira: #{itemFinanceiro.subConta}"/></td>
+                            </tr>
+                            <tr>
+                                <td><h:outputText value="Unidade: #{itemFinanceiro.unidadeOrganizacional}"/></td>
+                            </tr>
+                            <tr>
+                                <td><h:outputText value="Fonte: #{itemFinanceiro.contaDeDestinacao}"/></td>
+                            </tr>
+                        </table>
+
+                        <p:commandButton value="Imprimir"
+                                         icon="ui-icon-export-pdf"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         style="width: 100px; height: 30px"
+                                         styleClass="mtop10 mlef05"
+                                         actionListener="#{analiseContabilControlador.gerarPDFFinanceiro(itemFinanceiro)}"/>
+
+                        <table class="table table-striped table-bordered mtop20 ">
+                            <tr>
+                                <td style="font-size: 16px; text-align: center"> Saldo Anterior Débito.</td>
+                                <td style="font-size: 16px; text-align: center"> Saldo Anterior Crédito.</td>
+                                <td style="font-size: 16px; text-align: center"> Saldo atual.</td>
+                                <td style="font-size: 16px; text-align: center"> Mov. Valor Débito.</td>
+                                <td style="font-size: 16px; text-align: center"> Mov. Valor Crédito.</td>
+                                <td style="font-size: 16px; text-align: center"> Mov. Atual.</td>
+                                <td style="font-size: 16px; text-align: center"> Saldo Débito.</td>
+                                <td style="font-size: 16px; text-align: center"> Saldo Crédito.</td>
+                                <td style="font-size: 16px; text-align: center"> Saldo atual.</td>
+                                <td style="font-size: 16px; text-align: center"> Diferença.</td>
+                            </tr>
+                            <tr>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.saldoAnterior.totalDebito}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.saldoAnterior.totalCredito}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.saldoAnterior.saldoDoDia}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.totalMovimentoDebito}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.totalMovimentoCredito}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.totalMovimentoAtual}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.saldoSubConta.totalDebito}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.saldoSubConta.totalCredito}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.saldoSubConta.saldoDoDia}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="font-size: 16px; text-align: center">
+                                    <h:outputText
+                                        value="#{itemFinanceiro.diferenca}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemFinanceiro.diferenca.doubleValue()  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </ui:repeat>
+                </p:panel>
+
+                <p:panel header="Orçamentário"
+                         styleClass="mtop20"
+                         rendered="#{analiseContabilControlador.selecionado.orcamentario ne null and analiseContabilControlador.selecionado.orcamentario.size() > 0}">
+
+
+                    <h1>Quantidade de Registro: #{analiseContabilControlador.selecionado.orcamentario.size()}</h1>
+
+                    <ui:repeat value="#{analiseContabilControlador.selecionado.orcamentario}" var="itemOrc">
+                        <h1>#{itemOrc.fonteDespesaORC}</h1>
+                        <table class="table table-striped table-bordered mtop20 ">
+                            <tr>
+                                <td></td>
+                                <td style="font-size: 16px; text-align: center"> Valores referente aos fatos geradores.</td>
+                                <td style="font-size: 16px; text-align: center"> Valores referente ao último saldo.</td>
+                                <td> Diferença</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Data:"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText value="Valores dos fatos referente a data inicial e final "/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.dataSaldo}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </td>
+                                <td style="text-align: right;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Dotação:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText value="#{itemOrc.dotacao}"
+                                                  converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.dotacao}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.dotacao - itemOrc.dotacao}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.dotacao.compareTo(itemOrc.dotacao)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Alteração Orçamentária:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText value="#{itemOrc.alteracao}"
+                                                  converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.alteracao}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.alteracao - itemOrc.alteracao}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.alteracao.compareTo(itemOrc.alteracao)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Dotação atualizada:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.saldoDotacaoAtual}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.saldoDotacaoAtual}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.saldoDotacaoAtual - itemOrc.saldoDotacaoAtual}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.saldoDotacaoAtual.compareTo(itemOrc.saldoDotacaoAtual)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Empenhado:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText value="#{itemOrc.empenhado}"
+                                                  converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.empenhado}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.empenhado - itemOrc.empenhado}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.empenhado.compareTo(itemOrc.empenhado)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Reservado:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText value="#{itemOrc.reservado}"
+                                                  converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.reservado}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.reservado - itemOrc.reservado}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.reservado.compareTo(itemOrc.reservado)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Reservado por Licitação:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.reservadoPorLicitacao}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.reservadoPorLicitacao}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.reservadoPorLicitacao - itemOrc.reservadoPorLicitacao}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.reservadoPorLicitacao.compareTo(itemOrc.reservadoPorLicitacao)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Liquidação:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText value="#{itemOrc.liquidado}"
+                                                  converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.liquidado}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.liquidado - itemOrc.liquidado}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.liquidado.compareTo(itemOrc.liquidado)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Pago:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText value="#{itemOrc.pago}"
+                                                  converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.pago}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.pago - itemOrc.pago}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.pago.compareTo(itemOrc.pago)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <h:outputText value="Saldo atual:"/>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <h:outputText value="#{itemOrc.saldoAtual}"
+                                                  converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.saldoAtual}"
+                                        converter="moedaConverter"/>
+                                </td>
+                                <td style="text-align: right;">
+                                    <h:outputText
+                                        value="#{itemOrc.ultimoSaldo.saldoAtual - itemOrc.saldoAtual}"
+                                        converter="moedaConverter"
+                                        styleClass="#{itemOrc.ultimoSaldo.saldoAtual.compareTo(itemOrc.saldoAtual)  == 0 ? 'negrito' : 'vermelhonegrito'}"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </ui:repeat>
+                </p:panel>
+            </p:panel>
+
+
+        </h:form>
+
+
+        <p:dialog widgetVar="dialogProgressBar"
+                  width="800"
+                  closable="false"
+                  showHeader="false"
+                  modal="true"
+                  hideEffect="clip"
+                  resizable="false"
+                  position="center"
+                  dynamic="true">
+            <h:form id="formDialogProgressBar">
+                <div class="alert alert-success centralizado mtop05">
+                    <strong>Aguarde, </strong> o processo de validação está sendo executado...
+                </div>
+                <center>
+                    <p:commandButton icon="ui-icon-cancel"
+                                     styleClass="operacao prioritario"
+                                     value="Abortar"
+                                     update="@this"
+                                     process="@this"
+                                     immediate="true"
+                                     actionListener="#{analiseContabilControlador.abortar()}"/>
+
+                </center>
+
+                <ui:repeat value="#{analiseContabilControlador.selecionado.tipos}" var="tipoProcessamento">
+                    <p:panel style="text-align: center; width: 100%; border: 0px;"
+                             id="panelBarra">
+
+                        <h:outputText
+                            value="#{tipoProcessamento.descricaoProcesso}"
+                            escape="false"/>
+                        <br/>
+                        <br/>
+
+                        <h:outputText
+                            value="#{tipoProcessamento.mensagemBarraProcesso}"
+                            escape="false"/>
+
+                        <br/>
+                        <h:outputText
+                            value="Total: #{tipoProcessamento.total}"
+                            styleClass="negrito"/>
+                        <br/>
+                        <h:outputText
+                            value="Processados: #{tipoProcessamento.calculados}"
+                            styleClass="negrito"/>
+
+
+                        <div class="progress progress-striped active" id="barraProgresso">
+                            <div class="bar"
+                                 style="width: #{tipoProcessamento.porcentagemDoCalculo}%;">
+                                <h:outputText
+                                    value="#{tipoProcessamento.porcentagemDoCalculo}"
+                                    styleClass="negrito">
+                                    <f:convertNumber type="number" maxFractionDigits="2"/>
+                                </h:outputText>
+                                <h:outputText value="%"/>
+                            </div>
+                        </div>
+
+
+                        <br/>
+                        <h:outputText
+                            value="Tempo Decorrido: #{tipoProcessamento.tempoDecorrido}"
+                            styleClass="negrito"/>
+
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado: #{tipoProcessamento.tempoEstimado}"
+                            styleClass="negrito"/>
+
+                        <br/>
+                    </p:panel>
+                </ui:repeat>
+
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,144 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:f="http://java.sun.com/jsf/core">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="remoteForm">
+            <script type="text/javascript">
+                $(document).ready(function () {
+                    iniciaPagamento();
+                });
+            </script>
+            <p:remoteCommand name="posPagamento" actionListener="#{calculoFolhaDePagamentoControlador.posCalculo}"
+                             update=":Formulario"/>
+
+            <p:remoteCommand name="finalPagamento" update=":Formulario"/>
+        </h:form>
+        <p:panel style="border: 0">
+            <h:form id="Formulario">
+                <script type="text/javascript">
+
+                    var timer;
+
+                    function iniciaPagamento() {
+                        timer = setInterval(function () {
+                            posPagamento();
+                        }, 1000);
+
+                    }
+
+                    function terminaPagamento() {
+                        clearInterval(timer);
+                        finalPagamento();
+                    }
+
+                </script>
+
+
+                <center>
+                    <p:commandButton style=" height: 32px;"
+
+                                     value="Voltar" icon="ui-icon-arrowreturnthick-1-w"
+                                     disabled="#{calculoFolhaDePagamentoControlador.logSucesso.length() lt 1}"
+                                     styleClass="icone_azul" action="edita"
+                                     actionListener="#{calculoFolhaDePagamentoControlador.novo()}" ajax="false"/>
+                    <p:commandButton style=" height: 32px;"
+                                     actionListener="#{calculoFolhaDePagamentoControlador.abortaCalculo()}"
+                                     value="Abortar Calculo"
+                                     icon="ui-icon-cancel"
+
+                                     styleClass="icone_vermelho" ajax="false"/>
+                    <p:commandButton ajax="false" icon="ui-icon-print"
+                                     styleClass="icone_azul"
+                                     id="exportar"
+                                     style=" height: 32px;"
+                                     disabled="#{calculoFolhaDePagamentoControlador.logSucesso.length() lt 1}"
+                                     action="#{calculoFolhaDePagamentoControlador.geraTxt()}"
+                                     value="Exportar"/>
+                    <p:commandButton ajax="true" icon="ui-icon-calculator"
+                                     styleClass="icone_azul"
+                                     onstart="aguarde.show();"
+                                     oncomplete="aguade.hide();"
+                                     id="recalcular"
+                                     style=" height: 32px;"
+                                     disabled="#{calculoFolhaDePagamentoControlador.filtro.vinculoFP eq null}"
+                                     actionListener="#{calculoFolhaDePagamentoControlador.calcularFolha}"
+                                     onclick="if (!confirm('Deseja recalcular o servidor #{calculoFolhaDePagamentoControlador.filtro.vinculoFP}?'))
+                                            return false;"
+                                     value="Recalcular"/>
+                    <p:commandButton value="Ficha Financeira"
+                                     style=" height: 32px;"
+                                     id="botaoEmitirFicha"
+                                     disabled="#{calculoFolhaDePagamentoControlador.logSucesso.length() lt 1}"
+                                     rendered="#{calculoFolhaDePagamentoControlador.filtro.vinculoFP ne null}"
+                                     icon="ui-icon-print"
+                                     onclick="window.open('#{request.contextPath}/relatorio/fichafinanceira/gerar/?ano=#{calculoFolhaDePagamentoControlador.folhaDePagamento.ano}&amp;mesinicial=#{calculoFolhaDePagamentoControlador.folhaDePagamento.mes.numeroMes}&amp;mesfinal=#{calculoFolhaDePagamentoControlador.folhaDePagamento.mes.numeroMes}&amp;tipo=#{calculoFolhaDePagamentoControlador.folhaDePagamento.tipoFolhaDePagamento.name()}&amp;contrato=#{calculoFolhaDePagamentoControlador.filtro.vinculoFP.id}', '_blank');"/>
+                    <p:commandButton id="botaoEmitirFolhaPorSecretaria"
+                                     style="height: 32px;"
+                                     value="Relatório de Folha Por Secretaria"
+                                     title="Relatório de Folha Por Secretaria"
+                                     icon="ui-icon-print"
+                                     rendered="#{calculoFolhaDePagamentoControlador.folhaDePagamento.loteProcessamento ne null}"
+                                     disabled="#{calculoFolhaDePagamentoControlador.logSucesso.length() lt 1}"
+                                     onclick="window.open('#{request.contextPath}/relatorio/folha-por-secretaria-recurso-vinculoFP/?ano=#{calculoFolhaDePagamentoControlador.folhaDePagamento.ano}&amp;mes=#{calculoFolhaDePagamentoControlador.folhaDePagamento.mes.numeroMes}&amp;tipo=#{calculoFolhaDePagamentoControlador.folhaDePagamento.tipoFolhaDePagamento.name()}&amp;orgao=#{calculoFolhaDePagamentoControlador.folhaDePagamento.unidadeOrganizacional.id}&amp;lote=#{calculoFolhaDePagamentoControlador.folhaDePagamento.loteProcessamento.id ne null ? calculoFolhaDePagamentoControlador.folhaDePagamento.loteProcessamento.id : '0' }', '_blank');"/>
+                </center>
+                <br/>
+
+
+                <p:panel style="font-size: 12px">
+                    <p:panel id="painelBarra" style="text-align: center; border: 0; ">
+                        <h2>Calculando Folha de Pagamento</h2>
+                        <div style="text-align: center; color: slategrey">
+                            <h:outputText value="#{calculoFolhaDePagamentoControlador.legenda}"/>
+                            <h:outputText value="#{calculoFolhaDePagamentoControlador.porcentagemDoCalculo}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                            <h:outputText value="%"/>
+                            <p:progressBar id="barra" widgetVar="barra"
+                                           value="#{calculoFolhaDePagamentoControlador.porcentagemDoCalculo}"
+                                           ajax="true"
+                                           interval="1000"
+
+                            >
+
+                            </p:progressBar>
+
+                            <!---->
+
+                            <br/>
+                            <h:outputText
+                                value="#{calculoFolhaDePagamentoControlador.posicaoCadastroAtual.intValue()} de #{calculoFolhaDePagamentoControlador.totalCadastros.intValue()}"/><br/>
+                            <h:outputText value="Tempo Decorrido #{calculoFolhaDePagamentoControlador.tempoDecorrido}"/><br/>
+                            <h:outputText value="Tempo Estimado #{calculoFolhaDePagamentoControlador.tempoEstimado}"/>
+                        </div>
+                    </p:panel>
+                </p:panel>
+                <br/>
+                <p:outputPanel id="outSaida">
+                    <p:panel rendered="#{calculoFolhaDePagamentoControlador.logSucesso.length() > 1}"
+                             header="Resumo do Cálculo" id="relatorio" style="line-height:200%;">
+                        <p:messages id="msgs" showDetail="true"/>
+                        <h:outputText escape="false"
+                                      rendered="#{calculoFolhaDePagamentoControlador.logSucesso.length() lt 250}"
+                                      value="#{calculoFolhaDePagamentoControlador.logSucesso}"/>
+                        <h:outputText escape="false"
+                                      rendered="#{calculoFolhaDePagamentoControlador.logSucesso.length() gt 250}"
+                                      value="#{calculoFolhaDePagamentoControlador.logSucesso.substring(0, 250)}"/>
+                        <div style="text-align: center; color: slategrey; font-size: x-small">
+                            <p> ... </p>
+                            <p> Para ver todo o relatório clique no botão de exportar no topo da página </p>
+                        </div>
+                    </p:panel>
+                </p:outputPanel>
+                <br/>
+            </h:form>
+        </p:panel>
+    </ui:define>
+</ui:composition>
+</html>

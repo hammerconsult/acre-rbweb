@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:rh="http://java.sun.com/jsf/composite/components/rh"
+
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function start() {
+                statusDialog.show();
+            }
+
+            function stop() {
+                statusDialog.hide();
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:panel header="Declaração de Imposto de Renda Retido na Fonte (DIRF)">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Ano Calendário:"/>
+                    <h:selectOneMenu value="#{dirfControlador.selecionado.exercicio}"
+                                     disabled="#{dirfControlador.operacao eq 'EDITAR'}"
+                                     title="Clique para selecionar o exercício para geração da DIRF"
+                                     converter="#{dirfControlador.exercicioConverter}">
+                        <f:selectItems value="#{dirfControlador.exercicios}"/>
+                        <p:ajax event="change"
+                                process="@this"
+                                update=":Formulario:selectOneEntidade"
+                                onstart="statusDialog.show()"
+                                oncomplete="statusDialog.hide()"/>
+                    </h:selectOneMenu>
+                    <fc:outputLabelObrigatorio value="Tipo da Dirf:"/>
+                    <h:selectOneMenu title="Selecione o tipo da Dirf"
+                                     value="#{dirfControlador.selecionado.tipoDirf}"
+                                     id="tipoGrupo">
+                        <f:selectItems value="#{dirfControlador.tiposDirf}"/>
+                        <p:ajax event="change" process="@this" update="@form"/>
+                    </h:selectOneMenu>
+                    <h:outputLabel value="Tipo de Emissão da Dirf:"
+                                   rendered="#{dirfControlador.selecionado.tipoDirf eq 'CONTABIL'}"/>
+                    <h:selectOneMenu title="Selecione um tipo de emissão."
+                                     value="#{dirfControlador.selecionado.tipoEmissaoDirf}"
+                                     rendered="#{dirfControlador.selecionado.tipoDirf eq 'CONTABIL'}">
+                        <f:selectItems value="#{dirfControlador.tipoEmissao()}"/>
+                    </h:selectOneMenu>
+                    <fc:outputLabelObrigatorio value="Entidade:"/>
+                    <h:panelGroup>
+                        <h:selectOneMenu value="#{dirfControlador.selecionado.entidade}"
+                                         id="selectOneEntidade"
+                                         styleClass="mrig05"
+                                         disabled="#{dirfControlador.operacao eq 'EDITAR'}"
+                                         style="width: 417px;"
+                                         converter="#{dirfControlador.converterEntidade}">
+                            <f:selectItems value="#{dirfControlador.buscarEntidadesParaDeclaracao()}"/>
+                            <f:ajax event="change" execute="@this" render="botaoDetalhes"/>
+                        </h:selectOneMenu>
+
+                        <p:commandButton icon="ui-icon-lupa"
+                                         id="botaoDetalhes"
+                                         styleClass="icone-20"
+                                         disabled="#{dirfControlador.selecionado.entidade eq null}"
+                                         update=":formUnidadesDeclaracao"
+                                         onclick="statusDialog.show()"
+                                         oncomplete="statusDialog.hide(); dialogUnidadesDeclaracao.show()"
+                                         title="Clique para ver as unidades deste estabelecimento"/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Responsável:"/>
+                    <p:autoComplete queryDelay="1000" id="contratoFP"
+                                    completeMethod="#{dirfControlador.completaContratoFP}"
+                                    value="#{dirfControlador.selecionado.responsavel}"
+                                    var="c"
+                                    maxResults="10"
+                                    disabled="#{dirfControlador.operacao eq 'EDITAR'}"
+                                    itemLabel="#{c}"
+                                    itemValue="#{c.id}"
+                                    converter="#{dirfControlador.contratoFPConverter}"
+                                    forceSelection="true"
+                                    size="70">
+                    </p:autoComplete>
+
+                    <h:outputText value="Servidor:" rendered="#{dirfControlador.hasPermissaoGerarIndividual}"/>
+
+                    <rh:auto-complete-vinculofp id="auto-complete-contrato"
+                                                validarPermissaoDeAcessoAoVinculo="false"
+                                                rendered="#{dirfControlador.hasPermissaoGerarIndividual}"
+                                                process=":Formulario:auto-complete-contrato"
+                                                converter="#{consultaFichaFinanceiraControlador.converterContratoFP}"
+                                                completeMethod="#{consultaFichaFinanceiraControlador.completaContrato}"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                value="#{dirfControlador.vinculoParaDirf.vinculoFP}"/>
+
+                    <p:commandButton value="Adicionar" rendered="#{dirfControlador.hasPermissaoGerarIndividual}"
+                                     icon="ui-icon-plus" styleClass="operacao mtop10"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     update=":Formulario"
+                                     actionListener="#{dirfControlador.adicionarVinculoFP}"/>
+
+
+                </h:panelGrid>
+
+                <p:dataTable value="#{dirfControlador.selecionado.itemVinculoFP}"
+                             var="vinculo"
+                             rendered="#{dirfControlador.hasPermissaoGerarIndividual}"
+                             paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             styleClass="mtop05"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>CONFIGURAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             id="tabela-dirf-usuario">
+                    <p:column headerText="Ações" style="text-align: center; width: 10%">
+                        <p:commandButton
+                            actionListener="#{dirfControlador.removerVinculoFP(vinculo)}"
+                            onstart="aguarde.show()"
+                            icon="ui-icon-trash"
+                            oncomplete="aguarde.hide()"
+                            update="tabela-dirf-usuario"/>
+                    </p:column>
+                    <p:column headerText="Vinculo FP">
+                        <h:outputText value="#{vinculo.vinculoFP}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+
+            <p:commandButton value="Gerar Arquivo"
+                             styleClass="mtop10 prioritario operacao"
+                             id="botaoGerarArquivo"
+                             onclick="if (!confirm('Este processo pode levar alguns minutos até sua conclusão, tem certeza que deseja gerar o arquivo DIRF agora?'))
+                        {return false;} else {aguarde.show()}"
+
+                             actionListener="#{dirfControlador.validarParametrosParaGeracao}"
+                             icon="ui-icon-print"/>
+            <p:commandButton value="Cancelar"
+                             styleClass="mtop10 mlef05 operacao"
+                             ajax="false"
+                             action="lista.xhtml"
+                             icon="ui-icon-voltar"/>
+        </h:form>
+
+        <p:dialog modal="true"
+                  position="center"
+                  height="500"
+                  width="700"
+                  header="Orgãos"
+                  resizable="false"
+                  widgetVar="dialogUnidadesDeclaracao"
+                  closable="true">
+            <h:form id="formUnidadesDeclaracao">
+                <p:dataTable id="tabelaHierarquia"
+                             styleClass="mtop05 mbot10"
+                             rowKey="#{item.id}"
+                             rowStyleClass="#{dirfControlador.orgaoEstaEmEstabelecimentoSelecionado(item)? 'fundo-verde' : ''}"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{dirfControlador.orgaosVigentesNaDataDaDirf()}"
+                             var="item">
+
+                    <p:column headerText="Orgãos">
+                        <h:outputText value="#{item}"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  header="Arquivo já existente encontrado"
+                  resizable="false"
+                  dynamic="true"
+                  widgetVar="dialogArquivoJaExistente"
+                  closable="false">
+            <h:form id="form-arquivo-existente">
+                <h:outputText value="#{dirfControlador.mensagemArquivoExistente()}"
+                              escape="false"/>
+                <br/>
+                <br/>
+                <h:outputText value="Deseja substituir o arquivo já existente?"
+                              style="font-size: 14px;"
+                              styleClass="negrito"/>
+
+                <div align="center" style="padding-bottom: 10px;">
+                    <p:commandButton value="Sim"
+                                     process="@this"
+                                     update="@none"
+                                     icon="ui-icon-check"
+                                     onclick="aguarde.show()"
+                                     styleClass="mrig05 mtop05 prioritario padrao"
+                                     actionListener="#{dirfControlador.gerarDirf}"/>
+
+                    <p:commandButton value="Não"
+                                     icon="ui-icon-cancel"
+                                     process="@none"
+                                     update="@none"
+                                     styleClass="mtop05 padrao"
+                                     onclick="dialogArquivoJaExistente.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+    >
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <p:messages id="msgs" showDetail="true"/>
+        <h:form id="Formulario">
+            <script type="text/javascript">
+                function keyLimparContaFinanceira(campoOrigem, idCampoDestino, limpar, esconder, desabilidar) {
+                    var split = campoOrigem.id.toString().split(':');
+                    var idOrigem = split[split.length - 1];
+
+                    if (campoOrigem.value.toString().trim().length == 0 || campoOrigem.value == '' || campoOrigem.value == 'undefined') {
+                        var idPanel = campoOrigem.id.replace(idOrigem, idCampoDestino);
+                        var panel = document.getElementById(idPanel);
+                        if (limpar == true) {
+                            panel.value = '';
+                        }
+                        if (esconder == true) {
+                            panel.style.display = 'none';
+                        }
+                        if (desabilidar == true) {
+                            panel.disabled = true;
+                        }
+
+                        limparConta();
+                    }
+                }
+            </script>
+
+            <p:remoteCommand name="limparConta"
+                             actionListener="#{relatorioSaldoFinanceiroControlador.atribuirIdNullContaBancaria()}"/>
+
+            <p:panel header="Relação de Disponibilidade de Caixa Bruta">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Apresentação"/>
+                    <h:selectOneMenu value="#{relatorioSaldoFinanceiroControlador.apresentacao}">
+                        <f:selectItems
+                            value="#{relatorioSaldoFinanceiroControlador.listaApresentacao}"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Data Referência: "/>
+                    <p:calendar value="#{relatorioSaldoFinanceiroControlador.dataReferencia}"
+                                onkeypress="mascara(this, mdata)"
+                                pattern="dd/MM/yyyy"
+                                locale="pt_BR"
+                                navigator="true">
+                        <p:ajax event="valueChange"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{relatorioSaldoFinanceiroControlador.limparCamposSemData()}"
+                                update=":Formulario"/>
+                        <p:ajax event="dateSelect"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{relatorioSaldoFinanceiroControlador.limparCamposSemData()}"
+                                update=":Formulario"/>
+                    </p:calendar>
+
+                    <h:outputText value="Conta Bancária: "/>
+                    <p:autoComplete queryDelay="1000" id="cbentidade" forceSelection="true"
+                                    size="70" title="Informe uma Conta Corrente"
+                                    value="#{relatorioSaldoFinanceiroControlador.contaBancariaEntidade}"
+                                    completeMethod="#{relatorioSaldoFinanceiroControlador.completarContaBancariaEntidade}"
+                                    converter="#{relatorioSaldoFinanceiroControlador.converterContaBancariaEntidade}"
+                                    var="cbe" itemValue="#{cbe.id}"
+                                    itemLabel="#{cbe.toStringAutoComplete()}"
+                                    maxResults="10"
+                                    onkeyup="keyLimparContaFinanceira(this, 'subconta_input', true, false, false);
+                                                 keyUpLimparEsconderDesabilidarCampo(this, 'panelInformacoesConta', false, true, false)">
+                        <p:ajax event="itemSelect" update=":Formulario" process=":Formulario"
+                                listener="#{relatorioSaldoFinanceiroControlador.atribuirNullContaFinanceira()}"/>
+                    </p:autoComplete>
+
+                    <p:spacer rendered="#{relatorioSaldoFinanceiroControlador.contaFinanceira.id ne null}"/>
+                    <h:panelGrid id="panelInformacoesConta" columns="4"
+                                 rendered="#{relatorioSaldoFinanceiroControlador.contaFinanceira.id ne null}">
+
+                        <h:outputText value="Banco: "/>
+                        <h:outputText value="#{relatorioSaldoFinanceiroControlador.contaFinanceira.contaBancariaEntidade.agencia.banco.numeroBanco}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Agência: "/>
+                        <h:outputText value="#{relatorioSaldoFinanceiroControlador.contaFinanceira.contaBancariaEntidade.agencia.toStringAgencia()}"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+
+                    <h:outputText value="Conta Financeira: "/>
+                    <p:autoComplete queryDelay="1000" id="subconta" forceSelection="true" size="70" title="Informe uma Conta Financeira"
+                                    value="#{relatorioSaldoFinanceiroControlador.contaFinanceira}"
+                                    completeMethod="#{relatorioSaldoFinanceiroControlador.completarSubContas}"
+                                    converter="#{relatorioSaldoFinanceiroControlador.converterContaFinanceira}"
+                                    var="sub" itemValue="#{sub.id}"
+                                    itemLabel="#{sub.toStringAutoCompleteContaFinanceira()}"
+                                    maxResults="10"
+                                    onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'panelInformacoesConta', false, true, false)">
+                        <p:ajax event="itemSelect" update=":Formulario:fonte :Formulario:cbentidade" process="@this"
+                                listener="#{relatorioSaldoFinanceiroControlador.recuperaContaBancariaApartirDaContaFinanceira()}"/>
+                    </p:autoComplete>
+
+                    <h:outputLabel value="Exibir: "/>
+                    <p:selectOneRadio id="tipoExib"
+                                      title="Informe o Tipo de Exibição"
+                                      value="#{relatorioSaldoFinanceiroControlador.tipoExibicao}">
+                        <f:selectItems value="#{relatorioSaldoFinanceiroControlador.tiposDeExibicao}"/>
+                    </p:selectOneRadio>
+
+                    <h:outputText value="Fonte de Recursos: "/>
+                    <p:autoComplete queryDelay="1000" id="fonte" forceSelection="true"
+                                    size="70" title="Selecione uma Fonte de Recursos"
+                                    value="#{relatorioSaldoFinanceiroControlador.fonteDeRecursos}"
+                                    completeMethod="#{relatorioSaldoFinanceiroControlador.completarFontesDeRecursos}"
+                                    converter="#{relatorioSaldoFinanceiroControlador.converterFonteDeRecursos}"
+                                    var="font"
+                                    itemValue="#{font.id}"
+                                    itemLabel="#{font}"
+                                    maxResults="10"/>
+
+                    <h:outputText value="Conta de Destinação de Recurso: "/>
+                    <fc:autoComplete converter="#{planoDeContasWizardControlador.converterConta}"
+                                     id="cd"
+                                     completeMethod="#{relatorioSaldoFinanceiroControlador.completarContasDeDestinacao}"
+                                     value="#{relatorioSaldoFinanceiroControlador.contaDeDestinacao}"/>
+                </h:panelGrid>
+
+                <h:panelGrid columns="1" id="painelPesquisaUnidade" width="100%">
+                    <fc:pesquisaUnidadeOrganizacional tipoHierarquia="ORCAMENTARIA"
+                                                      listaDeHierarquias="#{relatorioSaldoFinanceiroControlador.listaUnidades}"
+                                                      habilitaUnidadeGestora="true"
+                                                      dataOperacao="#{relatorioSaldoFinanceiroControlador.dataReferencia}"
+                                                      unidadeGestora="#{relatorioSaldoFinanceiroControlador.unidadeGestora}"/>
+                </h:panelGrid>
+                <p:spacer width="2"/>
+
+            </p:panel>
+
+            <fc:rodapeRelatorio actionListenerBotaoGerar="#{relatorioSaldoFinanceiroControlador.gerarRelatorio('PDF')}"
+                                actionListenerLimparCampos="#{relatorioSaldoFinanceiroControlador.limparCampos()}"
+                                controller="#{relatorioSaldoFinanceiroControlador}"
+                                mostrarBotoesExportar="true"/>
+
+            <p:remoteCommand name="limparContaFonte"
+                             actionListener="#{relatorioSaldoFinanceiroControlador.limparContaFonte()}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

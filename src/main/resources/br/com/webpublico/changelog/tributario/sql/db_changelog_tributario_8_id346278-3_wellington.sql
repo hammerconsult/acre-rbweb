@@ -1,0 +1,1 @@
+drop procedure proc_insere_unidade_medida_ambiental

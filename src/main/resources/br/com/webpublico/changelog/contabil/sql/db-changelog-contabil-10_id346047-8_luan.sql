@@ -1,0 +1,3 @@
+insert into PAGINAMENUHORIZPORTAL values (HIBERNATE_SEQUENCE.NEXTVAL, to_date('01/01/2023', 'dd/MM/yyyy'), null, 'PADRAO');
+insert into PAGINAMENUHORIZPORTAL values (HIBERNATE_SEQUENCE.NEXTVAL, to_date('01/01/2023', 'dd/MM/yyyy'), null, 'PRINCIPAL');
+insert into PAGINAMENUHORIZPORTAL values (HIBERNATE_SEQUENCE.NEXTVAL, to_date('01/01/2023', 'dd/MM/yyyy'), null, 'RELEVANTES');

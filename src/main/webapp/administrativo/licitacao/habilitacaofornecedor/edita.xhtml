@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <script type="text/javascript">
+                function limparTabela(campoOrigem) {
+                    if (campoOrigem.value.toString().trim().length == 0 || campoOrigem.value == '' || campoOrigem.value == 'undefined') {
+                        limparConteudoTabela();
+                    }
+                }
+            </script>
+            <p:panel id="panelPrincipal" header="Habilitação de Fornecedores">
+                <p:remoteCommand name="limparConteudoTabela"
+                                 process="@this"
+                                 update="bt-ver-licitacao panel-detalhes-licitacao painel-fornecedores-vencedores">
+                    <f:setPropertyActionListener value="#{null}"
+                                                 target="#{habilitacaoPregaoControlador.licitacaoFornecedoresVencedores}"/>
+                    <f:setPropertyActionListener value="#{null}"
+                                                 target="#{habilitacaoPregaoControlador.selecionado}"/>
+                </p:remoteCommand>
+
+                <p:outputPanel rendered="#{habilitacaoPregaoControlador.licitacaoHomologada}"
+                               id="panelLicitacaoHomologada">
+                    <div class="ui-message-warn alinhamentoCentralizado"
+                         style="padding: 4px; font-size: 13px; margin: 0px!important;">
+                        <h:outputText styleClass="negrito"
+                                      value="NÃO É POSSÍVEL EFETUAR ALTERAÇÕES NA HABILITAÇÃO DE FORNECEDORES PARA LICITAÇÃO HOMOLOGADA!"/>
+                    </div>
+                    <div class="mtop05"/>
+                </p:outputPanel>
+
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Licitação:"/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000" id="licitacao"
+                                        title="Informe a licitação."
+                                        value="#{habilitacaoPregaoControlador.selecionado}"
+                                        completeMethod="#{habilitacaoPregaoControlador.buscarLicitacoes}"
+                                        converter="#{licitacaoControlador.converterGenerico}"
+                                        var="lic"
+                                        itemLabel="#{lic.toStringAutoComplete()}"
+                                        itemValue="#{lic.id}"
+                                        onclick="this.select();"
+                                        onkeyup="limparTabela(this)"
+                                        forceSelection="true"
+                                        size="70"
+                                        maxResults="50"
+                                        panelStyle="max-height: 250px; max-width: 1000px"
+                                        dropdown="true"
+                                        styleClass="mrig05">
+                            <p:ajax event="itemSelect"
+                                    process="@this"
+                                    update="@form"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{habilitacaoPregaoControlador.carregarDependencias}"/>
+                        </p:autoComplete>
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         id="bt-informacao"
+                                         styleClass="icone-20 mrig05"
+                                         icon="ui-icon-info"/>
+
+                        <p:overlayPanel for="bt-informacao"
+                                        style="border : solid black 1px;"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout">
+                            <h:outputText value="Para consultar licitações específicas, digite o número da modalidade ou do processo seguido do ano
+                                                 &lt;br/>Ex.: '1 2014' (digitar sem áspas)
+                                                 &lt;br/>Para o caso acima o sistema consultará as licitações com o número da modalidade = 1 ou número do processo = 1 no ano de 2014"
+                                          escape="false"/>
+                        </p:overlayPanel>
+
+                        <p:commandButton process="@none"
+                                         id="bt-ver-licitacao"
+                                         icon="ui-icon-lupa"
+                                         styleClass="icone-20 mrig10"
+                                         disabled="#{habilitacaoPregaoControlador.selecionado eq null}"
+                                         update="@none"
+                                         onclick="window.open('#{request.contextPath}/licitacao/ver/#{habilitacaoPregaoControlador.selecionado.id}/','_blank');"/>
+
+                    </h:panelGroup>
+
+
+                    <h:outputLabel value="Modalidade:"/>
+                    <h:panelGroup id="panel-detalhes-licitacao">
+                        <h:outputLabel
+                            value="#{habilitacaoPregaoControlador.selecionado.modalidadeLicitacao}"
+                            styleClass="negrito mrig10"/>
+
+                        <h:outputLabel value="Natureza do Procedimento:"/>
+                        <h:outputLabel
+                            value="#{habilitacaoPregaoControlador.selecionado.naturezaDoProcedimento}"
+                            styleClass="negrito mrig10"/>
+
+                        <h:outputLabel value="Tipo de Avaliação:"
+                                       rendered="#{habilitacaoPregaoControlador.selecionado.isTecnicaEPreco()}"/>
+                        <h:selectOneMenu disabled="true"
+                                         value="#{habilitacaoPregaoControlador.selecionado.tipoAvaliacao}"
+                                         rendered="#{habilitacaoPregaoControlador.selecionado.isTecnicaEPreco()}">
+                            <f:selectItems value="#{habilitacaoPregaoControlador.tiposAvaliacao}"/>
+                        </h:selectOneMenu>
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <p:outputPanel id="painel-fornecedores-vencedores">
+                    <p:dataTable paginator="true"
+                                 id="tabela-fornecedores"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{habilitacaoPregaoControlador.licitacaoFornecedoresVencedores}"
+                                 rows="20"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>FORNECEDORES VENCEDORES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord}-{endRecord} de {totalRecords} | Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="20,50,100"
+                                 var="fornecedor">
+
+                        <p:column headerText="Documentos" style="width: 30px;" styleClass="alinhamentoCentralizado">
+                            <p:commandButton icon="ui-icon-user-tick"
+                                             title="Clique para apresentar os documentos deste fornecedor"
+                                             update=":formulario-hab-fornecedor"
+                                             process="@this"
+                                             onclick="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             disabled="#{habilitacaoPregaoControlador.isItemAdjudicado(fornecedor.empresa)}"
+                                             actionListener="#{habilitacaoPregaoControlador.carregarDocumentosNecessariosLicitacao}">
+                                <f:attribute value="#{fornecedor}"
+                                             name="fornecedor"/>
+                            </p:commandButton>
+                        </p:column>
+
+                        <p:column headerText="Hab. Itens" style="width: 30px;" styleClass="alinhamentoCentralizado">
+                            <p:commandButton icon="ui-icon-categorias"
+                                             title="Clique para informar os itens que o fornecedor está habilitado"
+                                             update=":form-itens-do-fornecedor"
+                                             process="@this"
+                                             onclick="aguarde.show();"
+                                             actionListener="#{habilitacaoPregaoControlador.carregarItensVencidosDoFornecedor}"
+                                             oncomplete="aguarde.hide();">
+                                <f:attribute value="#{fornecedor}"
+                                             name="fornecedor"/>
+                            </p:commandButton>
+                        </p:column>
+
+                        <p:column headerText="Detalhes" style="width: 30px;" styleClass="alinhamentoCentralizado">
+                            <p:commandButton icon="ui-icon-search"
+                                             title="Clique para visualizar"
+                                             update="@none"
+                                             process="@none"
+                                             onclick="window.open('#{request.contextPath}/habilitacao-fornecedor/licitacao/#{habilitacaoPregaoControlador.selecionado.id}/fornecedor/#{fornecedor.empresa.id}/','_blank');">
+                            </p:commandButton>
+                        </p:column>
+
+                        <p:column headerText="Código" styleClass="alinhamentoCentralizado" style="width: 20px;">
+                            <h:outputText value="#{fornecedor.codigo}"/>
+                        </p:column>
+
+                        <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{fornecedor.empresa.nomeCpfCnpj}"/>
+                        </p:column>
+
+                        <p:column headerText="Representante" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{fornecedor.representante.nome}"/>
+                        </p:column>
+
+                        <p:column headerText="Tipo Empresa" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{fornecedor.empresa.tipoEmpresa.descricao}"/>
+                        </p:column>
+
+                        <p:column headerText="Situação Ref. Documentação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{fornecedor.tipoClassificacaoFornecedor.descricao}"
+                                          styleClass="negrito"
+                                          style="color : #{habilitacaoPregaoControlador.getCorDaDescricao(fornecedor.tipoClassificacaoFornecedor.descricao)}"/>
+                        </p:column>
+
+                        <p:column headerText="Situação Ref. Técnica" styleClass="alinhamentoEsquerda"
+                                  rendered="#{habilitacaoPregaoControlador.selecionado.isTecnicaEPreco()}">
+                            <h:outputText value="#{fornecedor.classificacaoTecnica.descricao}"
+                                          styleClass="negrito"
+                                          style="color : #{habilitacaoPregaoControlador.getCorDaDescricao(fornecedor.classificacaoTecnica.descricao)}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+        </h:form>
+
+        <p:dialog header="Itens vencidos por fornecedor"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  width="800"
+                  height="400"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dialogItensDoFornecedor"
+                  closable="false">
+            <h:form id="form-itens-do-fornecedor">
+                <h:outputText value="Fornecedor: "/>
+                <h:outputText value="#{habilitacaoPregaoControlador.fornecedorSelecionado}"
+                              style="font-size: 13px;"/>
+
+                <div style="text-align: center; overflow: scroll; height: 300px; width: auto;" class="mtop05">
+                    <p:dataTable paginator="true"
+                                 id="tabela-itens-do-fornecedor"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05 mbot05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{habilitacaoPregaoControlador.itensVencidosDoFornecedor}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS VENCIDOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord}-{endRecord} de {totalRecords} | Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,50,100"
+                                 var="item"
+                                 rowKey="#{item.id}">
+
+                        <p:column style="width: 30px!important">
+                            <f:facet name="header">
+                                <p:commandButton icon="ui-icon-none"
+                                                 process="@this"
+                                                 rendered="#{!habilitacaoPregaoControlador.todosItensMarcados()}"
+                                                 disabled="#{!habilitacaoPregaoControlador.fornecedorSelecionado.isFornecedorHabilitadoOuRessalva()}"
+                                                 update="tabela-itens-do-fornecedor :form-itens-do-fornecedor:bt-habilitar"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{habilitacaoPregaoControlador.marcarTodosItens()}"
+                                                 styleClass="icone-20"/>
+
+                                <p:commandButton icon="ui-icon-check"
+                                                 process="@this"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 disabled="#{!habilitacaoPregaoControlador.fornecedorSelecionado.isFornecedorHabilitadoOuRessalva()}"
+                                                 rendered="#{habilitacaoPregaoControlador.todosItensMarcados()}"
+                                                 update="tabela-itens-do-fornecedor :form-itens-do-fornecedor:bt-habilitar"
+                                                 actionListener="#{habilitacaoPregaoControlador.desmarcarTodosItens()}"
+                                                 styleClass="icone-20"/>
+                            </f:facet>
+                            <p:commandButton icon="ui-icon-none"
+                                             process="@this"
+                                             update="tabela-itens-do-fornecedor :form-itens-do-fornecedor:bt-habilitar"
+                                             disabled="#{!habilitacaoPregaoControlador.fornecedorSelecionado.isFornecedorHabilitadoOuRessalva()}"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             rendered="#{!item.selecionado}"
+                                             actionListener="#{habilitacaoPregaoControlador.marcarItemPropostaFornecedor(item)}"
+                                             styleClass="icone-20"/>
+                            <p:commandButton icon="ui-icon-check"
+                                             update="tabela-itens-do-fornecedor :form-itens-do-fornecedor:bt-habilitar"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             disabled="#{!habilitacaoPregaoControlador.fornecedorSelecionado.isFornecedorHabilitadoOuRessalva()}"
+                                             process="@this"
+                                             rendered="#{item.selecionado}"
+                                             actionListener="#{habilitacaoPregaoControlador.desmarcarItemPropostaFornecedor(item)}"
+                                             styleClass="icone-20"/>
+                        </p:column>
+
+                        <p:column headerText="Nr. Lote" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{item.itemProcessoDeCompra.loteProcessoDeCompra.numero}"/>
+                        </p:column>
+                        <p:column headerText="Nr. Item" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{item.itemProcessoDeCompra.numero}"/>
+                        </p:column>
+                        <p:column headerText="Item" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{item}"/>
+                        </p:column>
+                        <p:column headerText="Situação" styleClass="alinhamentoEsquerda" style="width: 200px;">
+                            <h:outputText value="#{habilitacaoPregaoControlador.getSituacaoDoFornecedor(item)}"/>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+                <div style="text-align: center;">
+                    <p:outputPanel
+                        rendered="#{!habilitacaoPregaoControlador.fornecedorSelecionado.isFornecedorHabilitadoOuRessalva()}">
+                        <div class="ui-message-error" style="padding: 4px; font-size: 12px; margin: 0px!important;">
+                            <h:outputText value="Não será possível habilitar os itens pois o fornecedor está: "/>
+                            <h:outputText
+                                value="#{habilitacaoPregaoControlador.fornecedorSelecionado.tipoClassificacaoFornecedor.descricao}."/>
+                        </div>
+                    </p:outputPanel>
+
+                    <p:commandButton id="bt-habilitar"
+                                     icon="ui-icon-check"
+                                     value="Confirmar"
+                                     process="form-itens-do-fornecedor"
+                                     update=":formulario-hab-fornecedor"
+                                     disabled="#{habilitacaoPregaoControlador.botaoHabilitarItensDisabled()}"
+                                     actionListener="#{habilitacaoPregaoControlador.confirmarHabilitacaoDeItens}"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="mtop05 mrig05"/>
+
+                    <p:commandButton icon="ui-icon-cancel"
+                                     value="Cancelar"
+                                     process="@none"
+                                     update="@none"
+                                     oncomplete="aguarde.hide(); dialogItensDoFornecedor.hide();"
+                                     onclick="if (!confirm('Tem certeza que deseja cancelar a operação?')) {aguarde.show(); } else {dialogItensDoFornecedor.hide();}"
+                                     styleClass="mtop05"/>
+
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Documentos do Fornecedor"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dialogHabFornecedor">
+            <h:form id="formulario-hab-fornecedor">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Licitação:"/>
+                    <h:outputText value="#{habilitacaoPregaoControlador.selecionado}"
+                                  style="font-size: 13px;"/>
+
+                    <h:outputLabel value="Código:"/>
+                    <h:outputText value="#{habilitacaoPregaoControlador.fornecedorSelecionado.codigo}"
+                                  style="font-size: 13px;"/>
+
+                    <h:outputLabel value="Fornecedor:"/>
+                    <h:outputText value="#{habilitacaoPregaoControlador.fornecedorSelecionado.empresa}"
+                                  style="font-size: 13px;"/>
+
+                    <h:outputLabel value="Representante:"/>
+                    <h:outputText value="#{habilitacaoPregaoControlador.fornecedorSelecionado.representante}"
+                                  style="font-size: 13px;"/>
+                </h:panelGrid>
+
+                <div style="overflow-y: scroll; max-height: 400px !important;">
+                    <h:panelGrid columns="2" columnClasses="verticalAlignTop, verticalAlignTop">
+                        <p:dataTable rows="7"
+                                     paginator="true"
+                                     paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {NextPageLink} {LastPageLink}"
+                                     currentPageReportTemplate="({startRecord}-{endRecord} de {totalRecords} | Página: {currentPage}/{totalPages})"
+                                     widgetVar="tabelaOrigem"
+                                     style="width: 500px!important;"
+                                     id="tabelaOrigem"
+                                     value="#{habilitacaoPregaoControlador.selecionado.documentosProcesso}"
+                                     var="itemOrigem"
+                                     emptyMessage="Não foi localizado nenhum documento requisitado.">
+                            <f:facet name="header">
+                                <h:outputText value="DOCUMENTOS REQUISITADOS"/><br/>
+                            </f:facet>
+                            <p:column headerText="Tipo Documento">
+                                <h:outputText
+                                    value="#{itemOrigem.doctoHabilitacao.tipoDoctoHabilitacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Descrição">
+                                <h:outputText value="#{itemOrigem.doctoHabilitacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Op." style="text-align: center; width: 25px;">
+                                <p:commandButton icon="ui-icon-arrowthick-1-e"
+                                                 update=":formulario-hab-fornecedor"
+                                                 disabled="#{habilitacaoPregaoControlador.desabilitaBotaoAdicionarDocumentoFornecedor(itemOrigem.doctoHabilitacao)
+                                                    or habilitacaoPregaoControlador.licitacaoHomologada}"
+                                                 title="#{habilitacaoPregaoControlador.tituloBotaoAdicionarDocumentoFornecedor(itemOrigem.doctoHabilitacao)}"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{habilitacaoPregaoControlador.passarDocumentoDaLicitacaoParaFornecedor}">
+                                    <f:attribute value="#{itemOrigem.doctoHabilitacao}"
+                                                 name="itemOrigem"
+                                                 id="itemOrigem"/>
+                                </p:commandButton>
+                            </p:column>
+                        </p:dataTable>
+
+                        <p:dataTable rows="7"
+                                     widgetVar="tabelaDestino"
+                                     style="width: 500px!important;"
+                                     paginator="true"
+                                     rowsPerPageTemplate="05, 10, 20"
+                                     paginatorTemplate="#{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {NextPageLink} {LastPageLink}"
+                                     id="tabelaDestino"
+                                     value="#{habilitacaoPregaoControlador.fornecedorSelecionado.documentosFornecedor}"
+                                     var="itemDestino"
+                                     emptyMessage="Não foi localizado nenhum documento já apresentado.">
+                            <f:facet name="header">
+                                <h:outputText value="DOCUMENTOS APRESENTADOS"/><br/>
+                            </f:facet>
+                            <p:column headerText="Op." style="text-align: center; width: 25px;">
+                                <p:commandButton icon="ui-icon-arrowthick-1-w"
+                                                 update=":formulario-hab-fornecedor"
+                                                 disabled="#{habilitacaoPregaoControlador.licitacaoHomologada}"
+                                                 title="Clique para remover este documento."
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 oncomplete="aguarde.hide();"
+                                                 actionListener="#{habilitacaoPregaoControlador.removerDocumentoDoFornecedor(itemDestino)}">
+                                </p:commandButton>
+                            </p:column>
+                            <p:column headerText="Tipo Documento">
+                                <h:outputText value="#{itemDestino.doctoHabilitacao.tipoDoctoHabilitacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Descrição">
+                                <h:outputText value="#{itemDestino.doctoHabilitacao.descricao}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </h:panelGrid>
+                </div>
+
+                <div class="alinhamentoCentralizado">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     title="Clique para Confirmar."
+                                     disabled="#{habilitacaoPregaoControlador.licitacaoHomologada}"
+                                     actionListener="#{habilitacaoPregaoControlador.confirmarTodosDocumentosDoFornecedor()}"
+                                     process="@this"
+                                     update="@none"
+                                     styleClass="mtop05 mrig05"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-closethick"
+                                     title="Clique para Cancelar."
+                                     onclick="dialogHabFornecedor.hide()"
+                                     update="@none"
+                                     process="@none"
+                                     styleClass="mtop05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  widgetVar="dialogDocumentoFornecedor"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  height="300"
+                  closable="false"
+                  width="1050"
+                  header="Documento do Fornecedor">
+            <h:form id="form-documento-fornecedor">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Tipo Documento:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.doctoHabilitacao.tipoDoctoHabilitacao.descricao}"
+                                  style="font-size: 13px;"/>
+
+                    <h:outputLabel value="Descrição:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.doctoHabilitacao.descricao}"
+                                  style="font-size: 13px;"/>
+
+                    <h:outputLabel value="Requer Número?:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.doctoHabilitacao.requerNumero ? 'Sim' : 'Não'}"
+                                  style="font-size: 13px;"/>
+
+                    <h:outputLabel value="Requer Emissão?:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.doctoHabilitacao.requerEmissao ? 'Sim' : 'Não'}"
+                                  style="font-size: 13px;"/>
+
+                    <h:outputLabel value="Requer Validade?:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.doctoHabilitacao.requerValidade ? 'Sim' : 'Não'}"
+                                  style="font-size: 13px;"/>
+                </h:panelGrid>
+
+                <p:separator styleClass="mtop05 mbot05"/>
+
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Número:"/>
+                    <p:inputText
+                        value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.numeroDaCertidao}"
+                        size="10"
+                        styleClass="alinhamentoDireita"/>
+
+                    <h:outputLabel value="Data de Emissão:"/>
+                    <p:calendar onkeypress="mascara(this, Data)"
+                                maxlength="10"
+                                style="text-align: right"
+                                autocomplete="off"
+                                title="Digite a data de emissão do documento."
+                                value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.dataDeEmissao}"
+                                locale="pt_BR"
+                                navigator="true"
+                                pattern="dd/MM/yyyy"
+                                size="10"/>
+
+                    <h:outputLabel value="Data de Validade:"/>
+                    <p:calendar onkeypress="mascara(this, Data)"
+                                maxlength="10"
+                                style="text-align: right"
+                                autocomplete="off"
+                                title="Digite a data de validade do documento."
+                                value="#{habilitacaoPregaoControlador.documentoDoFornecedorSelecionado.dataDeValidade}"
+                                locale="pt_BR"
+                                navigator="true"
+                                pattern="dd/MM/yyyy"
+                                size="10"/>
+                </h:panelGrid>
+
+                <p:separator styleClass="mtop05 mbot05"/>
+
+                <div align="center" class="mtop05">
+                    <p:commandButton icon="ui-icon-check"
+                                     value="Confirmar"
+                                     process="form-documento-fornecedor"
+                                     update="@none"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="mrig05 prioritario operacao"
+                                     actionListener="#{habilitacaoPregaoControlador.confirmarDocumentoSelecionadoDoFornecedor()}"/>
+
+                    <p:commandButton icon="ui-icon-closethick"
+                                     process="@none"
+                                     update="@none"
+                                     value="Cancelar"
+                                     styleClass="operacao"
+                                     onclick="dialogDocumentoFornecedor.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+        <p:dialog widgetVar="dialogOperacaoDocumentoFornecedor" position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  height="300"
+                  closable="false"
+                  width="1050"
+                  modal="true"
+                  header="Fornecedor não apresentou todos documentos necessários.">
+            <h:form id="FormularioOperacaoDocumentoForcedor">
+                <h:outputText escape="false" value="#{habilitacaoPregaoControlador.documentosNaoApresentados}"/>
+            </h:form>
+            <div class="centralizado mtop20">
+                <p:commandButton value="Habilitar Totalmente" styleClass="mlef02 operacao prioritario"
+                                 onclick="if (!confirm('Tem certeza que deseja Habilitar esse Fornecedor?')) {return false; } else {aguarde.show();}"
+                                 icon="ui-icon-check"
+                                 oncomplete="dialogOperacaoDocumentoFornecedor.hide(); aguarde.hide()"
+                                 actionListener="#{habilitacaoPregaoControlador.habilitarFornecedor}"
+                                 title="Escolhendo essa opção, o fornecedor ficará com a situação Habilitado"/>
+                <p:commandButton value="Habilitar Parcialmente" styleClass="mlef02 operacao" icon="ui-icon-folder-open"
+                                 onclick="if (!confirm('Tem certeza que deseja Habilitar Parcialmente esse Fornecedor?')) {return false; } else {aguarde.show();}"
+                                 title="Escolhendo essa opção, o fornecedor ficará com a situação Habilitado Parcialmente"
+                                 oncomplete="dialogOperacaoDocumentoFornecedor.hide(); aguarde.hide()"
+                                 actionListener="#{habilitacaoPregaoControlador.habilitarParcialmenteFornecedor}"/>
+                <p:commandButton value="Inabilitar" styleClass="mlef02 operacao" icon="ui-icon-cancel"
+                                 oncomplete="dialogOperacaoDocumentoFornecedor.hide(); aguarde.hide()"
+                                 onclick="if (!confirm('Tem certeza que deseja Inabilitar esse Fornecedor?')) {return false; } else {aguarde.show();}"
+                                 title="Escolhendo essa opção, o fornecedor ficará com a situação Inabilitado"
+                                 actionListener="#{habilitacaoPregaoControlador.inabilitarFornecedor}"/>
+                <p:commandButton value="Cancelar" styleClass="mlef02 operacao" icon="ui-icon-close"
+                                 onclick="dialogOperacaoDocumentoFornecedor.hide(); aguarde.show()" oncomplete="aguarde.hide()"/>
+            </div>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

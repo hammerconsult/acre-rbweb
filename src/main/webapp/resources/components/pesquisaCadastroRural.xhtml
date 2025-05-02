@@ -1,0 +1,246 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+
+<!-- INTERFACE -->
+<cc:interface componentType="">
+    <cc:attribute name="cadastro" required="true"/>
+    <cc:attribute name="size" default="50"/>
+    <cc:attribute name="mostrapesquisa" default="true"/>
+    <cc:attribute name="listen" method-signature="void listenerPesquisaCadastroRural()" required="false"/>
+    <cc:attribute name="mostrarLabelAutoComplete" default="true"/>
+    <cc:attribute name="disabled" default="false"/>
+    <cc:attribute name="updateItemSelect" required="false" default="@form"/>
+</cc:interface>
+
+<!-- IMPLEMENTATION -->
+<cc:implementation>
+<h:panelGrid columns="5" id="panelgridPrincipal" cellspacing="3">
+    <c:if test="#{cc.attrs.mostrarLabelAutoComplete == true}">
+        <h:outputText value="Cadastro Rural: " styleClass="azulnegrito"/>
+    </c:if>
+    <p:autoComplete queryDelay="1000"
+            completeMethod="#{componentePesquisaCadastroRuralControlador.completaCadastroRuralJdbc}"
+            var="cadRInicial"
+            itemLabel="#{cadRInicial.codigo} - #{cadRInicial.nomePropriedade} - #{cadRInicial.numeroIncra}"
+            itemValue="#{cadRInicial.id}"
+            size="#{cc.attrs.size}"
+            disabled="#{cc.attrs.disabled}"
+            value="#{cc.attrs.cadastro}"
+            converter="#{componentePesquisaCadastroRuralControlador.converterCadastroRural}"
+            title="Informe ou selecione o Cadastro Rural"
+            maxResults="10"
+            >
+        <c:if test="#{!empty cc.getValueExpression('listen')}">
+            <p:ajax event="itemSelect" update="@form" listener="#{cc.attrs.listen}"/>
+        </c:if>
+        <c:if test="#{empty cc.getValueExpression('updateItemSelect')}">
+            <p:ajax event="itemSelect" update="#{cc.attrs.updateItemSelect}"/>
+        </c:if>
+    </p:autoComplete>&nbsp;
+    <p:commandButton icon="ui-icon-search"
+                     styleClass="vinteLarguraVinteAltura icone_branco botao_azul"
+                     update=":#{cc.clientId}:tabela :#{cc.clientId}:panelGridFiltros"
+                     oncomplete="dialogPesquisaCadastroRural.show()"
+                     rendered="#{cc.attrs.mostrapesquisa}"
+                     title="Clique para pesquisar os Cadastro Rurais"
+                     actionListener="#{componentePesquisaCadastroRuralControlador.limpaCampos()}"/>
+    <p:commandButton icon="ui-icon-info" id="botaoDestalhesCadastroRural"
+                     onclick="dlgdetalhes.show()"
+                     disabled="#{cc.attrs.cadastro == null or cc.attrs.cadastro.id == null}"
+                     title="Clique para visualizar os detalhes do cadastro selecionado"
+                     styleClass="vinteLarguraVinteAltura botao_azul icone_branco"
+            />
+</h:panelGrid>
+
+<p:dialog modal="true" widgetVar="carregando" header="carregando"
+          draggable="false" closable="false" resizable="true">
+    <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+</p:dialog>
+
+
+<p:dialog widgetVar="dialogPesquisaCadastroRural"
+          modal="true"
+          header="Pesquisa de Cadastro Rural"
+          width="900" resizable="false" closeOnEscape="false" closable="false">
+    <p:fieldset legend="Filtros">
+        <h:panelGrid columns="4" id="panelGridFiltros">
+            <h:outputText value="Código: "/>
+            <p:inputText value="#{componentePesquisaCadastroRuralControlador.codigo}"/>
+
+            <h:inputHidden/>
+            <h:inputHidden/>
+
+            <h:outputText value="Proprietário:"/>
+            <p:inputText value="#{componentePesquisaCadastroRuralControlador.proprietario}" size="30"/>
+
+            <h:inputHidden/>
+            <h:inputHidden/>
+
+            <h:outputText value="Nome da propriedade:"/>
+            <p:inputText value="#{componentePesquisaCadastroRuralControlador.nomePropriedade}" size="30"/>
+
+            <h:inputHidden/>
+            <h:inputHidden/>
+
+            <h:outputText value="Localização:"/>
+            <p:inputText value="#{componentePesquisaCadastroRuralControlador.localizacaoLote}" size="30"/>
+
+            <h:inputHidden/>
+            <h:inputHidden/>
+
+            <h:outputText value="Tipo de Área:"/>
+            <h:selectOneMenu value="#{componentePesquisaCadastroRuralControlador.tipoAreaRural}"
+                             converter="#{componentePesquisaCadastroRuralControlador.converterTipoAreaRual}">
+                <f:selectItems value="#{componentePesquisaCadastroRuralControlador.completaTipoAreaRural()}"/>
+            </h:selectOneMenu>
+
+            <h:inputHidden/>
+            <h:inputHidden/>
+
+            <h:outputText value="INCRA:"/>
+            <p:inputText value="#{componentePesquisaCadastroRuralControlador.numeroIncra}"/>
+
+        </h:panelGrid>
+    </p:fieldset>
+    <br/>
+    <center>
+        <h:panelGrid columns="3" id="painelGridBotoes">
+            <p:commandButton value="Filtrar"
+                             update=":#{cc.clientId}:tabela"
+                             actionListener="#{componentePesquisaCadastroRuralControlador.filtrar()}"
+                             icon="ui-icon-search"
+                             styleClass="botao_azul icone_branco"/>
+            <p:commandButton value="Nova Consulta"
+                             update=":#{cc.clientId}:tabela :#{cc.clientId}:panelGridFiltros"
+                             icon="ui-icon-document"
+                             styleClass="botao_verde icone_branco"
+                             actionListener="#{componentePesquisaCadastroRuralControlador.limpaCampos()}"/>
+            <p:commandButton value="Voltar" onclick="dialogPesquisaCadastroRural.hide()"
+                             styleClass="icone_vermelho"
+                             update="@form"
+                             icon="ui-icon-close"
+                             title="Clique para fechar a janela"
+                             rendered="#{componentePesquisaCadastroRuralControlador.cadastroRuralSelecionado == null}"
+                    >
+
+            </p:commandButton>
+            <p:commandButton value="Voltar" onclick="dialogPesquisaCadastroRural.hide();"
+                             styleClass="icone_vermelho"
+                             update="@form"
+                             icon="ui-icon-close"
+                             title="Clique para fechar a janela"
+                             rendered="#{componentePesquisaCadastroRuralControlador.cadastroRuralSelecionado != null  and empty cc.getValueExpression('listen')}">
+                <f:setPropertyActionListener target="#{cc.attrs.cadastro}"
+                                             value="#{componentePesquisaCadastroRuralControlador.cadastroRuralSelecionado}"/>
+            </p:commandButton>
+            <p:commandButton value="Voltar" onclick="dialogPesquisaCadastroRural.hide();"
+                             oncomplete="remoteCommandBtn();"
+                             styleClass="icone_vermelho"
+                             update="@form"
+                             icon="ui-icon-close"
+                             title="Clique para fechar a janela"
+                             rendered="#{componentePesquisaCadastroRuralControlador.cadastroRuralSelecionado != null and !empty cc.getValueExpression('listen')}">
+                <f:setPropertyActionListener target="#{cc.attrs.cadastro}"
+                                             value="#{componentePesquisaCadastroRuralControlador.cadastroRuralSelecionado}"/>
+            </p:commandButton>
+            <p:remoteCommand name="remoteCommandBtn" actionListener="#{cc.attrs.listen}" update="@form"/>
+        </h:panelGrid>
+    </center>
+    <br/>
+
+    <div style="height: 350px;  overflow: auto">
+
+        <p:dataTable value="#{componentePesquisaCadastroRuralControlador.lista}"
+                     var="cadastroRural"
+                     paginator="true" rows="10"
+                     emptyMessage="Nenhum cadastro encontrado para os filtros selecionados"
+                     paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                     rowsPerPageTemplate="10,50,100"
+                     id="tabela">
+            <p:column headerText="Selecionar" style="width: 10%; text-align: center;">
+                <p:commandButton styleClass="vinteLarguraVinteAltura botao_verde icone_branco"
+                                 icon="ui-icon-check"
+                                 update=":#{cc.clientId}:tabela :#{cc.clientId}:painelGridBotoes"
+                                 title="Clique para deselecionar o cadastro"
+                                 rendered="#{componentePesquisaCadastroRuralControlador.cadastroRuralSelecionado eq cadastroRural}"
+                                 actionListener="#{componentePesquisaCadastroRuralControlador.setaCadastroNull()}"/>
+                <p:commandButton styleClass="vinteLarguraVinteAltura  botao_vermelho icone_branco"
+                                 icon="ui-icon-closethick"
+                                 update=":#{cc.clientId}:tabela :#{cc.clientId}:painelGridBotoes"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 title="Clique para selecionar o cadastro"
+                                 actionListener="#{componentePesquisaCadastroRuralControlador.selecionarCadastro(cadastroRural)}"
+                                 rendered="#{componentePesquisaCadastroRuralControlador.cadastroRuralSelecionado ne cadastroRural}"
+                        />
+            </p:column>
+            <p:column headerText="Código">
+                <h:outputText value="#{cadastroRural.codigo}"/>
+            </p:column>
+            <p:column headerText="Nome da Propriedade">
+                <h:outputText value="#{cadastroRural.nomePropriedade}"/>
+            </p:column>
+            <p:column headerText="INCRA">
+                <h:outputText value="#{cadastroRural.numeroIncra}"/>
+            </p:column>
+
+        </p:dataTable>
+    </div>
+</p:dialog>
+<p:dialog widgetVar="dlgdetalhes"
+          id="dialogDetalhes"
+
+          showHeader="false"
+          header="Detalhes do Cadastro Econômico"
+          width="900" resizable="false">
+    <p:panel id="detalhes">
+        <h:panelGrid style="width: 100%">
+            <h:outputText value="CADASTRO RURAL" styleClass="azulnegrito"/>
+            <p:separator/>
+            <h:panelGrid columns="2">
+                <h:outputText value="Código: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.codigo}"/>
+                <h:outputText value="Nome da Propriedade: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.nomePropriedade}"/>
+                <h:outputText value="INCRA: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.numeroIncra}"/>
+                <h:outputText value="Tipo de Área: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.tipoAreaRural}"/>
+                <h:outputText value="Localização: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.localizacaoLote}"/>
+                <h:outputText value="Área do Lote: " styleClass="negrito"/>
+                <h:outputText value="#{cc.attrs.cadastro.areaLote}"/>
+            </h:panelGrid>
+        </h:panelGrid>
+        <p:dataTable
+                value="#{componentePesquisaCadastroRuralControlador.recuperaPessoasCadastro(cc.attrs.cadastro)}"
+                var="pessoaCad"
+                emptyMessage="Nenhuma pessoa encontrada no cadastro selecionado!">
+            <f:facet name="header">
+                <h:outputText
+                        value="#{cc.attrs.cadastro.tipoDeCadastro eq 'ECONOMICO' ? 'Sócios' : 'Proprietários'}"/>
+            </f:facet>
+            <p:column headerText="Nome">
+                <h:outputText value="#{pessoaCad.nome}"/>
+            </p:column>
+            <p:column headerText="CPF/CNPJ">
+                <h:outputText value="#{pessoaCad.cpf_Cnpj}"/>
+            </p:column>
+            <p:column headerText="Tipo de Pessoa">
+                <h:outputText value="#{pessoaCad.tipoPessoa}"/>
+            </p:column>
+        </p:dataTable>
+    </p:panel>
+    <p:commandButton value="Sair" icon="ui-icon-close" styleClass="icone_vermelho"
+                     onclick="dlgdetalhes.hide()"/>
+</p:dialog>
+
+</cc:implementation>
+</html>

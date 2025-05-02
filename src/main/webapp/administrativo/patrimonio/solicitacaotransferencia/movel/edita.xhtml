@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+
+            window.onload = function () {
+                buscarBensAoEditar();
+            }
+
+
+            var timer;
+
+            function iniciaPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timer = setInterval(function () {
+                    acompanhaAndamento();
+                }, 1000);
+            }
+
+            function encerrarPesquisa() {
+                clearInterval(timer);
+                finalizaPesquisa();
+            }
+
+            function iniciaTransferencia() {
+                $('#dlgPesquisa').modal({backdrop: 'static', keyboard: false});
+                $('#dlgPesquisa').modal('show');
+                timer = setInterval(function () {
+                    acompanhaTransferencia();
+                }, 1000);
+            }
+
+            function encerrarTransferencia() {
+                clearInterval(timer);
+                $("#dlgPesquisa").modal('hide');
+                finalizaTransferencia();
+            }
+        </script>
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="acompanhaAndamento"
+                             process="@this"
+                             actionListener="#{loteTransferenciaControlador.consultarAndamentoPesquisa}"
+                             update=":FormularioPesquisa"/>
+
+            <p:remoteCommand name="finalizaPesquisa"
+                             oncomplete="$('#dlgPesquisa').modal('hide');"
+                             actionListener="#{loteTransferenciaControlador.encerrarPesquisa}"/>
+
+            <p:remoteCommand name="acompanhaTransferencia"
+                             process="@this"
+                             actionListener="#{loteTransferenciaControlador.consultarAndamentoTransferencia}"
+                             update=":FormularioPesquisa"/>
+
+            <p:remoteCommand name="finalizaTransferencia"
+                             process="@form"
+                             actionListener="#{loteTransferenciaControlador.redirecionarAposSalvar}"/>
+
+            <p:remoteCommand
+                id="btnBuscarItens"
+                name="buscarBensAoEditar"
+                actionListener="#{loteTransferenciaControlador.buscarBensAoEditar()}"/>
+
+            <p:remoteCommand name="atualizarBotoesHeaderTableEncontrados"
+                             update=":Formulario:tabViewPrincipal:tableencontrados:panelBotoesMarcarDesmarcarTodos"/>
+
+            <fc:cabecalhoPretty controlador="#{loteTransferenciaControlador}"
+                                origem="#{loteTransferenciaControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Solicitação de Transferência de Bem Móvel" id="painelPrincipal">
+                <p:tabView id="tabViewPrincipal">
+                    <p:tab title="Dados da Transferência">
+                        <p:outputPanel id="outPanelDadosTransf">
+                            <p:fieldset>
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel for="codigo" value="Código:"/>
+                                    <h:outputLabel id="codigo"
+                                                   value="#{loteTransferenciaControlador.selecionado.codigo == null ? 'Gerado automaticamente ao concluir' : loteTransferenciaControlador.selecionado.codigo}"
+                                                   styleClass="negrito"/>
+
+                                    <fc:outputLabelObrigatorio for="descricao"
+                                                               value="Descrição:"/>
+                                    <h:panelGrid columns="2"
+                                                 cellpadding="0"
+                                                 cellspacing="0">
+                                        <p:inputTextarea
+                                            title="Digite a descrição da solicitação de transferência de bem."
+                                            value="#{loteTransferenciaControlador.selecionado.descricao}"
+                                            disabled="#{loteTransferenciaControlador.selecionado.isAguardandoAprovacao()}"
+                                            maxlength="255"
+                                            id="descricao"
+                                            cols="70"
+                                            rows="4"
+                                            autoResize="true"
+                                            counterTemplate="{0} Caracteres Restantes."
+                                            counter="counter-descricao"/>
+                                        <h:outputText id="counter-descricao"
+                                                      style="color: #497692"
+                                                      styleClass="mlef05"/>
+                                    </h:panelGrid>
+
+                                    <fc:outputLabelObrigatorio value="Tipo de Transferência: "/>
+                                    <h:panelGrid columns="2"
+                                                 id="panelTipoTransf"
+                                                 cellpadding="0"
+                                                 cellspacing="0">
+                                        <h:selectOneMenu
+                                            disabled="#{loteTransferenciaControlador.hasBemSelecionado()}"
+                                            value="#{loteTransferenciaControlador.selecionado.tipoTransferencia}">
+                                            <f:selectItems
+                                                value="#{loteTransferenciaControlador.tiposTransferencia}"/>
+                                            <p:ajax event="change"
+                                                    listener="#{loteTransferenciaControlador.limparCamposAoTrocarTipoTransferencia()}"
+                                                    process="@this :Formulario:tabViewPrincipal:outPanelDadosTransf"
+                                                    update="panelTipoTransf outPutPesquisa :Formulario:tabViewPrincipal:outPanelDadosTransf :Formulario:tabViewPrincipal:outputPanelInconsistencias :Formulario:alertInconsistencias"
+                                                    onstart="aguarde.show();"
+                                                    oncomplete="aguarde.hide();"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:botaoInformacao id="avisoTipoTransfInterna"
+                                                            rendered="#{loteTransferenciaControlador.selecionado.tipoTransferencia.name() eq 'INTERNA'}"
+                                                            title="Aviso referente ao tipo de tranferencia"
+                                                            detalhes="Interna - Utilizar quando a origem e destino correspondem a uma transferencia entre mesmas unidades orçamentárias"/>
+
+                                        <fc:botaoInformacao id="avisoTipoTransfExterna"
+                                                            rendered="#{loteTransferenciaControlador.selecionado.tipoTransferencia.name() eq 'EXTERNA'}"
+                                                            title="Aviso referente ao tipo de tranferencia"
+                                                            detalhes="Externa - Utilizar quando a origem e destino correspondem a unidades orçamentárias distintas"/>
+                                    </h:panelGrid>
+                                </h:panelGrid>
+                            </p:fieldset>
+                            <p:fieldset styleClass="mtop20" legend="Origem">
+                                <h:panelGrid columns="2">
+                                    <fc:outputLabelObrigatorio value="Unidade Administrativa:"/>
+                                    <p:autoComplete queryDelay="1000" id="acUnidadeOrganizacionalOrigem"
+                                                    title="Informe a Unidade Administrativa de origem"
+                                                    value="#{loteTransferenciaControlador.hierarquiaOrganizacionalOrigem}"
+                                                    completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalAdministrativaOndeUsuarioLogadoEhGestorPatrimonio}"
+                                                    var="undOrg"
+                                                    dropdown="true"
+                                                    size="70"
+                                                    panelStyle="max-width: 800px; max-height: 250px"
+                                                    process="@this"
+                                                    maxResults="50"
+                                                    itemLabel="#{undOrg}"
+                                                    itemValue="#{undOrg.id}"
+                                                    disabled="#{loteTransferenciaControlador.hasBemSelecionado()}"
+                                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                        <p:ajax event="itemSelect"
+                                                update="responsavelOrigem datalistOrc panelAnexos"
+                                                listener="#{loteTransferenciaControlador.buscarUnidadesOrcMesmaUnidadeOrigem()}"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"/>
+                                        <p:ajax event="itemSelect"
+                                                update="acUnidadeOrganizacionalDestino datalistOrcDestino responsavelDestino"
+                                                listener="#{loteTransferenciaControlador.limparCamposUnidadeDestino()}"/>
+                                    </p:autoComplete>
+
+                                    <h:outputText value="Unidades Orçamentárias: "/>
+                                    <p:dataList
+                                        value="#{loteTransferenciaControlador.orcamentariasOrigem}"
+                                        var="unidade"
+                                        id="datalistOrc"
+                                        styleClass="negrito">
+                                        <h:outputText value="#{unidade}"/>
+                                    </p:dataList>
+                                    <h:outputText for="responsavelOrigem"
+                                                  value="Responsável Unidade:"/>
+                                    <h:outputText id="responsavelOrigem"
+                                                  styleClass="negrito"
+                                                  value="#{loteTransferenciaControlador.selecionado.responsavelOrigem.nome}"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+                            <p:fieldset styleClass="mtop20" legend="Destino">
+                                <h:panelGrid columns="2">
+                                    <fc:outputLabelObrigatorio value="Unidade Administrativa:"/>
+                                    <p:autoComplete queryDelay="1000" id="acUnidadeOrganizacionalDestino"
+                                                    title="Informe a Unidade Administrativa de destino"
+                                                    value="#{loteTransferenciaControlador.hierarquiaOrganizacionalDestino}"
+                                                    completeMethod="#{loteTransferenciaControlador.buscarUnidadesDestinoMesmaUnidadeResponsavel}"
+                                                    disabled="#{loteTransferenciaControlador.hasBemSelecionado()}"
+                                                    var="unidade"
+                                                    process="@this"
+                                                    dropdown="true"
+                                                    size="70"
+                                                    panelStyle="max-height: 250px;max-width: 800px"
+                                                    maxResults="50"
+                                                    itemLabel="#{unidade}"
+                                                    itemValue="#{unidade.id}"
+                                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                        <p:ajax process="@this" event="itemSelect"
+                                                update="responsavelDestino datalistOrcDestino outPutPesquisa panelAnexos"
+                                                onstart="aguarde.show();" oncomplete="aguarde.hide();"
+                                                listener="#{loteTransferenciaControlador.buscarUnidadesOrcMesmaUnidadeDestino()}"/>
+                                    </p:autoComplete>
+
+                                    <h:outputText value="Unidades Orçamentárias:"/>
+                                    <p:dataList
+                                        value="#{loteTransferenciaControlador.orcamentariasDestino}"
+                                        var="unidade"
+                                        id="datalistOrcDestino"
+                                        styleClass="negrito">
+                                        <h:outputText value="#{unidade}"/>
+                                    </p:dataList>
+
+                                    <h:outputText value="Responsável Unidade:"/>
+                                    <h:outputText id="responsavelDestino"
+                                                  styleClass="negrito"
+                                                  value="#{loteTransferenciaControlador.selecionado.responsavelDestino.nome}"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Pesquisar Bens">
+                        <p:outputPanel id="outPutPesquisa">
+                            <h:panelGrid columns="2" id="gridPesquisa">
+                                <fc:outputLabelObrigatorio value="Unidade Administrativa de Origem:"/>
+                                <h:outputText id="ipUnidadeOrganizacionalOrigem"
+                                              styleClass="negrito"
+                                              value="#{loteTransferenciaControlador.filtroPesquisaBem.hierarquiaAdministrativa}"/>
+
+                                <h:outputLabel value="Unidade Orçamentária de Origem:" for="orcamentariaAll"/>
+                                <h:selectOneMenu
+                                    value="#{loteTransferenciaControlador.filtroPesquisaBem.hierarquiaOrcamentaria}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    id="orcamentariaAll">
+                                    <p:ajax event="valueChange"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                    <f:selectItems
+                                        value="#{loteTransferenciaControlador.hierarquiasOrcamentariasPesquisaBem}"/>
+                                </h:selectOneMenu>
+
+                                <h:outputText value="Grupo Patrimonial:"/>
+                                <p:autoComplete queryDelay="1000" widgetVar="grupo"
+                                                id="grupoBem"
+                                                title="Digite a descrição"
+                                                value="#{loteTransferenciaControlador.filtroPesquisaBem.grupoBem}"
+                                                completeMethod="#{grupoBemControlador.completaGrupoBem}"
+                                                var="grupo"
+                                                dropdown="true"
+                                                panelStyle="max-width: 800px; max-height: 250px"
+                                                process="@this"
+                                                size="70"
+                                                maxResults="10"
+                                                itemLabel="#{grupo}"
+                                                itemValue="#{grupo.id}"
+                                                converter="#{grupoBemControlador.converterGenerico}"/>
+
+                                <h:outputText value="Bem:"/>
+                                <ad:auto-complete-bens bem="#{loteTransferenciaControlador.filtroPesquisaBem.bem}"
+                                                       visualizarCampos="true"
+                                                       id="acBem"
+                                                       estadoDoBemDiferenteDe="BAIXADO"
+                                                       tipoBem="MOVEIS"
+                                                       unidadeOrganizacional="#{loteTransferenciaControlador.selecionado.unidadeOrigem}"/>
+                            </h:panelGrid>
+
+                            <p:commandButton value="Pesquisar"
+                                             title="Clique para pesquisar."
+                                             icon="ui-icon-search"
+                                             disabled="#{loteTransferenciaControlador.selecionado.isAguardandoAprovacao()}"
+                                             actionListener="#{loteTransferenciaControlador.pesquisar()}"
+                                             process=":Formulario:tabViewPrincipal:outPutPesquisa :Formulario:tabViewPrincipal:outPanelDadosTransf :Formulario:tabViewPrincipal:outputPanelInconsistencias"
+                                             styleClass="prioritario mrig05 pesquisar"
+                                             style="width: 150px"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"/>
+
+                            <p:dataTable id="tableencontrados"
+                                         value="#{loteTransferenciaControlador.bensDisponiveis}"
+                                         filteredValue="#{loteTransferenciaControlador.bensFiltradosFilterBy}"
+                                         var="bem"
+                                         styleClass="mtop05"
+                                         rowIndexVar="rowIx"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rows="10"
+                                         rowsPerPageTemplate="10, 50,100,200,300"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         paginator="true"
+                                         emptyMessage="Nenhum bem encontrado.">
+                                <p:ajax event="filter" oncomplete="atualizarBotoesHeaderTableEncontrados()"/>
+
+                                <p:column style="width:16px" headerText="Detalhes">
+                                    <p:rowToggler/>
+                                </p:column>
+
+                                <p:column style="width: 5%; text-align: center;">
+                                    <f:facet name="header">
+                                        <p:outputPanel id="panelBotoesMarcarDesmarcarTodos">
+                                            <p:commandButton icon="ui-icon-check"
+                                                             disabled="#{loteTransferenciaControlador.selecionado.isAguardandoAprovacao()}"
+                                                             styleClass="vinteLarguraVinteAltura"
+                                                             onstart="aguarde.show();"
+                                                             oncomplete="aguarde.hide();"
+                                                             process=":Formulario:painelPrincipal"
+                                                             update="tableencontrados :Formulario:tabViewPrincipal:panelAnexos :Formulario:tabViewPrincipal:outPanelDadosTransf"
+                                                             rendered="#{!loteTransferenciaControlador.mostrarBotaoSelecionarTodos()}"
+                                                             actionListener="#{loteTransferenciaControlador.desmarcarTodos()}"/>
+                                            <p:commandButton
+                                                styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                value=""
+                                                disabled="#{loteTransferenciaControlador.selecionado.isAguardandoAprovacao()}"
+                                                process=":Formulario:painelPrincipal"
+                                                update="tableencontrados :Formulario:tabViewPrincipal:panelAnexos :Formulario:tabViewPrincipal:outPanelDadosTransf"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide()"
+                                                rendered="#{loteTransferenciaControlador.mostrarBotaoSelecionarTodos()}"
+                                                actionListener="#{loteTransferenciaControlador.selecionarTodos()}"/>
+                                        </p:outputPanel>
+                                    </f:facet>
+                                    <p:commandButton icon="ui-icon-check"
+                                                     disabled="#{loteTransferenciaControlador.selecionado.isAguardandoAprovacao()}"
+                                                     styleClass="vinteLarguraVinteAltura"
+                                                     update="tableencontrados :Formulario:tabViewPrincipal:panelAnexos :Formulario:tabViewPrincipal:outPanelDadosTransf"
+                                                     process=":Formulario:painelPrincipal"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     rendered="#{!loteTransferenciaControlador.mostrarBotaoSelecionar(bem)}"
+                                                     actionListener="#{loteTransferenciaControlador.desmarcar(bem)}"/>
+                                    <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                     disabled="#{loteTransferenciaControlador.selecionado.isAguardandoAprovacao()}"
+                                                     value=""
+                                                     process=":Formulario:painelPrincipal"
+                                                     update="tableencontrados :Formulario:tabViewPrincipal:panelAnexos :Formulario:tabViewPrincipal:outPanelDadosTransf"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     rendered="#{loteTransferenciaControlador.mostrarBotaoSelecionar(bem)}"
+                                                     actionListener="#{loteTransferenciaControlador.selecionar(bem)}"/>
+                                </p:column>
+
+
+                                <p:column headerText="Registro Patrimonial" style="width: 5%; text-align: left"
+                                          filterBy="#{bem.identificacao}" filterMatchMode="contains">
+                                    <h:outputText value="#{bem.identificacao}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" style="width: 30%; text-align: left"
+                                          filterBy="#{bem.descricao}" filterMatchMode="contains">
+                                    <h:outputText value="#{bem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Patrimonial" style="width: 30%; text-align: left"
+                                          filterBy="#{bem.ultimoEstado.grupoBem}" filterMatchMode="contains">
+                                    <h:outputText value="#{bem.ultimoEstado.grupoBem}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Orçamentária" style="width: 20%; text-align: left"
+                                          filterBy="#{bem.orcamentaria}" filterMatchMode="contains">
+                                    <h:outputText value="#{bem.orcamentaria}"/>
+                                </p:column>
+                                <p:column headerText="Valor do Bem (R$)" style="width: 10%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.valorOriginal}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Ajustes (R$)" style="width: 10%; text-align: right">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{bem.valorDosAjustes}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+
+                                <p:rowExpansion>
+                                    <ad:detalhes-estado-bem estadoBem="#{bem.ultimoEstado}"/>
+                                </p:rowExpansion>
+
+                                <p:columnGroup id="total" type="footer">
+                                    <p:row>
+                                        <p:column styleClass="azulnegrito" colspan="6" style="text-align:right"
+                                                  footerText="Total Geral:"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteTransferenciaControlador.formatarValor(loteTransferenciaControlador.valorTotalDosBens())}"/>
+                                        <p:column styleClass="azulnegrito" style="text-align: right;"
+                                                  footerText="#{loteTransferenciaControlador.formatarValor(loteTransferenciaControlador.valorTotalDosAjustes())}"/>
+                                    </p:row>
+                                </p:columnGroup>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Inconsistências" id="tabInconsistencias">
+                        <p:outputPanel id="outputPanelInconsistencias">
+                            <ad:inconsistencias-pesquisa-bens
+                                inconsistencias="#{loteTransferenciaControlador.assistente.mensagens}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos" id="tabAnexo">
+                        <p:outputPanel id="panelAnexos">
+                            <fc:filesUploadWP selecionado="#{loteTransferenciaControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+
+                <p:outputPanel id="alertInconsistencias">
+                    <ad:alerta-pesquisa-com-inconsistencias
+                        render="#{loteTransferenciaControlador.assistente.hasInconsistencias()}"/>
+                </p:outputPanel>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             icon="ui-icon-disk"
+                             onstart="aguarde.show()"
+                             process="Formulario"
+                             disabled="#{loteTransferenciaControlador.assistente.bloquearAcoesTela}"
+                             actionListener="#{loteTransferenciaControlador.salvar()}"
+                             styleClass="mtop10 prioritario operacao"/>
+
+            <p:commandButton value="Cancelar"
+                             icon="ui-icon-cancel"
+                             onstart="aguade.show()"
+                             actionListener="#{loteTransferenciaControlador.cancelar()}"
+                             styleClass="mlef05 mtop10 operacao"/>
+        </h:form>
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <h:form id="FormularioPesquisa">
+
+                <div class="modal-header alert-info" style="text-align: center">
+                    <div class="centralizado ">
+                        <strong> #{loteTransferenciaControlador.assistente.descricaoProcesso}</strong>
+                    </div>
+                </div>
+
+                <div class="modal-body" style="text-align: center">
+                    <div
+                        style="#{loteTransferenciaControlador.assistente.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/>
+                    </div>
+                    <div
+                        style="#{loteTransferenciaControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{loteTransferenciaControlador.assistente.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="#{loteTransferenciaControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                            <div class="bar"
+                                 style="width: #{loteTransferenciaControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+                    <br/>
+                </div>
+            </h:form>
+        </div>
+
+    </ui:define>
+</ui:composition>
+</html>

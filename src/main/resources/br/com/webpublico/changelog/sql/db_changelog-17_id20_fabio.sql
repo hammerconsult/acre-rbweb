@@ -1,0 +1,9 @@
+update multafiscalizacao set tipocalculomultafiscalizacao = 'MENSAL' where tipocalculomultafiscalizacao = 'BASE_CALCULO';
+update multafiscalizacao set tipomultafiscalizacao = 'FIXO' where tipomultafiscalizacao = 'VARIAVEL';
+update multafiscalizacao set tipomultafiscalizacao = 'FIXO' where tipomultafiscalizacao = 'VARIAVEL_MANUAL';
+update multafiscalizacao set tipomultafiscalizacao = 'FIXO' where tipomultafiscalizacao = 'PERCENTUAL_MANUAL';
+update multafiscalizacao set tipomultafiscalizacao = 'FIXO' where tipomultafiscalizacao = 'EMBASAMENTO';
+update multafiscalizacao set tipomultafiscalizacao = 'FIXO' where tipomultafiscalizacao = 'MULTA_MORA';
+update multafiscalizacao set tipomultafiscalizacao = 'FIXO' where tipomultafiscalizacao = 'VARIAVEL_PORTE';
+update multafiscalizacao set tipomultafiscalizacao = 'FIXO' where tipomultafiscalizacao = 'AGRAVAMENTO';
+update multafiscalizacao set formacalculomultafiscalizacao = 'VALOR' where formacalculomultafiscalizacao = 'MULTA';

@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty auditavel="#{true}" controlador="#{aprovacaoMaterialControlador}"
+                                origem="#{aprovacaoMaterialControlador.caminhoPadrao}ver/#{aprovacaoMaterialControlador.selecionado.id}/"/>
+
+            <p:panel header="Detalhes da Avaliação de Requisição de Material">
+                <h:panelGrid columns="2">
+                    <h:outputText for="numero" value="Número:"/>
+                    <h:outputText id="numero" value="#{aprovacaoMaterialControlador.selecionado.numero}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Data da Aprovação:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{aprovacaoMaterialControlador.selecionado.dataDaAprovacao}">
+                        <f:convertDateTime pattern="dd/MM/yyyy" locale="pt_BR"/>
+                    </h:outputText>
+
+                    <h:outputText for="aprovador"
+                                  value="Aprovador:"/>
+                    <h:outputText id="aprovador"
+                                  value="#{aprovacaoMaterialControlador.selecionado.aprovador.pessoaFisica}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Requisição de Material:"/>
+                    <p:commandLink process="@none"
+                                   id="bt-ver-ata"
+                                   icon="ui-icon-search"
+                                   update="@none"
+                                   styleClass="negrito"
+                                   onclick="window.open('#{request.contextPath}/requisicao-de-material/ver/#{aprovacaoMaterialControlador.selecionado.requisicaoMaterial.id}/','_blank');">
+                        <h:outputText id="requisicao"
+                                      styleClass="negrito"
+                                      value="#{aprovacaoMaterialControlador.selecionado.requisicaoMaterial}"/>
+                    </p:commandLink>
+
+                    <h:outputText value="Unidade Administrativa Requerente:"/>
+                    <fc:codigo-descricao-hierarquia
+                        unidadeOrganizacional="#{aprovacaoMaterialControlador.selecionado.requisicaoMaterial.unidadeRequerente}"
+                        dataMovimento="#{aprovacaoMaterialControlador.selecionado.dataDaAprovacao}"
+                        tipoHierarquia="ADMINISTRATIVA"/>
+
+                    <h:outputText value="Local de Estoque de Origem:"/>
+                    <h:outputText id="localorigem"
+                                  styleClass="negrito"
+                                  value="#{aprovacaoMaterialControlador.selecionado.requisicaoMaterial.localEstoqueOrigem}"/>
+
+                    <h:outputText value="Local de Estoque de Destino:"
+                                  rendered="#{!aprovacaoMaterialControlador.isRequisicaoConsumo()}"/>
+
+                    <h:outputText id="localdestino"
+                                  styleClass="negrito"
+                                  value="#{aprovacaoMaterialControlador.selecionado.requisicaoMaterial.localEstoqueDestino}"
+                                  rendered="#{!aprovacaoMaterialControlador.isRequisicaoConsumo()}"/>
+                </h:panelGrid>
+                <br/>
+
+                <p:outputPanel id="painelDaTabela">
+                    <p:dataTable
+                        styleClass="mtop05"
+                        rowIndexVar="rowIx"
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                        rows="10"
+                        rowsPerPageTemplate="10,20,30,50"
+                        currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                        paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                        paginator="true"
+                        id="tabela"
+                        emptyMessage="Nenhum item encontrado na requisição selecionada."
+                        value="#{aprovacaoMaterialControlador.selecionado.itensAprovados}"
+                        var="item"
+                        rendered="#{aprovacaoMaterialControlador.selecionado.requisicaoMaterial != null}"
+                        style="text-align: center;">
+                        <p:ajax event="page" oncomplete="carregarTodasUnidadesMedidasDaTela()"/>
+                        <p:column headerText="Material" styleClass="alinhamentoEsquerda">
+                            <p:commandLink
+                                onstart="aguarde.show();"
+                                oncomplete="aguarde.hide();"
+                                title="Clique para ver detalhes do material"
+                                actionListener="#{aprovacaoMaterialControlador.setDetalhesMaterial(item)}"
+                                process="@this">
+                                <h:outputText value="#{item.material.codigo}"/>
+                            </p:commandLink>
+                            <h:outputText value=" - #{item.material.descricao}"/>
+
+                            <div style="display: flex; flex-direction: row; font-size: 13px; color: grey;">
+                                <div>
+                                    <h:outputText value="Unidade de Medida:" styleClass="mrig02"/>
+                                </div>
+                                <div>
+                                    <p unidade-medida-tip="#{item.material.unidadeMedida.id}" style="margin-top: 0">
+                                        #{item.material.unidadeMedida.descricaoComponenteTip}
+                                    </p>
+                                </div>
+                            </div>
+                        </p:column>
+                        <p:column headerText="Qtde Requerida"
+                                  styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida value="#{item.itemRequisicaoMaterial.quantidade}"
+                                                              tipoMascara="#{item.itemRequisicaoMaterial.materialRequisitado.mascaraQuantidade}"/>
+                        </p:column>
+                        <p:column headerText="Qtde Saída" styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                value="#{item.itemRequisicaoMaterial.quantidadeSaida}"
+                                tipoMascara="#{item.itemRequisicaoMaterial.materialRequisitado.mascaraQuantidade}"/>
+                        </p:column>
+                        <p:column headerText="Qtde a Avaliar"
+                                  styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                value="#{aprovacaoMaterialControlador.getQuantidadeAAvaliar(item)}"
+                                tipoMascara="#{item.itemRequisicaoMaterial.materialRequisitado.mascaraQuantidade}"/>
+                        </p:column>
+                        <p:column headerText="Qtde Estoque" styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                value="#{aprovacaoMaterialControlador.consolidadorDeEstoque.getFisicoConsolidado(item.material)}"
+                                tipoMascara="#{item.itemRequisicaoMaterial.materialRequisitado.mascaraQuantidade}"/>
+                        </p:column>
+                        <p:column headerText="Qtde Aprovada"
+                                  styleClass="alinhamentoDireita">
+                            <fc:output-mascara-unidade-medida
+                                value="#{item.quantidadeAprovada}"
+                                tipoMascara="#{item.itemRequisicaoMaterial.materialRequisitado.mascaraQuantidade}"/>
+                        </p:column>
+                        <p:column style="width: 15%;"
+                                  filterMatchMode="exact"
+                                  filterBy="#{item.tipoAprovacao}"
+                                  filterOptions="#{aprovacaoMaterialControlador.tiposDeAprovacoesParaFiltroView()}">
+                            <h:outputLabel value="#{item.tipoAprovacao.descricao}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+            <fc:rodapeVisualizarPretty id="rvpRodapeVisualizarPretty"
+                                       controlador="#{aprovacaoMaterialControlador}"
+                                       labelEditar="Reavaliar"
+                                       mostrarExcluir="#{!aprovacaoMaterialControlador.hasSaidaMaterial()}"/>
+
+            <p:commandButton value="Imprimir"
+                             icon="ui-icon-print"
+                             style="height: 30px"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="mlef05 mtop10"
+                             actionListener="#{aprovacaoMaterialControlador.gerarRelatorio()}"
+                             title="Clique para gerar o Relatório"/>
+
+        </h:form>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgMaterial"
+                  closable="true"
+                  width="950"
+                  height="430">
+            <h:form id="form-material">
+                <p:panel id="panelMaterial" header="Material">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Código: "/>
+                        <h:outputText
+                            value="#{aprovacaoMaterialControlador.itemSelecionado.material.codigo}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Objeto de Compra: "/>
+                        <h:outputText value="#{aprovacaoMaterialControlador.itemSelecionado.material.objetoCompra}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Grupo Objeto de Compra: "/>
+                        <h:outputText
+                            value="#{aprovacaoMaterialControlador.itemSelecionado.material.objetoCompra.grupoObjetoCompra}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Grupo Material: "/>
+                        <h:outputText value="#{aprovacaoMaterialControlador.itemSelecionado.material.grupo}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Descrição: "/>
+                        <h:outputText value="#{aprovacaoMaterialControlador.itemSelecionado.material.descricao}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Descrição Complementar: "/>
+                        <h:outputText
+                            value="#{aprovacaoMaterialControlador.itemSelecionado.material.descricaoComplementar}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Unidade de Medida: "/>
+                        <h:outputText value="#{aprovacaoMaterialControlador.itemSelecionado.material.unidadeMedida}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Perecibilidade: "/>
+                        <h:outputText
+                            value="#{aprovacaoMaterialControlador.itemSelecionado.material.perecibilidade.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Marca: "/>
+                        <h:outputText value="#{aprovacaoMaterialControlador.itemSelecionado.material.marca.descricao}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Modelo: "/>
+                        <h:outputText value="#{aprovacaoMaterialControlador.itemSelecionado.material.modelo.descricao}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Controle de Lote: "/>
+                        <h:outputText
+                            value="#{aprovacaoMaterialControlador.itemSelecionado.material.controleDeLote ? 'Sim' : 'Não'}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Material Médico-Hospitalar: "/>
+                        <h:outputText
+                            value="#{aprovacaoMaterialControlador.itemSelecionado.material.medicoHospitalar ? 'Sim' : 'Não'}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Situação: "/>
+                        <h:outputText
+                            value="#{aprovacaoMaterialControlador.itemSelecionado.material.statusMaterial.descricao}"
+                            styleClass="negrito"/>
+                    </h:panelGrid>
+                </p:panel>
+
+                <div style="display: flex; justify-content: center; margin-top: 10px">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-cancel"
+                                     process="@this"
+                                     update="@none"
+                                     title="Clique para fechar"
+                                     onclick="aguarde.show(); dlgMaterial.hide()"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="padrao"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

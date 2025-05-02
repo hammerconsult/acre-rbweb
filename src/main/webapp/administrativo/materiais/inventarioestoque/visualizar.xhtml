@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+            function iniciarRelatorio() {
+                aguarde.show();
+                timer = setInterval(function () {
+                    verificarRelatorio();
+                }, 1000);
+            }
+
+            function terminarRelatorio() {
+                clearInterval(timer);
+                aguarde.hide();
+                dlgImprimir.show();
+            }
+        </script>
+
+        <h:form id="Formulario">
+        <p:remoteCommand name="verificarRelatorio"
+                         actionListener="#{relatorioInventarioEstoqueControlador.verificarRelatorio}"/>
+
+            <fc:cabecalhoPretty auditavel="#{true}" controlador="#{inventarioEstoqueControlador}"
+                                origem="#{inventarioEstoqueControlador.caminhoPadrao}ver/#{inventarioEstoqueControlador.selecionado.id}/"/>
+            <p:panel header="Detalhes do Inventário de Estoque">
+                <h:panelGrid columns="2">
+                    <h:outputText for="localEstoque" value="Local de Estoque:"/>
+                    <h:outputText id="localEstoque"
+                                  styleClass="negrito"
+                                  value="#{inventarioEstoqueControlador.selecionado.localEstoque}"/>
+
+                    <h:outputLabel value="Situação:"/>
+                    <h:outputText value="#{inventarioEstoqueControlador.selecionado.situacaoInventario.descricao}"
+                                  styleClass="negrito"
+                                  id="situcao"/>
+
+                    <h:outputLabel value="Usuário Sistema:"/>
+                    <h:outputText value="#{inventarioEstoqueControlador.selecionado.usuarioSistema.pessoaFisica.nome}"
+                                  styleClass="negrito"
+                                  id="usuarioSistema"/>
+
+                    <h:outputText value="Iniciado em:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{inventarioEstoqueControlador.selecionado.iniciadoEm}">
+                        <f:convertDateTime type="both"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Encerrado em:"
+                                   rendered="#{inventarioEstoqueControlador.selecionado.isInventarioFinalizado()}"/>
+                    <h:outputText id="encerradoEm"
+                                  styleClass="negrito"
+                                  rendered="#{inventarioEstoqueControlador.selecionado.isInventarioFinalizado()}"
+                                  value="#{inventarioEstoqueControlador.selecionado.encerradoEm}">
+                        <f:convertDateTime type="both"/>
+                    </h:outputText>
+
+                    <h:outputText for="tipoInventario" value="Tipo de Inventário:"/>
+                    <h:outputText id="tipoInventario"
+                                  styleClass="negrito"
+                                  value="#{inventarioEstoqueControlador.selecionado.tipoInventario.descricao}"/>
+                </h:panelGrid>
+
+                <p:dataTable id="tabelaItensInventario"
+                             value="#{inventarioEstoqueControlador.selecionado.itensInventarioEstoque}"
+                             var="item"
+                             styleClass="mtop03"
+                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginator="true"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Materiais deste Inventário&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+                    <p:column headerText="Lotes" style="width: 60px!important" styleClass="alinhamentoEsquerda">
+                        <f:facet name="header">
+                            <h:outputText value="Lotes"/>
+                            <co:botao_informacao
+                                descricao="Somente os materiais que requerem controle de lote estarão com o botão disponível para visualização."
+                                styleClass="botao-transparente"/>
+                        </f:facet>
+                        <p:commandButton icon="ui-icon-search"
+                                         disabled="#{!item.material.controleDeLote}"
+                                         oncomplete="dialogLotes.show()"
+                                         actionListener="#{inventarioEstoqueControlador.setItemInventarioEstoqueSelecionado(item)}"
+                                         update=":FormularioDialogLotes"
+                                         title="Clique para visualizar os lotes deste material."/>
+                    </p:column>
+                    <p:column headerText="Material" style="text-align: left;"
+                              filterBy="#{item.material.descricao}"
+                              filterMatchMode="contains"
+                              filterStyle="min-width : 250px!important; text-align: left">
+                        <h:outputText title="#{item.material.descricaoComplementar}"
+                                      value="#{item.material}"/>
+                    </p:column>
+                    <p:column headerText="Objeto de Compra" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            title="Grupo Objeto de Compra: #{item.material.objetoCompra.grupoObjetoCompra.descricao}"
+                            value="#{item.material.objetoCompra.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Grupo Material" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{item.material.grupo}"/>
+                    </p:column>
+                    <p:column headerText="Unidade de Medida" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{item.material.unidadeMedida}"/>
+                    </p:column>
+                    <p:column headerText="Vl. Fin. Esperado" style="width: 120px; text-align: right;">
+                        <h:outputText value="#{itemInventarioEstoqueControlador.calcularValorFinanceiroEsperado(item)}"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Qtd. Esperada" style="width: 85px; text-align: center;">
+                        <h:outputText style="text-align: right;"
+                                      value="#{item.quantidadeEsperada}"/>
+                    </p:column>
+                    <p:column headerText="Vl. Fin. Constatado" style="width: 130px; text-align: right;">
+                        <h:outputText id="vlfinal"
+                                      value="#{itemInventarioEstoqueControlador.calcularValorFinanceiroConstatado(item)}"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Qtd. Constatada" style="width: 110px;">
+                        <h:outputText style="text-align: right;"
+                                      value="#{item.quantidadeConstatada}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+
+            <fc:rodapeVisualizarPretty id="rvpRodapeVisualizarPretty"
+                                       controlador="#{inventarioEstoqueControlador}"
+                                       mostrarEditar="#{inventarioEstoqueControlador.selecionado.isInventarioAberto()}"
+                                       mostrarExcluir="#{!inventarioEstoqueControlador.selecionado.isInventarioFinalizado()}"/>
+
+            <p:commandButton icon="ui-icon-check"
+                             id="btnConcluir"
+                             rendered="#{inventarioEstoqueControlador.selecionado.isInventarioAberto()}"
+                             value="Concluir Inventário"
+                             title="Clique concluir o inventário."
+                             update=":formConcluir"
+                             process=":formConcluir"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide();dlgConcluir.show();setaFoco('formConcluir:btnConfimarConcluir')"
+                             styleClass="prioritario operacao mlef05 mtop10"/>
+
+            <p:commandButton icon="ui-icon-wrench"
+                             id="btnFinalizar"
+                             rendered="#{inventarioEstoqueControlador.selecionado.isInventarioConcluido()}"
+                             value="Inventariar"
+                             title="Clique para inventariar este inventário."
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="prioritario operacao mlef05 mtop10"
+                             actionListener="#{inventarioEstoqueControlador.redirecionarParaInventariar()}"/>
+
+            <p:commandButton value="Imprimir Relatório"
+                             icon="ui-icon-print"
+                             style="height: 30px"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="operacao mlef05 mtop10"
+                             actionListener="#{relatorioInventarioEstoqueControlador.gerarRelatorioConferenciaInventario(inventarioEstoqueControlador.selecionado)}"
+                             title="Clique para imprimir o Relatório"/>
+
+        </h:form>
+
+        <p:dialog showHeader="false"
+                  modal="true"
+                  widgetVar="dialogLotes"
+                  resizable="false"
+                  closable="false"
+                  position="center"
+                  dynamic="true"
+                  width="800"
+                  draggable="false">
+            <h:form id="FormularioDialogLotes">
+                <h:outputText value="LOTES DO MATERIAL: " styleClass="mtop05 azul" style="font-size: 12px"/>
+                <h:outputText
+                    value="#{inventarioEstoqueControlador.itemInventarioEstoqueSelecionado.material.descricao}"
+                    style="font-size: 12px"
+                    styleClass="azulnegrito"/>
+
+                <p:dataTable
+                    value="#{inventarioEstoqueControlador.itemInventarioEstoqueSelecionado.lotesItemInventario}"
+                    var="lote"
+                    style="overflow: scroll; max-height: 400px; width: auto"
+                    styleClass="mtop02"
+                    emptyMessage="Não foram localizados registros para serem apresentados">
+                    <p:column headerText="Lote" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{lote.loteMaterial}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" style="width: 90px; text-align: center;">
+                        <h:outputText value="#{lote.quantidadeEsperada}"/>
+                    </p:column>
+                </p:dataTable>
+
+                <div align="center" style="width: 100%" class="margem-superior-dez-pixels">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-close"
+                                     onstart="aguarde.show()"
+                                     title="Clique para fechar a janela."
+                                     styleClass="padrao mtop05"
+                                     actionListener="#{inventarioEstoqueControlador.cancelaritemInventarioEstoque()}"
+                                     oncomplete="aguarde.hide();dialogLotes.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog modal="true"
+                  widgetVar="dlgConcluir"
+                  resizable="false"
+                  closable="false"
+                  position="center"
+                  dynamic="true"
+                  width="900"
+                  draggable="false">
+            <h:form id="formConcluir">
+
+                <div class="alert alert-success mtop05" style="font-size: 13px">
+                    <strong>Atenção!</strong> Ao concluir, não será possível realizar alterações. O estoque ficará bloqueado e liberará a próxima faze para 'Inventariar'.
+                </div>
+
+                <div align="center" style="width: 100%" class="margem-superior-dez-pixels">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     id="btnConfimarConcluir"
+                                     onstart="aguarde.show()"
+                                     title="Clique para concluir o inventário."
+                                     styleClass="padrao mtop10"
+                                     actionListener="#{inventarioEstoqueControlador.concluirInventario()}"
+                                     oncomplete="aguarde.hide();dlgConcluir.hide()"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     onstart="aguarde.show()"
+                                     title="Clique para fechar a janela."
+                                     styleClass="padrao mtop10 mlef05"
+                                     oncomplete="aguarde.hide();dlgConcluir.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog id="imprimirDialog"
+                  widgetVar="dlgImprimir"
+                  style="text-align: center"
+                  closable="false"
+                  resizable="false"
+                  modal="true">
+            <h:form id="formBarra">
+                <div class="alert alert-success mtop05" style="font-size: 13px" align="center">
+                    <strong>Operação realizada com sucesso!</strong> O relatório já pode ser impresso.
+                </div>
+
+                <div class="mtop20" align="center">
+                    <h:commandLink target="_blank"
+                                   actionListener="#{relatorioInventarioEstoqueControlador.imprimir}">
+                        <p:commandButton value="Imprimir"
+                                         icon="ui-icon-print"
+                                         widgetVar="btImprimir"
+                                         styleClass="operacao prioritario"
+                                         ajax="false"/>
+                    </h:commandLink>
+
+                    <p:commandButton value="Fechar"
+                                     id="btnSair"
+                                     icon="ui-icon-close"
+                                     styleClass="operacao mlef20"
+                                     title="Clique para fechar a janela."
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();dlgImprimir.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

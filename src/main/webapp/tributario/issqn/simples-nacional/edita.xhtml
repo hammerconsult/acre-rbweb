@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="application/javascript">
+
+            var timer;
+
+            function iniciarArquivo() {
+                timer = setInterval(function () {
+                    verificarArquivo();
+                }, 2000);
+            }
+
+            function terminarArquivo() {
+                clearInterval(timer);
+                finalizarArquivo();
+            }
+        </script>
+
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="verificarArquivo"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.acompanharProcesso}"
+                             update=":formProcessando"/>
+
+            <p:remoteCommand name="finalizarArquivo"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.finalizarProcesso}"
+                             update=":formProcessando"
+                             oncomplete="dialogProcessando.hide()"/>
+
+            <fc:cabecalhoPretty id="cpCabecalhoPretty"
+                                origem="#{arquivoInconsistenciaSimplesNacionalControlador.caminhoPadrao}listar/"
+                                controlador="#{arquivoInconsistenciaSimplesNacionalControlador}"/>
+            <p:panel header="Simples Nacional">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Código:"/>
+                    <h:outputText value="Preenchido automaticamente ao salvar" styleClass="negrito"
+                                  rendered="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.isCodigoVazio()}"/>
+                    <h:outputText value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.codigo}"
+                                  rendered="#{!arquivoInconsistenciaSimplesNacionalControlador.selecionado.isCodigoVazio()}"/>
+
+                    <fc:outputLabelObrigatorio value="Data da Operação:"/>
+                    <h:outputText value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.dataCadastro}"
+                                  converter="javax.faces.DateTime" styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Usuário:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.usuarioSistema.pessoaFisica.nome}"/>
+                </h:panelGrid>
+            </p:panel>
+            <p:panel id="panelUpload" header="Arquivo de Importação" styleClass="mtop05">
+                <p:outputPanel style="overflow: scroll;  width: auto; height: 100px;"
+                               rendered="#{!arquivoInconsistenciaSimplesNacionalControlador.selecionado.isArquivoImportacaoSelecionado()}">
+                    <p:fileUpload multiple="false" cancelLabel="Cancelar"
+                                  sizeExceedMessage="Arquivo Maior que 10 MB."
+                                  label="Selecione..."
+                                  allowTypes="/(\.|\/)(txt)$/"
+                                  uploadLabel="Upload Arquivo"
+                                  update="@form" sizeLimit="15728640"
+                                  id="iBotaoUpload"
+                                  fileUploadListener="#{arquivoInconsistenciaSimplesNacionalControlador.assistenteDetentorArquivoComposicao.handleFileUpload}"/>
+                </p:outputPanel>
+
+                <p:dataTable id="tabelaItem"
+                             value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.detentorArquivoComposicao.arquivosComposicao}"
+                             var="arquivoComposicao"
+                             styleClass="mtop05"
+                             rowIndexVar="rowIx"
+                             emptyMessage="Nenhum arquivo cadastrado.">
+
+                    <p:column rendered="#{arquivoComposicao.arquivo.id eq null}" headerText="Download"
+                              style="text-align: center">
+                        <p:commandButton id="downloadLink" ajax="false"
+                                         title="Click aqui para fazer o download do arquivo de importação."
+                                         icon="ui-icon-circle-arrow-s"
+                                         process="@form" update="@this"
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();">
+                            <p:fileDownload
+                                value="#{arquivoInconsistenciaSimplesNacionalControlador.assistenteDetentorArquivoComposicao.getStream(arquivoComposicao)}"/>
+                        </p:commandButton>
+                    </p:column>
+                    <p:column rendered="#{arquivoComposicao.arquivo.id ne null}" headerText="Download"
+                              style="width: 10%; text-align: center">
+                        <a title="Download"
+                           href="${facesContext.externalContext.requestContextPath}/arquivos/#{arquivoComposicao.arquivo.nome}?id=#{arquivoComposicao.arquivo.id}">#{arquivoComposicao.arquivo.nome}</a>
+                    </p:column>
+                    <p:column headerText="Excluir" style="width: 5%; text-align: center">
+                        <p:commandButton icon="ui-icon-trash"
+                                         title="Click aqui para excluir o arquivo de importação."
+                                         update="@form"
+                                         process="@this"
+                                         actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.assistenteDetentorArquivoComposicao.removerArquivo(arquivoComposicao)}"
+                                         onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                         oncomplete="aguarde.hide();"/>
+                    </p:column>
+                    <p:column headerText="Data do Upload" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{arquivoComposicao.dataUpload}">
+                            <f:convertDateTime pattern="dd/MM/yyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Descrição" style="text-align: left">
+                        <p:inputText value="#{arquivoComposicao.arquivo.descricao}" size="100" maxlength="100"
+                                     rendered="#{arquivoComposicao.arquivo.id eq null}"/>
+                        <h:outputText value="#{arquivoComposicao.arquivo.descricao}"
+                                      rendered="#{arquivoComposicao.arquivo.id ne null}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+
+            <p:commandButton value="Registrar Arquivo"
+                             styleClass="operacao prioritario mtop10"
+                             title="Click aqui para registrar o arquivo de importação"
+                             process="@this" update="@this"
+                             onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.processarArquivoImportacao()}"
+                             icon="ui-icon-gear"/>
+
+            <p:commandButton value="Cancelar"
+                             id="cbCancelar"
+                             style="height: 30px;"
+                             styleClass="mtop10"
+                             icon="ui-icon-cancel"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar e retornar a página anterior"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.cancelar()}"
+                             immediate="true"/>
+        </h:form>
+
+        <p:dialog modal="true" width="800" id="dlgProcessando" widgetVar="dialogProcessando" closable="false">
+            <div class="alert alert-info centralizado" id="mensagemFim">
+                <h:form id="formProcessando">
+                    <fc:acompanhamentoBarraProgresso assistenteBarraProgresso="#{arquivoInconsistenciaSimplesNacionalControlador.assistenteDoProcessoArquivo}"/>
+                </h:form>
+            </div>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

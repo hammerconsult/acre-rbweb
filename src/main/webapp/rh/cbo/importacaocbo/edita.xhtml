@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function atualizarCbos() {
+                dialogo.show();
+                $('#calculando').css('display', 'block');
+                $('#calculado').css('display', 'none');
+                $('#barraProgresso').css('display', 'block');
+                $('#tipoProcesso').css('display', 'block');
+                $('#processogeral').css('display', 'block');
+                $('#barraProgressoGeral').css('display', 'block');
+                $('#tabela-estimativa').css('display', 'block');
+                timer = setInterval(function () {
+                    acompanharProgresso();
+                }, 1000);
+            }
+
+            function termina() {
+                clearInterval(timer);
+                $('#calculando').css('display', 'none');
+                $('#calculado').css('display', 'block');
+                $('#barraProgresso').css('display', 'none');
+                $('#tipoProcesso').css('display', 'none');
+                $('#processogeral').css('display', 'none');
+                $('#barraProgressoGeral').css('display', 'none');
+                $('#tabela-estimativa').css('display', 'none');
+            }
+        </script>
+        <p:messages id="msgs" showDetail="true"/>
+        <h:form id="FormularioUpload" enctype="multipart/form-data">
+            <p:remoteCommand
+                update=":progressoAtualizacaoCBO"
+                actionListener="#{importacaoArquivoCBOControlador.verificarTermino()}"
+                name="acompanharProgresso"/>
+            <p:panel header="Importação Arquivo CBO">
+                <p:messages showDetail="true"/>
+                <fc:outputLabelObrigatorio value="Tipo de CBO:"/>
+                <h:selectOneMenu id="tipoArquivoCBO"
+                                 value="#{importacaoArquivoCBOControlador.selecionado.tipoCBO}">
+                    <f:selectItems value="#{importacaoArquivoCBOControlador.tiposCbo}"/>
+                    <p:ajax event="change" process="@this" update=":FormularioUpload"
+                            listener="#{importacaoArquivoCBOControlador.cbosImportacao.clear}"/>
+                </h:selectOneMenu>
+
+                <p:fileUpload auto="true"
+                              id="fUpload"
+                              styleClass="mtop10"
+                              label="Selecionar Arquivo"
+                              fileUploadListener="#{importacaoArquivoCBOControlador.importarArquivo}"
+                              allowTypes="/(\.|\/)(csv)$/"
+                              update=":FormularioCodigosIguais:tabelaCBOIguais @form"
+                />
+                <p:growl id="messages" showDetail="true"/>
+                <p:dataTable paginator="true"
+                             id="tabelaResultado"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             rows="10"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{importacaoArquivoCBOControlador.cbosImportacao}"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>CBOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="resultado">
+                    <p:column headerText="Código" filterBy="#{resultado.codigo}">
+                        <h:outputText
+                            value="#{resultado.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" filterBy="#{resultado.descricao}">
+                        <h:outputText value="#{resultado.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Tipo CBO">
+                        <h:outputText value="#{resultado.tipoCBO.descricao}"/>
+                    </p:column>
+                </p:dataTable>
+
+            </p:panel>
+            <p:commandButton value="Salvar"
+                             rendered="#{!importacaoArquivoCBOControlador.isTipoCboDiferenteArquivo()}"
+                             icon="ui-icon-disk"
+                             styleClass="mtop10 mrig05 prioritario"
+                             style="height: 30px;"
+                             onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             actionListener="#{importacaoArquivoCBOControlador.salvar()}"
+                             process="@this"
+                             title="CLique para salvar este registro."/>
+
+            <p:commandButton value="Salvar"
+                             rendered="#{importacaoArquivoCBOControlador.isTipoCboDiferenteArquivo()}"
+                             icon="ui-icon-disk"
+                             styleClass="mtop10 mrig05 prioritario"
+                             style="height: 30px;"
+                             onclick="if (!confirm('O nome do arquivo esta diferente do tipo do arquivo CBO informado, tem certeza que deseja continuar?'))
+                                            return false;"
+                             onstart="aguarde.show();"
+                             oncomplete="aguarde.hide();"
+                             title="Clique para salvar o registro"
+                             actionListener="#{importacaoArquivoCBOControlador.salvar()}"/>
+            <fc:rodapePretty id="rpRodapePretty" controlador="#{importacaoArquivoCBOControlador}" ocultarSalvar="true"/>
+        </h:form>
+        <h:form id="FormularioCodigosIguais">
+            <p:dialog id="visualizarCBOIguais"
+                      widgetVar="visualizarCBOIguais"
+                      header="CBOS iguais com descrição diferente"
+                      modal="true"
+                      draggable="false"
+                      resizable="false">
+
+                <p:dataTable paginator="true"
+                             id="tabelaCBOIguais"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             rows="10"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{importacaoArquivoCBOControlador.cbosIguais}"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>CBOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="cbo">
+                    <p:column headerText="Código">
+                        <h:outputText
+                            value="#{cbo.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Descrição">
+                        <h:outputText value="#{cbo.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Nova Descrição">
+                        <h:outputText
+                            value="#{importacaoArquivoCBOControlador.mapCboDescricaoDiferente.get(cbo).descricao}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:dialog>
+        </h:form>
+        <p:dialog widgetVar="dialogo"
+                  id="dialogAtualizarCbos"
+                  width="800"
+                  closable="false"
+                  resizable="false"
+                  modal="true" position="center" dynamic="true" header="Realizando a atualização">
+
+            <p:outputPanel id="progressoAtualizacaoCBO">
+                <div class="alert alert-info centralizado " id="calculando">
+                    <strong>Aguarde,</strong> O processo está em execução
+
+                </div>
+                <div class="alert alert-success centralizado " style="display: none" id="calculado">
+                    <strong>Pronto!</strong> Atualização dos CBOS efetuado com sucesso! <br/>
+                    <br/>
+                    <p:commandButton value="Ok" icon="ui-icon-check" styleClass="operacao"
+                                     onclick="dialogo.hide()"
+                    />
+                </div>
+                <div class="centralizado" id="tipoProcesso">
+                    <strong>#{importacaoArquivoCBOControlador.assistenteBarraProgresso.descricaoProcesso}</strong><br/>
+                </div>
+
+                <div class="progress progress-striped active" id="barraProgresso">
+                    <div class="bar"
+                         style="width: #{importacaoArquivoCBOControlador.assistenteBarraProgresso.porcentagemDoCalculo}%"></div>
+                </div>
+                <div id="tabela-estimativa">
+                    <table style="width: 100%; text-align: center">
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="#{importacaoArquivoCBOControlador.assistenteBarraProgresso.calculados}"/>
+                                de
+                                <h:outputText
+                                    value="#{importacaoArquivoCBOControlador.assistenteBarraProgresso.total}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Decorrido #{importacaoArquivoCBOControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Estimado #{importacaoArquivoCBOControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+            </p:outputPanel>
+
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+
+</html>

@@ -1,0 +1,1 @@
+INSERT INTO LOTEINTENCAOREGISTROPRECO select hibernate_sequence.nextval, dados.* from (select distinct item.INTENCAOREGISTROPRECO_ID, 1, 'Lote 1', item.TIPOOBJETOCOMPRA, 'QUANTIDADE', null FROM ITEMINTENCAOREGISTROPRECO item) dados

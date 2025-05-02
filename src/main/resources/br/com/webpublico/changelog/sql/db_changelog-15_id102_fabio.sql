@@ -1,0 +1,1 @@
+update processo set sequencia = 1 where sequencia is null

@@ -1,0 +1,1 @@
+update categoriadividapublica set mobiliaria = null, contratual = null, interna = null, externa = null;

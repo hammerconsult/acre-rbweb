@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:rh="http://java.sun.com/jsf/composite/components/rh"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function gerarAtualizarPeriodosAquisitivos() {
+                dialogo.show();
+                $('#calculando').css('display', 'block');
+                $('#calculado').css('display', 'none');
+                $('#barraProgresso').css('display', 'block');
+                $('#tipoProcesso').css('display', 'block');
+                $('#processogeral').css('display', 'block');
+                $('#barraProgressoGeral').css('display', 'block');
+                $('#tabela-estimativa').css('display', 'block');
+                timer = setInterval(function () {
+                    acompanharProgresso();
+                }, 1000);
+            }
+
+            function termina() {
+                clearInterval(timer);
+                finalizar();
+            }
+
+            function terminaProcesso() {
+                $('#calculando').css('display', 'none');
+                $('#barraProgresso').css('display', 'block');
+                $('#calculado').css('display', 'block');
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":progressoGeracaoAtualizacaoPeriodosAquisitivos"
+                actionListener="#{periodoAquisitivoControlador.verificarTermino()}"
+                name="acompanharProgresso"/>
+            <p:remoteCommand name="finalizar" update=":progressoGeracaoAtualizacaoPeriodosAquisitivos"
+                             actionListener="#{periodoAquisitivoControlador.encerrarFuture()}"/>
+            <p:panel header="Período Aquisitivo">
+                <h:panelGrid columns="2">
+
+                    <p:spacer/>
+                    <p:selectOneRadio id="options" value="#{periodoAquisitivoControlador.tipoFiltro}">
+                        <f:selectItem itemLabel="Servidor(a)" itemValue="VINCULO"/>
+                        <f:selectItem itemLabel="Orgão" itemValue="ORGAO"/>
+                        <p:ajax process="@this" update="@form" onstart="aguarde.show();"
+                                oncomplete="aguarde.hide();"
+                                listener="#{periodoAquisitivoControlador.novo}"/>
+                    </p:selectOneRadio>
+
+                    <h:outputText value="Orgão:"/>
+                    <p:autoComplete id="orgao"
+                                    queryDelay="1000"
+                                    title="Selecione o órgão."
+                                    value="#{periodoAquisitivoControlador.hierarquiaOrganizacional}"
+                                    completeMethod="#{periodoAquisitivoControlador.completarHierarquia}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    disabled="#{periodoAquisitivoControlador.tipoFiltro eq 'VINCULO'}"
+                                    var="org"
+                                    itemLabel="#{org}"
+                                    itemValue="#{org.id}"
+                                    maxResults="10"
+                                    size="70">
+                        <p:ajax event="itemSelect"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Servidor:"/>
+                    <rh:auto-complete-vinculofp id="auto-complete-servidor"
+                                                validarPermissaoDeAcessoAoVinculo="false"
+                                                process=":Formulario:auto-complete-servidor"
+                                                disabled="#{periodoAquisitivoControlador.tipoFiltro eq 'ORGAO'}"
+                                                converter="#{periodoAquisitivoControlador.converterContratoFP}"
+                                                update=":Formulario:tabela-periodos"
+                                                completeMethod="#{periodoAquisitivoControlador.completaContratoFP}"
+                                                actionListener="#{periodoAquisitivoControlador.limparPeriodosAquisitivos}"
+
+                                                value="#{periodoAquisitivoControlador.contratoFP}"/>
+
+                    <h:outputLabel value="Tipo Período Aquisitivo: "/>
+                    <p:outputPanel>
+                        <h:selectOneMenu title="Selecione o tipo do período aquisitivo"
+                                         styleClass="mrig05"
+                                         value="#{periodoAquisitivoControlador.tipoPeriodoAquisitivoSelecionado}"
+                                         id="tipo-de-compra">
+                            <f:selectItems value="#{periodoAquisitivoControlador.tiposPeriodoAquisitivo}"/>
+                        </h:selectOneMenu>
+
+                        <p:commandButton process="@none"
+                                         update="@none"
+                                         id="bt-informacao-tipo-periodo"
+                                         styleClass="icone-20 mrig05"
+                                         icon="ui-icon-info"/>
+
+                        <p:overlayPanel for="bt-informacao-tipo-periodo"
+                                        style="border : solid black 1px;"
+                                        styleClass="semSombra"
+                                        showEvent="mouseover"
+                                        hideEvent="mouseout">
+                            <h:outputText
+                                value="A consulta e a geração dos períodos aquisitivos irão considerar esse campo. A geração utiliza as bases de período aquisitivo configuradas para o cargo."
+                                escape="false"/>
+                        </p:overlayPanel>
+                    </p:outputPanel>
+                </h:panelGrid>
+
+
+                <h:panelGrid columns="3"
+                             cellpadding="0"
+                             cellspacing="0">
+                    <p:commandButton title="Consultar Período Aquisitivo"
+                                     icon="ui-icon-lupa"
+                                     update="tabela-periodos"
+                                     styleClass="operacao prioritario mtop05 mrig05"
+                                     process="@form"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide()"
+                                     value="Consultar Período Aquisitivo"
+                                     actionListener="#{periodoAquisitivoControlador.consultarPeriodoAquisitivo}"/>
+
+                    <p:commandButton title="Clique aqui para atualizar período o aquisitivo."
+                                     styleClass="operacao mtop05 mrig05"
+                                     icon="ui-icon-atualizar"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@form"
+                                     update="tabela-periodos"
+                                     value="Gerar/Atualizar Período Aquisitivo"
+                                     actionListener="#{periodoAquisitivoControlador.atualizarPeriodoAquisitivo}"/>
+
+                    <p:commandButton process="@none"
+                                     update="@none"
+                                     id="bt-informacao-tipo-gerar-periodo-aquisitivo"
+                                     styleClass="icone-20 mrig05"
+                                     icon="ui-icon-info"/>
+                </h:panelGrid>
+
+                <p:overlayPanel for="bt-informacao-tipo-gerar-periodo-aquisitivo"
+                                style="border : solid black 1px;"
+                                styleClass="semSombra"
+                                showEvent="mouseover"
+                                hideEvent="mouseout">
+                    <h:outputText
+                        value="A geração do período aquisitivo é sempre de acordo com as bases de período aquisitivo que estão configuradas no cargo."
+                        escape="false"/>
+                </p:overlayPanel>
+
+
+                <p:separator styleClass="mtop10 mbot10"/>
+
+
+                <p:dataTable paginator="true"
+                             id="tabela-periodos"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{periodoAquisitivoControlador.periodosAquisitivos}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>PERÍODOS AQUISITIVOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="periodo">
+                    <p:column headerText="Operação" style="text-align: center;">
+                        <p:commandButton icon="ui-icon-trash"
+                                         process="@this"
+                                         onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{periodoAquisitivoControlador.removerPeriodoAquisitivoFL(periodo)}"
+                                         title="Clique para remover este registro."
+                                         update="tabela-periodos"
+                                         styleClass="mrig05"/>
+
+                    </p:column>
+                    <p:column headerText="Cargo/Base Período Aquisitivo" style="text-align: left">
+                        <h:outputText value="#{periodo.baseCargo}" title="cod. #{periodo.id}"/>
+                    </p:column>
+                    <p:column headerText="Tipo Período Aquisitivo" style="text-align: left">
+                        <h:outputText
+                            value="#{periodo.baseCargo.basePeriodoAquisitivo.tipoPeriodoAquisitivo.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Início da Vigência" style="text-align: center">
+                        <h:outputText value="#{periodo.inicioVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Final da Vigência" style="text-align: center">
+                        <h:outputText value="#{periodo.finalVigencia}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Status" style="text-align: left">
+                        <h:outputText value="#{periodo.status.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Gozo" style="text-align: left">
+                        <h:outputText value="#{periodo.status.descricaoTipoGozoFerias}"/>
+                    </p:column>
+                    <p:column headerText="Qtde. de Dias" style="text-align: right">
+                        <h:outputText value="#{periodo.quantidadeDias}"/>
+                    </p:column>
+                    <p:column headerText="Saldo de Direto" style="text-align: right">
+                        <h:outputText value="#{periodo.saldoDeDireito}"/>
+                    </p:column>
+                    <p:column headerText="Saldo" style="text-align: right">
+                        <h:outputText value="#{periodo.saldo}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+        <p:dialog widgetVar="dialogo"
+                  id="dialogGerarAtualizarPeriodosAquisitivos"
+                  width="800"
+                  closable="false"
+                  resizable="false"
+                  modal="true" position="center" dynamic="true" header="Realizando a Geração/Atualização Períodos Aquisitivos">
+
+            <p:outputPanel id="progressoGeracaoAtualizacaoPeriodosAquisitivos">
+                <div class="alert alert-info centralizado " id="calculando">
+                    <strong>Aguarde,</strong> O processo está em execução
+
+                </div>
+                <div class="centralizado" id="tipoProcesso">
+                    <strong>#{periodoAquisitivoControlador.assistenteBarraProgresso.descricaoProcesso}</strong><br/>
+                </div>
+
+                <div class="progress progress-striped active" id="barraProgresso">
+                    <div class="bar"
+                         style="width: #{periodoAquisitivoControlador.assistenteBarraProgresso.porcentagemDoCalculo}%"></div>
+                </div>
+                <div class="centralizado" id="porcentagem">
+                    <strong>#{periodoAquisitivoControlador.assistenteBarraProgresso.porcentagemDoCalculo}%</strong><br/>
+                </div>
+                <div id="tabela-estimativa">
+                    <table style="width: 100%; text-align: center">
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="#{periodoAquisitivoControlador.assistenteBarraProgresso.calculados}"/>
+                                de
+                                <h:outputText
+                                    value="#{periodoAquisitivoControlador.assistenteBarraProgresso.total}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Decorrido #{periodoAquisitivoControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Estimado #{periodoAquisitivoControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="alert alert-success centralizado " style="display: none" id="calculado">
+                    <strong>Pronto!</strong> Geração/Atualização Períodos Aquisitivos efetuada com sucesso! <br/>
+                    <br/>
+                    <p:commandButton value="Ok" icon="ui-icon-check" styleClass="operacao"
+                                     onclick="dialogo.hide()"
+                    />
+                </div>
+
+            </p:outputPanel>
+
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,206 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:ui="http://java.sun.com/jsf/facelets" xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:panel>
+            <h:panelGrid columns="2">
+                <h:outputText value="Ano que será aplicado o reajuste: "/>
+                <h:selectOneMenu value="#{calculoReajusteMediaControlador.selecionado.exercicio}"
+                                 converter="#{calculoReajusteMediaControlador.converterReajuste}">
+                    <f:selectItems value="#{calculoReajusteMediaControlador.exercicios}"/>
+                </h:selectOneMenu>
+
+                <h:outputText value="Ano da referência do reajuste:"/>
+                <h:selectOneMenu value="#{calculoReajusteMediaControlador.selecionado.exercicioReferencia}"
+                                 converter="#{calculoReajusteMediaControlador.converterReajuste}">
+                    <f:selectItems value="#{calculoReajusteMediaControlador.exercicios}"/>
+                </h:selectOneMenu>
+
+                <fc:outputLabelObrigatorio value="Início Vigência dos Reajustes:"/>
+                <p:calendar onkeypress="mascara(this, mdata)" maxlength="10"
+                            title="Digite o Início Vigência dos Reajustes"
+                            value="#{calculoReajusteMediaControlador.selecionado.inicioVigenciaReajustes}" id="inicioVigencia"
+                            navigator="true"
+                            pattern="dd/MM/yyyy" size="10">
+                </p:calendar>
+
+                <fc:outputLabelObrigatorio value="Data de Referência:"/>
+                <p:calendar onkeypress="mascara(this, mdata)" maxlength="10"
+                            value="#{calculoReajusteMediaControlador.selecionado.dataReferencia}" id="dataReferencia"
+                            navigator="true"
+                            pattern="dd/MM/yyyy" size="10">
+                </p:calendar>
+
+                <p:commandButton value="Processar Reajuste"
+                                 icon="ui-icon-search"
+                                 styleClass="icone_azul"
+                                 update="@form"
+                                 id="processar"
+                                 style=" height: 30px;"
+                                 actionListener="#{calculoReajusteMediaControlador.iniciarProcesso()}"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"/>
+                <h:outputText value=""/>
+                <h:panelGroup rendered="#{!calculoReajusteMediaControlador.reajustesMediaAposentadoria.isEmpty()}">
+                    <p:commandButton icon="ui-icon-none"
+                                     actionListener="#{calculoReajusteMediaControlador.marcarTodos()}"
+                                     rendered="#{!calculoReajusteMediaControlador.todosItensMarcados}"
+                                     process="@this"
+                                     update="@form"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="icone-12"/>
+
+                    <p:commandButton icon="ui-icon-check"
+                                     actionListener="#{calculoReajusteMediaControlador.desmarcarTodos()}"
+                                     rendered="#{calculoReajusteMediaControlador.todosItensMarcados}"
+                                     process="@this"
+                                     update="@form"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     styleClass="icone-12"/>
+                    <h:outputText value=" Selecionar Todos"/>
+                </h:panelGroup>
+            </h:panelGrid>
+                <h:panelGroup rendered="#{!calculoReajusteMediaControlador.reajustesMediaAposentadoria.isEmpty()}">
+                    <div align="center" class="alert alert-warning">
+                        <strong>Atenção!</strong> Vínculos que já sofreram reajuste, que não possuam percentual de reajuste vigente ou que estão com registro de Valor de Benefício com início de vigência maior ou igual ao Início Vigência dos Reajustes digitado serão listados em vermelho e desabilitados para marcação.
+                    </div>
+                </h:panelGroup>
+                <br/>
+
+            <ui:repeat value="#{calculoReajusteMediaControlador.reajustesMediaAposentadoria}" var="reajuste">
+
+                <h:outputText style="font-weight: bolder;font-size: large; font-style: italic; #{reajuste.reajusteTransiente eq true? 'color: #800004': 'color: #000000'}"
+                              value="#{reajuste.toStringAlternativo()}"/>
+
+
+                <table class="table table-striped">
+                    <tr>
+                        <th>
+                            <p:commandButton icon="ui-icon-none"
+                                             actionListener="#{calculoReajusteMediaControlador.marcarTodosItens(reajuste)}"
+                                             rendered="#{!reajuste.todosItensMarcados()}"
+                                             disabled="#{reajuste.reajusteTransiente}"
+                                             process="@this"
+                                             update="@form"
+                                             onclick="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             styleClass="icone-12"/>
+
+                            <p:commandButton icon="ui-icon-check"
+                                             actionListener="#{calculoReajusteMediaControlador.desmarcarTodosItens(reajuste)}"
+                                             rendered="#{reajuste.todosItensMarcados()}"
+                                             disabled="#{reajuste.reajusteTransiente}"
+                                             process="@this"
+                                             update="@form"
+                                             onclick="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             styleClass="icone-12"/>
+
+                        </th>
+                        <th>Vinculo</th>
+                        <th>Código da Verba</th>
+                        <th>Início Vigência Antigo</th>
+                        <th>Final Vigência Antigo</th>
+                        <th>Início Vigência Novo</th>
+                        <th>Final Vigência Novo</th>
+                        <th>Valor Antigo</th>
+                        <th>Valor Novo</th>
+                    </tr>
+                    <tbody>
+                    <ui:repeat value="#{reajuste.processosCalculo}" var="calculo">
+                        <tr>
+                            <td>
+                                <p:commandButton icon="ui-icon-none"
+                                                 actionListener="#{calculoReajusteMediaControlador.marcarItem(calculo)}"
+                                                 rendered="#{!calculo.selecionado}"
+                                                 disabled="#{calculo.reajusteMediaAposentadoria.reajusteTransiente or calculo.processoTransiente}"
+                                                 process="@this"
+                                                 update="@form"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 styleClass="icone-12"/>
+
+                                <p:commandButton icon="ui-icon-check"
+                                                 actionListener="#{calculoReajusteMediaControlador.desmarcarItem(calculo)}"
+                                                 rendered="#{calculo.selecionado}"
+                                                 disabled="#{calculo.reajusteMediaAposentadoria.reajusteTransiente or calculo.processoTransiente}"
+                                                 process="@this"
+                                                 update="@form"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 styleClass="icone-12"/>
+                            </td>
+                            <td><h:outputText value="#{calculo.vinculoFP}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}"/></td>
+                            <td><h:outputText value="#{calculo.itemValorPrevidenciaNovo.eventoFP.codigo}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}"/></td>
+                            <td><h:outputText value="#{calculo.itemValorPrevidenciaAntigo.inicioVigencia}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                            </td>
+                            <td><h:outputText value="#{calculo.itemValorPrevidenciaAntigo.finalVigencia}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                            </td>
+                            <td><h:outputText value="#{calculo.itemValorPrevidenciaNovo.inicioVigencia}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                            </td>
+                            <td><h:outputText value="#{calculo.itemValorPrevidenciaNovo.finalVigencia}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                            </td>
+                            <td><h:outputText converter="moneyConverter"
+                                              value="#{calculo.itemValorPrevidenciaAntigo.valor}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}">
+                            </h:outputText></td>
+                            <td><h:outputText converter="moneyConverter"
+                                              value="#{calculo.itemValorPrevidenciaNovo.valor}" style="#{calculo.processoTransiente eq true? 'color: #800004': 'color: #000000'}"></h:outputText></td>
+                        </tr>
+                    </ui:repeat>
+                    </tbody>
+                </table>
+                <br/>
+                <br/>
+
+            </ui:repeat>
+            </p:panel>
+
+            <div class="mtop10">
+                <p:commandButton value="Efetivar Reajuste"
+                                 icon="ui-icon-disk"
+                                 disabled="#{calculoReajusteMediaControlador.calculos.size() eq 0}"
+                                 styleClass="icone_azul mrig05"
+                                 style=" height: 30px;"
+                                 onclick=" if (!confirm('O sistema irá reajustar todos os aposentados e pensionistas conforme vigências e valores apresentados na tela, deseja realmente prosseguir?')) return false;"
+                                 onstart="aguarde.show();"
+                                 oncomplete="aguarde.hide();"
+                                 actionListener="#{calculoReajusteMediaControlador.efetivarReajuste}"
+                                 update="@form"
+                />
+
+                <p:commandButton value="Cancelar"
+                                 id="cbCancelar"
+                                 style="height: 30px;"
+                                 styleClass="mrig05"
+                                 icon="ui-icon-cancel"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 title="Clique para cancelar e retornar a página anterior"
+                                 actionListener="#{calculoReajusteMediaControlador.cancelar()}"
+                                 immediate="true"
+                />
+            </div>
+
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>
+

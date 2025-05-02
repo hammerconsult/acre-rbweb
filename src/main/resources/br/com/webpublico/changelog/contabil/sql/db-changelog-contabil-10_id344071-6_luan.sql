@@ -1,0 +1,1 @@
+delete from PAGINAPREFEITURAPORTAL where id = 10823544551;

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript" >
+            var timer;
+
+            function gerarArquivo() {
+                progresso.show();
+                timer = setInterval(function () {
+                    acompanharProgresso();
+                }, 1000);
+            }
+
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand actionListener="#{sigControlador.consultarAndamentoArquivo}" name="acompanharProgresso" update=":formProgresso"/>
+            <p:panel header="Gerar Arquivos Siprev">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio for="siafi" value="Código do SIAFI: "/>
+                    <p:inputText value="#{sigControlador.selecionado.codigo}" id="siafi" maxlength="6"/>
+
+                    <fc:outputLabelObrigatorio value="Ente Federativo: "/>
+                    <p:autoComplete queryDelay="1000" id="ente"
+                                    value="#{sigControlador.selecionado.enteFederativo}"
+                                    completeMethod="#{sigControlador.completarPessoaJuridica}"
+                                    var="pessoa"
+                                    itemLabel="#{pessoa.nome} #{pessoa.cnpj}"
+                                    itemValue="#{pessoa.id}"
+                                    forceSelection="true"
+                                    converter="#{novoComponentePesquisaPessoaControlador.converterPessoa}"
+                                    size="70"/>
+
+                    <fc:outputLabelObrigatorio value="Representante Legal: "/>
+                    <p:autoComplete queryDelay="1000" id="funcionario"
+                                    value="#{sigControlador.selecionado.representante}"
+                                    completeMethod="#{sigControlador.completarPessoa}"
+                                    var="pessoa"
+                                    itemLabel="#{pessoa.nome} #{pessoa.cpf}"
+                                    itemValue="#{pessoa.id}"
+                                    forceSelection="true"
+                                    converter="#{siprevControlador.converterPessoaContratoFP}"
+                                    size="70"/>
+
+                    <fc:outputLabelObrigatorio value="Representante Legal Unidade Gestora: "/>
+                    <p:autoComplete queryDelay="1000" id="representante"
+                                    value="#{sigControlador.selecionado.representanteUnidadeGestora}"
+                                    completeMethod="#{sigControlador.completarPessoaJuridica}"
+                                    var="pessoa"
+                                    itemLabel="#{pessoa.nome} #{pessoa.cnpj}"
+                                    itemValue="#{pessoa.id}"
+                                    forceSelection="true"
+                                    converter="#{novoComponentePesquisaPessoaControlador.converterPessoa}"
+                                    size="70"/>
+
+                    <fc:outputLabelObrigatorio value="Esfera: "/>
+                    <h:selectOneMenu value="#{sigControlador.selecionado.esferaPoderSig}">
+                        <f:selectItems value="#{sigControlador.esferaPoder}"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Mês: "/>
+                    <h:selectOneMenu value="#{sigControlador.selecionado.mes}">
+                        <f:selectItems value="#{sigControlador.retornaMes}"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Exercício: "/>
+                    <p:inputMask mask="9999" id="exericicio"
+                                 value="#{sigControlador.selecionado.exercicio}"
+                                 converter="#{siprevControlador.converterExercicio}" size="10">
+                        <p:ajax event="blur" process="@this"/>
+                    </p:inputMask>
+                </h:panelGrid>
+                <p:commandButton value="Gerar Arquivo Sig" styleClass="mtop10 mrig05 prioritario"
+                                 style="height: 30px" icon="ui-icon-check" onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{sigControlador.gerarArquivoSig()}"/>
+                <p:commandButton value="Cancelar" styleClass="mtop10 mrig05"
+                                 style="height: 30px" icon="ui-icon-cancel" onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{sigControlador.redireciona()}"/>
+            </p:panel>
+        </h:form>
+        <p:dialog id="idConfirmarGeracao" widgetVar="confirmarGeracao"
+                  closable="false" resizable="false"
+                  draggable="false"
+                  modal="true"
+                  header="Confirmar Geração do Siprev"
+                  width="500" height="87">
+            <h:form>
+                <div class="alert alert-alert" align="center">
+                    <strong>Atenção!</strong> Já existe um arquivo do SIPREV gerado para #{sigControlador.selecionado.mes.descricao} de
+                    #{sigControlador.selecionado.exercicio.ano}, deseja gerar um novo arquivo e
+                    <strong>SUBSTITUIR</strong> o arquivo anterior?<br/>
+                    <p:commandButton value="Sim" styleClass="prioritario mtop10" icon="ui-icon-check"
+                                     style="height: 30px;"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{sigControlador.removerArquivoExistenteAndCriarNovo()}"/>
+                    <p:commandButton value="Não" styleClass="operacap mtop10" icon="ui-icon-cancel"
+                                     onclick="confirmarGeracao.hide()" style="height: 30px;"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="idProgresso" widgetVar="progresso"
+                  closable="false" resizable="false"
+                  draggable="false"
+                  modal="true"
+                  header="Confirmar Geração do Sig"
+                  width="500" height="87">
+            <h:form id="formProgresso">
+                <p:outputPanel id="barra">
+                    <div class="alinhamentoCentralizado">
+                        <h:outputText value="#{sigControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>%
+                    </div>
+                    <div class="progress progress-striped active" id="barraProgresso">
+                        <div class="bar"
+                             style="width: #{sigControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                    </div>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

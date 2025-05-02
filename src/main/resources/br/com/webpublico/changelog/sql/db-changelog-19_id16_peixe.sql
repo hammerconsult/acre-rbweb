@@ -1,0 +1,2 @@
+insert into motivorejeicao (id,codigo,descricao) values (hibernate_sequence.nextval,12,'Limite de 30% estourado.');
+insert into motivorejeicao (id,codigo,descricao) values (hibernate_sequence.nextval,13,'Limite de 70% estourado.');

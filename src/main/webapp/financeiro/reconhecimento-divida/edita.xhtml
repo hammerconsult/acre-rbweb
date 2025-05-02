@@ -1,0 +1,1257 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fcc="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+
+            <fc:cabecalhoPretty controlador="#{reconhecimentoDividaControlador}"
+                                origem="#{reconhecimentoDividaControlador.caminhoPadrao}listar/"/>
+            <p:panel header="Reconhecimento de Dívida de Exercícios Anteriores" id="panel-geral">
+                <p:tabView id="tab-view-geral">
+                    <p:tab id="tab-dados-gerais" title="Dados Gerais">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Número: "/>
+                            <h:outputLabel
+                                value="#{reconhecimentoDividaControlador.selecionado.numero ne null ? reconhecimentoDividaControlador.selecionado.numero : 'Gerado automaticamente ao salvar.'}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Situação: "/>
+                            <h:outputLabel
+                                value="#{reconhecimentoDividaControlador.selecionado.situacaoReconhecimentoDivida.descricao}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Data do Reconhecimento: "/>
+                            <h:outputLabel
+                                value="#{reconhecimentoDividaControlador.selecionado.dataReconhecimento}"
+                                styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputLabel>
+
+                            <h:outputLabel value="Unidade Administrativa: "/>
+                            <fc:codigo-descricao-hierarquia tipoHierarquia="ADMINISTRATIVA"
+                                                            unidadeOrganizacional="#{reconhecimentoDividaControlador.selecionado.unidadeAdministrativa}"
+                                                            dataMovimento="#{reconhecimentoDividaControlador.selecionado.dataReconhecimento}"/>
+
+                            <h:outputLabel value="Unidade Orçamentária: "/>
+                            <fc:codigo-descricao-hierarquia tipoHierarquia="ORCAMENTARIA"
+                                                            unidadeOrganizacional="#{reconhecimentoDividaControlador.selecionado.unidadeOrcamentaria}"
+                                                            dataMovimento="#{reconhecimentoDividaControlador.selecionado.dataReconhecimento}"/>
+
+                            <fc:outputLabelObrigatorio value="Responsável/Ordenador da Despesa: "/>
+                            <fc:autoComplete
+                                completeMethod="#{reconhecimentoDividaControlador.completarPessoasComVinculoVigente}"
+                                value="#{reconhecimentoDividaControlador.selecionado.responsavel}"
+                                id="responsavel"
+                                disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                converter="#{pessoaContabilControlador.converterGenerico}"/>
+
+                            <fc:outputLabelObrigatorio value="Fornecedor: "/>
+                            <fc:novoAutocompletePessoa value="#{reconhecimentoDividaControlador.selecionado.fornecedor}"
+                                                       id="fornecedor"
+                                                       caminhoAtual=""
+                                                       mostraSituacoes="false"
+                                                       situacoesPossiveis="#{reconhecimentoDividaControlador.situacoesDisponiveis}"
+                                                       mostraBotaoEdita="false"
+                                                       mostraBotaoInfo="false"
+                                                       mostraBotaoNovo="false"
+                                                       disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"/>
+
+                            <h:outputText value="Contrato: "/>
+                            <fc:autoComplete
+                                id="contrato"
+                                completeMethod="#{reconhecimentoDividaControlador.completarContratos}"
+                                value="#{reconhecimentoDividaControlador.selecionado.contrato}"
+                                disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                converter="#{contratoAdmControlador.converterGenerico}"/>
+
+                            <fc:outputLabelObrigatorio value="Objeto: "/>
+                            <fc:inputTextarea value="#{reconhecimentoDividaControlador.selecionado.objeto}"
+                                              disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                              title="Informe o Objeto"/>
+
+                            <fc:outputLabelObrigatorio value="Justificativa: "/>
+                            <fc:inputTextarea value="#{reconhecimentoDividaControlador.selecionado.justificativa}"
+                                              disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                              title="Informe a Justificativa"/>
+                        </h:panelGrid>
+                    </p:tab>
+                    <p:tab title="Certidões">
+                        <p:outputPanel id="panel-certidao">
+                            <p:commandButton icon="ui-icon-circle-plus"
+                                             value="Nova Certidão"
+                                             actionListener="#{reconhecimentoDividaControlador.instanciarDocumento()}"
+                                             disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                             rendered="#{reconhecimentoDividaControlador.doctoHabilitacaoReconhecimentoDivida eq null}"
+                                             immediate="true"
+                                             update=":Formulario:tab-view-geral:panel-certidao"
+                                             process="@this"
+                                             title="Clique para adicionar uma nova certidão."
+                                             styleClass="padrao"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"/>
+
+                            <p:panel header="Certidão"
+                                     id="panel-novo-certidao"
+                                     styleClass="mtop05 mbot05"
+                                     rendered="#{reconhecimentoDividaControlador.doctoHabilitacaoReconhecimentoDivida ne null}">
+
+                                <h:panelGrid columns="2" styleClass="mbot05">
+                                    <fc:outputLabelObrigatorio value="Documento:"/>
+                                    <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                        <p:autoComplete title="Digite o Documento"
+                                                        queryDelay="1000" id="documentos"
+                                                        value="#{reconhecimentoDividaControlador.doctoHabilitacaoReconhecimentoDivida.doctoHabilitacao}"
+                                                        completeMethod="#{reconhecimentoDividaControlador.completarDocumentosObrigatorios}"
+                                                        converter="#{doctoHabilitacaoControlador.converterGenerico}"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px; max-width: 700px"
+                                                        var="docto"
+                                                        itemLabel="#{docto} "
+                                                        itemValue="#{docto.id}"
+                                                        maxResults="10"
+                                                        forceSelection="true"
+                                                        size="70"/>
+                                        <fc:novoParente
+                                            destino="#{doctoHabilitacaoControlador.caminhoDestinoNovoCadastro}"
+                                            origem="#{reconhecimentoDividaControlador.caminhoOrigem}"
+                                            selecionado="#{reconhecimentoDividaControlador.selecionado}"/>
+                                    </h:panelGrid>
+
+                                    <h:outputText value="Arquivo:"/>
+                                    <p:outputPanel id="panelFileUploadDocto">
+                                        <fc:fileUploadWP
+                                            allowTypes="/(\.|\/)(gif|jpe?g|png|pdf|doc|docx|xls|xlsx|txt)$/"
+                                            selecionado="#{reconhecimentoDividaControlador.doctoHabilitacaoReconhecimentoDivida}"/>
+                                    </p:outputPanel>
+                                </h:panelGrid>
+
+                                <p:commandButton id="botao-adicionar-certidao"
+                                                 value="Confirmar"
+                                                 title="Clique para confirmar este documento."
+                                                 styleClass="padrao mrig05"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="panel-novo-certidao"
+                                                 update=":Formulario:tab-view-geral:panel-certidao"
+                                                 actionListener="#{reconhecimentoDividaControlador.adicionarDocumento()}"
+                                                 icon="ui-icon-check"/>
+
+                                <p:commandButton id="botao-cancelar-certidao"
+                                                 value="Cancelar"
+                                                 title="Clique para cancelar este documento."
+                                                 styleClass="padrao"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 process="@this"
+                                                 update=":Formulario:tab-view-geral:panel-certidao"
+                                                 actionListener="#{reconhecimentoDividaControlador.cancelarDocumento()}"
+                                                 icon="ui-icon-cancel"/>
+                            </p:panel>
+
+                            <p:dataTable paginator="true"
+                                         id="tabelaCertidao"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{reconhecimentoDividaControlador.selecionado.documentosHabilitacao}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>CERTIDÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="docto">
+                                <p:column headerText="Ações"
+                                          style="text-align: center; width: 7%;">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     actionListener="#{reconhecimentoDividaControlador.editarDocumento(docto)}"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     title="Clique para editar este documento."
+                                                     process="@this"
+                                                     update=":Formulario:tab-view-geral:panel-certidao"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     actionListener="#{reconhecimentoDividaControlador.removerDocumento(docto)}"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     title="Clique para remover este documento."
+                                                     process="@this"
+                                                     update="tabelaCertidao"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"/>
+                                </p:column>
+                                <p:column headerText="Tipo Documento" style="text-align: left">
+                                    <h:outputText value="#{docto.doctoHabilitacao.tipoDoctoHabilitacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Documento" style="text-align: left">
+                                    <h:outputText value="#{docto.doctoHabilitacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Requer Número?" style="text-align: left;">
+                                    <h:outputText
+                                        value="#{utilBean.converterBooleanSimOuNao(docto.doctoHabilitacao.requerNumero)}"/>
+                                </p:column>
+                                <p:column headerText="Requer Data Emissão?" style="text-align: left;">
+                                    <h:outputText
+                                        value="#{utilBean.converterBooleanSimOuNao(docto.doctoHabilitacao.requerEmissao)}"/>
+                                </p:column>
+                                <p:column headerText="Requer Data Validade?" style="text-align: left;">
+                                    <h:outputText
+                                        value="#{utilBean.converterBooleanSimOuNao(docto.doctoHabilitacao.requerValidade)}"/>
+                                </p:column>
+                                <p:column headerText="Anexos" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{docto.detentorArquivoComposicao.arquivoComposicao.arquivo.nome}"/>
+                                    <p:commandButton
+                                        rendered="#{docto.detentorArquivoComposicao.arquivoComposicao ne null and docto.detentorArquivoComposicao.arquivoComposicao.arquivo.id eq null}"
+                                        id="downloadLinkDocto" ajax="false"
+                                        icon="ui-icon-arrowthickstop-1-s"
+                                        title="Download do Arquivo"
+                                        process=":Formulario:tab-view-geral:panel-parecer" update="@this"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()">
+                                        <p:fileDownload
+                                            value="#{assistenteDetentorArquivoControlador.baixarAnexo(docto.detentorArquivoComposicao.arquivoComposicao.arquivo)}"/>
+                                    </p:commandButton>
+                                    <p:outputPanel
+                                        rendered="#{docto.detentorArquivoComposicao.arquivoComposicao.arquivo.id ne null}">
+                                        <a href='${facesContext.externalContext.requestContextPath}/arquivos/#{docto.detentorArquivoComposicao.arquivoComposicao.arquivo.nome}?id=#{docto.detentorArquivoComposicao.arquivoComposicao.arquivo.id}'>
+                                            <p:button icon="ui-icon-arrowthickstop-1-s"
+                                                      title="Download do Arquivo"/>
+                                        </a>
+                                    </p:outputPanel>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Itens">
+                        <p:outputPanel id="panel-itens">
+                            <p:commandButton icon="ui-icon-circle-plus"
+                                             value="Novo Item"
+                                             actionListener="#{reconhecimentoDividaControlador.instanciarItem()}"
+                                             disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                             rendered="#{reconhecimentoDividaControlador.itemReconhecimentoDivida eq null}"
+                                             immediate="true"
+                                             update=":Formulario:tab-view-geral:panel-itens"
+                                             process="@this"
+                                             title="Clique para adicionar um novo item."
+                                             styleClass="padrao"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"/>
+
+                            <p:panel header="Item"
+                                     id="panel-novo-item"
+                                     styleClass="mtop05 mbot05"
+                                     rendered="#{reconhecimentoDividaControlador.itemReconhecimentoDivida ne null}">
+
+                                <h:panelGrid columns="2" styleClass="mbot05">
+                                    <fc:outputLabelObrigatorio value="Objeto de Compra:"/>
+                                    <p:autoComplete title="Digite o Objeto de Compra"
+                                                    queryDelay="1000" id="objetoCompra"
+                                                    value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.objetoCompra}"
+                                                    completeMethod="#{reconhecimentoDividaControlador.completarObjetosDeCompra}"
+                                                    converter="#{objetoCompraControlador.converterGenerico}"
+                                                    dropdown="true"
+                                                    panelStyle="max-height: 250px; max-width: 700px"
+                                                    var="objetoCompra"
+                                                    itemLabel="#{objetoCompra} "
+                                                    itemValue="#{objetoCompra.id}"
+                                                    maxResults="10"
+                                                    forceSelection="true"
+                                                    size="70">
+                                        <p:ajax event="itemSelect"
+                                                update="@this bt-especificacoes pn-unidade-medida"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"/>
+                                    </p:autoComplete>
+
+                                    <h:outputText value="Especificações: "/>
+                                    <p:commandButton icon="ui-icon-newwin" id="bt-especificacoes"
+                                                     update=":form-tabela-especificacao:tabelaespecificacao"
+                                                     disabled="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.objetoCompra eq null}"
+                                                     process="@this"
+                                                     actionListener="#{reconhecimentoDividaControlador.recuperarObjetoDeCompra()}"
+                                                     onclick="dialogTabelaEspecificacoes.show()"/>
+
+                                    <fc:outputLabelObrigatorio value="Unidade de Medida: "/>
+                                    <p:outputPanel id="pn-unidade-medida">
+                                        <ad:unidade-medida
+                                            tipoObjetoCompra="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.objetoCompra.tipoObjetoCompra}"
+                                            unidadeMedidaSelecionada="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.unidadeMedida}"
+                                            update=":Formulario:tab-view-geral:quantidadeDoItem"/>
+                                    </p:outputPanel>
+
+                                    <fc:outputLabelObrigatorio value="Quantidade:"/>
+                                    <p:inputText
+                                        value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.quantidade}"
+                                        converter="#{reconhecimentoDividaControlador.converterMascaraUnidadeMedida}"
+                                        onkeypress="mascara(this, monetario)"
+                                        id="quantidadeDoItem"/>
+
+                                    <fc:outputLabelObrigatorio value="Valor Unitário:"/>
+                                    <p:inputText id="it-valor"
+                                                 styleClass="alinhamentoDireita"
+                                                 value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.valorUnitario}"
+                                                 onkeypress="mascaraPonto4Casas(this)"
+                                                 converter="moneyConverter"/>
+                                </h:panelGrid>
+
+                                <p:commandButton id="botao-adicionar-itens"
+                                                 value="Confirmar"
+                                                 title="Clique para confirmar este item."
+                                                 styleClass="padrao mrig05"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="panel-itens"
+                                                 update=":Formulario:tab-view-geral:panel-itens"
+                                                 actionListener="#{reconhecimentoDividaControlador.adicionarItem()}"
+                                                 icon="ui-icon-check"/>
+
+                                <p:commandButton id="botao-cancelar-itens"
+                                                 value="Cancelar"
+                                                 title="Clique para cancelar este item."
+                                                 styleClass="padrao"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 process="@this"
+                                                 update=":Formulario:tab-view-geral:panel-itens"
+                                                 actionListener="#{reconhecimentoDividaControlador.cancelarItem()}"
+                                                 icon="ui-icon-cancel"/>
+                            </p:panel>
+
+                            <p:dataTable paginator="true"
+                                         id="tabelaItens"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{reconhecimentoDividaControlador.selecionado.itens}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="it">
+                                <p:column headerText="Ações"
+                                          styleClass="alinhamentoCentralizado"
+                                          style="width: 7%">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     actionListener="#{reconhecimentoDividaControlador.editarItem(it)}"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     title="Clique para editar este item."
+                                                     process="@this"
+                                                     update=":Formulario:tab-view-geral:panel-itens"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     actionListener="#{reconhecimentoDividaControlador.removerItem(it)}"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     title="Clique para remover este item."
+                                                     process="@this"
+                                                     update="tabelaItens"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"/>
+                                </p:column>
+                                <p:column headerText="Reserva de Dotação" styleClass="alinhamentoCentralizado">
+
+                                    <p:commandButton icon="ui-icon-circle-plus"
+                                                     process="@this"
+                                                     onclick="aguarde.show()"
+                                                     update=":form-item-reconhecimento-divida-dotacao"
+                                                     oncomplete="aguarde.hide()"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     actionListener="#{reconhecimentoDividaControlador.definirDependenciasParaCriarItemReconhecimentoDividaDotacao(it)}"
+                                                     title="Clique para realizar as reservas de dotação desse item."/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     styleClass="mlef03"
+                                                     process="@this"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     onclick="aguarde.show()"
+                                                     update=":form-excluir-item-reconhecimento-divida-dotacao"
+                                                     oncomplete="dlgExcluirDotacaoReconhecimentoDivida.show(); aguarde.hide()"
+                                                     actionListener="#{reconhecimentoDividaControlador.editarItem(it)}"
+                                                     title="Clique para ver as reservas realizadas e excluir alguma caso seja necessário."
+                                                     rendered="#{reconhecimentoDividaControlador.hasDotacaoAdiconadaParaItem(it)}"/>
+
+                                    <p:commandButton icon="ui-icon-search"
+                                                     styleClass="mlef03"
+                                                     process="@this"
+                                                     onclick="aguarde.show()"
+                                                     update=":form-vis-dotacoes-item-reconhecimento"
+                                                     oncomplete="dlgVisDotacoesItemReconhecimento.show(); aguarde.hide()"
+                                                     rendered="#{reconhecimentoDividaControlador.hasDotacaoAdiconadaParaItem(it)}"
+                                                     actionListener="#{reconhecimentoDividaControlador.selecionarItem(it)}"
+                                                     title="Clique para ver as reservas realizadas."/>
+                                </p:column>
+
+                                <p:column headerText="Tipo Objeto Compra"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{it.tipoSolicitacao}"/>
+                                </p:column>
+                                <p:column headerText="SubTipo Objeto Compra"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:selectOneMenu
+                                        rendered="#{it.hasMaisDeUmSubTipo()}"
+                                        value="#{it.subTipoObjetoCompra}"
+                                        title="Informe o subtipo de objeto de compra"
+                                        id="subtipoObjetoCompra">
+                                        <f:selectItems
+                                            value="#{reconhecimentoDividaControlador.getSubtiposObjetoCompra(it)}"/>
+                                        <p:ajax event="change"
+                                                process="@this"/>
+                                    </h:selectOneMenu>
+
+                                    <h:outputText value="#{it.subTipoObjetoCompra.descricao}"
+                                                  rendered="#{!it.hasMaisDeUmSubTipo()}"/>
+                                </p:column>
+
+                                <p:column headerText="Objeto de Compra" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{it.objetoCompra}"/>
+                                </p:column>
+                                <p:column headerText="Unidade Medida" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{it.unidadeMedida}"/>
+                                </p:column>
+                                <p:column headerText="Quantidade" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{it.quantidade}">
+                                        <f:convertNumber pattern="###,##0.0000"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor Unitário" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{it.valorUnitario}">
+                                        <f:convertNumber pattern="###,##0.0000"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor Total" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{it.valorTotal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Pareceres/Anexos">
+                        <p:outputPanel id="panel-parecer">
+                            <p:commandButton value="Novo Parecer"
+                                             icon="ui-icon-circle-plus"
+                                             styleClass="padrao"
+                                             onclick="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             disabled="#{!reconhecimentoDividaControlador.canHabilitarAnexos()}"
+                                             title="Clique para adicionar um novo parecer."
+                                             actionListener="#{reconhecimentoDividaControlador.novoParecer()}"
+                                             rendered="#{reconhecimentoDividaControlador.parecerReconhecimentoDivida eq null}"
+                                             process=":Formulario:tab-view-geral:panel-parecer"
+                                             update=":Formulario:tab-view-geral:panel-parecer"/>
+
+                            <p:panel header="Parecer/Anexo"
+                                     id="panel-novo-parecer"
+                                     rendered="#{reconhecimentoDividaControlador.parecerReconhecimentoDivida ne null}"
+                                     styleClass="mtop05 mbot05">
+
+                                <h:panelGrid columns="2">
+                                    <fc:outputLabelObrigatorio value="Tipo de Parecer: "/>
+                                    <h:selectOneMenu id="tipo-parecer"
+                                                     value="#{reconhecimentoDividaControlador.parecerReconhecimentoDivida.tipoParecer}">
+                                        <f:selectItems
+                                            value="#{reconhecimentoDividaControlador.tiposParecerReconhecimentoDivida}"/>
+                                    </h:selectOneMenu>
+
+                                    <fc:outputLabelObrigatorio value="Arquivo:"/>
+                                    <p:outputPanel id="panelFileUpload">
+                                        <fc:fileUploadWP
+                                            allowTypes="/(\.|\/)(gif|jpe?g|png|pdf|doc|docx|xls|xlsx|txt)$/"
+                                            selecionado="#{reconhecimentoDividaControlador.parecerReconhecimentoDivida}"/>
+                                    </p:outputPanel>
+                                </h:panelGrid>
+
+                                <p:commandButton id="adicionar-parecer"
+                                                 title="Clique para confirmar este parecer."
+                                                 value="Confirmar"
+                                                 actionListener="#{reconhecimentoDividaControlador.confirmarParecer}"
+                                                 styleClass="padrao mrig05"
+                                                 icon="ui-icon-circle-plus"
+                                                 process="panel-novo-parecer"
+                                                 update=":Formulario:tab-view-geral:panel-parecer"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"/>
+
+                                <p:commandButton id="cancelar-parecer"
+                                                 title="Clique para cancelar este parecer."
+                                                 value="Cancelar"
+                                                 actionListener="#{reconhecimentoDividaControlador.cancelarParecer}"
+                                                 styleClass="padrao"
+                                                 icon="ui-icon-cancel"
+                                                 process="@this"
+                                                 update=":Formulario:tab-view-geral:panel-parecer"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"/>
+                            </p:panel>
+
+                            <p:dataTable id="tabela-parecer"
+                                         paginator="true"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{reconhecimentoDividaControlador.selecionado.pareceres}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>PARECERES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="arquivo">
+
+                                <p:column headerText="Ações"
+                                          style="text-align: center; width: 90px;">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     title="Clique para alterar este parecer."
+                                                     process="@this"
+                                                     update=":Formulario:tab-view-geral:panel-parecer"
+                                                     styleClass="mrig05"
+                                                     disabled="#{!reconhecimentoDividaControlador.canHabilitarAnexos()}"
+                                                     actionListener="#{reconhecimentoDividaControlador.alterarParecer(arquivo)}"
+                                                     onclick="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para remover este parecer."
+                                                     process="@this"
+                                                     disabled="#{!reconhecimentoDividaControlador.canHabilitarAnexos()}"
+                                                     update="tabela-parecer"
+                                                     styleClass="mrig05"
+                                                     actionListener="#{reconhecimentoDividaControlador.removerParecer(arquivo)}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Parecer" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{arquivo.tipoParecer.descricao}"/>
+                                </p:column>
+
+                                <p:column headerText="Anexos" styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                        value="#{arquivo.detentorArquivoComposicao.arquivoComposicao.arquivo.nome}"/>
+                                    <p:commandButton
+                                        rendered="#{arquivo.detentorArquivoComposicao.arquivoComposicao.arquivo.id eq null}"
+                                        id="downloadLink" ajax="false"
+                                        icon="ui-icon-arrowthickstop-1-s"
+                                        title="Download do Arquivo"
+                                        process=":Formulario:tab-view-geral:panel-parecer" update="@this"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()">
+                                        <p:fileDownload
+                                            value="#{assistenteDetentorArquivoControlador.baixarAnexo(arquivo.detentorArquivoComposicao.arquivoComposicao.arquivo)}"/>
+                                    </p:commandButton>
+                                    <p:outputPanel
+                                        rendered="#{arquivo.detentorArquivoComposicao.arquivoComposicao.arquivo.id ne null}">
+                                        <a href='${facesContext.externalContext.requestContextPath}/arquivos/#{arquivo.detentorArquivoComposicao.arquivoComposicao.arquivo.nome}?id=#{arquivo.detentorArquivoComposicao.arquivoComposicao.arquivo.id}'>
+                                            <p:button icon="ui-icon-arrowthickstop-1-s"
+                                                      title="Download do Arquivo"/>
+                                        </a>
+                                    </p:outputPanel>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab title="Publicações">
+                        <p:outputPanel id="panel-publicacao">
+                            <p:commandButton value="Nova Publicação"
+                                             icon="ui-icon-circle-plus"
+                                             styleClass="padrao"
+                                             onclick="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                             title="Clique para adicionar uma nova publicação."
+                                             actionListener="#{reconhecimentoDividaControlador.novaPublicacao()}"
+                                             rendered="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida eq null}"
+                                             process=":Formulario:tab-view-geral:panel-publicacao"
+                                             update=":Formulario:tab-view-geral:panel-publicacao"/>
+
+                            <p:panel header="Publicação"
+                                     id="panel-nova-publicacao"
+                                     rendered="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida ne null}"
+                                     styleClass="mtop05 mbot05">
+
+                                <h:panelGrid columns="2">
+                                    <fc:outputLabelObrigatorio value="Data de Publicação:"/>
+                                    <p:calendar id="data-publicacao"
+                                                title="Informe a data da publicação."
+                                                value="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida.dataPublicacao}"
+                                                navigator="true" pattern="dd/MM/yyyy"
+                                                onkeypress="mascara(this, mdata)"
+                                                style="text-align: right"
+                                                autocomplete="off"
+                                                maxlength="10"
+                                                size="10"/>
+
+                                    <fc:outputLabelObrigatorio value="Tipo da Publicação:"/>
+                                    <h:selectOneMenu id="tipo-publicacao"
+                                                     value="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida.tipoPublicacaoLicitacao}">
+                                        <f:selectItems
+                                            value="#{reconhecimentoDividaControlador.tiposDePublicacaoLicitacao}"/>
+                                    </h:selectOneMenu>
+
+                                    <fc:outputLabelObrigatorio value="Veículo de Publicação:"/>
+                                    <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                        <p:autoComplete queryDelay="1000" id="veiculo-publicacao"
+                                                        title="Digite o nome do veículo de publicaçao."
+                                                        value="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida.veiculoDePublicacao}"
+                                                        completeMethod="#{reconhecimentoDividaControlador.completarVeiculosDePublicacao}"
+                                                        converter="#{veiculoDePublicacaoControlador.converterGenerico}"
+                                                        forceSelection="true"
+                                                        var="v"
+                                                        itemLabel="#{v.nome}"
+                                                        itemValue="#{v.id}"
+                                                        maxlength="10"
+                                                        size="70"
+                                                        styleClass="mrig05"/>
+
+                                        <fc:novoParente selecionado="#{reconhecimentoDividaControlador.selecionado}"
+                                                        origem="#{reconhecimentoDividaControlador.caminhoOrigem}"
+                                                        destino="#{veiculoDePublicacaoControlador.caminhoDestinoNovoCadastro}"/>
+                                    </h:panelGrid>
+
+                                    <fc:outputLabelObrigatorio value="Número da edição do veículo de publicação:"/>
+                                    <p:inputText title="Número da edição do veiculo de publicação."
+                                                 value="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida.numeroEdicaoPublicacao}"
+                                                 id="edicao-publicacao"
+                                                 size="10"/>
+
+                                    <fc:outputLabelObrigatorio value="Número da página:"/>
+                                    <p:inputText title="Informe o numero da página."
+                                                 value="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida.numeroPagina}"
+                                                 id="numero-pagina"
+                                                 size="10"/>
+
+                                    <h:outputLabel value="Observações:"/>
+                                    <p:inputTextarea id="observacoes-publicacao"
+                                                     title="Digite a observação."
+                                                     value="#{reconhecimentoDividaControlador.publicacaoReconhecimentoDivida.observacoes}"
+                                                     cols="70"/>
+                                </h:panelGrid>
+
+                                <p:commandButton id="adicionar-publicacao"
+                                                 title="Clique para confirmar esta publicação."
+                                                 value="Confirmar"
+                                                 actionListener="#{reconhecimentoDividaControlador.confirmarPublicacao}"
+                                                 styleClass="padrao mrig05"
+                                                 icon="ui-icon-circle-plus"
+                                                 process="panel-nova-publicacao"
+                                                 update=":Formulario:tab-view-geral:panel-publicacao"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"/>
+
+                                <p:commandButton id="cancelar-publicacao"
+                                                 title="Clique para cancelar esta publicação."
+                                                 value="Cancelar"
+                                                 actionListener="#{reconhecimentoDividaControlador.cancelarPublicacao}"
+                                                 styleClass="padrao"
+                                                 icon="ui-icon-cancel"
+                                                 process="@this"
+                                                 update=":Formulario:tab-view-geral:panel-publicacao"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"/>
+                            </p:panel>
+
+                            <p:dataTable id="tabela-publicacao"
+                                         paginator="true"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{reconhecimentoDividaControlador.selecionado.publicacoes}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>PUBLICAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="pl">
+
+                                <p:column headerText="Ações"
+                                          style="text-align: center; width: 90px;">
+                                    <p:commandButton icon="ui-icon-pencil"
+                                                     title="Clique para alterar esta publicação."
+                                                     process="@this"
+                                                     update=":Formulario:tab-view-geral:panel-publicacao"
+                                                     styleClass="mrig05"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     actionListener="#{reconhecimentoDividaControlador.alterarPublicacao(pl)}"
+                                                     onclick="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"/>
+
+                                    <p:commandButton icon="ui-icon-trash"
+                                                     onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                     oncomplete="aguarde.hide()"
+                                                     title="Clique para remover esta publicação."
+                                                     process="@this"
+                                                     disabled="#{!reconhecimentoDividaControlador.canEnviarParaAguardando()}"
+                                                     update="tabela-publicacao"
+                                                     styleClass="mrig05"
+                                                     actionListener="#{reconhecimentoDividaControlador.removerPublicacao(pl)}"/>
+                                </p:column>
+                                <p:column headerText="Data de Publicação" style="text-align: center;">
+                                    <h:outputText value="#{pl.dataPublicacao}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Tipo da Publicação" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{pl.tipoPublicacaoLicitacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Veículo de Publicação" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{pl.veiculoDePublicacao.nome}"/>
+                                </p:column>
+                                <p:column headerText="N° da Edição do Veículo de Publicação"
+                                          styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{pl.numeroEdicaoPublicacao}"/>
+                                </p:column>
+                                <p:column headerText="N° da Página" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{pl.numeroPagina}"/>
+                                </p:column>
+                                <p:column headerText="Observações" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{pl.observacoes}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Históricos">
+                        <p:dataTable id="tabela-historico"
+                                     paginator="true"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{reconhecimentoDividaControlador.selecionado.historicos}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>HISTÓRICOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="rdh">
+                            <p:column headerText="Usuário" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rdh.usuarioSistema}"/>
+                            </p:column>
+                            <p:column headerText="Data" style="text-align: center;">
+                                <h:outputText value="#{rdh.dataHistorico}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="De" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rdh.situacaoDe ne null ? rdh.situacaoDe.descricao : ''}"/>
+                            </p:column>
+                            <p:column headerText="Para" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rdh.situacaoPara.descricao}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Execução Orçamentária">
+                        <p:tabView id="tabViewExecucao">
+                            <p:tab id="tabEmpenho" title="Empenho">
+                                <p:dataTable id="tabelaEmpenho"
+                                             value="#{reconhecimentoDividaControlador.empenhos}"
+                                             var="e"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             styleClass="mtop10"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>EMPENHOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{e.dataEmpenho}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{e.numero}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$) " styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{e.valor}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="mlef05"/>
+                                            <h:outputText value="#{reconhecimentoDividaControlador.somaEmpenhos}"
+                                                          converter="moneyConverter"/>
+                                        </div>
+                                    </f:facet>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Estorno de Empenho">
+                                <p:dataTable id="tabelaEmpenhoEstorno"
+                                             value="#{reconhecimentoDividaControlador.estornosDeEmpenhos}"
+                                             var="ee"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             styleClass="mtop10"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>ESTORNO DE EMPENHOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{ee.dataEstorno}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{ee.numero}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$) " styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{ee.valor}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="mlef05"/>
+                                            <h:outputText value="#{reconhecimentoDividaControlador.somaEstornoEmpenhos}"
+                                                          converter="moneyConverter"/>
+                                        </div>
+                                    </f:facet>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab id="tabLiquidacao" title="Liquidação">
+                                <p:dataTable id="tabelaLiquidacao"
+                                             value="#{reconhecimentoDividaControlador.liquidacoes}"
+                                             var="l"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             styleClass="mtop10"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>LIQUIDAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{l.dataLiquidacao}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{l.numero}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$) " styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{l.valor}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="mlef05"/>
+                                            <h:outputText value="#{reconhecimentoDividaControlador.somaLiquidacoes}"
+                                                          converter="moneyConverter"/>
+                                        </div>
+                                    </f:facet>
+                                </p:dataTable>
+                            </p:tab>
+
+                            <p:tab title="Estorno de Liquidação">
+                                <p:dataTable id="tabelaLiquidacaoEstorno"
+                                             value="#{reconhecimentoDividaControlador.estornosDeLiquidacoes}"
+                                             var="lest"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             styleClass="mtop10"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>ESTORNO DE LIQUIDAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{lest.dataEstorno}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{lest.numero}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$) " styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{lest.valor}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="mlef05"/>
+                                            <h:outputText
+                                                value="#{reconhecimentoDividaControlador.somaEstornoLiquidacoes}"
+                                                converter="moneyConverter"/>
+                                        </div>
+                                    </f:facet>
+                                </p:dataTable>
+                            </p:tab>
+
+                            <p:tab title="Pagamento">
+                                <p:dataTable id="tabelaPagamento"
+                                             value="#{reconhecimentoDividaControlador.pagamentos}"
+                                             var="p"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             styleClass="mtop10"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>PAGAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{p.dataPagamento}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{p.numeroPagamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{p.valor}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="mlef05"/>
+                                            <h:outputText value="#{reconhecimentoDividaControlador.somaPagamentos}"
+                                                          converter="moneyConverter"/>
+                                        </div>
+                                    </f:facet>
+                                </p:dataTable>
+                            </p:tab>
+
+                            <p:tab title="Estorno de Pagamento">
+                                <p:dataTable id="tabelaPagamentoEstorno"
+                                             value="#{reconhecimentoDividaControlador.estornosDePagamentos}"
+                                             var="pest"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             styleClass="mtop10"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>ESTORNO DE PAGAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{pest.dataEstorno}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{pest.numero}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                        <h:outputText value="#{pest.valor}"
+                                                      converter="moneyConverter"/>
+                                    </p:column>
+                                    <f:facet name="footer">
+                                        <div style="text-align: right">
+                                            <h:outputText value="Total: " styleClass="mlef05"/>
+                                            <h:outputText
+                                                value="#{reconhecimentoDividaControlador.somaEstornoPagamentos}"
+                                                converter="moneyConverter"/>
+                                        </div>
+                                    </f:facet>
+                                </p:dataTable>
+                            </p:tab>
+                        </p:tabView>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+            <fc:rodapePretty controlador="#{reconhecimentoDividaControlador}"
+                             desabilitaSalvar="#{reconhecimentoDividaControlador.isAprovado()}"/>
+
+            <p:commandButton value="Rejeitar"
+                             id="btRejeitar"
+                             title="Clique para Rejeitar o reconhecimento da dívida do exercício."
+                             icon="ui-icon-transferthick-e-w"
+                             styleClass="mtop10 mlef05"
+                             onstart="aguarde.show()"
+                             style="height: 30px"
+                             oncomplete="aguarde.hide();dialogIndeferir.show()"
+                             onclick="if (!confirm('Tem certeza que deseja rejeitar este reconhecimento da dívida do exercício?')) {return false; } else {aguarde.show();}"
+                             actionListener="#{reconhecimentoDividaControlador.enviarParaRejeitado()}"
+                             rendered="#{reconhecimentoDividaControlador.canRejeitarOrAprovar()}"/>
+
+            <p:commandButton value="Enviar p/ Análise"
+                             id="btEnviarAnalise"
+                             process=":Formulario"
+                             update="@none"
+                             title="Clique para enviar o reconhecimento da dívida do exercício para análise."
+                             icon="ui-icon-note"
+                             oncomplete="aguarde.hide()"
+                             onclick="if (!confirm('Tem certeza que deseja enviar este reconhecimento da dívida do exercício para análise?')) {return false; } else {aguarde.show();}"
+                             styleClass="mtop10 mlef05"
+                             style="height: 30px"
+                             actionListener="#{reconhecimentoDividaControlador.enviarParaAguardandoAprovacao()}"
+                             rendered="#{reconhecimentoDividaControlador.canEnviarParaAguardando()}"/>
+
+            <p:commandButton value="Aprovar"
+                             id="btAprovar"
+                             process="@this"
+                             update="@none"
+                             title="Clique para aprovar o reconhecimento da dívida do exercício."
+                             icon="ui-icon-check"
+                             oncomplete="aguarde.hide()"
+                             onclick="if (!confirm('Tem certeza que deseja aprovar este reconhecimento da dívida do exercício?')) {return false; } else {aguarde.show();}"
+                             styleClass="mtop10 mlef05"
+                             style="height: 30px"
+                             actionListener="#{reconhecimentoDividaControlador.enviarParaAprovado()}"
+                             rendered="#{reconhecimentoDividaControlador.canRejeitarOrAprovar()}"/>
+        </h:form>
+
+        <p:dialog header="Tabela de Especificações do Objeto de Compra"
+                  modal="true"
+                  dynamic="true"
+                  id="dialogTabelaEspe"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="800"
+                  height="400"
+                  widgetVar="dialogTabelaEspecificacoes">
+            <h:form id="form-tabela-especificacao">
+                <p:outputPanel id="outputespecificacoes">
+                    <p:dataTable paginator="true"
+                                 id="tabelaespecificacao"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{reconhecimentoDividaControlador.objetoCompra.especificacaoesAtivas}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ESPECIFICAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="especificacao">
+                        <p:column headerText="Ações" style="text-align: center; width: 15%">
+                            <p:commandButton icon="ui-icon-search" update=":form-especificacao-detalhes"
+                                             oncomplete="dialogEspecificacao.show();"
+                                             actionListener="#{reconhecimentoDividaControlador.visualizarEspecificacao(especificacao)}"/>
+                        </p:column>
+                        <p:column headerText="Especificação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{especificacao.textoCurto}" escape="false"/>
+                        </p:column>
+                        <p:column headerText="Ativo" style="text-align: center">
+                            <h:outputText value="#{objetoCompraControlador.especificacaoAtiva(especificacao)}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+        <p:dialog header="Detalhes da Especificação"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  id="dialogEspecificacaoDetalhe"
+                  widgetVar="dialogEspecificacao">
+            <h:form id="form-especificacao-detalhes">
+                <p:outputPanel id="outPutEspecificacao">
+                    <p:editor id="editorConsulta" widgetVar="editorWidget"
+                              disabled="true"
+                              value="#{reconhecimentoDividaControlador.objetoDeCompraEspecificacaoVisualizar.texto}"
+                              width="700"/>
+
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog
+            header="Realizar Reserva de Dotação"
+            modal="true"
+            dynamic="true"
+            position="center"
+            style="position: fixed !important; max-width: 800px; max-height: 500px; overflow: auto;  "
+            resizable="false"
+            widgetVar="dlgItemReconhecimentoDotacao"
+            closable="false">
+            <h:form id="form-item-reconhecimento-divida-dotacao">
+                <h:outputText value="ITEM: " styleClass="azul mtop05"/>
+                <h:outputLabel value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida}"
+                               styleClass="azulnegrito"/>
+
+                <p:outputPanel id="outputPanel-despesa-orcamentaria">
+                    <fcc:consultar-despesa-orcamentaria-na-tela
+                        id="consulta-despesa-orc-na-tela"
+                        styleElementoDespesa="margin-right:8px"
+                        filtroElemento="#{reconhecimentoDividaControlador.filtroDotacaoPadrao}"
+                        value="#{reconhecimentoDividaControlador.itemReconhecimentoDividaDotacao.despesaORC}"
+                        subTipoObjetoCompra="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.subTipoObjetoCompra}"
+                        tiposObjetoCompra="#{consultarDespesaOrcamentariaNaTelaControlador.tipoObjetoCompraPorDescricao(reconhecimentoDividaControlador.itemReconhecimentoDivida.objetoCompra.tipoObjetoCompra.name())}"
+                        mostrarArvoreExpandida="true"
+                        unidadeAdministrativa="#{reconhecimentoDividaControlador.selecionado.unidadeAdministrativa}"/>
+                </p:outputPanel>
+
+                <h:panelGrid columns="2" id="grid-valores-dotacao">
+                    <fc:outputLabelObrigatorio value="Fonte de Recurso: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="fonteDespesaORC"
+                                    size="70"
+                                    title="Informe a Fonte de Recurso."
+                                    value="#{reconhecimentoDividaControlador.itemReconhecimentoDividaDotacao.fonteDespesaORC}"
+                                    completeMethod="#{reconhecimentoDividaControlador.buscarFonteDespesaORCPorCodigoOrDescricao}"
+                                    converter="#{empenhoControlador.converterFonteDespesaORC}"
+                                    forceSelection="true"
+                                    var="fo"
+                                    itemValue="#{fo.id}"
+                                    itemLabel="#{fo.provisaoPPAFonte.destinacaoDeRecursos}">
+                        <p:ajax event="itemSelect"
+                                process="@this"
+                                update="saldoOrcamentario"/>
+                    </p:autoComplete>
+
+                    <h:outputLabel value="Saldo Orçamentário: "/>
+                    <p:outputPanel id="saldoOrcamentario">
+                        <h:outputText
+                            value="#{reconhecimentoDividaControlador.saldoOrcamentario}"
+                            styleClass="negrito">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+                    </p:outputPanel>
+
+                    <h:outputLabel value="Valor Total à Reservar: "/>
+                    <h:outputText
+                        value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.valorTotalItem}"
+                        styleClass="negrito">
+                        <f:convertNumber type="currency"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Valor já Reservado: "/>
+                    <h:outputText
+                        value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.valorReservado}"
+                        styleClass="negrito">
+                        <f:convertNumber type="currency"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Valor para Reservar: "/>
+                    <h:outputText
+                        value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.valorParaReservar}"
+                        styleClass="negrito">
+                        <f:convertNumber type="currency"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Valor da Reserva: "/>
+                    <fc:inputMoeda id="ipt-valor-reserva"
+                                   value="#{reconhecimentoDividaControlador.itemReconhecimentoDividaDotacao.valorReservado}"/>
+                </h:panelGrid>
+
+                <div class="mtop10 alinhamentoCentralizado">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     styleClass="padrao mrig05 prioritario"
+                                     process=":form-item-reconhecimento-divida-dotacao"
+                                     update=":Formulario:tab-view-geral:tabelaItens"
+                                     actionListener="#{reconhecimentoDividaControlador.confirmarItemReconhecimentoDividaDotacao()}"
+                                     onstart="aguarde.show(); "
+                                     oncomplete="aguarde.hide(); "/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     styleClass="padrao mrig05"
+                                     process="@this"
+                                     update="@none"
+                                     actionListener="#{reconhecimentoDividaControlador.cancelarItemReconhecimentoDividaDotacao()}"
+                                     onstart="aguarde.show(); " oncomplete="aguarde.hide(); "/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Excluir Reserva do Item do Reconhecimento da Dívida do Exercício"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgExcluirDotacaoReconhecimentoDivida"
+                  closable="false">
+            <h:form id="form-excluir-item-reconhecimento-divida-dotacao">
+                <div class="mtop10">
+                    <p:dataTable id="tabela-item-reconhecimento-divida-dotacao"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.dotacoes}"
+                                 var="itemReconhecimentoDividaDotacao">
+                        <f:facet name="header">RESERVAS DO ITEM</f:facet>
+                        <p:column headerText="Ações" style="text-align: center; width: 20px; ">
+                            <p:commandButton icon="ui-icon-trash"
+                                             process="@this"
+                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{reconhecimentoDividaControlador.removerItemReconhecimentoDividaDotacao(itemReconhecimentoDividaDotacao)}"
+                                             title="Clique para remover este registro."
+                                             update="tabela-item-reconhecimento-divida-dotacao"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Despesa Orçamentária" styleClass="alinhamentoEsquerda">
+                            <h:outputLabel value="#{itemReconhecimentoDividaDotacao.fonteDespesaORC}"/>
+                        </p:column>
+                        <p:column headerText="Valor Reservado" style="text-align: right; ">
+                            <h:outputLabel value="#{itemReconhecimentoDividaDotacao.valorReservado}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputLabel>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+                <div style="text-align: center; margin: 10px; ">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-circle-close"
+                                     styleClass="padrao mrig05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{reconhecimentoDividaControlador.cancelarItem()}"
+                                     process="@this"
+                                     update=":Formulario:tab-view-geral:tabelaItens"
+                                     onclick="dlgExcluirDotacaoReconhecimentoDivida.hide(); "/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Visualizar Reservas do Item do Reconhecimento da Dívida do Exercício"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dlgVisDotacoesItemReconhecimento"
+                  closable="false">
+            <h:form id="form-vis-dotacoes-item-reconhecimento">
+                <div class="mtop10">
+                    <p:dataTable id="tabela-item-reconhecimento-divida-dotacao-ver"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{reconhecimentoDividaControlador.itemReconhecimentoDivida.dotacoes}"
+                                 var="itemDotacao">
+                        <f:facet name="header">RESERVAS DO ITEM</f:facet>
+                        <p:column headerText="Fonte de Despesa Orçamentária" styleClass="alinhamentoEsquerda">
+                            <h:outputLabel value="#{itemDotacao.fonteDespesaORC}"/>
+                        </p:column>
+                        <p:column headerText="Valor Reservado" style="text-align: right; ">
+                            <h:outputLabel value="#{itemDotacao.valorReservado}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputLabel>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+                <div style="text-align: center; margin: 10px; ">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-circle-close"
+                                     styleClass="padrao mrig05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{reconhecimentoDividaControlador.cancelarItem()}"
+                                     process="@this"
+                                     update="@none"
+                                     onclick="dlgVisDotacoesItemReconhecimento.hide(); "/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

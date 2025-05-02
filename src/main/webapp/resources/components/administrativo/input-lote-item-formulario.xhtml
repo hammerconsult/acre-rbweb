@@ -1,0 +1,634 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui">
+
+<!--INTERFACE-->
+<cc:interface>
+    <cc:attribute name="lotes" required="true" type="java.util.List"/>
+    <cc:attribute name="selecionado" required="true" type="java.lang.Object"/>
+    <cc:attribute name="disabled"/>
+    <cc:attribute name="updateGridDadosGerais"/>
+    <cc:attribute name="listenerConfirmarItens"/>
+    <cc:attribute name="listener" method-signature="void f()" default="null"/>
+    <cc:attribute name="tipoProcesso" required="true" type="br.com.webpublico.enums.TipoMovimentoProcessoLicitatorio"/>
+</cc:interface>
+
+<!--IMPLEMENTATION-->
+<cc:implementation>
+    <f:event type="preRenderComponent"
+             listener="#{formularioCompraControlador.preRenderComponente(cc.attrs.lotes, cc.attrs.selecionado, cc.attrs.tipoProcesso)}"/>
+
+    <p:panel header="Lote" id="pn-lotes-proc">
+        <p:commandButton value="Novo Lote"
+                         styleClass="padrao"
+                         icon="ui-icon-plus"
+                         title="Clique para adicionar um novo lote."
+                         actionListener="#{formularioCompraControlador.novoLote()}"
+                         rendered="#{!formularioCompraControlador.hasLoteVO()}"
+                         disabled="#{cc.attrs.disabled}"
+                         update="pn-lotes-proc"
+                         process="@this"
+                         onstart="aguarde.show()"
+                         oncomplete="aguarde.hide();"/>
+
+        <h:panelGrid columns="2"
+                     id="grid-lote"
+                     rendered="#{formularioCompraControlador.hasLoteVO() and !formularioCompraControlador.hasItemLoteVO()}">
+            <h:outputText value="Número: "/>
+            <h:outputText
+                value="#{formularioCompraControlador.loteFormularioVO.numero}"/>
+
+            <fc:outputLabelObrigatorio value="Descrição: "/>
+            <p:inputText
+                value="#{formularioCompraControlador.loteFormularioVO.descricao}"
+                maxlength="70"/>
+
+            <fc:outputLabelObrigatorio value="Tipo de Controle: "
+                                       rendered="#{formularioCompraControlador.isApuracaoPorLote()}"/>
+            <h:selectOneRadio
+                id="tipoControleLote"
+                rendered="#{formularioCompraControlador.isApuracaoPorLote()}"
+                disabled="#{formularioCompraControlador.loteFormularioVO.hasItens()}"
+                value="#{formularioCompraControlador.loteFormularioVO.tipoControle}">
+                <f:selectItems
+                    value="#{formularioCompraControlador.tiposControle}"/>
+                <p:ajax event="change" process="@this"/>
+            </h:selectOneRadio>
+        </h:panelGrid>
+
+        <p:commandButton value="Adicionar"
+                         title="Clique para adicionar as alterações do lote."
+                         rendered="#{formularioCompraControlador.hasLoteVO() and !formularioCompraControlador.hasItemLoteVO()}"
+                         actionListener="#{formularioCompraControlador.adicionarLote()}"
+                         onstart="aguarde.show()"
+                         oncomplete="aguarde.hide()"
+                         icon="ui-icon-check"
+                         styleClass="operacao prioritario mtop10"
+                         process="@this pn-lotes-proc"
+                         update="#{cc.attrs.updateGridDadosGerais} pn-lotes-proc"/>
+
+        <p:commandButton value="Cancelar"
+                         title="Clique aqui para cancelar as alterações do lote."
+                         icon="ui-icon-cancel"
+                         rendered="#{formularioCompraControlador.hasLoteVO() and !formularioCompraControlador.hasItemLoteVO()}"
+                         actionListener="#{formularioCompraControlador.cancelarLote()}"
+                         onstart="aguarde.show()"
+                         oncomplete="aguarde.hide()"
+                         process="@this"
+                         update="pn-lotes-proc"
+                         styleClass="operacao mtop10 mlef05"/>
+
+        <p:dataTable
+            id="tabela-lotes"
+            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+            rowIndexVar="rowIx"
+            styleClass="mtop05"
+            var="lote"
+            rowKey="#{lote.criadoEm}"
+            emptyMessage="Não foram localizados registros para serem apresentados"
+            rendered="#{!formularioCompraControlador.hasLoteVO()}"
+            value="#{formularioCompraControlador.lotesVO}">
+            <p:ajax event="rowToggle" oncomplete="carregarTodasUnidadesMedidasDaTela()"/>
+            <f:facet name="header">
+                LOTES
+            </f:facet>
+            <p:column headerText="Itens" style="width: 2%">
+                <p:rowToggler/>
+            </p:column>
+            <p:column headerText="Ações"
+                      style="text-align: center; width: 20%; ">
+                <p:commandButton
+                    actionListener="#{formularioCompraControlador.editarLote(lote)}"
+                    disabled="#{cc.attrs.disabled}"
+                    title="Clique para alterar esse registro."
+                    icon="ui-icon-pencil"
+                    onstart="aguarde.show()"
+                    oncomplete="aguarde.hide()"
+                    process="@this"
+                    update=":#{cc.clientId}:pn-lotes-proc"/>
+
+                <p:commandButton
+                    actionListener="#{formularioCompraControlador.removerLote(lote)}"
+                    title="Clique para remover esse registro."
+                    icon="ui-icon-trash"
+                    styleClass="mlef05"
+                    onclick="if (!confirm('Tem certeza que deseja excluir o lote?')) {return false; } else {aguarde.show();}"
+                    oncomplete="aguarde.hide()"
+                    process="@this"
+                    disabled="#{cc.attrs.disabled}"
+                    update=":#{cc.clientId}:pn-lotes-proc #{cc.attrs.updateGridDadosGerais}"/>
+
+                <p:commandButton
+                    value="Editar Itens"
+                    actionListener="#{formularioCompraControlador.novoItem(lote)}"
+                    disabled="#{cc.attrs.disabled}"
+                    title="Clique para editar os itens deste lote."
+                    style="height: 30px"
+                    icon="ui-icon-pencil"
+                    styleClass="mlef05 prioritario"
+                    onstart="aguarde.show()"
+                    oncomplete="aguarde.hide()"
+                    process="@this"
+                    update=":#{cc.clientId}:pn-lotes-proc"/>
+            </p:column>
+            <p:column headerText="Número"
+                      style="text-align: left; width: 5%; ">
+                <h:outputText value="#{lote.numero}"/>
+            </p:column>
+            <p:column headerText="Descrição"
+                      style="text-align: left;">
+                <h:outputText value="#{lote.descricao}"/>
+            </p:column>
+            <p:column headerText="Valor (R$)"
+                      style="text-align: right;">
+                <h:outputText value="#{lote.valorTotal}">
+                    <f:convertNumber pattern="###,##0.00"/>
+                </h:outputText>
+            </p:column>
+
+            <p:column headerText="Itens para Definição de Valor de Referência"
+                      rendered="#{formularioCompraControlador.habilitarItensDefinicaoValorUnitario()}">
+                <p:dataTable id="tabela-item-lote"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionado' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{lote.itensValorReferencia}"
+                             var="itemRef">
+                    <p:column headerText="Item" styleClass="alinhamentoDireita"
+                              style="width: 1%">
+                        <h:outputText value="#{itemRef.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{itemRef.objetoCompra}"
+                                      title="#{itemRef.objetoCompra.grupoObjetoCompra}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" styleClass="alinhamentoDireita"
+                              rendered="#{formularioCompraControlador.tipoObjeto.isObraServicoEngenharia() or formularioCompraControlador.tipoApuracaoProcesso.isPorItem()}"
+                              style="width: 10%">
+                        <p:outputPanel id="qtde-vl-referencia">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{itemRef.unidadeMedida.mascaraQuantidade}"
+                                value="#{itemRef.quantidade}"/>
+                        </p:outputPanel>
+                    </p:column>
+                    <p:column headerText="Vl. Unit. (R$)" styleClass="alinhamentoDireita"
+                              style="width: 10%">
+                        <fc:input-mascara-unidade-medida
+                            tipoMascara="#{itemRef.unidadeMedida.mascaraValorUnitario}"
+                            value="#{itemRef.valorUnitario}"
+                            size="15"
+                            update=":#{cc.clientId}:pn-lotes-proc"
+                            listener="#{formularioCompraControlador.calcularValorTotalItem(itemRef)}"/>
+                    </p:column>
+                    <p:column headerText="Vl. Total (R$)" styleClass="alinhamentoDireita"
+                              rendered="#{formularioCompraControlador.tipoObjeto.isObraServicoEngenharia() or formularioCompraControlador.tipoApuracaoProcesso.isPorItem()}"
+                              style="width: 10%">
+                        <h:outputText id="op-valor-item" value="#{itemRef.valorTotal}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </p:column>
+
+            <p:rowExpansion>
+                <p:dataTable
+                    paginator="true"
+                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                    rowIndexVar="rowIx"
+                    styleClass="mtop05 mlef10"
+                    style="overflow: scroll; width: auto"
+                    emptyMessage="Não foram localizados registros para serem apresentados"
+                    rows="10"
+                    paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                    rowsPerPageTemplate="10"
+                    value="#{lote.itens}"
+                    var="item">
+                    <p:column headerText="Item" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{item.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição"
+                              style="text-align: left">
+                        <h:outputText value="#{item.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Especif."
+                              style="text-align: left">
+                        <ad:especificacao-objeto-compra
+                            exibirTexto="true"
+                            especificacao="#{item.descricaoComplementar}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Grupo Objeto de Compra" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{item.objetoCompra.grupoObjetoCompra}"/>
+
+                        <br/><br/>
+                        <h:outputText
+                            style="font-size: 12px; color: grey"
+                            value="Cotação: "/>
+                        <h:outputText
+                            styleClass="negrito"
+                            style="font-size: 12px; color: grey"
+                            value="#{item.objetoCompra.grupoObjetoCompra.tipoCotacao.descricao}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Grupo"
+                        style="text-align: left">
+                        <h:outputText
+                            value="#{item.objetoCompra.grupoContaDespesa.grupo}"/>
+                    </p:column>
+                    <p:column
+                        headerText="Conta" styleClass="alinhamentoEsquerda">
+                        <ad:conta-desdobrada-por-grupo
+                            styleClass="default"
+                            grupoContaDespesa="#{item.objetoCompra.grupoContaDespesa}"/>
+                    </p:column>
+                    <p:column headerText="Unid. Med."
+                              style="text-align: center">
+                        <p unidade-medida-tip="#{item.unidadeMedida.id}">
+                            #{item.unidadeMedida.descricaoComponenteTip}
+                        </p>
+                    </p:column>
+                    <p:column headerText="Tipo Benefício"
+                              style="text-align: left">
+                        <h:outputText value="#{item.tipoBeneficio.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Controle"
+                              style="text-align: left; vertical-align: #{item.objetoCompra.isObjetoValorReferencia() ? 'top' : ''}">
+                        <h:outputText value="#{item.tipoControle.descricao}"/>
+
+                        <p:outputPanel
+                            rendered="#{item.objetoCompra.isObjetoValorReferencia()}">
+                            <br/><br/>
+                            <h:outputText value="Valor de Referência (R$)"
+                                          style="color: grey"/>
+                        </p:outputPanel>
+                    </p:column>
+                    <p:column
+                        headerText="Qtde/Valor (R$)"
+                        style="text-align: right; width: 10%; vertical-align: #{item.objetoCompra.isObjetoValorReferencia() ? 'top' : ''}">
+
+                        <fc:output-mascara-unidade-medida
+                            rendered="#{item.tipoControlePorQuantidade}"
+                            tipoMascara="#{item.unidadeMedida.mascaraQuantidade}"
+                            value="#{item.quantidade}"/>
+
+                        <h:outputText value="#{item.valorTotal}"
+                                      rendered="#{item.tipoControlePorValor}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+
+                        <p:outputPanel
+                            rendered="#{item.objetoCompra.isObjetoValorReferencia()}">
+                            <br/><br/>
+                            <fc:output-mascara-unidade-medida
+                                style="color: grey"
+                                tipoMascara="#{item.unidadeMedida.mascaraValorUnitario}"
+                                value="#{item.valorUnitario}"/>
+                        </p:outputPanel>
+                    </p:column>
+                </p:dataTable>
+            </p:rowExpansion>
+        </p:dataTable>
+
+        <h:panelGrid columns="2" cellspacing="2" cellpadding="2"
+                     rendered="#{formularioCompraControlador.hasItemLoteVO()}"
+                     id="grid-item">
+
+            <h:outputText value="Número do Lote: "/>
+            <h:outputText value="#{formularioCompraControlador.loteFormularioVO.numero}"
+                          styleClass="negrito"/>
+
+            <h:outputText value="Descrição do Lote: "/>
+            <h:outputText value="#{formularioCompraControlador.loteFormularioVO.descricao}"
+                          styleClass="negrito"/>
+
+            <hr class="mbot05 mtop02"/>
+            <h:outputText/>
+
+            <h:outputText value="Exclusivo - ME/EPP: "/>
+            <h:panelGroup>
+                <h:selectBooleanCheckbox value="#{formularioCompraControlador.itemFormularioVO.exclusivoME}">
+                    <p:ajax event="change"
+                            update=":#{cc.clientId}:grid-item"
+                            process="@this :#{cc.clientId}:grid-item"
+                            listener="#{formularioCompraControlador.atribuirTipoBeneficio()}"/>
+                </h:selectBooleanCheckbox>
+
+                <fc:botaoInformacao id="btn-info-exclusivome"
+                                    styleClassBotao="icone-16 mlef05"
+                                    detalhes="Processo licitatório destinado exclusivamente à participação de microempresas(ME) e empresas de pequeno porte(EPP) nos itens de contratação cujo valor seja de até R$ 80.000,00 (oitenta mil reais); (Redação dada pela Lei Complementar nº 147, de 2014)"/>
+            </h:panelGroup>
+
+            <fc:outputLabelObrigatorio value="Nº do Item: "/>
+            <p:inputText value="#{formularioCompraControlador.itemFormularioVO.numero}"
+                         onkeypress="somenteNumeros(event, this)"/>
+
+            <fc:outputLabelObrigatorio value="Tipo de Controle: "/>
+            <h:selectOneRadio
+                id="tipoControleItem"
+                disabled="#{formularioCompraControlador.isApuracaoPorLote()}"
+                value="#{formularioCompraControlador.itemFormularioVO.tipoControle}">
+                <f:selectItems
+                    value="#{formularioCompraControlador.tiposControle}"/>
+                <p:ajax event="change"
+                        process="@this :#{cc.clientId}:grid-item"
+                        oncomplete="setaFoco(':#{cc.clientId}:ac-objeto-compra_input')"
+                        update=":#{cc.clientId}:grid-item"/>
+            </h:selectOneRadio>
+
+            <fc:outputLabelObrigatorio value="Objeto de Compra: "/>
+            <ad:autocomplete-objeto-compra
+                id="ac-objeto-compra"
+                objetoCompra="#{formularioCompraControlador.itemFormularioVO.objetoCompra}"
+                tipoObjeto="#{formularioCompraControlador.tipoObjeto}"
+                processItemSelect="@this :#{cc.clientId}:grid-item"
+                updateItemSelect=":#{cc.clientId}:grid-item"/>
+
+            <h:outputLabel value="Tipo de Cotação: "/>
+            <h:outputText id="tipoCotacaoGrupoObjetoCompra"
+                          styleClass="negrito"
+                          value="#{formularioCompraControlador.itemFormularioVO.objetoCompra.grupoObjetoCompra.tipoCotacao.descricao}"/>
+
+            <h:outputText value="Especificação: " style="margin-right: 60px"/>
+            <h:panelGroup columns="2" style="vertical-align: top">
+                <p:inputTextarea id="especificacao"
+                                 title="Digite a descrição da complementar."
+                                 value="#{formularioCompraControlador.itemFormularioVO.descricaoComplementar}"
+                                 autoResize="false"
+                                 maxlength="3000"
+                                 readonly="true"
+                                 cols="70"
+                                 rows="5"
+                                 scrollHeight="50"/>
+                <p:outputPanel id="panel-especificacao" styleClass="mlef05">
+                    <ad:tabela-especificacoes-objeto-compra
+                        update=":#{cc.clientId}:grid-item"
+                        objetoCompra="#{formularioCompraControlador.itemFormularioVO.objetoCompra}"
+                        limparEspecificacao="#{formularioCompraControlador.limparEspecificacao}"
+                        selecionarEspecificacao="#{formularioCompraControlador.selecionarEspecificacao}"/>
+                </p:outputPanel>
+            </h:panelGroup>
+
+            <fc:outputLabelObrigatorio value="Unidade de Medida: "/>
+            <ad:unidade-medida
+                tipoObjetoCompra="#{formularioCompraControlador.itemFormularioVO.objetoCompra.tipoObjetoCompra}"
+                unidadeMedidaSelecionada="#{formularioCompraControlador.itemFormularioVO.unidadeMedida}"
+                disabled="#{cc.attrs.disabled}"
+                update=":#{cc.clientId}:quantidade"/>
+
+            <fc:outputLabelObrigatorio value="Quantidade Sem Benefício: "
+                                       rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorQuantidade()
+                                                   and formularioCompraControlador.itemFormularioVO.tipoBeneficio.isSemBeneficio()}"/>
+            <h:panelGroup id="qtde-sem-beneficio"
+                          rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorQuantidade()
+                                    and formularioCompraControlador.itemFormularioVO.tipoBeneficio.isSemBeneficio()}">
+                <fc:input-mascara-unidade-medida
+                    update=":#{cc.clientId}:qtde-sem-beneficio :#{cc.clientId}:quantidade :#{cc.clientId}:percentual :#{cc.clientId}:qtde-cota-reserv"
+                    listener="#{formularioCompraControlador.calcularPercentualCotaReseravadaME()}"
+                    value="#{formularioCompraControlador.itemFormularioVO.quantidadeSemBenecifio}"
+                    tipoMascara="#{formularioCompraControlador.itemFormularioVO.unidadeMedida.mascaraQuantidade}"/>
+
+                <div class="label label-default mlef05" style="font-size: 14px; padding: 4px">
+                    <h:outputText id="percentual"
+                                  styleClass="negrito"
+                                  value="#{formularioCompraControlador.itemFormularioVO.percentualCotaReservada}"/>%
+                    - Percentual Cota Reservada ME/EPP
+                </div>
+            </h:panelGroup>
+
+            <h:outputText value="Cota Reservada ME/EPP: "
+                          rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorQuantidade() and formularioCompraControlador.itemFormularioVO.tipoBeneficio.isSemBeneficio()}"/>
+            <h:panelGroup
+                id="qtde-cota-reserv"
+                rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorQuantidade() and formularioCompraControlador.itemFormularioVO.tipoBeneficio.isSemBeneficio()}">
+                <fc:input-mascara-unidade-medida
+                    update=":#{cc.clientId}:qtde-sem-beneficio :#{cc.clientId}:quantidade :#{cc.clientId}:percentual :#{cc.clientId}:qtde-cota-reserv"
+                    listener="#{formularioCompraControlador.calcularPercentualCotaReseravadaME()}"
+                    value="#{formularioCompraControlador.itemFormularioVO.quantidadeCotaReservadaME}"
+                    tipoMascara="#{formularioCompraControlador.itemFormularioVO.unidadeMedida.mascaraQuantidade}"/>
+
+                <fc:botaoInformacao id="btn-info-cotaem"
+                                    styleClassBotao="icone-25 mlef05"
+                                    detalhes="Em certames para aquisição de bens de natureza divisível, deverá estabelecer cota de até 25% (vinte e cinco por cento) do objeto para a contratação de microempresas(ME) e empresas de pequeno porte(EPP). (Redação dada pela Lei Complementar nº 147, de 2014)"/>
+            </h:panelGroup>
+
+            <fc:outputLabelObrigatorio
+                value="#{formularioCompraControlador.itemFormularioVO.tipoBeneficio.isSemBeneficio() ? 'Quantidade Total' : 'Quantidade'} "
+                rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorQuantidade()}"/>
+            <p:outputPanel id="quantidade"
+                           rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorQuantidade()}">
+                <fc:input-mascara-unidade-medida
+                    readonly="#{formularioCompraControlador.itemFormularioVO.tipoBeneficio.isSemBeneficio()}"
+                    value="#{formularioCompraControlador.itemFormularioVO.quantidade}"
+                    tipoMascara="#{formularioCompraControlador.itemFormularioVO.unidadeMedida.mascaraQuantidade}"/>
+            </p:outputPanel>
+
+            <fc:outputLabelObrigatorio value="Valor do Item (R$): "
+                                       rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorValor()}"/>
+            <p:inputText title="Digite o valor"
+                         rendered="#{formularioCompraControlador.itemFormularioVO.isTipoControlePorValor()}"
+                         value="#{formularioCompraControlador.itemFormularioVO.valorTotal}"
+                         id="valorItem" maxlength="15" size="20"
+                         onkeypress="mascara(this, mvalor)"
+                         styleClass="alinhamentoDireita">
+                <f:convertNumber pattern="###,##0.00"/>
+                <p:ajax event="blur" update="@this" process="@this"/>
+            </p:inputText>
+        </h:panelGrid>
+
+        <p:commandButton value="Adicionar Item"
+                         style="width: 190px"
+                         title="Clique aqui para salvar o item ao lote."
+                         rendered="#{formularioCompraControlador.hasItemLoteVO()}"
+                         actionListener="#{formularioCompraControlador.adicionarItem()}"
+                         disabled="#{cc.attrs.disabled}"
+                         onclick="aguarde.show()"
+                         process="@this :#{cc.clientId}:grid-item"
+                         update=":#{cc.clientId}:grid-item :#{cc.clientId}:tabela-itens"
+                         oncomplete="aguarde.hide()"
+                         icon="ui-icon-check"
+                         styleClass="operacao mtop10"/>
+
+        <p:commandButton value="Ordenar Itens"
+                         style="width: 190px"
+                         styleClass="padrao mtop10 mlef05"
+                         icon="ui-icon-arrow-2-n-s"
+                         title="Clique aqui para ordenar os itens do lote."
+                         rendered="#{formularioCompraControlador.hasItemLoteVO()}"
+                         actionListener="#{formularioCompraControlador.renumerarAndOrdenarItensEmTela()}"
+                         onclick="aguarde.show()"
+                         oncomplete="aguarde.hide();"
+                         process="@this"
+                         update="tabela-itens"/>
+
+        <p:commandButton value="Cancelar Edição Item"
+                         style="width: 190px"
+                         id="btn-cancelar-edicao"
+                         title="Clique aqui para cancelar as alterações do item."
+                         icon="ui-icon-cancel"
+                         disabled="#{!formularioCompraControlador.editandoItem}"
+                         rendered="#{formularioCompraControlador.hasItemLoteVO()}"
+                         actionListener="#{formularioCompraControlador.novoItem(formularioCompraControlador.loteFormularioVO)}"
+                         onstart="aguarde.show()"
+                         oncomplete="aguarde.hide()"
+                         process="@this"
+                         update=":#{cc.clientId}:grid-item :#{cc.clientId}:tabela-itens :#{cc.clientId}:btn-cancelar-edicao"
+                         styleClass="operacao mtop10 mlef05"/>
+
+        <p:commandButton value="Confirmar Lote/Itens"
+                         title="Clique aqui para confirmar e fechar a janela."
+                         style="height: 30px;  width: 190px"
+                         icon="ui-icon-check"
+                         onstart="aguarde.show()"
+                         oncomplete="aguarde.hide()"
+                         styleClass="prioritario mtop10 mlef05"
+                         rendered="#{formularioCompraControlador.hasItemLoteVO()}"
+                         actionListener="#{formularioCompraControlador.confirmarItens()}"
+                         update="pn-lotes-proc"
+                         process="@this"/>
+
+        <p:dataTable id="tabela-itens"
+                     rendered="#{formularioCompraControlador.hasItemLoteVO()}"
+                     value="#{formularioCompraControlador.loteFormularioVO.itens}"
+                     var="itemForm"
+                     rowKey="#{itemForm.criadoEm}"
+                     paginator="true"
+                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                     rowIndexVar="rowIx"
+                     styleClass="mtop03"
+                     emptyMessage="Não foram localizados registros para serem apresentados."
+                     rows="10"
+                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DO LOTE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})">
+            <p:column headerText="Ações"
+                      style="text-align: center; min-width: 8%; ">
+                <div style="display: flex; flex-direction: row; justify-content: center">
+                    <p:commandButton
+                        actionListener="#{formularioCompraControlador.editarItem(itemForm)}"
+                        disabled="#{cc.attrs.disabled or formularioCompraControlador.editandoItem or itemForm.tipoBeneficio.isCotaReservadaME()}"
+                        title="Clique para alterar esse registro."
+                        icon="ui-icon-pencil"
+                        id="btn-editar-item"
+                        styleClass="mrig05"
+                        onclick="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                        process="@this"
+                        update="btn-editar-item btn-remover-item input-ordenar-item :#{cc.clientId}:btn-cancelar-edicao"/>
+
+                    <p:commandButton
+                        actionListener="#{formularioCompraControlador.removerItem(itemForm)}"
+                        disabled="#{formularioCompraControlador.editandoItem}"
+                        title="Clique para remover esse registro."
+                        id="btn-remover-item"
+                        icon="ui-icon-trash"
+                        onclick="if (!confirm('Tem certeza que deseja excluir esse item do lote?')) {return false; } else {aguarde.show();}"
+                        oncomplete="aguarde.hide()"
+                        process="@this tabela-itens"
+                        update="tabela-itens :#{cc.clientId}:grid-item"/>
+                </div>
+            </p:column>
+            <p:column headerText="Item">
+                <p:inputText value="#{itemForm.numero}"
+                             disabled="#{cc.attrs.disabled or formularioCompraControlador.editandoItem}"
+                             id="input-ordenar-item"
+                             size="2"
+                             style="text-align: center">
+                    <p:ajax event="change"
+                            update="@this"
+                            process="@this"
+                            listener="#{formularioCompraControlador.alterarNumeroItemList(itemForm)}"/>
+                </p:inputText>
+            </p:column>
+            <p:column headerText="Descrição"
+                      style="text-align: left">
+                <h:outputText value="#{itemForm.descricao}"/>
+            </p:column>
+            <p:column headerText="Especif."
+                      style="text-align: left">
+                <ad:especificacao-objeto-compra especificacao="#{itemForm.descricaoComplementar}"
+                                                exibirTexto="true"/>
+            </p:column>
+            <p:column headerText="Unid. Med."
+                      style="text-align: left">
+                <h:outputText value="#{itemForm.unidadeMedida}"/>
+            </p:column>
+            <p:column headerText="Tipo Benefício"
+                      style="text-align: left">
+                <h:outputText value="#{itemForm.tipoBeneficio.descricao}"/>
+            </p:column>
+            <p:column
+                headerText="Grupo Objeto de Compra" styleClass="alinhamentoEsquerda">
+                <h:outputText
+                    value="#{itemForm.objetoCompra.grupoObjetoCompra}"/>
+
+                <br/><br/>
+                <h:outputText
+                    style="font-size: 12px; color: grey"
+                    value="Cotação: "/>
+                <h:outputText
+                    styleClass="negrito"
+                    style="font-size: 12px; color: grey"
+                    value="#{itemForm.objetoCompra.grupoObjetoCompra.tipoCotacao.descricao}"/>
+
+            </p:column>
+            <p:column
+                headerText="Grupo"
+                style="text-align: left">
+                <h:outputText
+                    value="#{itemForm.objetoCompra.grupoContaDespesa.grupo}"/>
+            </p:column>
+            <p:column
+                headerText="Conta" styleClass="alinhamentoEsquerda">
+                <ad:conta-desdobrada-por-grupo
+                    styleClass="default"
+                    grupoContaDespesa="#{itemForm.objetoCompra.grupoContaDespesa}"/>
+            </p:column>
+
+            <p:column headerText="Controle"
+                      style="text-align: left; vertical-align: #{itemForm.objetoCompra.isObjetoValorReferencia() ? 'top' : ''}">
+                <h:outputText value="#{itemForm.tipoControle.descricao}"/>
+
+                <p:outputPanel
+                    rendered="#{itemForm.objetoCompra.isObjetoValorReferencia()}">
+                    <br/><br/>
+                    <h:outputText value="Valor de Referência (R$)"
+                                  style="color: grey"/>
+                </p:outputPanel>
+            </p:column>
+            <p:column
+                headerText="Qtde/Valor (R$)"
+                style="text-align: right; width: 10%; vertical-align: #{itemForm.objetoCompra.isObjetoValorReferencia() ? 'top' : ''}">
+
+                <fc:output-mascara-unidade-medida
+                    rendered="#{itemForm.tipoControlePorQuantidade}"
+                    tipoMascara="#{itemForm.unidadeMedida.mascaraQuantidade}"
+                    value="#{itemForm.quantidade}"/>
+
+                <h:outputText value="#{itemForm.valorTotal}"
+                              rendered="#{itemForm.tipoControlePorValor}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+
+                <p:outputPanel
+                    rendered="#{itemForm.objetoCompra.isObjetoValorReferencia()}">
+                    <br/><br/>
+                    <fc:output-mascara-unidade-medida
+                        style="color: grey"
+                        tipoMascara="#{itemForm.unidadeMedida.mascaraValorUnitario}"
+                        value="#{itemForm.valorUnitario}"/>
+                </p:outputPanel>
+            </p:column>
+        </p:dataTable>
+    </p:panel>
+
+</cc:implementation>
+</html>

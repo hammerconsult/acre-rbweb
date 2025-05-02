@@ -1,0 +1,812 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components">
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <style type="text/css">
+            .lineSeparator {
+                white-space: pre;
+            }
+        </style>
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{calculoITBIControlador}"
+                                origem="#{calculoITBIControlador.caminhoPadrao}listar/"/>
+
+            <p:panel id="panel" header="Lançamento de ITBI">
+                <h:panelGrid columns="5" styleClass="width50">
+                    <h:outputText value="Exercício"/>
+                    <h:outputText value="Código"/>
+                    <h:outputText value="Protocolo"/>
+                    <h:outputText value="Data de Lançamento"/>
+                    <h:outputText value="Usuário"/>
+
+                    <p:inputMask mask="9999" value="#{calculoITBIControlador.selecionado.exercicio}"
+                                 styleClass="mtop05"
+                                 size="6" converter="#{exercicioControlador.converterExercicio}"/>
+                    <p:inputText
+                        value="#{calculoITBIControlador.operacaoNovo ? 'Gerado automaticamente ao salvar' : calculoITBIControlador.selecionado.codigo}"
+                        size="#{calculoITBIControlador.operacaoNovo ? '28' : '12'}"
+                        readonly="true" styleClass="negrito campo-bloqueado mtop05"/>
+                    <h:panelGrid columns="1" styleClass="mtop05">
+                        <fc:protocolo numero="#{calculoITBIControlador.selecionado.numeroProtocolo}"
+                                      ano="#{calculoITBIControlador.selecionado.anoProtocolo}"
+                                      controlador="#{calculoITBIControlador}" mostrarLabel="false"/>
+                    </h:panelGrid>
+                    <p:inputText value="#{calculoITBIControlador.selecionado.dataLancamento}" size="12"
+                                 readonly="true" styleClass="negrito campo-bloqueado mtop05">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </p:inputText>
+                    <p:inputText value="#{calculoITBIControlador.selecionado.usuarioSistema.nome}" size="20"
+                                 readonly="true" styleClass="negrito campo-bloqueado mtop05"/>
+                </h:panelGrid>
+
+                <p:tabView id="tabDadosItbi">
+                    <p:tab title="Dados do ITBI">
+                        <h:panelGrid columns="2" styleClass="mtop10" id="gripPrincipal">
+                            <fc:outputLabelObrigatorio value="Tipo de ITBI: "/>
+                            <h:selectOneMenu title="Selecione um tipo de ITBI."
+                                             value="#{calculoITBIControlador.selecionado.tipoITBI}"
+                                             id="tiposItbi">
+                                <f:selectItems value="#{calculoITBIControlador.buscarTiposITBI()}"/>
+                                <p:ajax event="change" update=":Formulario"
+                                        listener="#{calculoITBIControlador.recuperarParametro()}"
+                                        process="@this"/>
+                            </h:selectOneMenu>
+
+                            <h:outputText value="Auditor Fiscal: "/>
+                            <fc:novoAutocompletePessoa id="auditor" mostraBotoes="false" juridica="false"
+                                                       value="#{calculoITBIControlador.selecionado.auditorFiscal}"
+                                                       situacoesPossiveis="#{calculoITBIControlador.buscarSituacoesPesquisaPessoa()}"
+                                                       caminhoAtual="#{calculoITBIControlador.urlAtual}"
+                                                       completeMethod="#{calculoITBIControlador.completarAuditorFiscal}"
+                                                       listenerNavegacao="#{calculoITBIControlador.colocarSelecionadoNaSecao()}"
+                                                       mostraSituacoes="false" size="70"/>
+
+                            <h:panelGroup id="groupLabelCadastros">
+                                <fc:outputLabelObrigatorio
+                                    value="Cadastro #{calculoITBIControlador.isItbiImobiliario() ? 'Imobiliário: ' : 'Rural: '}"
+                                    rendered="#{calculoITBIControlador.selecionado.tipoITBI ne null}"/>
+                            </h:panelGroup>
+
+                            <h:panelGroup id="groupValueCadastros">
+                                <p:autoComplete queryDelay="1000"
+                                                rendered="#{calculoITBIControlador.selecionado.tipoITBI eq 'IMOBILIARIO'}"
+                                                value="#{calculoITBIControlador.selecionado.cadastroImobiliario}"
+                                                var="ci" dropdown="true"
+                                                itemLabel="#{ci}" process="@this"
+                                                itemValue="#{ci.id}"
+                                                completeMethod="#{calculoITBIControlador.buscarCadastroPorTipo}"
+                                                converter="#{componenteCIControlador.converterCadastroImobiliario}"
+                                                id="cadImobiliario" size="70">
+                                    <p:ajax event="itemSelect" update="@this :Formulario:groupInfoCadastros"
+                                            process="@this"
+                                            onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                            listener="#{calculoITBIControlador.mudouCadastroImobiliario()}"/>
+                                </p:autoComplete>
+
+                                <p:autoComplete queryDelay="1000"
+                                                rendered="#{calculoITBIControlador.selecionado.tipoITBI eq 'RURAL'}"
+                                                value="#{calculoITBIControlador.selecionado.cadastroRural}"
+                                                var="cr" dropdown="true"
+                                                itemLabel="#{cr}" process="@this"
+                                                itemValue="#{cr.id}"
+                                                completeMethod="#{calculoITBIControlador.buscarCadastroPorTipo}"
+                                                converter="#{cadastroRuralControlador.converterCadastroRural}"
+                                                id="cadRural" size="70">
+                                    <p:ajax event="itemSelect" update=":Formulario:groupInfoCadastros" process="@this"
+                                            onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                            listener="#{calculoITBIControlador.buscarDadosCadastroITBI()}"
+                                    />
+                                </p:autoComplete>
+                            </h:panelGroup>
+
+                            <h:outputText value="Observação: "/>
+                            <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                                <p:inputTextarea id="observacao" title="Informe a observação"
+                                                 value="#{calculoITBIControlador.selecionado.observacao}"
+                                                 cols="70" maxlength="3000"
+                                                 autoResize="true" counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter"/>
+                                <h:outputText id="counter" styleClass="mlef03"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </p:tab>
+                    <p:tab title="Anexos">
+                        <fc:filesUploadWP selecionado="#{calculoITBIControlador.selecionado}"/>
+                    </p:tab>
+                </p:tabView>
+
+                <h:panelGroup id="groupInfoCadastros">
+
+                    <p:fieldset rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                legend="Dados do Cadastro #{calculoITBIControlador.selecionado.tipoITBI eq null or
+                        calculoITBIControlador.isItbiImobiliario()  ? 'Imobiliário' : 'Rural'}"
+                                styleClass="mtop20">
+
+                        <table style="width: 100%">
+                            <tr>
+                                <td style="width: 50%">
+                                    <c:forEach items="#{calculoITBIControlador.buscarProprietarios()}"
+                                               var="prop" varStatus="index">
+                                        <h:panelGrid columns="3">
+                                            <p:commandLink onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                                           style="vertical-align: top"
+                                                           actionListener="#{calculoITBIControlador.mostrarInfoCadastros()}"
+                                                           title="Detalhes do Cadastro #{calculoITBIControlador.selecionado.tipoITBI eq null or
+                                                           calculoITBIControlador.isItbiImobiliario()  ? 'Imobiliário' : 'Rural'}"
+                                                           update="Formulario:groupDadosCadastro"
+                                                           rendered="#{index.index eq 0}"
+                                                           process="@this">
+                                                <i class="ui-icon ui-icon-circle-triangle-e"/>
+                                            </p:commandLink>
+                                            <h:outputText value="Proprietário: "
+                                                          styleClass="#{index.index gt 0 ? 'mlef20' : ''}"/>
+                                            <h:outputText value="#{prop.nomeRazaoSocial} (#{prop.cpfCnpj})"/>
+                                        </h:panelGrid>
+                                    </c:forEach>
+
+                                    <h:panelGroup id="groupDadosCadastro">
+                                        <h:panelGrid columns="2"
+                                                     rendered="#{calculoITBIControlador.canMostrarInfoCadastros}"
+                                                     styleClass="mlef20">
+                                            <c:forEach items="#{calculoITBIControlador.dadosCadastro()}" var="entry">
+                                                <h:outputText value="#{entry.key}"/>
+                                                <h:outputText
+                                                    value="#{entry.value}"
+                                                    styleClass="negrito"/>
+                                            </c:forEach>
+                                        </h:panelGrid>
+                                    </h:panelGroup>
+                                </td>
+
+                                <td style="width: 50%; vertical-align: top">
+                                    <p:commandButton value="Imprimir BCI"
+                                                     rendered="#{calculoITBIControlador.selecionado.imobiliario}"
+                                                     onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                                     process="@this" update="@this"
+                                                     actionListener="#{relatorioCadastroImobiliarioControlador.gerarRelatorioImobiliario(calculoITBIControlador.selecionado.idCadastro)}"
+                                                     icon="ui-icon-print" styleClass="operacao"
+                                                     style="float: right"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </p:fieldset>
+
+                    <div align="center">
+                        <p:commandButton value="Adicionar Transmissão"
+                                         rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                         onclick="aguarde.show(); wTransmissao.show()" oncomplete="aguarde.hide()"
+                                         process="@this" update=":formTransmissao"
+                                         actionListener="#{calculoITBIControlador.definirInformacoesCalculo()}"
+                                         icon="ui-icon-plus" styleClass="operacao mtop10 mbot10"/>
+                    </div>
+                    <p:scrollPanel mode="native" rendered="#{calculoITBIControlador.selecionado.cadastro ne null}">
+                        <p:dataTable id="tabelaCalculos" styleClass="mtop10"
+                                     rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                     emptyMessage="Nenhum transmitente encontrado"
+                                     var="calculo" paginator="true" rows="10"
+                                     value="#{calculoITBIControlador.selecionado.getCalculosOrdenados(false)}"
+                                     rowKey="#{calculo.id}"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>TRANSMISSÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowIndexVar="rowlx"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column style="width: 1%;"
+                                      headerText="Itens">
+                                <p:rowToggler id="itensDoCalculo"/>
+                            </p:column>
+                            <p:column headerText="Ações" style="width: 10%; text-align: center">
+                                <h:panelGrid columns="3">
+                                    <p:commandButton icon="ui-icon-search" styleClass="icone-30"
+                                                     title="Pressione este botão para detalhes do calculo"
+                                                     process="@this" onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     actionListener="#{calculoITBIControlador.visualizarSimulacao(calculo)}"
+                                                     update="tabelaCalculos">
+                                    </p:commandButton>
+                                    <p:commandButton icon="ui-icon-pencil" styleClass="icone-30"
+                                                     title="Pressione este botão para editar o registro"
+                                                     actionListener="#{calculoITBIControlador.editarCalculo(calculo)}"
+                                                     process="@this" onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     update="tabelaCalculos">
+                                    </p:commandButton>
+                                    <p:commandButton icon="ui-icon-trash" styleClass="icone-30"
+                                                     title="Pressione este botão para remover o registro"
+                                                     process="@this" onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     actionListener="#{calculoITBIControlador.removerCalculo(calculo)}"
+                                                     update="tabelaCalculos">
+                                    </p:commandButton>
+                                </h:panelGrid>
+                            </p:column>
+                            <p:column headerText="Transferência">
+                                <h:outputText value="#{calculo.ordemCalculo}"/>
+                            </p:column>
+                            <p:column headerText="Isento/Imune">
+                                <h:outputText value="#{calculo.isento ? 'Sim' : 'Não'}"/>
+                            </p:column>
+                            <p:column headerText="Transmitentes">
+                                <h:outputText value="#{calculoITBIControlador.montarNomesTransmitentes(calculo)}"/>
+                            </p:column>
+                            <p:column headerText="Percentual">
+                                <h:outputText styleClass="lineSeparator"
+                                              value="#{calculoITBIControlador.montarPercentuaisTransmitentes(calculo)}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Adquirentes">
+                                <h:outputText styleClass="lineSeparator"
+                                              value="#{calculoITBIControlador.montarNomesAdquirentes(calculo)}"/>
+                            </p:column>
+                            <p:column headerText="Percentual">
+                                <h:outputText styleClass="lineSeparator"
+                                              value="#{calculoITBIControlador.montarPercentuaisAdquirentes(calculo)}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Tipo Base de Cálculo">
+                                <h:outputText value="#{calculo.tipoBaseCalculoITBI.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Percentual De Reajuste">
+                                <h:outputText value="#{calculo.valorReajuste}%">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Valor Base de Cálculo">
+                                <h:outputText value="#{calculo.baseCalculo}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Percentual Base de Cálculo">
+                                <h:outputText value="#{calculo.percentual}%">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Total Base de Cálculo">
+                                <h:outputText value="#{calculo.totalBaseCalculo}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Valor do ITBI">
+                                <h:outputText value="#{calculo.valorReal}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:rowExpansion>
+                                <p:panel style="border: none" styleClass="mtop05 mbot05">
+                                    <p:dataTable emptyMessage="Nenhum registro encontrado"
+                                                 style="text-align: center;"
+                                                 id="tabelaItemCalculo"
+                                                 value="#{calculo.itensCalculo}" var="itemCalculo">
+                                        <f:facet name="header">
+                                            <h:outputText value="Tipo(s) de Negociação"/>
+                                        </f:facet>
+                                        <p:column headerText="Tipo de Negociação" styleClass="alinhamentoEsquerda"
+                                                  style="vertical-align: top;">
+                                            <h:outputText value="#{itemCalculo.tipoNegociacao.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Percentual" styleClass="alinhamentoEsquerda"
+                                                  style="vertical-align: top;">
+                                            <h:outputText value="#{itemCalculo.percentual}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor Informado" styleClass="alinhamentoEsquerda"
+                                                  style="vertical-align: top;">
+                                            <h:outputText value="#{itemCalculo.valorInformado}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Alíquota" styleClass="alinhamentoEsquerda"
+                                                  style="vertical-align: top;">
+                                            <h:outputText value="#{itemCalculo.tipoNegociacao.aliquota}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:panel>
+                            </p:rowExpansion>
+                        </p:dataTable>
+                    </p:scrollPanel>
+                </h:panelGroup>
+
+            </p:panel>
+            <fc:rodapePretty controlador="#{calculoITBIControlador}"/>
+        </h:form>
+
+        <p:dialog header="Adicionar Transmissão" modal="true" dynamic="true" showEffect="fade"
+                  width="850"
+                  hideEffect="fade" position="center" style="max-height: 70%; max-width: 70%; overflow: auto"
+                  draggable="false" resizable="false" widgetVar="wTransmissao"
+                  closable="false">
+            <h:form id="formTransmissao">
+                <p:scrollPanel mode="native" style="border: none">
+                    <h:panelGrid columns="2">
+                        <h:outputText
+                            value="Cadastro #{calculoITBIControlador.isItbiImobiliario() ? 'Imobiliário: ' : 'Rural: '}"/>
+                        <h:outputText value="#{calculoITBIControlador.selecionado.inscricao}" styleClass="negrito"/>
+
+                        <h:outputText value="Valor Venal do Imóvel: "/>
+                        <h:outputText value="#{calculoITBIControlador.dadosCadastroITBI.valorVenal}"
+                                      styleClass="negrito">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <p:separator/>
+                        <p:separator/>
+                        <h:outputText value="Isento/Imune: "/>
+                        <p:selectBooleanCheckbox value="#{calculoITBIControlador.isento}">
+                            <p:ajax event="change"
+                                    update="groupLabelIsencao groupValueIsencao"
+                                    process="@this"/>
+                        </p:selectBooleanCheckbox>
+
+                        <h:panelGroup id="groupLabelIsencao">
+                            <fc:outputLabelObrigatorio value="Tipo de Isenção: "
+                                                       rendered="#{calculoITBIControlador.isento}"/>
+                        </h:panelGroup>
+
+                        <h:panelGroup id="groupValueIsencao">
+                            <p:autoComplete queryDelay="1000"
+                                            rendered="#{calculoITBIControlador.isento}"
+                                            value="#{calculoITBIControlador.tipoIsencaoITBI}"
+                                            var="tpIsencao" dropdown="true"
+                                            itemLabel="#{tpIsencao}" process="@this"
+                                            itemValue="#{tpIsencao.id}"
+                                            completeMethod="#{calculoITBIControlador.buscarTiposDeIsencaoITBI}"
+                                            converter="#{tipoIsencaoITBIControlador.converterGenerico}"
+                                            id="tipoIsencao" size="70"/>
+                        </h:panelGroup>
+                    </h:panelGrid>
+
+                    <p:fieldset legend="Transmitente(s)" id="fieldsetTransmitentes"
+                                styleClass="mtop20">
+
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio value="Transmitente: "/>
+                            <fc:novoAutocompletePessoa id="transmitente" mostraBotoes="false"
+                                                       value="#{calculoITBIControlador.transmitente.pessoa}"
+                                                       situacoesPossiveis="#{calculoITBIControlador.buscarSituacoesPesquisaPessoa()}"
+                                                       caminhoAtual="#{calculoITBIControlador.urlAtual}"
+                                                       completeMethod="#{calculoITBIControlador.adquirentesTransmissaoAnterior}"
+                                                       listenerNavegacao="#{calculoITBIControlador.colocarSelecionadoNaSecao()}"
+                                                       mostraSituacoes="false" size="65"/>
+                            <fc:outputLabelObrigatorio value="Percentual: "/>
+                            <p:inputText title="Digite o percentual do Transmitente."
+                                         onkeypress="mascara(this, porcentagem)"
+                                         converter="porcentagemConverter" size="20"
+                                         value="#{calculoITBIControlador.transmitente.percentual}"
+                                         id="percentualTransmitente">
+                                <p:ajax event="change" update="@this" process="@this"/>
+                            </p:inputText>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Adicionar"
+                                         rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                         onclick="aguarde.show()" oncomplete="aguarde.hide()" process="@this"
+                                         update="tabelaTransmitentes :formTransmissao:fieldsetTransmitentes :formTransmissao:fieldsetValores :formTransmissao:percentualBaseCalculo"
+                                         icon="ui-icon-plus" styleClass="operacao mtop10"
+                                         actionListener="#{calculoITBIControlador.adicionarTransmitente()}"
+                                         style="text-align: center"/>
+
+                        <p:commandButton value="Limpar lista"
+                                         rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                         onclick="aguarde.show()" oncomplete="aguarde.hide()" process="@this"
+                                         update="tabelaTransmitentes :formTransmissao:fieldsetTransmitentes :formTransmissao:fieldsetValores :formTransmissao:percentualBaseCalculo"
+                                         icon="ui-icon-clear" styleClass="operacao mtop10"
+                                         actionListener="#{calculoITBIControlador.limparListaTransmitentes()}"
+                                         style="text-align: center"/>
+
+                        <p:dataTable id="tabelaTransmitentes" styleClass="mtop10"
+                                     rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                     emptyMessage="Nenhum transmitente encontrado"
+                                     var="transmitente" paginator="true" rows="10"
+                                     value="#{calculoITBIControlador.calculoITBI.transmitentesCalculo}"
+                                     rowKey="#{transmitente.id}"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Transmitente(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowIndexVar="rowlx"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Ações" style="width: 10%; text-align: center">
+                                <h:panelGrid columns="2">
+                                    <p:commandButton icon="ui-icon-trash" styleClass="icone-30"
+                                                     title="Pressione este botão para remover o registro"
+                                                     process="@this" onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     actionListener="#{calculoITBIControlador.removerTransmitente(transmitente)}"
+                                                     update=":formTransmissao:fieldsetTransmitentes">
+                                    </p:commandButton>
+                                </h:panelGrid>
+                            </p:column>
+                            <p:column headerText="Transmitente" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transmitente.pessoa}"/>
+                            </p:column>
+                            <p:column headerText="Percentual" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transmitente.percentual}%">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:fieldset>
+
+                    <p:fieldset legend="Adquirente(s)" id="fieldsetAdquirentes"
+                                styleClass="mtop20">
+
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio value="Adquirente: "/>
+                            <fc:novoAutocompletePessoa id="adquirente" mostraBotoes="false"
+                                                       value="#{calculoITBIControlador.adquirente.adquirente}"
+                                                       situacoesPossiveis="#{calculoITBIControlador.buscarSituacoesPesquisaPessoa()}"
+                                                       caminhoAtual="#{calculoITBIControlador.urlAtual}"
+                                                       listenerNavegacao="#{calculoITBIControlador.colocarSelecionadoNaSecao()}"
+                                                       mostraSituacoes="false" size="65"/>
+
+                            <fc:outputLabelObrigatorio value="Percentual: "/>
+                            <p:inputText title="Digite o percentual do Adquirente."
+                                         onkeypress="mascara(this, porcentagem)"
+                                         converter="porcentagemConverter" size="20"
+                                         value="#{calculoITBIControlador.adquirente.percentual}"
+                                         id="percentual">
+                                <p:ajax event="change" update="@this" process="@this"/>
+                            </p:inputText>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Adicionar"
+                                         rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                         onclick="aguarde.show()" oncomplete="aguarde.hide()" process="@this"
+                                         update="tabelaAdquirentes :formTransmissao:fieldsetAdquirentes :formTransmissao:fieldsetValores :formTransmissao:percentualBaseCalculo"
+                                         icon="ui-icon-plus" styleClass="operacao mtop10"
+                                         actionListener="#{calculoITBIControlador.adicionarAdquirente()}"
+                                         style="text-align: center"/>
+
+                        <p:dataTable id="tabelaAdquirentes" styleClass="mtop10"
+                                     rendered="#{calculoITBIControlador.selecionado.cadastro ne null}"
+                                     emptyMessage="Nenhum adquirente encontrado"
+                                     var="adquirente" paginator="true" rows="10"
+                                     value="#{calculoITBIControlador.calculoITBI.adquirentesCalculo}"
+                                     rowKey="#{adquirente.id}"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Adquirente(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowIndexVar="rowlx"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Ações" style="width: 10%; text-align: center">
+                                <h:panelGrid columns="2">
+                                    <p:commandButton icon="ui-icon-pencil" styleClass="icone-30"
+                                                     title="Pressione este botão para editar o registro"
+                                                     actionListener="#{calculoITBIControlador.editarAdquirente(adquirente)}"
+                                                     process="@this" onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     update=":formTransmissao:fieldsetAdquirentes">
+                                    </p:commandButton>
+                                    <p:commandButton icon="ui-icon-trash" styleClass="icone-30"
+                                                     title="Pressione este botão para remover o registro"
+                                                     process="@this" onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     actionListener="#{calculoITBIControlador.removerAdquirente(adquirente)}"
+                                                     update=":formTransmissao:fieldsetAdquirentes">
+                                    </p:commandButton>
+                                </h:panelGrid>
+                            </p:column>
+                            <p:column headerText="Adquirente" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{adquirente.adquirente}"/>
+                            </p:column>
+                            <p:column headerText="Percentual" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{adquirente.percentual}%">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:fieldset>
+
+                    <p:fieldset legend="Valores" id="fieldsetValores"
+                                styleClass="mtop20">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Tipo da Base de Cálculo: "/>
+                            <h:selectOneMenu title="Selecione o Tipo da Base de Cálculo."
+                                             value="#{calculoITBIControlador.calculoITBI.tipoBaseCalculoITBI}"
+                                             disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"
+                                             id="tiposBaseCalculo">
+                                <f:selectItems value="#{calculoITBIControlador.buscarTiposBaseCalculo()}"/>
+                                <p:ajax event="change" process="tiposBaseCalculo"
+                                        update=":formTransmissao:fieldsetValores :formTransmissao:valorInformado"
+                                        listener="#{calculoITBIControlador.validarPorcentagemPermitidaAndAtualizarValores()}"/>
+                            </h:selectOneMenu>
+
+                            <h:outputText value="Percentual de Reajuste sobre o Valor Venal do Imóvel (%):"
+                                          rendered="#{calculoITBIControlador.canMostrarPercentualDeReajuste()}"/>
+                            <p:inputText id="inputPercentualReajuste"
+                                         value="#{calculoITBIControlador.calculoITBI.valorReajuste}"
+                                         disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"
+                                         rendered="#{calculoITBIControlador.canMostrarPercentualDeReajuste()}"
+                                         maxlength="5"
+                                         onkeydown="mascaraPonto(this);">
+                                <f:convertNumber integerOnly="true" type="number" pattern="#,##0.00"/>
+                                <p:ajax event="blur"
+                                        update=":formTransmissao:valorBaseCalculo :formTransmissao:totalBaseCalculo :formTransmissao:valorInformado"
+                                        process="@this"
+                                        listener="#{calculoITBIControlador.validarPorcentagemPermitidaAndAtualizarValores()}"/>
+                            </p:inputText>
+
+                            <h:outputText value="Valor da Base de Cálculo (R$):"/>
+                            <p:inputText value="#{calculoITBIControlador.calculoITBI.baseCalculo}"
+                                         id="valorBaseCalculo"
+                                         onkeydown="mascaraPonto(this)"
+                                         disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"
+                                         styleClass="negrito">
+                                <p:ajax event="keyup"
+                                        listener="#{calculoITBIControlador.mudouBaseCalculo()}"
+                                        update="totalBaseCalculo valorInformado" process="@this"/>
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </p:inputText>
+
+                            <h:outputText value="Percentual da Base de Cálculo (%):"/>
+                            <h:outputText id="percentualBaseCalculo" styleClass="negrito"
+                                          value="#{calculoITBIControlador.calculoITBI.percentual}"> >
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+
+                            <h:outputText value="Total da Base de Cálculo (R$):"/>
+                            <h:outputText value="#{calculoITBIControlador.calculoITBI.totalBaseCalculo}"
+                                          id="totalBaseCalculo"
+                                          styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </h:panelGrid>
+
+                        <p:fieldset legend="Negociações" id="fieldsetNegociacoes"
+                                    styleClass="mtop20">
+                            <h:panelGrid columns="2" id="gridNegociacoes">
+                                <fc:outputLabelObrigatorio value="Tipo de Negociação:"
+                                                           styleAsterisco="#{calculoITBIControlador.calculoITBI.tipoBaseCalculoITBI eq 'VALOR_VENAL_ACRESCIMOS' ? 'visibility: hidden' : ''}"/>
+                                <h:selectOneMenu id="tipoNegociacao"
+                                                 disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"
+                                                 value="#{calculoITBIControlador.itemCalculo.tipoNegociacao}"
+                                                 converter="#{tipoNegociacaoControlador.converterGenerico}">
+
+                                    <f:selectItems value="#{calculoITBIControlador.buscarTiposNegociacao()}"/>
+                                    <p:ajax update=":formTransmissao:aliquotaTipoNegociacao valorInformado"
+                                            event="change"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio value="Percentual:"
+                                                           rendered="#{calculoITBIControlador.isBaseCalculoValorVenal()}"
+                                                           styleAsterisco="#{calculoITBIControlador.calculoITBI.tipoBaseCalculoITBI eq 'VALOR_VENAL_ACRESCIMOS' ? 'visibility: hidden' : ''}"/>
+                                <p:inputText id="percentualTipoNegociacao"
+                                             disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"
+                                             value="#{calculoITBIControlador.itemCalculo.percentual}"
+                                             rendered="#{calculoITBIControlador.isBaseCalculoValorVenal()}"
+                                             converter="porcentagemConverter" onkeypress="mascara(this, porcentagem)">
+                                    <p:ajax update=":formTransmissao:fieldsetNegociacoes" process="@this" event="change"
+                                            listener="#{calculoITBIControlador.validarPercentualAndAtualizarValorTipoNegociacao()}"/>
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </p:inputText>
+
+                                <h:outputText value="Alíquota (%):"/>
+                                <h:outputText value="#{calculoITBIControlador.itemCalculo.tipoNegociacao.aliquota}"
+                                              disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"
+                                              id="aliquotaTipoNegociacao">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <fc:outputLabelObrigatorio value="Valor Informado (R$):"
+                                                           styleAsterisco="#{calculoITBIControlador.calculoITBI.tipoBaseCalculoITBI eq 'VALOR_VENAL_ACRESCIMOS' ? 'visibility: hidden' : ''}"/>
+                                <p:inputText value="#{calculoITBIControlador.itemCalculo.valorInformado}"
+                                             disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"
+                                             id="valorInformado" onkeydown="mascaraPonto(this)"
+                                             styleClass="alinhamentoDireita">
+                                    <p:ajax update=":formTransmissao:fieldsetNegociacoes" process="@this" event="change"
+                                            listener="#{calculoITBIControlador.validarValorAndAtualizarPorcentualTipoNegociacao()}"/>
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </p:inputText>
+                            </h:panelGrid>
+
+                            <p:commandButton value="Adicionar"
+                                             id="btAdicionarNegociacoes"
+                                             actionListener="#{calculoITBIControlador.adicionarItemCalculo()}"
+                                             update="percentual fieldsetNegociacoes tabelaNegociacoes percentualTipoNegociacao totalBaseCalculo valorBaseCalculo tiposBaseCalculo percentualBaseCalculo inputPercentualReajuste :formTransmissao:fieldsetAdquirentes :formTransmissao:fieldsetTransmitentes"
+                                             styleClass="operacao"
+                                             icon="ui-icon-plus"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             disabled="#{calculoITBIControlador.canAdicionarNegociacoes() and
+                                                 !calculoITBIControlador.calculoITBI.itensCalculo.contains(calculoITBIControlador.itemCalculo)}"/>
+
+                            <p:dataTable id="tabelaNegociacoes" styleClass="mtop10"
+                                         emptyMessage="Nenhuma Negociação encontrada"
+                                         var="itemCalc" paginator="true" rows="10"
+                                         value="#{calculoITBIControlador.calculoITBI.itensCalculo}"
+                                         rowKey="#{itemCalc.id}"
+                                         rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Negociações&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                         rowIndexVar="rowlx"
+                                         rowsPerPageTemplate="10,25,50,100">
+                                <p:column headerText="Ações">
+                                    <h:panelGrid columns="2">
+                                        <p:commandButton icon="ui-icon-pencil" styleClass="icone-30"
+                                                         title="Pressione este botão para editar o registro"
+                                                         actionListener="#{calculoITBIControlador.editarItemCalculo(itemCalc)}"
+                                                         process="@this" onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         update=":formTransmissao:fieldsetValores">
+                                        </p:commandButton>
+                                        <p:commandButton icon="ui-icon-trash" styleClass="icone-30"
+                                                         title="Pressione este botão para remover o registro"
+                                                         process="@this" onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         actionListener="#{calculoITBIControlador.removerItemCalculo(itemCalc)}"
+                                                         update=":formTransmissao:fieldsetValores">
+                                        </p:commandButton>
+                                    </h:panelGrid>
+                                </p:column>
+                                <p:column headerText="Tipo de Negociação">
+                                    <h:outputText value="#{itemCalc.tipoNegociacao.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Alíquota (%)">
+                                    <h:outputText value="#{itemCalc.tipoNegociacao.aliquota}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Percentual">
+                                    <h:outputText value="#{itemCalc.percentual}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor Informado (R$)">
+                                    <h:outputText value="#{itemCalc.valorInformado}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor Calculado (R$)">
+                                    <h:outputText value="#{itemCalc.valorCalculado}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:fieldset>
+                    </p:fieldset>
+                </p:scrollPanel>
+
+                <h:panelGrid columns="2" styleClass="mtop05">
+                    <p:commandButton value="Adicionar"
+                                     id="btAdicionarCalculo"
+                                     actionListener="#{calculoITBIControlador.adicionarCalculo()}"
+                                     update=":Formulario:tabelaCalculos" process="@this"
+                                     styleClass="operacao prioritario"
+                                     icon="ui-icon-plus"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"/>
+
+                    <p:commandButton value="Cancelar"
+                                     id="btCancelarCalculo"
+                                     actionListener="#{calculoITBIControlador.cancelarCalculo()}"
+                                     update="@this" process="@this"
+                                     styleClass="operacao mlef05"
+                                     icon="ui-icon-cancel"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide(); wTransmissao.hide()"/>
+                </h:panelGrid>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="confirmaComDebito" id="dlgConfirmaComDebito" width="600" modal="true">
+            <h:form id="formConfirmaComDebitos">
+                <div style="text-align: center;">
+                    <div class="alert centralizado">
+                        <strong>
+                            #{calculoITBIControlador.mensagemValidacao}
+                        </strong>
+                    </div>
+                    <br/>
+                    <p:commandButton icon="ui-icon-check"
+                                     styleClass="operacao prioritario"
+                                     value="Confirmar"
+                                     onclick="confirmaComDebito.hide();"/>
+
+                    <p:commandButton icon="ui-icon-close"
+                                     styleClass="operacao"
+                                     value="Cancelar"
+                                     update=":Formulario"
+                                     onclick="confirmaComDebito.hide(); limparDadosCalculoITBI()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="alertaComDebito" id="dlgAlertaComDebito" width="600" modal="true">
+            <h:form id="formAlertaComDebitos">
+                <div style="text-align: center;">
+                    <div class="alert alert-error centralizado">
+                        <strong>
+                            #{calculoITBIControlador.mensagemValidacao}
+                        </strong>
+                    </div>
+                    <br/>
+                    <p:commandButton icon="ui-icon-check"
+                                     styleClass="operacao prioritario"
+                                     value="OK"
+                                     update=":Formulario"
+                                     onclick="alertaComDebito.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Simulação de proprietários de ITBI" modal="true" dynamic="true" showEffect="fade"
+                  width="850"
+                  hideEffect="fade" position="center" style="max-height: 70%; max-width: 70%; overflow: auto"
+                  draggable="false" resizable="false" widgetVar="wSimulacaoVer"
+                  closable="false">
+
+            <h:form id="formSimulacaoVer">
+                <p:scrollPanel mode="native" style="border: none">
+
+                    <p:fieldset legend="Proprietário(s)" id="fieldsetProprietáriosSimulacao"
+                                styleClass="mtop20">
+
+                        <h:panelGrid id="gridPorcentagemTotal" columns="2">
+                            <h:outputText value="Porcentagem total:" styleClass="negrito"/>
+                            <h:outputText value="${calculoITBIControlador.porcentagemTotalAdquirentesSimulacao()}"
+                                          styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00" maxFractionDigits="15"/>
+                            </h:outputText>
+                        </h:panelGrid>
+
+                        <p:dataTable id="tabelaProprietariosSimulacao" styleClass="mtop10"
+                                     rendered="${calculoITBIControlador.selecionado.cadastro ne null}"
+                                     emptyMessage="Nenhum adquirente encontrado"
+                                     var="proprietario" paginator="true" rows="10"
+                                     value="${calculoITBIControlador.calculoITBI.proprietariosSimulacao}"
+                                     rowKey="${proprietario.id}"
+                                     rowStyleClass="${empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Adquirente(s)&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     rowIndexVar="rowlx"
+                                     rowsPerPageTemplate="10,25,50,100">
+                            <p:column headerText="Transmitente" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="${proprietario.pessoa}"/>
+                            </p:column>
+                            <p:column headerText="Percentual" styleClass="alinhamentoEsquerda">
+                                <p:inputText value="${proprietario.proporcao}"
+                                             onkeypress="mascara(this, porcentagem)"
+                                             converter="porcentagemConverter" size="20"
+                                             disabled="#{calculoITBIControlador.bloquearAlteracaoDePorcentagemDialog()}">
+                                    <p:ajax event="keyup" update=":formSimulacaoVer:gridPorcentagemTotal" process="@this"/>
+                                    <f:convertNumber pattern="#,##0.00" maxFractionDigits="15"/>
+                                </p:inputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:fieldset>
+                </p:scrollPanel>
+                <p:commandButton value="Salvar" update="@this" process="@this"
+                                 icon="ui-icon-circle-plus"
+                                 styleClass="operacao mtop10"
+                                 rendered="#{!calculoITBIControlador.bloquearAlteracaoDePorcentagemDialog()}"
+                                 actionListener="#{calculoITBIControlador.salvarDialogEdicaoPorcentagem()}"/>
+                <p:commandButton value="Fechar" update="@this" process="@this"
+                                 icon="ui-icon-circle-close"
+                                 rendered="#{calculoITBIControlador.bloquearAlteracaoDePorcentagemDialog()}"
+                                 styleClass="operacao mtop10"
+                                 onclick="wSimulacaoVer.hide()"/>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

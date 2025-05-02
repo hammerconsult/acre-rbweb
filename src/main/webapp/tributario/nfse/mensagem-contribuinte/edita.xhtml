@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fct="http://java.sun.com/jsf/composite/components/tributario"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script language="javascript" type="text/javascript"
+                src="#{facesContext.externalContext.requestContextPath}/resources/js/tinymce/tinymce.min.js"></script>
+
+        <script type="text/javascript">
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            function reloadTinyMce() {
+                tinymce.activeEditor.remove("#mytextarea");
+                $("#mytextarea").val($("#Formulario\\:tabView\\:ihConteudo").val());
+                initTinyMce();
+            }
+
+            function initTinyMce() {
+                tinymce.init({
+                    selector: '#mytextarea',
+                    plugins: 'code print preview importcss fullpage searchreplace autolink directionality visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern help',
+                    height: 600,
+                    content_css: "#{facesContext.externalContext.requestContextPath}/resources/css/edit_area.css",
+                    importcss_append: true,
+                    automatic_uploads: true,
+                    file_picker_types: 'image',
+                    file_picker_callback: function (cb, value, meta) {
+                        var input = document.createElement('input');
+                        input.setAttribute('type', 'file');
+                        input.setAttribute('accept', 'image/*');
+                        input.onchange = function () {
+                            var file = this.files[0];
+
+                            var reader = new FileReader();
+                            reader.onload = function () {
+                                var id = 'blobid' + (new Date()).getTime();
+                                var blobCache = tinymce.activeEditor.editorUpload.blobCache;
+                                var base64 = reader.result.split(',')[1];
+                                var blobInfo = blobCache.create(id, file, base64);
+                                blobCache.add(blobInfo);
+
+                                cb(blobInfo.blobUri(), {title: file.name});
+                            };
+                            reader.readAsDataURL(file);
+                        };
+
+                        input.click();
+                    }
+                });
+            }
+
+            initTinyMce();
+
+            function transferirConteudo() {
+                var conteudo = tinyMCE.get('mytextarea').getContent();
+                console.log(conteudo);
+                document.getElementById('Formulario:tabView:ihConteudo').value = conteudo;
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:poll widgetVar="pollEnvio"
+                    interval="1"
+                    autoStart="false"
+                    listener="#{mensagemContribuinteControlador.acompanharEnvio()}"
+                    update=":FormularioAcompanhamento"/>
+
+            <fc:cabecalhoPretty id="cpCabecalhoPretty" origem="#{mensagemContribuinteControlador.caminhoPadrao}/listar/"
+                                controlador="#{mensagemContribuinteControlador}"/>
+
+            <p:tabView id="tabView">
+                <p:tab id="tabDadosGerais" title="Dados Gerais">
+                    <h:panelGrid columns="2">
+                        <h:outputLabel value="Enviada por: "/>
+                        <h:outputText
+                            value="#{mensagemContribuinteControlador.selecionado.enviadaPor.toString()}"
+                            styleClass="negrito"/>
+
+                        <h:outputLabel value="Data do Envio: "/>
+                        <h:outputText
+                            value="#{mensagemContribuinteControlador.selecionado.emitidaEm}"
+                            styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy HH:mm"/>
+                        </h:outputText>
+
+                        <fc:outputLabelObrigatorio value="Tipo de Mensagem: "/>
+                        <p:selectOneMenu
+                            value="#{mensagemContribuinteControlador.selecionado.tipoMensagemContribuinte}">
+                            <p:ajax event="valueChange" process="@this" update=":Formulario:tabView:opDocumentos"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{mensagemContribuinteControlador.tratarTipoMensagem()}"/>
+                            <f:selectItems value="#{mensagemContribuinteControlador.tiposMensagem}"/>
+                        </p:selectOneMenu>
+
+                        <fc:outputLabelObrigatorio value="Título: "/>
+                        <p:inputText value="#{mensagemContribuinteControlador.selecionado.titulo}"
+                                     size="70" maxlength="70"/>
+                    </h:panelGrid>
+                </p:tab>
+                <p:tab id="tabMensagem" title="Mensagem">
+                    <h:panelGrid style="width: 100%">
+                        <fc:outputLabelObrigatorio value="Conteúdo"/>
+                        <div>
+                            <h:inputHidden id="ihConteudo"
+                                           value="#{mensagemContribuinteControlador.selecionado.conteudo}"/>
+
+                            <textarea id="mytextarea"
+                                      name="modelo"
+                                      style="width: 100%; height: 400px; position: top; padding: 0px">
+                                    </textarea>
+                        </div>
+                    </h:panelGrid>
+                </p:tab>
+                <p:tab id="tabDocumentos" title="Documento(s)">
+                    <p:outputPanel id="opDocumentos">
+                        <h:outputLabel
+                            rendered="#{mensagemContribuinteControlador.selecionado.tipoMensagemContribuinte ne 'QUESTIONAMENTO'}"
+                            value="Somente é possível anexar documentos para mensagens do tipo questionamento."/>
+
+                        <h:panelGrid columns="2"
+                                     rendered="#{mensagemContribuinteControlador.selecionado.tipoMensagemContribuinte eq 'QUESTIONAMENTO'}">
+                            <fc:outputLabelObrigatorio value="Descrição do Documento: "/>
+                            <p:inputText value="#{mensagemContribuinteControlador.documento.descricaoDocumento}"
+                                         size="100"
+                                         maxlength="255"/>
+
+                            <h:outputLabel value="Obrigatório? "/>
+                            <p:selectBooleanCheckbox value="#{mensagemContribuinteControlador.documento.obrigatorio}"/>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Adicionar"
+                                         title="Clique para adicionar o documento."
+                                         styleClass="mtop05 mbot05"
+                                         icon="ui-icon-circle-plus"
+                                         process=":Formulario:tabView:opDocumentos"
+                                         update=":Formulario:tabView:opDocumentos"
+                                         rendered="#{mensagemContribuinteControlador.selecionado.tipoMensagemContribuinte eq 'QUESTIONAMENTO'}"
+                                         actionListener="#{mensagemContribuinteControlador.adicionarDocumento()}"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"/>
+
+                        <p:dataTable value="#{mensagemContribuinteControlador.selecionado.documentos}"
+                                     rendered="#{mensagemContribuinteControlador.selecionado.tipoMensagemContribuinte eq 'QUESTIONAMENTO'}"
+                                     var="documento"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'vinteAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+                            <p:column styleClass="centralizado width100">
+                                <p:commandButton
+                                    icon="ui-icon-trash"
+                                    onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                    process=":Formulario:tabView:opDocumentos"
+                                    update=":Formulario:tabView:opDocumentos"
+                                    oncomplete="aguarde.hide()"
+                                    actionListener="#{mensagemContribuinteControlador.removerDocumento(documento)}"/>
+                            </p:column>
+                            <p:column headerText="Descrição do Documento" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{documento.descricaoDocumento}"/>
+                            </p:column>
+                            <p:column headerText="Obrigatório?" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{documento.obrigatorio ? 'Sim' : 'Não'}"/>
+                                <h:outputLabel value="#{cadastro.pessoa.nome}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+                <p:tab id="tabContribuintes" title="Contribuinte(s)">
+                    <p:outputPanel id="opContribuintes">
+                        <h:panelGrid>
+                            <h:outputLabel value="Para quais contribuintes?"/>
+                            <p:selectOneRadio
+                                value="#{mensagemContribuinteControlador.selecionado.enviarTodosUsuarios}">
+                                <f:selectItem itemValue="#{false}" itemLabel="Selecionar contribuintes"/>
+                                <f:selectItem itemValue="#{true}" itemLabel="Todos"/>
+                                <p:ajax event="valueChange"
+                                        onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                        process="@this" update=":Formulario:tabView:opContribuintes"
+                                        listener="#{mensagemContribuinteControlador.mudouEnviarTodosUsuarios()}"/>
+                            </p:selectOneRadio>
+                        </h:panelGrid>
+
+                        <p:outputPanel
+                            rendered="#{not mensagemContribuinteControlador.selecionado.enviarTodosUsuarios}">
+                            <h:panelGrid columns="2">
+                                <h:outputLabel value="Tipo de ISSQN:"/>
+                                <p:selectOneMenu
+                                    value="#{mensagemContribuinteControlador.filtroMensagemContribuinte.tipoIssqn}">
+                                    <f:selectItems value="#{mensagemContribuinteControlador.tiposIssqn}"/>
+                                </p:selectOneMenu>
+
+                                <h:outputLabel value="Inscrição Cadastral:"/>
+                                <fct:intervaloInscricaoCadastral
+                                    inscricaoCadastralInicial="#{mensagemContribuinteControlador.filtroMensagemContribuinte.inscricaoInicial}"
+                                    inscricaoCadastralFinal="#{mensagemContribuinteControlador.filtroMensagemContribuinte.inscricaoFinal}"
+                                    tipoCadastroTributario="ECONOMICO"/>
+
+                                <h:outputLabel value="Envia RPS?"/>
+                                <p:selectOneMenu
+                                    value="#{mensagemContribuinteControlador.filtroMensagemContribuinte.enviaRPS}"
+                                    style="width: 100px;">
+                                    <f:selectItem itemLabel="Todos" itemValue="#{null}"/>
+                                    <f:selectItem itemLabel="Sim" itemValue="#{true}"/>
+                                    <f:selectItem itemLabel="Não" itemValue="#{false}"/>
+                                </p:selectOneMenu>
+                            </h:panelGrid>
+
+                            <p:fieldset legend="Receberam mensagem">
+                                <h:panelGrid columns="2">
+                                    <h:outputLabel value="Enviada por:"/>
+                                    <fc:autoComplete converter="#{usuarioSistemaControlador.converterGenerico}"
+                                                     completeMethod="#{mensagemContribuinteControlador.completarEnviadaPor}"
+                                                     value="#{mensagemContribuinteControlador.filtroMensagemContribuinte.enviadaPor}"
+                                                     id="acEnviadaPor"/>
+                                    <h:outputLabel value="Data de Envio Inicial:"/>
+                                    <fc:calendar
+                                        value="#{mensagemContribuinteControlador.filtroMensagemContribuinte.dataEnvioInicial}"/>
+                                    <h:outputLabel value="Data de Envio Final:"/>
+                                    <fc:calendar
+                                        value="#{mensagemContribuinteControlador.filtroMensagemContribuinte.dataEnvioFinal}"/>
+                                </h:panelGrid>
+                            </p:fieldset>
+
+                            <p:commandButton value="Pesquisar"
+                                             styleClass="operacao mbot10 mtop05"
+                                             icon="ui-icon-search"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             process=":Formulario:tabView:opContribuintes"
+                                             update=":Formulario:tabView:opContribuintes"
+                                             actionListener="#{mensagemContribuinteControlador.pesquisarCadastros()}"/>
+
+                            <p:commandButton value="Limpar Campos"
+                                             styleClass="operacao mbot10 mtop05"
+                                             icon="ui-icon-clear"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             process=":Formulario:tabView:opContribuintes"
+                                             update=":Formulario:tabView:opContribuintes"
+                                             actionListener="#{mensagemContribuinteControlador.limparCampos()}"/>
+
+                            <p:dataTable id="dtCadastros"
+                                         value="#{mensagemContribuinteControlador.cadastros.registros}"
+                                         var="cadastro"
+                                         emptyMessage="Não foram localizados registros para serem apresentados.">
+                                <f:facet name="header">
+                                    <fc:paginacaoRegistros
+                                        listaPaginada="#{mensagemContribuinteControlador.cadastros}"/>
+                                </f:facet>
+                                <p:column style="text-align: center;">
+                                    <f:facet name="header">
+                                        <fc:selecaoMultiplosRegistros
+                                            listaPaginada="#{mensagemContribuinteControlador.cadastros}"
+                                            registro="#{cadastro}" update=":Formulario:tabView:dtCadastros"
+                                            todosRegistros="#{true}"/>
+                                    </f:facet>
+                                    <fc:selecaoMultiplosRegistros
+                                        listaPaginada="#{mensagemContribuinteControlador.cadastros}"
+                                        registro="#{cadastro}" update=":Formulario:tabView:dtCadastros"/>
+                                </p:column>
+                                <p:column headerText="Inscrição Cadastral" styleClass="alinhamentoEsquerda">
+                                    <h:outputLabel value="#{cadastro.inscricaoCadastral}"/>
+                                </p:column>
+                                <p:column headerText="CPF/CNPJ" styleClass="alinhamentoEsquerda">
+                                    <h:outputLabel value="#{cadastro.pessoa.cpf_Cnpj}"/>
+                                </p:column>
+                                <p:column headerText="Nome/Razão Social" styleClass="alinhamentoEsquerda">
+                                    <h:outputLabel value="#{cadastro.pessoa.nome}"/>
+                                </p:column>
+                                <f:facet name="footer">
+                                    <fc:paginacaoRegistros
+                                        listaPaginada="#{mensagemContribuinteControlador.cadastros}"/>
+                                </f:facet>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:outputPanel>
+                </p:tab>
+                <p:tab id="tabAnexos" title="Anexo(s)">
+                    <fc:filesUploadWP selecionado="#{mensagemContribuinteControlador.selecionado}"/>
+                </p:tab>
+            </p:tabView>
+
+            <p:commandButton value="Enviar"
+                             id="cbSalvar"
+                             styleClass="mtop10 mrig05 prioritario"
+                             style="height: 30px;"
+                             icon="ui-icon-disk"
+                             process="@form"
+                             update="@form :formularioConfirmacao"
+                             title="Clique para salvar o registro"
+                             actionListener="#{mensagemContribuinteControlador.preEnviarMensagens()}"
+                             onclick="aguarde.show(); transferirConteudo();"
+                             oncomplete="aguarde.hide(); reloadTinyMce();"/>
+
+            <p:commandButton value="Cancelar"
+                             id="cbCancelar"
+                             style="height: 30px;"
+                             styleClass="mtop10"
+                             icon="ui-icon-cancel"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar e retornar a página anterior"
+                             actionListener="#{mensagemContribuinteControlador.cancelar()}"
+                             immediate="true"/>
+        </h:form>
+
+        <p:dialog modal="true"
+                  widgetVar="dialogConfirmacao"
+                  style="position: fixed !important; z-index: 99999999 !important;"
+                  position="center"
+                  showHeader="true"
+                  header="Atenção!"
+                  draggable="false"
+                  closable="false"
+                  resizable="false">
+            <h:form id="formularioConfirmacao">
+                <div class="centralizado">
+                    <div class="alert alert-warning centralizado">
+                        Foram encontrados
+                        <strong>#{mensagemContribuinteControlador.countCadastrosEconomico}</strong> contribuintes que irão
+                        receber a mensagem, tem certeza que deseja enviar?
+                    </div>
+                    <p:commandButton value="Sim, enviar"
+                                     styleClass="mtop10 mrig05 prioritario"
+                                     style="height: 30px;"
+                                     icon="ui-icon-disk"
+                                     title="Clique para salvar o registro"
+                                     actionListener="#{mensagemContribuinteControlador.enviarMensagens()}"
+                                     onclick="dialogConfirmacao.hide()"/>
+
+                    <p:commandButton value="Não, cancelar"
+                                     style="height: 30px;"
+                                     styleClass="mtop10"
+                                     icon="ui-icon-cancel"
+                                     onclick="dialogConfirmacao.hide()"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <div id="dialogAcompanhamento" class="modal hide fade">
+            <h:form id="FormularioAcompanhamento">
+                <div class="modal-body mtop20">
+                    <div style="text-align: center">
+                        <div class="negrito" style="font-size: 16px;">
+                            #{mensagemContribuinteControlador.assistenteBarraProgresso.descricaoProcesso}
+                        </div>
+
+                        <div class="mtop20"
+                             style="display: #{mensagemContribuinteControlador.assistenteBarraProgresso.total > 0 ? 'block' : 'none'}">
+                            <div class="progress progress-bar active" id="barraProgresso">
+                                <div class="bar"
+                                     style="width: #{mensagemContribuinteControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;">
+                                </div>
+                            </div>
+
+                            <h:outputText
+                                value="#{mensagemContribuinteControlador.assistenteBarraProgresso.porcentagemDoCalculo}"
+                                styleClass="negrito">
+                                <f:convertNumber type="number" maxFractionDigits="2"/>
+                            </h:outputText>
+                            <h:outputText value="%"/>
+
+                            <div class="negrito mtop05">
+                                <h:outputText
+                                    styleClass="mlef05"
+                                    value="#{mensagemContribuinteControlador.assistenteBarraProgresso.calculados}"/>
+                                de
+                                <h:outputText
+                                    styleClass="mrig05"
+                                    value="#{mensagemContribuinteControlador.assistenteBarraProgresso.total}"/>
+                            </div>
+
+                            <br/>
+                            <h:outputText
+                                styleClass="cinzaEscuro"
+                                value="Tempo Decorrido: #{mensagemContribuinteControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+
+                            <br/>
+                            <h:outputText
+                                styleClass="cinzaEscuro"
+                                value="Tempo Estimado: #{mensagemContribuinteControlador.assistenteBarraProgresso.tempoEstimado}"/>
+
+                        </div>
+                        <div
+                            style="display: #{mensagemContribuinteControlador.assistenteBarraProgresso.total == 0 ? 'block' : 'none'}">
+                            <h:graphicImage value="/img/ajaxloading.gif"/>
+                        </div>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,192 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="controlador" required="true"/>
+    <cc:attribute name="mostrarDataPrescricao" default="false"/>
+    <cc:attribute name="mostrarCheckBoxDAJ" required="false" default="true"/>
+</cc:interface>
+
+<cc:implementation>
+    <p:dialog draggable="false"
+              id="dialog" width="1100" height="550"
+              dynamic="true"
+              modal="true"
+              onShow="redimensionarLadosDialog(this.id);redimensionarAlturaDialog(this.id)"
+              position="center"
+              style="position: fixed !important;"
+              widgetVar="dialogo" header="Consultar Débitos" resizable="true" closable="false">
+        <h:form id="FormDialog">
+            <p:panel header="Filtros" id="panelDialog">
+                <h:panelGrid columns="2" id="gridFiltros">
+                    <h:outputText value="Descrição da Dívida: "/>
+                    <p:autoComplete queryDelay="1000" value="#{cc.attrs.controlador.filtroDivida}"
+                                    completeMethod="#{cc.attrs.controlador.completarDividas}"
+                                    converter="#{dividaControlador.converterGenerico}"
+                                    var="divida"
+                                    maxResults="10"
+                                    dropdown="true"
+                                    itemLabel="#{divida.descricao}"
+                                    itemValue="#{divida.id}"
+                                    size="60">
+                        <p:ajax event="itemSelect" update="gridFiltros"/>
+                    </p:autoComplete>
+                    <h:outputText value="Situação da Dívida: "/>
+                    <h:panelGrid columns="9">
+                        <h:outputText value="Do Exercício: "/>
+                        <p:selectBooleanCheckbox value="#{cc.attrs.controlador.dividaDoExercicio}">
+                            <p:ajax update="gridFiltros"/>
+                        </p:selectBooleanCheckbox>
+                        <h:outputText value="Dívida Ativa: "/>
+                        <p:selectBooleanCheckbox value="#{cc.attrs.controlador.dividaAtiva}">
+                            <p:ajax update="gridFiltros"/>
+                        </p:selectBooleanCheckbox>
+                        <h:outputText value="Dívida Ativa Ajuizada: " rendered="#{cc.attrs.mostrarCheckBoxDAJ}"/>
+                        <p:selectBooleanCheckbox value="#{cc.attrs.controlador.dividaAtivaAzuijada}" rendered="#{cc.attrs.mostrarCheckBoxDAJ}">
+                            <p:ajax update="gridFiltros"/>
+                        </p:selectBooleanCheckbox>
+                    </h:panelGrid>
+                    <h:outputText value="Exercício: "/>
+                    <h:panelGrid columns="6">
+                        <fc:exercicioInicialFinal
+                            exercicioInicial="#{cc.attrs.controlador.filtroExercicioInicio}"
+                            exercicioFinal="#{cc.attrs.controlador.filtroExercicioFinal}"/>
+                    </h:panelGrid>
+
+                    <h:outputText value="Data de Vencimento Inicial:"/>
+                    <p:calendar value="#{cc.attrs.controlador.vencimentoInicial}" pattern="dd/MM/yyyy"
+                                onkeyup="mascara(this, Data)" maxlength="10" showOn="button" size="12">
+                        <p:ajax event="blur" process="@this"/>
+                    </p:calendar>
+                    <h:outputText value="Data de Vencimento Final:"/>
+                    <p:calendar value="#{cc.attrs.controlador.vencimentoFinal}" pattern="dd/MM/yyyy"
+                                onkeyup="mascara(this, Data)" maxlength="10" showOn="button" size="12">
+                        <p:ajax event="blur" process="@this"/>
+                    </p:calendar>
+
+                </h:panelGrid>
+                <p:separator styleClass="mtop10 mbot10"/>
+                <h:panelGrid columns="4">
+                    <p:commandButton
+                        onstart="statusDialog.show()"
+                        onsuccess="statusDialog.hide()"
+                        value="Pesquisar" icon="ui-icon-search" styleClass="operacao prioritario"
+                        actionListener="#{cc.attrs.controlador.pesquisar()}"
+                        update="@form"/>
+
+                    <p:commandButton value="Limpar Campos/Tabela" icon="ui-icon-document"
+                                     styleClass="operacao" onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                     actionListener="#{cc.attrs.controlador.inicializarFiltros()}"
+                                     update="@form"/>
+
+                    <p:commandButton styleClass="icone_verde operacao"
+                                     onstart="statusDialog.show()"
+                                     onsuccess="statusDialog.hide()"
+                                     value="Adicionar"
+                                     title="Clique para adicionar as parcelas selecionadas no processo de débitos"
+                                     icon="ui-icon-circle-plus"
+                                     actionListener="#{cc.attrs.controlador.adicionarParcelas}"
+                                     update="@form"/>
+
+                    <p:commandButton value="Fechar" icon="ui-icon-closethick" styleClass="operacao"
+                                     onclick="dialogo.hide(); aguarde.show()" oncomplete="aguarde.hide()"
+                                     process="@this"
+                                     update=":Formulario:tabView:tabelas"/>
+                </h:panelGrid>
+            </p:panel>
+            <p:dataTable id="tabelaConsultas" var="parcela"
+                         rowKey="#{parcela.idParcela}"
+                         widgetVar="tabela"
+                         selection="#{cc.attrs.controlador.resultados}"
+                         styleClass="mtop10"
+                         emptyMessage="Nenhuma parcela encontrada"
+                         paginator="true"
+                         rows="10"
+                         paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Parcelas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                         currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                         rowsPerPageTemplate="10,50,100,450"
+                         value="#{cc.attrs.controlador.resultadoConsulta}">
+                <p:column selectionMode="multiple" style="width: 5%; text-align: center;"/>
+                <p:column headerText="Cadastro" rendered="#{cc.attrs.controlador.tipoCadastroTributario.isPessoa()}">
+                    <h:outputText value="#{parcela.cadastro}"/>
+                </p:column>
+                <p:column headerText="Referência">
+                    <h:outputText value="#{parcela.referencia}"/>
+                </p:column>
+                <p:column headerText="Dívida">
+                    <h:outputText value="#{parcela.divida}"/>
+                </p:column>
+                <p:column headerText="Exercício">
+                    <h:outputText value="#{parcela.exercicio}"/>
+                </p:column>
+                <p:column headerText="Tipo">
+                    <h:outputText value="#{parcela.siglaTipoDeDebito}"/>
+                </p:column>
+                <p:column headerText="Parcela">
+                    <h:outputText value="#{parcela.parcela}"/>
+                </p:column>
+                <p:column headerText="Vencimento">
+                    <h:outputText value="#{parcela.vencimento}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Prescrição" style="text-align: center"
+                          rendered="#{cc.attrs.mostrarDataPrescricao}">
+                    <h:outputText value="#{parcela.prescricao}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Imposto">
+                    <h:outputText value="#{parcela.valorImposto}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Taxa">
+                    <h:outputText value="#{parcela.valorTaxa}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Desconto">
+                    <h:outputText value="#{parcela.valorDesconto}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Juros">
+                    <h:outputText value="#{parcela.valorJuros}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Multa">
+                    <h:outputText value="#{parcela.valorMulta}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Correção">
+                    <h:outputText value="#{parcela.valorCorrecao}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Honorários">
+                    <h:outputText value="#{parcela.valorHonorarios}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Total">
+                    <h:outputText value="#{parcela.valorTotal}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Situação">
+                    <h:outputText value="#{parcela.situacaoDescricaoEnum}"/>
+                </p:column>
+            </p:dataTable>
+        </h:form>
+    </p:dialog>
+</cc:implementation>
+</html>

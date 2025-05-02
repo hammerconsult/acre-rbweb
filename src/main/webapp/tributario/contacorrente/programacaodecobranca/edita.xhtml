@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core" xmlns:faces="http://www.springframework.org/tags/form">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+            var timerPesquisar;
+            function acompanharPesquisar() {
+                timerPesquisar = setInterval(function () {
+                    rcAtualizaCompFutures();
+                }, 1000);
+            }
+            function finalizarPesquisar() {
+                clearInterval(timerPesquisar);
+                rcFinalizaFuturePesquisar();
+            }
+
+        </script>
+        <h:form id="Formulario">
+
+            <p:remoteCommand
+                update=":Formulario"
+                actionListener="#{programacaoCobrancaControlador.consultarFuturePesquisar}"
+                name="rcAtualizaCompFutures"/>
+
+            <p:remoteCommand
+                update=":Formulario"
+                actionListener="#{programacaoCobrancaControlador.finalizarFuturePesquisar}"
+                name="rcFinalizaFuturePesquisar"/>
+
+        <fc:cabecalhoPretty controlador="#{programacaoCobrancaControlador}" origem="#{programacaoCobrancaControlador.caminhoPadrao}listar/"/>
+            <p:panel header="Programação de Cobrança" id="painelPrincipal">
+                        <p:fieldset styleClass="mbot05 mtop05">
+                            <h:panelGrid columns="2">
+
+                                <h:outputText value="Número: "/>
+                                <h:outputText value="#{programacaoCobrancaControlador.selecionado.numero != null ? programacaoCobrancaControlador.selecionado.numero : 'Código gerado automaticamente ao salvar'}"
+                                              styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Tipo de Cadastro: "/>
+                                <h:selectOneMenu
+                                    value="#{programacaoCobrancaControlador.selecionado.tipoCadastro}"
+                                    styleClass="mtop05">
+                                    <f:selectItems value="#{programacaoCobrancaControlador.tiposDeCadastroTributario}"/>
+                                    <p:ajax update="@form" event="change"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{programacaoCobrancaControlador.limparCadastro}"
+                                            process="@this"
+                                    />
+                                </h:selectOneMenu>
+                                <h:outputText value="Protocolo: "/>
+                                <fc:protocolo ano="#{programacaoCobrancaControlador.selecionado.anoProtocolo}"
+                                              numero="#{programacaoCobrancaControlador.selecionado.numeroProtocolo}"
+                                              controlador="#{programacaoCobrancaControlador}" mostrarLabel="false"/>
+                                <h:outputText value="Data da Criação: "/>
+                                <h:outputText
+                                    value="#{programacaoCobrancaControlador.selecionado.dataProgramacaoCobranca}"
+                                    styleClass="negrito">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value="Usuário: "/>
+                                <h:outputLabel value="#{programacaoCobrancaControlador.selecionado.usuarioSistema.nome}"
+                                               styleClass="negrito"/>
+                                <h:outputText value="Descrição: "/>
+                                <p:inputTextarea maxlength="120"
+                                                 value="#{programacaoCobrancaControlador.selecionado.descricao}"
+                                                 rows="2" cols="70" id="descricao"
+                                                 scrollHeight="3">
+                                    <p:ajax process="@this" update="descricao"/>
+                                </p:inputTextarea>
+                                <h:outputText value="Situação: "/>
+                                <h:outputText styleClass="negrito"
+                                              value="#{programacaoCobrancaControlador.selecionado.ultimaSituacao.descricao}"/>
+                            </h:panelGrid>
+                        </p:fieldset>
+
+                <ui:include src="painelimobiliario.xhtml"/>
+                <ui:include src="painelpessoa.xhtml"/>
+                <ui:include src="paineleconomico.xhtml"/>
+
+            </p:panel>
+
+            <p:commandButton value="Pesquisar Débitos"
+                             icon="ui-icon-search"
+                             actionListener="#{programacaoCobrancaControlador.pesquisar()}"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="operacao prioritario mtop05"
+                             update=":Formulario:tabelaConsultas"
+                             process=":Formulario:painelPrincipal @this"/>
+
+            <div style="background: wheat; width: 100%;">
+                <p:dataTable id="tabelaConsultas"
+                             var="parcela"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'} #{parcela.situacaoDescricaoEnum eq 'Em Aberto'? parcela.vencimento lt programacaoCobrancaControlador.dataOperacao? 'vermelho': 'verde': ''}"
+                             value="#{programacaoCobrancaControlador.resultadosConsulta}"
+                             paginator="true"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             rows="100"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Parcelas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="100,250,500,1000">
+                    <p:column style="width: 5%; text-align: center;">
+                        <f:facet name="header">
+                            <p:commandButton icon="ui-icon-check"
+                                             styleClass="vinteLarguraVinteAltura"
+                                             process="@this"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             update="tabelaConsultas"
+                                             rendered="#{!programacaoCobrancaControlador.mostrarBotaoSelecionarTodos()}"
+                                             actionListener="#{programacaoCobrancaControlador.desmarcarTodos()}"/>
+                            <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                             value=""
+                                             process="@this"
+                                             onstart="aguarde.show();"
+                                             oncomplete="aguarde.hide();"
+                                             update="tabelaConsultas"
+                                             rendered="#{programacaoCobrancaControlador.mostrarBotaoSelecionarTodos()}"
+                                             actionListener="#{programacaoCobrancaControlador.selecionarTodos()}"/>
+                        </f:facet>
+                        <p:commandButton icon="ui-icon-check"
+                                         styleClass="vinteLarguraVinteAltura"
+                                         update="tabelaConsultas"
+                                         process="@this"
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         rendered="#{!programacaoCobrancaControlador.mostrarBotaoSelecionarObjeto(parcela)}"
+                                         actionListener="#{programacaoCobrancaControlador.desmarcarObjeto(parcela)}"/>
+                        <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                         value=""
+                                         update="tabelaConsultas"
+                                         process="@this"
+                                         onstart="aguarde.show();"
+                                         oncomplete="aguarde.hide();"
+                                         rendered="#{programacaoCobrancaControlador.mostrarBotaoSelecionarObjeto(parcela)}"
+                                         actionListener="#{programacaoCobrancaControlador.selecionarObjeto(parcela)}"/>
+                    </p:column>
+                    <p:column headerText="Cadastro" style="width: 8%;">
+                        <h:outputText value="#{parcela.cadastro}"/>
+                    </p:column>
+                    <p:column headerText="Dívida" style="width: 12%;">
+                        <h:outputText value="#{parcela.divida}"/>
+                    </p:column>
+                    <p:column headerText="Exercício" style="width: 5%; text-align: center;"
+                              sortBy="#{parcela.exercicio}" filterMatchMode="contains">
+                        <h:outputText value="#{parcela.exercicio}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Débito" style="width: 5%;">
+                        <h:outputText value="#{parcela.tipoDeDebito}"/>
+                    </p:column>
+                    <p:column headerText="Parcela" style="width: 2%; text-align: center;"
+                              sortBy="#{parcela.parcela}" filterMatchMode="contains">
+                        <h:outputText value="#{parcela.parcela}"/>
+                    </p:column>
+                    <p:column headerText="SD" style="width: 2%; text-align: center;">
+                        <h:outputText value="#{parcela.sd}"/>
+                    </p:column>
+                    <p:column headerText="Vencimento" style="width: 5%; text-align: center;"
+                              sortBy="#{parcela.vencimentoToString}" filterMatchMode="contains">
+                        <h:outputText value="#{parcela.vencimentoToString}"/>
+                    </p:column>
+                    <p:column headerText="Imposto" style="text-align: right">
+                        <h:outputText value="#{parcela.valorImposto}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalImposto}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Taxa" style="text-align: right">
+                        <h:outputText value="#{parcela.valorTaxa}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalTaxa}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Desconto" style="text-align: right">
+                        <h:outputText value="#{parcela.valorDesconto}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalDesconto}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Juros" style="text-align: right">
+                        <h:outputText value="#{parcela.valorJuros}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalJuros}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Multa" style="text-align: right">
+                        <h:outputText value="#{parcela.valorMulta}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalMulta}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Correção" style="text-align: right">
+                        <h:outputText value="#{parcela.valorCorrecao}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalCorrecao}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Honorários" style="text-align: right">
+                        <h:outputText value="#{parcela.valorHonorarios}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalHonorarios}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Total" style="text-align: right">
+                        <h:outputText value="#{parcela.valorTotal}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <h:outputText value="#{programacaoCobrancaControlador.totalTabelaParcelas.totalGeral}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Situação">
+                        <h:outputText value="#{parcela.situacaoDescricaoEnum}" title="cod. ${parcela.idParcela}"/>
+                    </p:column>
+                </p:dataTable>
+            </div>
+
+            <p:commandButton value="Salvar" icon="ui-icon-disk" styleClass="operacao prioritario mtop10"
+                             actionListener="#{programacaoCobrancaControlador.salvar()}"
+                             disabled="#{programacaoCobrancaControlador.selecionado.ultimaSituacao.name() ne 'SIMULACAO'}"
+                             update="@form"
+                             process="@form"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+            />
+            <p:commandButton value="Cancelar" icon="ui-icon-cancel" styleClass="operacao mlef05 mtop10"
+                             actionListener="#{programacaoCobrancaControlador.redireciona()}"
+                             update="@this"
+                             process="@this"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+            />
+
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

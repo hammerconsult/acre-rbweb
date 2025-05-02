@@ -1,0 +1,1 @@
+create table MAILTAN (id number(14,0))

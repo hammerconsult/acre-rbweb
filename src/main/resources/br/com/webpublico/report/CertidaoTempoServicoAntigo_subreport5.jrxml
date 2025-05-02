@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="CertidaoTempoServicoAntigo_subreport5" pageWidth="555" pageHeight="802" whenNoDataType="NoDataSection" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.zoom" value="1.610510000000001"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="MATRICULA_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOCAL_E_DATA" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[select coalesce(total_exercicio,0) as total_exercicio,
+       coalesce(total_averbado,0) as total_averbado,
+       (coalesce(total_exercicio,0) + coalesce(total_averbado,0)) as total_geral,
+       replace(replace(frt_extenso_monetario(coalesce(total_exercicio,0) + coalesce(total_averbado,0)), 'REAL'),'REAIS') as total_geral_extenso,
+       trunc((total_geral/365)) as anos,
+       trunc(((total_geral/365 - trunc((total_geral/365)))*365)/30) as meses,
+       trunc(((((total_geral/365 - trunc((total_geral/365))))*365)/30 - trunc(((total_geral/365 - trunc((total_geral/365)))*365)/30))*30) as dias
+from (select (select sum(case
+                         when (to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null and extract(year from to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = extract(year from to_date(to_char(vinculo2.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'))) then
+                           (to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                            to_date(to_char(vinculo2.inicioVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') +1)
+
+                         when (extract(year from to_date(to_char(vinculo2.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano) then
+                           (to_date(
+                                case when extract(year from sysdate) = exercicio.ano then
+                                  to_char(sysdate, 'dd/MM/yyyy')
+                                else
+                                  '31/12/' || cast(exercicio.ano as varchar(255))
+                                end, 'dd/MM/yyyy') -
+                            to_date(vinculo2.inicioVigencia) +1)
+
+                         when (
+                           (to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null)
+                           and
+                           (extract(year from to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano )
+                         ) then
+                           (to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                            trunc(to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy'),'YYYY') +1)
+
+                         when exercicio.ano = extract(year from sysdate) then
+                           (to_date(sysdate) -
+                            trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+
+                         else
+                           (to_date('31/12/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy') -
+                            trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+                         end -
+                         (coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(vinculo2.finalVigencia,sysdate),faltasjustificadas.fim))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else  trunc(LEAST(coalesce(vinculo2.finalVigencia,sysdate),faltasjustificadas.fim)) end -
+                                                case when (extract(year from faltasjustificadas.inicio) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else faltasjustificadas.inicio end) + 1)
+                                    from faltas faltasJustificadas
+                                    where faltasJustificadas.contratofp_id = contrato.id
+                                          and faltasJustificadas.tipofalta = 'FALTA_JUSTIFICADA'
+                                          and exercicio.ano >= extract(year from faltasjustificadas.inicio)
+                                          and exercicio.ano <= extract(year from faltasjustificadas.fim)),0)  +
+
+                          coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),trunc(sysdate)),faltasInjustificadas.fim))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else  trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),trunc(sysdate)),faltasInjustificadas.fim)) end -
+                                                case when (extract(year from faltasInjustificadas.inicio) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else faltasInjustificadas.inicio end) + 1)
+                                    from faltas faltasInjustificadas
+                                    where faltasInjustificadas.contratofp_id = contrato.id
+                                          and faltasInjustificadas.tipofalta = 'FALTA_INJUSTIFICADA'
+                                          and exercicio.ano >= extract(year from faltasInjustificadas.inicio)
+                                          and exercicio.ano <= extract(year from faltasInjustificadas.fim)),0)  +
+
+                          coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),sysdate),afastamento.termino))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),sysdate),to_date(to_char(afastamento.termino,'dd/MM/yyyy'), 'dd/MM/yyyy'))) end -
+                                                case when (extract(year from to_date(to_char(afastamento.inicio,'dd/MM/yyyy'), 'dd/MM/yyyy')) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else to_date(to_char(afastamento.inicio,'dd/MM/yyyy'), 'dd/MM/yyyy') end) + 1)
+                                    from afastamento afastamento
+                                      inner join tipoafastamento on afastamento.tipoafastamento_id = tipoafastamento.id
+                                    where tipoafastamento.descTempoServicoAposentadoria = 0 and coalesce(tipoafastamento.descontarTempoServicoEfetivo,0) = 1
+                                          and afastamento.contratofp_id = contrato.id
+                                          and exercicio.ano >= extract(year from afastamento.inicio)
+                                          and exercicio.ano <= extract(year from afastamento.termino)),0))
+)from contratofp contrato inner join vinculofp vinculo2 on contrato.id = vinculo2.id
+  inner join matriculafp matricula on matricula.id = vinculo2.matriculafp_id
+  inner join exercicio on extract(year from vinculo2.inicioVigencia) <= exercicio.ano
+
+              where exercicio.ano  <= coalesce(extract(year from vinculo2.finalvigencia) ,extract(year from sysdate)) and matricula.id = matricula2.id)  as total_exercicio,
+
+             (select sum(
+                 case
+                 when (to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null and extract(year from to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = extract(year from to_date(to_char(averbacao.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'))) then
+                   (to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                    to_date(to_char(averbacao.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') +1)
+                 when (extract(year from to_date(to_char(averbacao.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano) then
+                   (to_date(
+                        case when extract(year from sysdate) = exercicio.ano then
+                          to_char(sysdate, 'dd/MM/yyyy')
+                        else
+                          '31/12/' || cast(exercicio.ano as varchar(255))
+                        end, 'dd/MM/yyyy') -
+                    to_date(averbacao.inicioVigencia) +1)
+                 when (
+                   (to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null)
+                   and
+                   (extract(year from to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano)
+                 ) then
+                   (to_date(to_char(to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'), 'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                    trunc(to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),'YYYY') +1)
+                 when exercicio.ano = extract(year from sysdate) then
+                   (to_date(sysdate, 'dd/MM/yyyy') -
+                    trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+                 else
+                   (to_date('31/12/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy') -
+                    trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+                 end)
+
+              from averbacaotemposervico averbacao join contratofp contrato on averbacao.contratofp_id = contrato.id
+                inner join vinculofp vinculo on vinculo.id = contrato.id
+                inner join matriculafp matricula on matricula.id = vinculo.matriculafp_id
+                inner join exercicio on extract(year from averbacao.inicioVigencia) <= exercicio.ano
+              where averbacao.aposentado = 1 and exercicio.ano  <= extract(year from averbacao.finalvigencia) and matricula.id = matricula2.id) as total_averbado,
+             coalesce((select sum(case
+                                  when (to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null and extract(year from to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = extract(year from to_date(to_char(vinculo2.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'))) then
+                                    (to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                                     to_date(to_char(vinculo2.inicioVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') +1)
+
+                                  when (extract(year from to_date(to_char(vinculo2.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano) then
+                                    (to_date(
+                                         case when extract(year from sysdate) = exercicio.ano then
+                                           to_char(sysdate, 'dd/MM/yyyy')
+                                         else
+                                           '31/12/' || cast(exercicio.ano as varchar(255))
+                                         end, 'dd/MM/yyyy') -
+                                     to_date(vinculo2.inicioVigencia) +1)
+
+                                  when (
+                                    (to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null)
+                                    and
+                                    (extract(year from to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano )
+                                  ) then
+                                    (to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                                     trunc(to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy'),'YYYY') +1)
+
+                                  when exercicio.ano = extract(year from sysdate) then
+                                    (to_date(sysdate) -
+                                     trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+
+                                  else
+                                    (to_date('31/12/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy') -
+                                     trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+                                  end -
+                                  (coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),sysdate),to_date(to_char(faltasjustificadas.fim, 'dd/MM/yyyy'), 'dd/MM/yyyy')))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else  trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),sysdate),to_date(to_char(faltasjustificadas.fim, 'dd/MM/yyyy'), 'dd/MM/yyyy'))) end -
+                                                         case when (extract(year from to_date(to_char(faltasjustificadas.inicio, 'dd/MM/yyyy'), 'dd/MM/yyyy')) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else to_date(to_char(faltasjustificadas.inicio, 'dd/MM/yyyy'), 'dd/MM/yyyy') end) + 1)
+                                             from faltas faltasJustificadas
+                                             where faltasJustificadas.contratofp_id = contrato.id
+                                                   and faltasJustificadas.tipofalta = 'FALTA_JUSTIFICADA'
+                                                   and exercicio.ano >= extract(year from faltasjustificadas.inicio)
+                                                   and exercicio.ano <= extract(year from faltasjustificadas.fim)),0)  +
+
+                                   coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),trunc(sysdate)),faltasInjustificadas.fim))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else  trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),trunc(sysdate)),faltasInjustificadas.fim)) end -
+                                                         case when (extract(year from faltasInjustificadas.inicio) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else faltasInjustificadas.inicio end) + 1)
+                                             from faltas faltasInjustificadas
+                                             where faltasInjustificadas.contratofp_id = contrato.id
+                                                   and faltasInjustificadas.tipofalta = 'FALTA_INJUSTIFICADA'
+                                                   and exercicio.ano >= extract(year from faltasInjustificadas.inicio)
+                                                   and exercicio.ano <= extract(year from faltasInjustificadas.fim)),0)  +
+
+                                   coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),sysdate),afastamento.termino))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else trunc(LEAST(coalesce(to_date(to_char(vinculo2.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),sysdate),afastamento.termino)) end -
+                                                         case when (extract(year from afastamento.inicio) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else afastamento.inicio end) + 1)
+                                             from afastamento afastamento
+                                               inner join tipoafastamento on afastamento.tipoafastamento_id = tipoafastamento.id
+                                             where tipoafastamento.descTempoServicoAposentadoria = 0 and coalesce(tipoafastamento.descontarTempoServicoEfetivo,0) = 1
+                                                   and afastamento.contratofp_id = contrato.id
+                                                   and exercicio.ano >= extract(year from afastamento.inicio)
+                                                   and exercicio.ano <= extract(year from afastamento.termino)),0))
+             )from contratofp contrato inner join vinculofp vinculo2 on contrato.id = vinculo2.id
+               inner join matriculafp matricula on matricula.id = vinculo2.matriculafp_id
+               inner join exercicio on extract(year from vinculo2.inicioVigencia) <= exercicio.ano
+               where exercicio.ano  <= coalesce(extract(year from vinculo2.finalvigencia) ,extract(year from sysdate)) and matricula.id = matricula2.id),0)
+             ---
+             +
+
+              coalesce((select sum(
+                 case
+                 when (to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null and extract(year from to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = extract(year from to_date(to_char(averbacao.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'))) then
+                   (to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                    to_date(to_char(averbacao.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') +1)
+                 when (extract(year from to_date(to_char(averbacao.inicioVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano) then
+                   (to_date(
+                        case when extract(year from sysdate) = exercicio.ano then
+                          to_char(sysdate, 'dd/MM/yyyy')
+                        else
+                          '31/12/' || cast(exercicio.ano as varchar(255))
+                        end, 'dd/MM/yyyy') -
+                    to_date(averbacao.inicioVigencia) +1)
+                 when (
+                   (to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') is not null)
+                   and
+                   (extract(year from to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy')) = exercicio.ano)
+                 ) then
+                   (to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy') -
+                    trunc(to_date(to_char(averbacao.finalVigencia, 'dd/MM/yyyy'), 'dd/MM/yyyy'),'YYYY') +1)
+                 when exercicio.ano = extract(year from sysdate) then
+                   (to_date(sysdate, 'dd/MM/yyyy') -
+                    trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+                 else
+                   (to_date('31/12/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy') -
+                    trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+                 end)
+
+                       from averbacaotemposervico averbacao join contratofp contrato on averbacao.contratofp_id = contrato.id
+                         inner join vinculofp vinculo on vinculo.id = contrato.id
+                         inner join matriculafp matricula on matricula.id = vinculo.matriculafp_id
+                         inner join exercicio on extract(year from averbacao.inicioVigencia) <= exercicio.ano
+                         where averbacao.aposentado = 1 and (exercicio.ano  <= extract(year from averbacao.finalvigencia) and matricula.id = matricula2.id)), 0) as TOTAL_GERAL
+      from matriculafp matricula2
+where matricula2.id = $P{MATRICULA_ID})]]>
+	</queryString>
+	<field name="TOTAL_EXERCICIO" class="java.math.BigDecimal"/>
+	<field name="TOTAL_AVERBADO" class="java.math.BigDecimal"/>
+	<field name="TOTAL_GERAL" class="java.math.BigDecimal"/>
+	<field name="TOTAL_GERAL_EXTENSO" class="java.lang.String"/>
+	<field name="ANOS" class="java.math.BigDecimal"/>
+	<field name="MESES" class="java.math.BigDecimal"/>
+	<field name="DIAS" class="java.math.BigDecimal"/>
+	<detail>
+		<band height="153" splitType="Stretch">
+			<line>
+				<reportElement x="0" y="0" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="17" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="554" y="0" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="0" y="0" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="185" y="0" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="370" y="0" width="1" height="17"/>
+			</line>
+			<staticText>
+				<reportElement mode="Opaque" x="1" y="1" width="184" height="16" backcolor="#CCCCCC"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<text><![CDATA[TOTAL EXERCÍCIO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="186" y="1" width="184" height="16" backcolor="#CCCCCC"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<text><![CDATA[TOTAL AVERBADO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="371" y="1" width="183" height="16" backcolor="#CCCCCC"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<text><![CDATA[TOTAL GERAL]]></text>
+			</staticText>
+			<line>
+				<reportElement x="370" y="17" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="185" y="17" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="0" y="34" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="17" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="554" y="17" width="1" height="17"/>
+			</line>
+			<textField>
+				<reportElement x="1" y="18" width="184" height="16"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL_EXERCICIO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="186" y="18" width="184" height="16"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL_AVERBADO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="370" y="18" width="184" height="16"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL_GERAL}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="34" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="0" y="51" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="554" y="34" width="1" height="17"/>
+			</line>
+			<textField>
+				<reportElement x="1" y="35" width="553" height="16"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<textFieldExpression><![CDATA["TOTAL GERAL DE " + $F{TOTAL_GERAL} + " ( " + $F{TOTAL_GERAL_EXTENSO} + ") DIA(S)"]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="554" y="50" width="1" height="17"/>
+			</line>
+			<line>
+				<reportElement x="0" y="67" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="50" width="1" height="17"/>
+			</line>
+			<textField>
+				<reportElement x="0" y="52" width="555" height="15"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ANOS} + " ANO(S), " + $F{MESES} + " MES(ES) E " + $F{DIAS} + " DIA(S)"]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="85" width="1" height="58"/>
+			</line>
+			<line>
+				<reportElement x="0" y="142" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="554" y="86" width="1" height="57"/>
+			</line>
+			<line>
+				<reportElement x="279" y="85" width="1" height="58"/>
+			</line>
+			<line>
+				<reportElement x="0" y="85" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="0" y="143" width="555" height="10"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="6" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Esta certidão não contém emendas nem rasuras]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="1" y="130" width="278" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="6" isBold="true"/>
+				</textElement>
+				<text><![CDATA[RESPONSÁVEL]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="280" y="130" width="274" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="6" isBold="true"/>
+				</textElement>
+				<text><![CDATA[DIRETOR(A) DA SECRETARIA]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="5" y="86" width="274" height="14"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$P{LOCAL_E_DATA}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="288" y="86" width="266" height="14"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$P{LOCAL_E_DATA}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

@@ -1,0 +1,1 @@
+update periodoaquisitivofl set status = 'CONCEDIDO', saldo = 0 where id = 639404224;

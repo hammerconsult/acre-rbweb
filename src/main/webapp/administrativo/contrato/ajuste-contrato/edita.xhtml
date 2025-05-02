@@ -1,0 +1,1614 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparDadosContrato"
+                             process="@this"
+                             actionListener="#{ajusteContratoControlador.definirAjusteContratoComoNull()}"
+                             update=":Formulario:tab-view-geral :Formulario:tab-view-geral:grid-ajuste"/>
+
+            <fc:cabecalhoPretty controlador="#{ajusteContratoControlador}"
+                                origem="#{ajusteContratoControlador}listar"/>
+            <p:panel header="Ajuste de Contrato">
+                <p:tabView id="tab-view-geral" styleClass="mtop10">
+                    <p:tab title="Dados do Ajuste">
+                        <h:panelGrid columns="2" id="grid-ajuste" styleClass="mtop05">
+
+                            <h:outputText value="Data de Lançamento:"/>
+                            <h:outputText value="#{ajusteContratoControlador.selecionado.dataLancamento}"
+                                          styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputText value="Data de Aprovação:"
+                                          rendered="#{ajusteContratoControlador.selecionado.dataAprovacao ne null}"/>
+                            <p:calendar onkeypress="mascara(this, mdata)"
+                                        maxlength="10"
+                                        showOn="button"
+                                        rendered="#{ajusteContratoControlador.selecionado.dataAprovacao ne null}"
+                                        disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}"
+                                        title="Digite a data de publicação"
+                                        value="#{ajusteContratoControlador.selecionado.dataAprovacao}"
+                                        locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                        size="12">
+                                <p:ajax event="blur" process="@this"/>
+                                <p:ajax event="dateSelect" process="@this"/>
+                            </p:calendar>
+
+                            <h:outputLabel value="Número:"/>
+                            <h:outputText
+                                    styleClass="negrito"
+                                    value="#{ajusteContratoControlador.selecionado.numeroAjuste ne null ? ajusteContratoControlador.selecionado.numeroAjuste : 'Gerado ao salvar ajuste.' }"/>
+
+                            <h:outputLabel value="Situação:"/>
+                            <h:outputText
+                                    styleClass="negrito"
+                                    value="#{ajusteContratoControlador.selecionado.situacao.descricao}"/>
+
+                            <h:outputLabel value="Responsável: "/>
+                            <h:outputText
+                                    styleClass="negrito"
+                                    value="#{ajusteContratoControlador.selecionado.responsavel}"/>
+
+                            <fc:outputLabelObrigatorio value="Tipo de Ajuste: "/>
+                            <h:panelGrid columns="4" cellpadding="0" cellspacing="0">
+                                <h:selectOneMenu title="Selecione o tipo de ajuste."
+                                                 style="width: auto"
+                                                 value="#{ajusteContratoControlador.selecionado.tipoAjuste}"
+                                                 disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}">
+                                    <f:selectItems value="#{ajusteContratoControlador.tiposAjuste}"/>
+                                    <p:ajax event="change"
+                                            process="@this"
+                                            listener="#{ajusteContratoControlador.listenerTipoAjuste()}"
+                                            update=":Formulario:tab-view-geral:grid-ajuste :Formulario:tab-view-geral:panel-ajuste"/>
+                                </h:selectOneMenu>
+
+                                <div style="color: dimgrey">
+                                    <a class="fa fa-info-circle mlef05" style="color: orangered"/>
+                                    Indica que o ajuste alterará os dados cadastrais do
+                                    <strong>#{ajusteContratoControlador.selecionado.tipoAjuste.titulo}.</strong>
+                                </div>
+                            </h:panelGrid>
+
+                            <fc:outputLabelObrigatorio value="Contrato: "
+                                                       rendered="#{ajusteContratoControlador.selecionado.isAjusteContrato() or ajusteContratoControlador.selecionado.isAjusteControleExecucao() or ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra()}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.selecionado.isAjusteContrato() or ajusteContratoControlador.selecionado.isAjusteControleExecucao() or ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra()}">
+                                <p:autoComplete queryDelay="1000"
+                                                id="contrato"
+                                                size="70"
+                                                title="Informe um contrato"
+                                                value="#{ajusteContratoControlador.selecionado.contrato}"
+                                                completeMethod="#{ajusteContratoControlador.completarContratos}"
+                                                converter="#{contratoAdmControlador.converterGenerico}"
+                                                disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 800px"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosContrato();}"
+                                                var="cont"
+                                                itemValue="#{cont.id}"
+                                                itemLabel="#{cont}">
+                                    <p:ajax event="itemSelect"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{ajusteContratoControlador.recuperarDadosContrato()}"
+                                            update=":Formulario:tab-view-geral:panel-dados-cont :Formulario:tab-view-geral:grid-ajuste
+                                                    :Formulario:tab-view-geral:panel-ajuste"
+                                            process="@this"/>
+                                </p:autoComplete>
+
+                                <p:outputPanel id="panelVerContrato">
+                                    <p:commandButton process="@none"
+                                                     id="btnVerContrato"
+                                                     icon="ui-icon-search"
+                                                     disabled="#{ajusteContratoControlador.selecionado.contrato eq null}"
+                                                     update="@none"
+                                                     styleClass="mlef05 mrig05"
+                                                     onclick="window.open('#{request.contextPath}/contrato-adm/ver/#{ajusteContratoControlador.selecionado.contrato.id}/','_blank');"/>
+                                </p:outputPanel>
+
+                                <co:botao_informacao descricao="
+                                  &lt;b>Busca contratos deferidos. Filtros: &lt;/b>
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano do Termo.
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano do Contrato.
+                                  &lt;br/&gt; &bull;
+                                  Nome/Razão Social do Fornecedor.
+                                  &lt;br/&gt; &bull;
+                                  Cpf/Cnpj do Fornecedor."/>
+                            </h:panelGroup>
+
+                            <fc:outputLabelObrigatorio
+                                    value="#{(ajusteContratoControlador.selecionado.isAjusteAditivo() or ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()) ? 'Aditivo Contrato' : 'Apostilamento Contrato' }: "
+                                    rendered="#{ajusteContratoControlador.selecionado.isAjusteAditivoOrApostilamento() or ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.selecionado.isAjusteAditivoOrApostilamento() or ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()}">
+                                <p:autoComplete queryDelay="1000"
+                                                id="aditivo"
+                                                size="70"
+                                                title="Informe um aditivo"
+                                                value="#{ajusteContratoControlador.alteracaoContratual}"
+                                                completeMethod="#{ajusteContratoControlador.completarAlteracaoContratual}"
+                                                converter="#{alteracaoContratualContratoControlador.converterGenerico}"
+                                                disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}"
+                                                maxResults="50"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 800px"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparDadosContrato();}"
+                                                var="adit"
+                                                itemValue="#{adit.id}"
+                                                itemLabel="#{adit}">F
+                                    <p:ajax event="itemSelect"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{ajusteContratoControlador.recuperarDadosAlteracaoContratual()}"
+                                            update=":Formulario:tab-view-geral :Formulario:tab-view-geral:grid-ajuste"
+                                            process="@this"/>
+                                </p:autoComplete>
+
+                                <p:outputPanel id="panelVerAditivo">
+                                    <fc:botaoTargetBlank
+                                            icon="ui-icon-search"
+                                            styleClass="icone-30"
+                                            rendered="#{dispensaDeLicitacaoControlador.operacaoEditar}"
+                                            actionListener="#{utilBeanAdministrativo.redirecionarParaAlteracaoContratual(ajusteContratoControlador.alteracaoContratual.id)}"
+                                            title="Clique para visualizar este registro em nova aba."/>
+                                </p:outputPanel>
+
+                                <co:botao_informacao descricao="
+                                  &lt;b>Busca registros deferidos. Filtros: &lt;/b>
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano do Termo.
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano.
+                                  &lt;br/&gt; &bull;
+                                  Nome/Razão Social do Fornecedor.
+                                  &lt;br/&gt; &bull;
+                                  Cpf/Cnpj do Fornecedor."/>
+                            </h:panelGroup>
+
+
+                            <h:outputText value="Justificativa:"/>
+                            <h:panelGrid columns="2"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea title="Digite a justificativa do ajuste."
+                                                 value="#{ajusteContratoControlador.selecionado.historico}"
+                                                 disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}"
+                                                 cols="70"
+                                                 rows="4"
+                                                 maxlength="3000"
+                                                 autoResize="true"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-justi">
+                                    <p:ajax update="@this" process="@this"/>
+                                </p:inputTextarea>
+                                <h:outputText id="counter-justi"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+                        <p:outputPanel id="panel-ajuste">
+                            <p:outputPanel id="panel-movimentos"
+                                           rendered="#{!ajusteContratoControlador.selecionado.isAjusteControleExecucao() and !ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra() and !ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()}">
+                                <br/>
+                                <p:outputPanel
+                                        rendered="#{ajusteContratoControlador.selecionado.contrato ne null
+                                          or ajusteContratoControlador.alteracaoContratual ne null}">
+                                    <table style="width: 100%;border: 1px solid lightgrey">
+                                        <tr>
+                                            <td colspan="2">
+                                                <div class="alert alert-info" align="center">
+                                                    Alteração de Dados Cadastrais do(a) #{ajusteContratoControlador.selecionado.tipoAjuste.titulo}
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <tr style="vertical-align: top">
+                                            <td>
+                                                <p:fieldset
+                                                        styleClass="mtop05"
+                                                        legend="Dados Originais">
+                                                    <h:panelGrid columns="2" cellpadding="2" cellspacing="2">
+                                                        <h:outputText value="Situação: "/>
+                                                        <h:outputText
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.situacaoContrato.descricao}"
+                                                                styleClass="negrito label label-info"
+                                                                style="font-size: 13px"/>
+
+                                                        <h:outputText value="Número/Ano do Termo: "/>
+                                                        <p:inputText
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.numeroAnoTermo}"
+                                                                styleClass="negrito"/>
+
+                                                        <h:outputText value="Data de Lançamento: "/>
+                                                        <p:inputText
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.dataLancamento}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Data de Aprovação: "/>
+                                                        <p:inputText
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.dataAprovacao}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Data de Deferimento: "/>
+                                                        <p:inputText
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.dataDeferimento}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Data de Assinatura: "/>
+                                                        <p:inputText
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.dataAssinatura}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Início de Vigência:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.inicioVigencia}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date" pattern="dd/MM/yyyy"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Término de Vigência:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.terminoVigencia}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date" pattern="dd/MM/yyyy"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Término de Vigência Atual:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                readonly="true"
+                                                                size="15"
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.terminoVigenciaAtual}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date" pattern="dd/MM/yyyy"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Início de Execução:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.inicioExecucao}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date" pattern="dd/MM/yyyy"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Término de Execução:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                readonly="true"
+                                                                size="15"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.terminoExecucao}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date" pattern="dd/MM/yyyy"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Término de Execução Atual:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                readonly="true"
+                                                                size="15"
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.terminoExecucaoAtual}"
+                                                                styleClass="negrito">
+                                                            <f:convertDateTime type="date" pattern="dd/MM/yyyy"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Responsável Unidade Administrativa:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                readonly="true"
+                                                                size="50"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.responsavelPrefeitura}"
+                                                                styleClass="negrito"/>
+
+                                                        <h:outputText value="Responsável pelo Fornecedor:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputText
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                readonly="true"
+                                                                size="50"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.responsavelEmpresa}"
+                                                                styleClass="negrito"/>
+
+                                                        <h:outputText value="Objeto:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputTextarea
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.objeto}"
+                                                                cols="40"
+                                                                autoResize="true"
+                                                                readonly="true"
+                                                                size="15"/>
+
+                                                        <h:outputText value="Justificativa:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteAditivo}"/>
+                                                        <p:inputTextarea
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteAditivo}"
+                                                                value="#{ajusteContratoControlador.ajustesDadosOriginais.observacao}"
+                                                                cols="40"
+                                                                autoResize="true"
+                                                                readonly="true"/>
+                                                    </h:panelGrid>
+                                                </p:fieldset>
+                                            </td>
+
+                                            <td>
+                                                <p:fieldset
+                                                        styleClass="mtop05"
+                                                        legend="Alteração de Dados">
+                                                    <h:panelGrid columns="2" cellpadding="2" cellspacing="2"
+                                                                 id="grid-alteracao-dados">
+                                                        <h:outputText value="Situação: "/>
+                                                        <h:selectOneMenu
+                                                                rendered="#{ajusteContratoControlador.ajustesDadosOriginais.situacaoContrato.isAprovado()
+                                                                         and ajusteContratoControlador.selecionado.isAjusteContrato()}"
+                                                                value="#{ajusteContratoControlador.ajustesDadosAlteracao.situacaoContrato}">
+                                                            <f:selectItems
+                                                                    value="#{ajusteContratoControlador.situacoesContrato}"/>
+                                                            <p:ajax event="change"
+                                                                    update="grid-alteracao-dados"
+                                                                    process="@this"
+                                                                    listener="#{ajusteContratoControlador.limparCamposAjusteContrato()}"/>
+                                                        </h:selectOneMenu>
+
+                                                        <h:outputText
+                                                                rendered="#{!ajusteContratoControlador.ajustesDadosOriginais.situacaoContrato.isAprovado()}"
+                                                                value="#{ajusteContratoControlador.ajustesDadosAlteracao.situacaoContrato.descricao}"
+                                                                styleClass="negrito label label-info"
+                                                                style="font-size: 13px"/>
+
+                                                        <h:outputText value="Número/Ano do Termo: "/>
+                                                        <h:panelGroup columns="4">
+                                                            <p:inputText
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.numeroTermo}"
+                                                                    size="10"
+                                                                    disabled="#{!ajusteContratoControlador.ajustesDadosOriginais.situacaoContrato.isAprovado()}"
+                                                                    onkeypress="somenteNumeros(event, this, false, false, true)"
+                                                                    maxlength="8"
+                                                                    style="text-align: right">
+                                                                <p:ajax event="blur" process="@this"/>
+                                                            </p:inputText>
+
+                                                            <h:outputText value=" / " styleClass="mlef05 mrig05"/>
+                                                            <p:inputMask mask="9999"
+                                                                         disabled="#{!ajusteContratoControlador.ajustesDadosOriginais.situacaoContrato.isAprovado()}"
+                                                                         value="#{ajusteContratoControlador.ajustesDadosAlteracao.exercicio}"
+                                                                         converter="#{exercicioControlador.converterExercicio}"
+                                                                         size="8">
+                                                                <p:ajax event="blur" process="@this"/>
+                                                            </p:inputMask>
+                                                        </h:panelGroup>
+
+                                                        <h:outputText value="Data de Lançamento: "/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    title="Informe a data de lançamento do contrato."
+                                                                    disabled="#{!ajusteContratoControlador.ajustesDadosOriginais.situacaoContrato.isEmElaboracao()}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.dataLancamento}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Data de Aprovação: "/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    title="Informe a data de aprovação do contrato."
+                                                                    disabled="#{!ajusteContratoControlador.ajustesDadosOriginais.situacaoContrato.isAprovado()}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.dataAprovacao}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Data de Deferimento: "/>
+                                                        <h:panelGroup>
+                                                            <p:calendar onkeypress="mascara(this, mdata)"
+                                                                        showOn="button"
+                                                                        title="Informe a data de deferimento."
+                                                                        disabled="#{!ajusteContratoControlador.ajustesDadosAlteracao.situacaoContrato.isDeferido()}"
+                                                                        value="#{ajusteContratoControlador.ajustesDadosAlteracao.dataDeferimento}"
+                                                                        locale="pt_BR"
+                                                                        navigator="true"
+                                                                        pattern="dd/MM/yyyy"
+                                                                        size="15">
+                                                                <p:ajax event="blur" process="@this"/>
+                                                                <p:ajax event="dateSelect" process="@this"/>
+                                                            </p:calendar>
+                                                            <h:outputText styleClass="alert alert-danger mlef05"
+                                                                          value="Campo deve ser informado!"
+                                                                          style="padding: 5px;"
+                                                                          rendered="#{ajusteContratoControlador.ajustesDadosAlteracao.situacaoContrato.isDeferido()
+                                                                                      and ajusteContratoControlador.selecionado.isAjusteContrato()}"/>
+                                                        </h:panelGroup>
+
+                                                        <h:outputText value="Data de Assinatura: "/>
+                                                        <h:panelGroup>
+                                                            <p:calendar onkeypress="mascara(this, mdata)"
+                                                                        showOn="button"
+                                                                        disabled="#{!ajusteContratoControlador.ajustesDadosAlteracao.situacaoContrato.isDeferido()}"
+                                                                        value="#{ajusteContratoControlador.ajustesDadosAlteracao.dataAssinatura}"
+                                                                        locale="pt_BR"
+                                                                        navigator="true"
+                                                                        pattern="dd/MM/yyyy"
+                                                                        size="15">
+                                                                <p:ajax event="blur" process="@this"/>
+                                                                <p:ajax event="dateSelect" process="@this"/>
+                                                            </p:calendar>
+
+                                                            <h:outputText styleClass="alert alert-danger mlef05"
+                                                                          value="Campo deve ser informado!"
+                                                                          style="padding: 5px;"
+                                                                          rendered="#{ajusteContratoControlador.ajustesDadosAlteracao.situacaoContrato.deferido
+                                                                                        and ajusteContratoControlador.selecionado.isAjusteContrato()}"/>
+                                                        </h:panelGroup>
+
+                                                        <h:outputText value="Início de Vigência: "
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.inicioVigencia}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Término de Vigência: "
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.terminoVigencia}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Término de Vigência Atual: "
+                                                                      rendered="#{ajusteContratoControlador.selecionado.isAjusteContrato()}"/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    rendered="#{ajusteContratoControlador.selecionado.isAjusteContrato()}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.terminoVigenciaAtual}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Início de Execução: "
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.inicioExecucao}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Término de Execução: "
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.terminoExecucao}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Término de Execução Atual: "
+                                                                      rendered="#{ajusteContratoControlador.selecionado.isAjusteContrato()}"/>
+                                                        <p:calendar onkeypress="mascara(this, mdata)"
+                                                                    showOn="button"
+                                                                    rendered="#{ajusteContratoControlador.selecionado.isAjusteContrato()}"
+                                                                    value="#{ajusteContratoControlador.ajustesDadosAlteracao.terminoExecucaoAtual}"
+                                                                    locale="pt_BR"
+                                                                    navigator="true"
+                                                                    pattern="dd/MM/yyyy"
+                                                                    size="15">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                            <p:ajax event="dateSelect" process="@this"/>
+                                                        </p:calendar>
+
+                                                        <h:outputText value="Responsável Unidade Administrativa:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:autoComplete queryDelay="1000"
+                                                                        title="Digite o responsável pela prefeitura que deseja pesquisar."
+                                                                        value="#{ajusteContratoControlador.ajustesDadosAlteracao.responsavelPrefeitura}"
+                                                                        completeMethod="#{ajusteContratoControlador.completarContratosFP}"
+                                                                        converter="#{contratoFPControlador.converterGenerico}"
+                                                                        rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                        var="respUnid"
+                                                                        dropdown="true"
+                                                                        style="display: flex"
+                                                                        panelStyle="max-height: 230px;max-width: 800px"
+                                                                        maxResults="50"
+                                                                        itemValue="#{respUnid.id}"
+                                                                        itemLabel="#{respUnid}"
+                                                                        size="45">
+                                                            <p:ajax event="itemSelect" process="@this"/>
+                                                        </p:autoComplete>
+
+                                                        <h:outputText value="Responsável pelo Fornecedor:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:autoComplete queryDelay="1000"
+                                                                        title="Digite o responsável pela empresa que deseja pesquisar."
+                                                                        rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                        value="#{ajusteContratoControlador.ajustesDadosAlteracao.responsavelEmpresa}"
+                                                                        completeMethod="#{ajusteContratoControlador.completaPessoaFisica}"
+                                                                        converter="#{pessoaFisicaControlador.converterPessoaFisica}"
+                                                                        var="p"
+                                                                        dropdown="true"
+                                                                        style="display: flex"
+                                                                        panelStyle="max-height: 230px;max-width: 800px"
+                                                                        maxResults="50"
+                                                                        forceSelection="true"
+                                                                        itemValue="#{p.id}"
+                                                                        itemLabel="#{p}"
+                                                                        process="@this"
+                                                                        size="45">
+                                                            <p:ajax event="itemSelect" process="@this"/>
+                                                        </p:autoComplete>
+
+                                                        <h:outputText value="Objeto:"
+                                                                      rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"/>
+                                                        <p:inputTextarea title="Digite o objeto do contrato"
+                                                                         rendered="#{ajusteContratoControlador.selecionado.ajusteContrato}"
+                                                                         value="#{ajusteContratoControlador.ajustesDadosAlteracao.objeto}"
+                                                                         id="objeto-do-contrato"
+                                                                         cols="40"
+                                                                         maxlength="3000"
+                                                                         autoResize="true"
+                                                                         counterTemplate="{0} Caracteres Restantes.">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                        </p:inputTextarea>
+
+                                                        <h:outputLabel value="Justificativa: "
+                                                                       rendered="#{ajusteContratoControlador.selecionado.ajusteAditivo}"/>
+                                                        <p:inputTextarea
+                                                                rendered="#{ajusteContratoControlador.selecionado.ajusteAditivo}"
+                                                                value="#{ajusteContratoControlador.ajustesDadosAlteracao.observacao}"
+                                                                cols="40"
+                                                                maxlength="3000"
+                                                                autoResize="true"
+                                                                counterTemplate="{0} Caracteres Restantes.">
+                                                            <p:ajax event="blur" process="@this"/>
+                                                        </p:inputTextarea>
+                                                    </h:panelGrid>
+                                                </p:fieldset>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </p:outputPanel>
+                            </p:outputPanel>
+
+                            <p:outputPanel id="panel-Itens"
+                                           rendered="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao()
+                                           or ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra()
+                                           or ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()}">
+
+                                <div style="display: #{ajusteContratoControlador.hasItens() ? 'block' : 'none'}">
+                                    <div class="alert alert-info" align="center" style="margin-top: 20px">
+                                        Alteração de Dados Cadastrais do #{ajusteContratoControlador.selecionado.tipoAjuste.descricao}
+                                    </div>
+
+                                    <p:dataTable
+                                            id="itensCont"
+                                            value="#{ajusteContratoControlador.itensAjusteDadosVO}" var="item"
+                                            rendered="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao() or ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra()}"
+                                            style="vertical-align: top"
+                                            rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                            rows="10"
+                                            paginator="true"
+                                            paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                            rowsPerPageTemplate="10,25,50,100"
+                                            rowIndexVar="rowlx">
+                                        <f:facet name="header">
+                                            <p:commandButton
+                                                    styleClass="mlef10 trintaAltura"
+                                                    rendered="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao()}"
+                                                    icon="ui-icon-check"
+                                                    value="Trocar Tipo Controle em Todos os Itens"
+                                                    process="@this"
+                                                    update=":Formulario:tab-view-geral:panel-Itens"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    actionListener="#{ajusteContratoControlador.aplicarTipoControleParaTodosItens()}"
+                                                    disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}"/>
+                                        </f:facet>
+                                        <p:column headerText="Item"
+                                                  styleClass="alinhamentoCentralizado">
+                                            <h:outputText value="#{item.ajusteDadosOriginais.itemContrato.numero}"/>
+                                        </p:column>
+                                        <p:column
+                                                headerText="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao() ? 'Objeto Compra' : 'Objeto Compra De'}"
+                                                styleClass="alinhamentoEsquerda">
+                                            <h:outputText
+                                                    value="#{item.ajusteDadosOriginais.itemContrato.itemAdequado.objetoCompra}"/>
+                                            <br/>
+                                            <div style="font-size: 10px; color: dimgrey"
+                                                 class="mtop05">
+                                                <ad:grupo-conta-despesa
+                                                        grupoContaDespesa="#{item.ajusteDadosOriginais.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa}"/>
+                                            </div>
+                                        </p:column>
+                                        <p:column headerText="Objeto Compra Para"
+                                                  style="width: 25%;"
+                                                  styleClass="alinhamentoEsquerda"
+                                                  rendered="#{ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra()}">
+                                            <p:autoComplete queryDelay="1000"
+                                                            id="ac-objeto-compra"
+                                                            value="#{item.ajusteAlteracaoDados.objetoCompra}"
+                                                            completeMethod="#{ajusteContratoControlador.completarObjetoCompra}"
+                                                            var="acOb"
+                                                            size="25"
+                                                            dropdown="true"
+                                                            panelStyle="max-height: 250px;max-width: 800px"
+                                                            maxResults="50"
+                                                            itemLabel="#{acOb}"
+                                                            itemValue="#{acOb.id}"
+                                                            converter="#{objetoCompraControlador.converterGenerico}"
+                                                            disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}">
+                                                <p:ajax event="itemSelect"
+                                                        listener="#{ajusteContratoControlador.listenerObjetoCompraContrato(item)}"
+                                                        onstart="aguarde.show()"
+                                                        oncomplete="aguarde.hide()"
+                                                        update="pn-grupo-conta-oc"
+                                                        process="@this"/>
+                                            </p:autoComplete>
+                                            <br/>
+                                            <div style="font-size: 10px; color: dimgrey"
+                                                 class="mtop05">
+                                                <p:outputPanel id="pn-grupo-conta-oc">
+                                                    <ad:grupo-conta-despesa
+                                                            grupoContaDespesa="#{item.ajusteAlteracaoDados.objetoCompra.grupoContaDespesa}"/>
+                                                </p:outputPanel>
+                                            </div>
+                                        </p:column>
+                                        <p:column
+                                                headerText="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao() ? 'Especif.' : 'Especif. De'}"
+                                                styleClass="alinhamentoEsquerda">
+                                            <ad:especificacao-objeto-compra
+                                                    exibirTexto="true"
+                                                    especificacao="#{item.ajusteDadosOriginais.descricaoComplementar}"/>
+                                        </p:column>
+                                        <p:column headerText="Especif. Para"
+                                                  style="width: 20%"
+                                                  styleClass="alinhamentoEsquerda"
+                                                  rendered="#{ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra()}">
+                                            <h:panelGroup id="group-especif">
+                                                <p:inputTextarea id="editor-especif"
+                                                                 title="Digite a descrição complementar."
+                                                                 value="#{item.ajusteAlteracaoDados.descricaoComplementar}"
+                                                                 autoResize="false"
+                                                                 maxlength="3000"
+                                                                 cols="20"
+                                                                 rows="5"
+                                                                 scrollHeight="50"
+                                                                 disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}">
+                                                    <p:ajax update="@this"
+                                                            process="@this"
+                                                            listener="#{ajusteContratoControlador.validarAlteracaoObjetoCompra(item)}"/>
+                                                </p:inputTextarea>
+
+                                                <p:commandButton icon="ui-icon-newwin"
+                                                                 update=":formTabelaEspecificacao"
+                                                                 process="@this"
+                                                                 actionListener="#{ajusteContratoControlador.recuperarObjetoCompra(item)}"
+                                                                 onclick="aguarde.show()"
+                                                                 oncomplete="aguarde.hide();"
+                                                                 tabindex="-1"/>
+                                            </h:panelGroup>
+                                        </p:column>
+                                        <p:column headerText="Tipo Controle De"
+                                                  styleClass="alinhamentoEsquerda"
+                                                  rendered="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao()}">
+                                            <h:outputText value="#{item.ajusteDadosOriginais.tipoControle.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Tipo Controle Para"
+                                                  styleClass="alinhamentoEsquerda"
+                                                  rendered="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao()}">
+                                            <div>
+                                                <h:selectOneMenu value="#{item.ajusteAlteracaoDados.tipoControle}"
+                                                                 disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}">
+                                                    <f:selectItems
+                                                            value="#{ajusteContratoControlador.tiposControle}"/>
+                                                    <p:ajax event="change"
+                                                            process="@this"
+                                                            update="@this :Formulario:tab-view-geral:panel-Itens"
+                                                            onstart="aguarde.show()"
+                                                            oncomplete="aguarde.hide()"
+                                                            listener="#{ajusteContratoControlador.recalcularValoresMovimentos(item, item.ajusteAlteracaoDados.tipoControle)}"/>
+                                                </h:selectOneMenu>
+                                            </div>
+                                        </p:column>
+                                        <p:column headerText="Qtde." style="text-align: right">
+                                            <fc:output-mascara-unidade-medida
+                                                    tipoMascara="#{item.ajusteAlteracaoDados.objetoCompra.unidadeMedida.mascaraQuantidade}"
+                                                    value="#{item.ajusteAlteracaoDados.quantidade}"/>
+                                        </p:column>
+                                        <p:column headerText="Vl. Unit." style="text-align: right">
+                                            <p:outputPanel id="vl-unitario">
+                                                <fc:output-mascara-unidade-medida
+                                                        tipoMascara="#{item.ajusteAlteracaoDados.objetoCompra.unidadeMedida.mascaraValorUnitario}"
+                                                        value="#{item.ajusteAlteracaoDados.valorUnitario}"/>
+                                            </p:outputPanel>
+                                        </p:column>
+                                        <p:column headerText="Vl. Total" style="text-align: right">
+                                            <h:outputText id="vl-total"
+                                                          value="#{item.ajusteAlteracaoDados.itemContrato.valorTotal}">
+                                                <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:column>
+                                    </p:dataTable>
+
+                                    <p:outputPanel
+                                            rendered="#{ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()}">
+                                        <p:fieldset
+                                                styleClass="mtop05"
+                                                legend="Dados Gerais do Aditivo">
+                                            <h:panelGrid columns="2" cellpadding="2" cellspacing="2">
+                                                <h:outputText value="Situação: "/>
+                                                <h:outputText
+                                                        value="#{ajusteContratoControlador.alteracaoContratual.situacao.descricao}"
+                                                        styleClass="negrito label label-info"
+                                                        style="font-size: 13px"/>
+
+                                                <h:outputText value="Número/Ano do Termo: "/>
+                                                <h:commandLink
+                                                        styleClass="link-redirecionar"
+                                                        target="_blank"
+                                                        actionListener="#{utilBeanAdministrativo.redirecionarParaAlteracaoContratual(ajusteContratoControlador.alteracaoContratual)}"
+                                                        title="Clique para visualizar este registro em nova aba.">
+                                                    <h:outputText styleClass="negrito"
+                                                                  value="#{ajusteContratoControlador.alteracaoContratual.numeroAnoTermo}"/>
+                                                </h:commandLink>
+
+                                                <h:outputText value="Data de Aprovação: "/>
+                                                <h:outputText
+                                                        value="#{ajusteContratoControlador.alteracaoContratual.dataAprovacao}"
+                                                        styleClass="negrito">
+                                                    <f:convertDateTime type="date"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Data de Deferimento:"/>
+                                                <h:outputText
+                                                        value="#{ajusteContratoControlador.alteracaoContratual.dataDeferimento}"
+                                                        styleClass="negrito">
+                                                    <f:convertDateTime type="date"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Data de Assinatura:"/>
+                                                <h:outputText
+                                                        value="#{ajusteContratoControlador.alteracaoContratual.dataAssinatura}"
+                                                        styleClass="negrito">
+                                                    <f:convertDateTime type="date"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Justificativa: "/>
+                                                <p:inputTextarea
+                                                        value="#{ajusteContratoControlador.alteracaoContratual.justificativa}"
+                                                        cols="40"
+                                                        autoResize="true"
+                                                        readonly="true"/>
+                                            </h:panelGrid>
+                                        </p:fieldset>
+                                    </p:outputPanel>
+
+
+                                    <p:dataTable
+                                            id="tableMovimentosAditivo"
+                                            value="#{ajusteContratoControlador.itensAjusteDadosVO}" var="mov"
+                                            rendered="#{ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()}"
+                                            style="vertical-align: top; margin-top: 10px"
+                                            rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                            rows="10"
+                                            paginator="true"
+                                            paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Movimentos &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                            rowsPerPageTemplate="10,25,50,100"
+                                            rowIndexVar="rowlx">
+                                        <p:column headerText="Detalhar Itens" style="width: 5%">
+                                            <p:rowToggler/>
+                                        </p:column>
+                                        <p:column headerText="Operação De"
+                                                  styleClass="alinhamentoEsquerda">
+                                            <h:outputText value="#{mov.ajusteDadosOriginais.operacao.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Operação Para"
+                                                  styleClass="alinhamentoEsquerda">
+                                            <div>
+                                                <h:selectOneMenu value="#{mov.ajusteAlteracaoDados.operacao}"
+                                                                 disabled="#{!ajusteContratoControlador.selecionado.situacao.isEmElaboracao()}">
+                                                    <f:selectItems
+                                                            value="#{ajusteContratoControlador.operacoes}"/>
+                                                    <p:ajax event="change"
+                                                            process="@this"
+                                                            update="@this :Formulario:tab-view-geral:panel-Itens"
+                                                            onstart="aguarde.show()"
+                                                            oncomplete="aguarde.hide()"/>
+                                                </h:selectOneMenu>
+                                            </div>
+                                        </p:column>
+                                        <p:column headerText="Finalidade" styleClass="alinhamentoEsquerda">
+                                            <h:outputText value="#{mov.ajusteDadosOriginais.movimentoAlteracaoCont.finalidade.descricao}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor/Variação Contrato" styleClass="alinhamentoEsquerda">
+                                            <h:outputText
+                                                    value="#{mov.ajusteDadosOriginais.movimentoAlteracaoCont.valorVariacaoContrato ? 'Sim' : 'Não'}"/>
+                                        </p:column>
+                                        <p:column headerText="Valor do Movimento" styleClass="alinhamentoDireita">
+                                            <h:outputText
+                                                    value="#{mov.ajusteDadosOriginais.movimentoAlteracaoCont.valor}"
+                                                    converter="moneyConverter"/>
+                                        </p:column>
+
+                                        <p:rowExpansion>
+                                            <div>
+                                                <p:dataTable paginator="true"
+                                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                                             rowIndexVar="rowIx"
+                                                             styleClass="mtop05"
+                                                             emptyMessage="Não foram localizados registros para serem apresentados"
+                                                             value="#{ajusteContratoControlador.itensMovimento}"
+                                                             rows="10"
+                                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Itens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                             rowsPerPageTemplate="10,25,50,100"
+                                                             var="item">
+
+                                                    <p:columnGroup type="header">
+                                                        <p:row>
+                                                            <p:column styleClass="alinhamentoEsquerda"
+                                                                      headerText="Item" rowspan="2"/>
+                                                            <p:column styleClass="alinhamentoEsquerda"
+                                                                      headerText="Unid. Med." rowspan="2"/>
+                                                            <p:column
+                                                                    styleClass="alinhamentoCentralizado negrito"
+                                                                    headerText="Original" colspan="3"/>
+                                                            <p:column
+                                                                    styleClass="alinhamentoCentralizado negrito"
+                                                                    headerText="Movimentação"
+                                                                    colspan="3"/>
+                                                        </p:row>
+                                                        <p:row>
+                                                            <p:column styleClass="alinhamentoDireita"
+                                                                      headerText="Qtde" colspan="1"/>
+                                                            <p:column styleClass="alinhamentoDireita"
+                                                                      headerText="Valor Unit. (R$)" colspan="1"/>
+                                                            <p:column styleClass="alinhamentoDireita"
+                                                                      headerText="Valor Total (R$)" colspan="1"/>
+                                                            <p:column styleClass="alinhamentoDireita"
+                                                                      headerText="#{mov.ajusteDadosOriginais.movimentoAlteracaoCont.labelColunaQuantidadeAjuste()}"
+                                                                      colspan="1"/>
+                                                            <p:column styleClass="alinhamentoDireita"
+                                                                      headerText="#{mov.ajusteDadosOriginais.movimentoAlteracaoCont.labelColunaValorUnitarioAjuste()}"
+                                                                      colspan="1"/>
+                                                            <p:column styleClass="alinhamentoDireita"
+                                                                      headerText="Valor Total (R$)" colspan="1"/>
+                                                        </p:row>
+                                                    </p:columnGroup>
+                                                    <p:column styleClass="alinhamentoEsquerda"
+                                                              headerText="Item">
+                                                        <h:outputText
+                                                                value="#{item.itemContrato.numeroDescricao}"/>
+                                                    </p:column>
+                                                    <p:column styleClass="alinhamentoEsquerda"
+                                                              headerText="Item">
+                                                        <h:outputText
+                                                                value="#{item.itemContrato.itemAdequado.unidadeMedida.sigla}"/>
+                                                    </p:column>
+                                                    <p:column styleClass="alinhamentoDireita">
+                                                        <h:outputText
+                                                                value="#{item.itemContrato.quantidadeTotalContrato}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:column>
+                                                    <p:column
+                                                            styleClass="alinhamentoDireita">
+                                                        <h:outputText
+                                                                value="#{item.itemContrato.valorUnitario}">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:column>
+                                                    <p:column styleClass="alinhamentoDireita">
+                                                        <h:outputText value="#{item.itemContrato.valorTotal}"
+                                                                      converter="moneyConverter"/>
+                                                    </p:column>
+                                                    <p:column styleClass="alinhamentoDireita"
+                                                              headerText="#{mov.ajusteDadosOriginais.movimentoAlteracaoCont.labelColunaQuantidadeAjuste()}">
+                                                        <fc:output-mascara-unidade-medida
+                                                                tipoMascara="#{item.mascaraQuantidade}"
+                                                                value="#{item.quantidade}"/>
+                                                    </p:column>
+                                                    <p:column styleClass="alinhamentoDireita"
+                                                              headerText="#{mov.ajusteDadosOriginais.movimentoAlteracaoCont.labelColunaValorUnitarioAjuste()}">
+                                                        <fc:output-mascara-unidade-medida
+                                                                tipoMascara="#{item.mascaraValorUnitario}"
+                                                                value="#{item.valorUnitario}"/>
+                                                    </p:column>
+                                                    <p:column styleClass="alinhamentoDireita"
+                                                              headerText="Valor Total">
+                                                        <h:outputText value="#{item.valorTotal}">
+                                                            <f:convertNumber type="currency"
+                                                                             pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </p:column>
+                                                </p:dataTable>
+                                            </div>
+                                        </p:rowExpansion>
+                                    </p:dataTable>
+                                </div>
+                            </p:outputPanel>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Dados do Contrato">
+                        <p:outputPanel id="panel-dados-cont">
+                            <ad:detalhes-contrato contrato="#{ajusteContratoControlador.selecionado.contrato}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <fc:filesUploadWP selecionado="#{ajusteContratoControlador.selecionado}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             styleClass="operacao mtop10 prioritario"
+                             process="@this"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para salvar as execuções."
+                             actionListener="#{ajusteContratoControlador.salvarAjuste()}"
+                             icon="ui-icon-disk"/>
+
+            <p:commandButton value="Cancelar"
+                             styleClass="operacao mlef05 mtop10"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para cancelar esta operação."
+                             actionListener="#{ajusteContratoControlador.cancelar()}"
+                             icon="ui-icon-cancel"/>
+
+            <p:commandButton icon="ui-icon-check"
+                             process="@this :Formulario:tab-view-geral:panel-ajuste"
+                             value="Aprovar Ajuste"
+                             update=":formAprovarAjuste"
+                             rendered="#{ajusteContratoControlador.selecionado.situacao.isEmElaboracao() and ajusteContratoControlador.isOperacaoEditar()}"
+                             onclick="aguarde.show()"
+                             actionListener="#{ajusteContratoControlador.aprovarAjuste()}"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para aprovar o ajuste."
+                             styleClass="mlef05 mtop10 operacao prioritario"/>
+        </h:form>
+
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  width="1000"
+                  resizable="false"
+                  widgetVar="dlgAprovarAjuste"
+                  closable="false">
+            <h:form id="formAprovarAjuste">
+                <legend
+                        class="legenda mbot02">Aprovar Ajuste - #{ajusteContratoControlador.selecionado.tipoAjuste.titulo}</legend>
+
+                <div align="center" class="alert alert-error" style="font-size: 15px; padding: 3px">
+                    <strong>Atenção!</strong> O ajuste será aprovado e não poderá sofrer alterações.
+                </div>
+                <div align="center" class="alert alert-error" style="font-size: 15px; padding: 3px">
+                    <strong>Ao aprovar o ajuste, será movimentado os dados relacionados abaixo</strong>
+                </div>
+
+                <div class="thumbnail mtop10">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Data de Aprovação: "/>
+                        <p:calendar onkeypress="mascara(this, mdata)"
+                                    maxlength="10"
+                                    showOn="button"
+                                    title="Digite a data de publicação"
+                                    value="#{ajusteContratoControlador.selecionado.dataAprovacao}"
+                                    locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                    size="12">
+                            <p:ajax event="blur" process="@this"/>
+                            <p:ajax event="dateSelect" process="@this"/>
+                        </p:calendar>
+                    </h:panelGrid>
+
+                    <div class="label label-info mtop10" style="font-size: 14px; text-decoration: none">
+                        ALTERAÇÕES
+                    </div>
+                    <p:scrollPanel mode="native" style="max-height: 250px">
+                        <h:panelGrid columns="2" styleClass="mtop10">
+                            <h:outputText value="Situação: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.situacaoContrato)
+                                                  and ajusteContratoControlador.selecionado.isAjusteContrato()}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.situacaoContrato)
+                                                  and ajusteContratoControlador.selecionado.isAjusteContrato()}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.situacaoContrato.descricao}"
+                                        styleClass="negrito label label-info"
+                                        style="font-size: 13px"/>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.situacaoContrato.descricao}"
+                                        styleClass="negrito label label-info"
+                                        style="font-size: 13px"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Número/Ano do Termo: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjetoString(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.numeroTermo)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjetoString(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.numeroTermo)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.numeroAnoTermo}"/>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.numeroAnoTermo}"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Data de Lançamento: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataLancamento)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataLancamento)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.dataLancamento}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataLancamento}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Data de Aprovação: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataAprovacao)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataAprovacao)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.dataAprovacao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataAprovacao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Data de Deferimento: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataDeferimento)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataDeferimento)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.dataDeferimento}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataDeferimento}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Data de Assinatura: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataAssinatura)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataAssinatura)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.dataAssinatura}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.dataAssinatura}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Início de Vigência: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.inicioVigencia)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.inicioVigencia)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.inicioVigencia}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.inicioVigencia}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Término de Vigência: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoVigencia)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoVigencia)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.terminoVigencia}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoVigencia}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Término de Vigência Atual: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoVigenciaAtual)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoVigenciaAtual)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.terminoVigenciaAtual}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoVigenciaAtual}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Início da Execução: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.inicioExecucao)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.inicioExecucao)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.inicioExecucao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.inicioExecucao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Término de Execução: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoExecucao)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoExecucao)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.terminoExecucao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoExecucao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Término de Execução Atual: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoExecucaoAtual)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoExecucaoAtual)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.terminoExecucaoAtual}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.terminoExecucaoAtual}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </h:panelGroup>
+
+                            <h:outputText value="Responsável Unidade Administrativa: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.responsavelPrefeitura)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.responsavelPrefeitura)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.responsavelPrefeitura}"/>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.responsavelPrefeitura}"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Responsável pelo Fornecedor: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.responsavelEmpresa)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjeto(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.responsavelEmpresa)}">
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.responsavelEmpresa}"/>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <h:outputText
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.responsavelEmpresa}"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Objeto: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjetoString(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.objeto)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjetoString(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.objeto)}">
+                                <p:inputTextarea
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.objeto}"
+                                        cols="40"
+                                        autoResize="true"
+                                        readonly="true"
+                                        size="15"/>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <p:inputTextarea
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.objeto}"
+                                        cols="40"
+                                        autoResize="true"
+                                        readonly="true"
+                                        size="15"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Justificativa: "
+                                          styleClass="negrito"
+                                          rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjetoString(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.observacao)}"/>
+                            <h:panelGroup
+                                    rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.hasAlteracaoObjetoString(ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.observacao)}">
+                                <p:inputTextarea
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosOriginal.observacao}"
+                                        cols="40"
+                                        autoResize="true"
+                                        readonly="true"
+                                        size="15"/>
+                                <a class="fa fa-arrow-right mlef10 mrig10" style="font-size: 15px"/>
+                                <p:inputTextarea
+                                        value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.ajusteDadosAlteracao.observacao}"
+                                        cols="40"
+                                        autoResize="true"
+                                        readonly="true"
+                                        size="15"/>
+                            </h:panelGroup>
+                        </h:panelGrid>
+
+                        <p:dataTable
+                                value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.itensContratoDeAprovadoParaEmElaboracao}"
+                                rendered="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.isAjusteAprovadoParaEmElaboracao()}"
+                                var="itemCont"
+                                style="vertical-align: top"
+                                rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                rows="10"
+                                paginator="true"
+                                paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                rowsPerPageTemplate="10,25,50,100"
+                                rowIndexVar="rowlx">
+                            <f:facet name="header">
+                                Itens do contrato não poderão ser movimentados até a próxima aprovação do contrato
+                            </f:facet>
+                            <p:column headerText="Item" style="width: 2%"
+                                      styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{itemCont.numero}"/>
+                            </p:column>
+                            <p:column headerText="Objeto Compra"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                        value="#{itemCont.itemAdequado.objetoCompra}"/>
+                            </p:column>
+                            <p:column headerText="Qtde." style="text-align: right">
+                                <fc:output-mascara-unidade-medida
+                                        tipoMascara="#{itemCont.itemAdequado.unidadeMedida.mascaraQuantidade}"
+                                        value="#{itemCont.quantidadeTotalContrato}"/>
+                            </p:column>
+                            <p:column headerText="Vl. Unit." style="text-align: right">
+                                <fc:output-mascara-unidade-medida
+                                        tipoMascara="#{itemCont.itemAdequado.unidadeMedida.mascaraValorUnitario}"
+                                        value="#{itemCont.valorUnitario}"/>
+                            </p:column>
+                            <p:column headerText="Vl. Total" style="text-align: right">
+                                <h:outputText
+                                        value="#{itemCont.valorTotal}">
+                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+
+                        <p:dataTable
+                                value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.itensAjusteDadosCadastrais}"
+                                rendered="#{ajusteContratoControlador.selecionado.substituicaoObjetoCompra or ajusteContratoControlador.selecionado.ajusteControleExecucao}"
+                                var="itemAlt"
+                                style="vertical-align: top"
+                                rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                rows="10"
+                                paginator="true"
+                                paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                rowsPerPageTemplate="10,25,50,100"
+                                rowIndexVar="rowlx">
+                            <f:facet name="header">
+                                Itens do contrato que serão movimentados
+                            </f:facet>
+                            <p:column headerText="Item" style="width: 2%"
+                                      styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{itemAlt.ajusteDadosOriginais.itemContrato.numero}"/>
+                            </p:column>
+
+                            <c:if test="#{ajusteContratoControlador.selecionado.isAjusteControleExecucao()}">
+                                <p:column headerText="Objeto Compra"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText
+                                            value="#{itemAlt.ajusteDadosOriginais.itemContrato.itemAdequado.objetoCompra}"/>
+                                    <br/>
+                                    <div style="font-size: 11px; color: dimgrey"
+                                         class="mtop05">
+                                        <ad:grupo-conta-despesa
+                                                grupoContaDespesa="#{itemAlt.ajusteDadosOriginais.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Especif."
+                                          styleClass="alinhamentoEsquerda">
+                                    <ad:especificacao-objeto-compra
+                                            exibirTexto="true"
+                                            especificacao="#{itemAlt.ajusteDadosOriginais.descricaoComplementar}"/>
+                                </p:column>
+                                <p:column headerText="Tipo Controle De"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemAlt.ajusteDadosOriginais.tipoControle.descricao}"
+                                                  styleClass="negrito"/>
+                                </p:column>
+                                <p:column headerText="Tipo Controle Para"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemAlt.ajusteAlteracaoDados.tipoControle.descricao}"
+                                                  styleClass="azulnegrito"/>
+                                </p:column>
+                            </c:if>
+
+                            <c:if test="#{ajusteContratoControlador.selecionado.isSubstituicaoObjetoCompra()}">
+                                <p:column headerText="Objeto Compra De"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemAlt.ajusteDadosOriginais.objetoCompra}"
+                                                  styleClass="negrito"/>
+                                    <br/>
+                                    <div style="font-size: 11px; color: dimgrey"
+                                         class="mtop05">
+                                        <ad:grupo-conta-despesa
+                                                grupoContaDespesa="#{itemAlt.ajusteDadosOriginais.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Objeto Compra Para"
+                                          styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{itemAlt.ajusteAlteracaoDados.objetoCompra}"
+                                                  styleClass="azulnegrito"/>
+                                    <br/>
+                                    <div style="font-size: 11px; color: dimgrey"
+                                         class="mtop05">
+                                        <ad:grupo-conta-despesa
+                                                grupoContaDespesa="#{itemAlt.ajusteAlteracaoDados.itemContrato.itemAdequado.objetoCompra.grupoContaDespesa}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Especif. De"
+                                          styleClass="alinhamentoEsquerda">
+                                    <ad:especificacao-objeto-compra
+                                            styleClassTexto="negrito"
+                                            especificacao="#{itemAlt.ajusteDadosOriginais.descricaoComplementar}"
+                                            exibirTexto="true"/>
+                                </p:column>
+
+                                <p:column headerText="Especif. Para"
+                                          styleClass="alinhamentoEsquerda">
+                                    <ad:especificacao-objeto-compra
+                                            styleClassTexto="azulnegrito"
+                                            especificacao="#{itemAlt.ajusteAlteracaoDados.descricaoComplementar}"
+                                            exibirTexto="true"/>
+                                </p:column>
+                            </c:if>
+
+                            <p:column headerText="Qtde." style="text-align: right">
+                                <fc:output-mascara-unidade-medida
+                                        tipoMascara="#{itemAlt.ajusteAlteracaoDados.objetoCompra.unidadeMedida.mascaraQuantidade}"
+                                        value="#{itemAlt.ajusteAlteracaoDados.quantidade}"/>
+                            </p:column>
+                            <p:column headerText="Vl. Unit." style="text-align: right">
+                                <fc:output-mascara-unidade-medida
+                                        tipoMascara="#{itemAlt.ajusteAlteracaoDados.objetoCompra.unidadeMedida.mascaraValorUnitario}"
+                                        value="#{itemAlt.ajusteAlteracaoDados.valorUnitario}"/>
+                            </p:column>
+                            <p:column headerText="Vl. Total" style="text-align: right">
+                                <h:outputText
+                                        value="#{itemAlt.ajusteAlteracaoDados.itemContrato.valorTotal}">
+                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+
+                        <p:dataTable
+                                value="#{ajusteContratoControlador.ajusteContratoAprovacaoVO.itensAjusteDadosCadastrais}"
+                                rendered="#{ajusteContratoControlador.selecionado.isAjusteOperacaoAditivo()}"
+                                var="movAlt"
+                                style="vertical-align: top"
+                                rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                rows="10"
+                                paginator="true"
+                                paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                rowsPerPageTemplate="10,25,50,100"
+                                rowIndexVar="rowlx">
+                            <f:facet name="header">
+                                Movimentos do Aditivo que serão alterados
+                            </f:facet>
+                            <p:column headerText="Operação De"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{movAlt.ajusteDadosOriginais.operacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Operação Para"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{movAlt.ajusteAlteracaoDados.operacao.descricao}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:scrollPanel>
+                </div>
+
+                <div class="modal-footer" style="border-radius: 1px">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     process="@this :formAprovarAjuste"
+                                     styleClass="prioritario"
+                                     title="Clique para confirmar a aprovação do ajuste."
+                                     onstart="aguarde.show();"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{ajusteContratoControlador.confirmarAprovacao()}"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     styleClass="operacao mlef05"
+                                     title="Clique para cancelar a aprovação do ajuste."
+                                     process="@this"
+                                     onclick="aguarde.show();"
+                                     actionListener="#{ajusteContratoControlador.cancelarAprovacao()}"
+                                     oncomplete="aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <div id="modalTabelaEspecificacao"
+             class="modal hide fade"
+             tabindex="-1" role="dialog"
+             style="width: 80%; left: 30%"
+             aria-labelledby="modalTabelaEspecificacao"
+             aria-hidden="true">
+            <p:outputPanel id="formTabelaEspecificacao">
+                <div class="modal-header alert alert-info" style="text-align: center">
+                    <div class="centralizado">
+                        Tabela de Especificações do Objeto de Compra
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <p:dataTable paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{ajusteContratoControlador.objetoCompra.especificacaoesAtivas}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ESPECIFICAÇÕES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="especificacao">
+                        <p:column headerText="Selecionar" style="text-align: center; width: 6%">
+                            <p:commandLink
+                                    immediate="true"
+                                    process="@this :formTabelaEspecificacao"
+                                    update=":Formulario:tab-view-geral:itensCont"
+                                    onclick="aguarde.show();$('#modalTabelaEspecificacao').modal('hide')"
+                                    oncomplete="aguarde.hide();"
+                                    actionListener="#{ajusteContratoControlador.selecionarEspecificacao}">
+                                <i class="fa fa-check-circle-o verdenegrito" style="font-size: 14px"/>
+                                <f:attribute name="objeto" value="#{especificacao}"/>
+                            </p:commandLink>
+                        </p:column>
+                        <p:column headerText="Detalhes" style="text-align: center; width: 6%">
+                            <p:rowToggler/>
+                        </p:column>
+                        <p:column headerText="Especificação (Texto Curto)" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{especificacao.textoCurto}" escape="false"/>
+                        </p:column>
+                        <p:column headerText="Ativo" style="text-align: center; width: 1%">
+                            <h:outputText value="#{objetoCompraControlador.especificacaoAtiva(especificacao)}"/>
+                        </p:column>
+                        <p:rowExpansion>
+                            <div class="alert alert-info mbot02">
+                                <strong>Especificação (Texto Completo): </strong><br/>
+                                <h:outputText value="#{especificacao.texto}" escape="false"/>
+                            </div>
+                        </p:rowExpansion>
+                    </p:dataTable>
+                </div>
+                <div class="modal-footer" style="height: 10%">
+                    <p:commandLink value="Fechar Tabela"
+                                   onclick="$('#modalTabelaEspecificacao').modal('hide');"/>
+                </div>
+            </p:outputPanel>
+        </div>
+
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparContaExtra"
+                             process="@this"
+                             update=":Formulario:evento :Formulario:panelSaldo :Formulario:panelTipoConta :Formulario:contaDestinacao"
+                             actionListener="#{ajusteDepositoControlador.limparCamposContaExtra()}"/>
+
+            <p:remoteCommand name="limparClasseCredor"
+                             process="@this"
+                             update=":Formulario:classeCredor"
+                             actionListener="#{ajusteDepositoControlador.limparClasseCredor()}"/>
+
+            <fc:cabecalhoPretty controlador="#{ajusteDepositoControlador}"
+                                origem="#{ajusteDepositoControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Ajuste em Depósito" id="panelGeral">
+                <h:panelGrid columns="2" id="gridGeral">
+                    <h:outputText value="Situação: "/>
+                    <h:outputText value="#{ajusteDepositoControlador.selecionado.situacao.descricao}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Número: "/>
+                    <h:outputText
+                        value="#{ajusteDepositoControlador.selecionado eq null ? ajusteDepositoControlador.selecionado.numero : 'Gerado automaticamente'}"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Data: "/>
+                    <p:calendar id="data" value="#{ajusteDepositoControlador.selecionado.dataAjuste}"
+                                pattern="dd/MM/yyyy" navigator="true"
+                                disabled="true"
+                                size="21">
+                        <p:ajax event="dateSelect" update=":Formulario:evento"/>
+                    </p:calendar>
+
+                    <h:outputText value="Unidade Organizacional: "/>
+                    <fc:codigo-descricao-hierarquia dataMovimento="#{ajusteDepositoControlador.selecionado.dataAjuste}"
+                                                    unidadeOrganizacional="#{ajusteDepositoControlador.selecionado.unidadeOrganizacional}"
+                                                    tipoHierarquia="ORCAMENTARIA"/>
+
+                    <h:outputText value="Tipo de Ajuste: "/>
+                    <p:selectOneRadio id="tipoajuste" value="#{ajusteDepositoControlador.selecionado.tipoAjuste}">
+                        <f:selectItems value="#{ajusteDepositoControlador.tiposAjuste}" var="tipo"
+                                       itemLabel="#{tipo.descricao}" itemValue="#{tipo}"/>
+                        <p:ajax event="change"
+                                listener="#{ajusteDepositoControlador.atribuirEvento()}"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                update=":Formulario:contaDestinacao :Formulario:pessoa :Formulario:classeCredor :Formulario:conta :Formulario:conta-financeira :Formulario:evento :Formulario:panelReceitaExtra :Formulario:panelValor"/>
+                    </p:selectOneRadio>
+
+                    <fc:outputLabelObrigatorio value="Conta Extraorçamentária: "/>
+                    <h:panelGrid columns="2">
+                        <p:autoComplete queryDelay="1000"
+                                        id="conta"
+                                        size="70"
+                                        title="Informe a conta extraorçamentária."
+                                        value="#{ajusteDepositoControlador.selecionado.contaExtraorcamentaria}"
+                                        completeMethod="#{ajusteDepositoControlador.completarContasExtraorcamentarias}"
+                                        converter="#{planoDeContasWizardControlador.converterConta}"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparContaExtra();}"
+                                        dropdown="true"
+                                        disabled="#{!empty ajusteDepositoControlador.selecionado.receitasExtras}"
+                                        panelStyle="max-height: 250px"
+                                        maxResults="30"
+                                        var="conta"
+                                        itemValue="#{conta.id}"
+                                        itemLabel="#{conta}">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update=":Formulario:evento :Formulario:panelSaldo :Formulario:panelTipoConta :Formulario:contaDestinacao"
+                                    listener="#{ajusteDepositoControlador.atribuirEvento()}"
+                                    process="@this"/>
+                        </p:autoComplete>
+
+                        <p:outputPanel id="panelSaldo">
+                            <h:outputText value="Saldo: "
+                                          rendered="#{ajusteDepositoControlador.renderizarSaldoExtra()}"/>
+                            <h:outputText id="saldoContaExtra"
+                                          rendered="#{ajusteDepositoControlador.renderizarSaldoExtra()}"
+                                          style="font-weight: bold"
+                                          value="#{ajusteDepositoControlador.saldoContaExtra}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:outputPanel>
+                    </h:panelGrid>
+
+                    <h:outputText value="Tipo de Conta Extra: "/>
+                    <p:outputPanel id="panelTipoConta">
+                        <h:outputText id="tipoCE"
+                                      styleClass="negrito"
+                                      value="#{ajusteDepositoControlador.selecionado.contaExtraorcamentaria.tipoContaExtraorcamentaria.descricao}"/>
+                    </p:outputPanel>
+
+                    <fc:outputLabelObrigatorio value="Conta de Destinação de Recurso: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="contaDestinacao"
+                                    title="Selecione uma conta de destinação de recursos."
+                                    completeMethod="#{ajusteDepositoControlador.completarContasDeDestinacao}"
+                                    value="#{ajusteDepositoControlador.selecionado.contaDeDestinacao}"
+                                    var="contaD"
+                                    size="70"
+                                    dropdown="true"
+                                    disabled="#{!empty ajusteDepositoControlador.selecionado.receitasExtras}"
+                                    panelStyle="max-height: 250px"
+                                    itemLabel="#{contaD}"
+                                    itemValue="#{contaD.id}"
+                                    forceSelection="true"
+                                    converter="#{planoDeContasWizardControlador.converterConta}"
+                                    maxResults="10">
+                        <p:ajax event="itemSelect"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{ajusteDepositoControlador.recuperarSaldoContaExtraorcamentaria}"
+                                process="@this"
+                                update=":Formulario:panelSaldo"/>
+                    </p:autoComplete>
+
+                    <h:outputText value="Evento Contábil: "/>
+                    <p:outputPanel id="evento">
+                        <co:visualizarEventoContabil evento="#{ajusteDepositoControlador.selecionado.eventoContabil}"
+                                                     parametroEvento="#{ajusteDepositoControlador.getParametroEvento()}"/>
+
+                    </p:outputPanel>
+
+                    <fc:outputLabelObrigatorio value="Pessoa: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="pessoa"
+                                    size="70"
+                                    title="Informe a Pessoa"
+                                    value="#{ajusteDepositoControlador.selecionado.pessoa}"
+                                    completeMethod="#{ajusteDepositoControlador.completarPessoas}"
+                                    disabled="#{!empty ajusteDepositoControlador.selecionado.receitasExtras}"
+                                    converter="#{pessoaContabilControlador.converterGenerico}"
+                                    onkeyup="if(keyUpCampoVazio(this)){limparClasseCredor();}"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px"
+                                    maxResults="30"
+                                    var="pessoa"
+                                    itemValue="#{pessoa.id}"
+                                    itemLabel="#{pessoa.nomeAutoComplete}">
+                        <p:ajax update=":Formulario:classeCredor"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                event="itemSelect"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Classe: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="classeCredor"
+                                    size="70"
+                                    title="Informe a Classe"
+                                    disabled="#{ajusteDepositoControlador.selecionado.pessoa eq null or !empty ajusteDepositoControlador.selecionado.receitasExtras}"
+                                    value="#{ajusteDepositoControlador.selecionado.classeCredor}"
+                                    completeMethod="#{ajusteDepositoControlador.completarClassesCredor}"
+                                    converter="#{classeCredorControlador.converterGenerico}"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px"
+                                    maxResults="30"
+                                    var="classe"
+                                    itemValue="#{classe.id}"
+                                    itemLabel="#{classe}">
+                        <p:ajax process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                event="itemSelect"/>
+                    </p:autoComplete>
+
+
+                    <fc:outputLabelObrigatorio value="Conta Financeira: "/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000"
+                                        id="conta-financeira"
+                                        size="70"
+                                        title="Informe um conta financeira."
+                                        value="#{ajusteDepositoControlador.contaFinanceira}"
+                                        completeMethod="#{ajusteDepositoControlador.completarContaFinanceira}"
+                                        converter="#{contaFinanceiraControlador.converterGenerico}"
+                                        disabled="#{!empty ajusteDepositoControlador.selecionado.receitasExtras}"
+                                        dropdown="true"
+                                        styleClass="mrig05"
+                                        panelStyle="max-height: 250px"
+                                        maxResults="30"
+                                        var="cf"
+                                        itemValue="#{cf.id}"
+                                        itemLabel="#{cf.toStringAutoCompleteContaFinanceira()}">
+                            <p:ajax event="itemSelect"
+                                    process="@this"
+                                    update="@none"/>
+                        </p:autoComplete>
+
+                        <co:botao_informacao descricao="
+                                  &lt;b> 1) Ajuste Aumentativo &lt;/b>
+                                  &lt;br/&gt; &bull;
+                                  Conta financeira utilizada para filtrar as receitas extra que serão vinculadas ao ajuste aumentativo.
+                                  &lt;br/&gt;&lt;br/&gt; &bull;
+                                  &lt;b> 2) Ajuste Diminutivo &lt;/b>
+                                  &lt;br/&gt; &bull;
+                                  Conta financeira utilizada para vincular a receita extra que será gerada para o ajuste diminutivo."/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Histórico: "/>
+                    <h:panelGrid columns="2" cellspacing="0" cellpadding="0">
+                        <p:inputTextarea title="Digite o histórico"
+                                         value="#{ajusteDepositoControlador.selecionado.historico}"
+                                         id="historico"
+                                         cols="70"
+                                         rows="3"
+                                         maxlength="255"
+                                         counterTemplate="{0} Caracteres Restantes." counter="counter"/>
+                        <h:outputText id="counter" styleClass="mlef05 azul"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Valor: "/>
+                    <p:outputPanel id="panelValor">
+                        <fc:inputMoeda title="Informe o valor do ajuste."
+                                       readonly="#{ajusteDepositoControlador.selecionado.isAjusteAumentativo()}"
+                                       value="#{ajusteDepositoControlador.selecionado.valor}"
+                                       id="valor"/>
+                    </p:outputPanel>
+                </h:panelGrid>
+
+                <p:outputPanel id="panelReceitaExtra">
+                    <p:panel rendered="#{ajusteDepositoControlador.selecionado.isAjusteAumentativo()}"
+                             styleClass="semBorda">
+                        <p:commandButton value="Buscar Receita"
+                                         styleClass="padrao mtop10"
+                                         id="btn-buscar-receita"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para selecionar buscar as receitas extras abertas com saldo."
+                                         actionListener="#{ajusteDepositoControlador.buscarReceitaExtra()}"
+                                         process="@this"
+                                         update=":formdlgReceitaExtra"
+                                         icon="ui-icon-circle-plus"/>
+
+                        <p:dataTable id="tabelaReceitaExtra"
+                                     value="#{ajusteDepositoControlador.selecionado.receitasExtras}"
+                                     var="rec"
+                                     styleClass="mtop02"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>RECEITAS EXTRAORÇAMENTÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+
+                            <p:column headerText="Ações" style="text-align: center; width: 8px">
+                                <p:commandButton icon="ui-icon-trash"
+                                                 actionListener="#{ajusteDepositoControlador.removerReceitaExtra(rec)}"
+                                                 title="Clique para remover este registro."
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 update=":Formulario:contaDestinacao :Formulario:pessoa :Formulario:classeCredor :Formulario:conta :Formulario:conta-financeira :Formulario:tabelaReceitaExtra :Formulario:panelValor"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"/>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:commandLink target="_blank"
+                                               title="Clique para visualizar esta receita extra."
+                                               actionListener="#{utilBeanContabil.redirecionarParaReceitaExtra(rec.receitaExtra)}">
+                                    <h:outputText value="#{rec.receitaExtra.numero}"/>
+                                </h:commandLink>
+                            </p:column>
+                            <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{rec.receitaExtra.dataReceita}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.receitaExtra.contaExtraorcamentaria}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.receitaExtra.subConta}"/>
+                            </p:column>
+                            <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{rec.receitaExtra.pessoa}"/>
+                            </p:column>
+                            <p:column headerText="Saldo (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{rec.receitaExtra.saldo}">
+                                    <f:convertNumber type="currency"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{rec.receitaExtra.valor}">
+                                    <f:convertNumber type="currency"/>
+                                </h:outputText>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{ajusteDepositoControlador.selecionado.valorTotalReceitaExtra}"
+                                            converter="moneyConverter"/>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:panel>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{ajusteDepositoControlador}"/>
+        </h:form>
+
+
+        <p:dialog widgetVar="dlgReceitaExtra"
+                  modal="true"
+                  resizable="false"
+                  showHeader="true"
+                  closable="false"
+                  dynamic="true"
+                  style="position: fixed !important;"
+                  position="center">
+            <h:form id="formdlgReceitaExtra">
+
+                <p:outputPanel id="panelDialogReceita" styleClass="mtop05">
+                    <p:dataTable id="rec"
+                                 value="#{ajusteDepositoControlador.receitasExtras}"
+                                 selection="#{ajusteDepositoControlador.receitasExtrasSelecionadas}"
+                                 rowKey="#{rec.id}"
+                                 var="rec"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 style="max-height: 400px; overflow-y: scroll; border : solid #92B8D3 1px; margin-top: 10px;"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>RECEITAS EXTRAORÇAMENTÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column selectionMode="multiple" style="width: 5%; text-align: center;"/>
+                        <p:column headerText="Receita"
+                                  filterBy="#{rec.numero}"
+                                  filterMatchMode="contains"
+                                  styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{rec.numero}"/>
+                        </p:column>
+                        <p:column headerText="Data"
+                                  filterBy="#{rec.dataReceita}"
+                                  styleClass="alinhamentoCentralizado"
+                                  filterMatchMode="contains">
+                            <h:outputText value="#{rec.dataReceita}">
+                                <f:convertDateTime parent="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Conta Extraorçamentária"
+                                  styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{rec.contaExtraorcamentaria}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso"
+                                  styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{rec.fonteDeRecursos}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)"
+                                  styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{rec.valor}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Saldo (R$)"
+                                  styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{rec.saldo}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:commandButton value="Confirmar"
+                                     update=":Formulario:contaDestinacao :Formulario:pessoa :Formulario:classeCredor :Formulario:conta :Formulario:conta-financeira :Formulario:tabelaReceitaExtra :Formulario:panelValor"
+                                     process="@this :formdlgReceitaExtra"
+                                     styleClass="padrao mtop10"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     title="Clique para confirmar a(s) receita(s) extraorçamentária(s) selecionada(s)."
+                                     icon="ui-icon-check"
+                                     actionListener="#{ajusteDepositoControlador.adicionarReceitaExtra()}"/>
+
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-circle-close"
+                                     title="Clique para fecha a janela."
+                                     process="@this"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     onclick="dlgReceitaExtra.hide()"
+                                     styleClass="padrao mlef05 mtop10"/>
+
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

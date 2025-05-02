@@ -1,0 +1,11 @@
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2012', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2013', 'dd/MM/yyyy')  where id = 639624019;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2013', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2014', 'dd/MM/yyyy')  where id = 639594730;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2014', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2015', 'dd/MM/yyyy')  where id = 639756399;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2015', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2016', 'dd/MM/yyyy')  where id = 639771638;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2016', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2017', 'dd/MM/yyyy')  where id = 745952599;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2017', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2018', 'dd/MM/yyyy')  where id = 745952600;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2018', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2019', 'dd/MM/yyyy')  where id = 811027929;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2019', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2020', 'dd/MM/yyyy')  where id = 893437619;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2020', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2021', 'dd/MM/yyyy')  where id = 10587195622;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2021', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2022', 'dd/MM/yyyy')  where id = 10727135582;
+update PERIODOAQUISITIVOFL set INICIOVIGENCIA = to_date('07/02/2022', 'dd/MM/yyyy'), FINALVIGENCIA = to_date('06/02/2023', 'dd/MM/yyyy')  where id = 10855520484;

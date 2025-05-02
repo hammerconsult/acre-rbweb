@@ -1,0 +1,22 @@
+INSERT INTO RECURSOSISTEMA (ID, NOME, CAMINHO, CADASTRO, MODULO)
+VALUES (hibernate_sequence.nextval, 'TRIBUTÁRIO > NOTA FISCAL > TARIFA BANCÁRIA > LISTAR',
+        '/tributario/nfse/tarifa-bancaria/lista.xhtml', 0, 'TRIBUTARIO');
+
+INSERT INTO RECURSOSISTEMA (ID, NOME, CAMINHO, CADASTRO, MODULO)
+VALUES (hibernate_sequence.nextval, 'TRIBUTÁRIO > NOTA FISCAL > TARIFA BANCÁRIA > VISUALIZAR',
+        '/tributario/nfse/tarifa-bancaria/visualizar.xhtml', 0, 'TRIBUTARIO');
+
+INSERT INTO GRUPORECURSOSISTEMA (GRUPORECURSO_ID, RECURSOSISTEMA_ID)
+VALUES ((SELECT ID FROM GRUPORECURSO WHERE NOME = 'TRB - NFS-e - Gerencial'),
+        (SELECT ID FROM RECURSOSISTEMA WHERE CAMINHO = '/tributario/nfse/tarifa-bancaria/lista.xhtml'));
+
+INSERT INTO GRUPORECURSOSISTEMA (GRUPORECURSO_ID, RECURSOSISTEMA_ID)
+VALUES ((SELECT ID FROM GRUPORECURSO WHERE NOME = 'TRB - NFS-e - Gerencial'),
+        (SELECT ID
+         FROM RECURSOSISTEMA
+         WHERE CAMINHO = '/tributario/nfse/tarifa-bancaria/visualizar.xhtml'));
+
+INSERT INTO MENU (ID, LABEL, CAMINHO, PAI_ID, ORDEM)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 'TARIFA BANCÁRIA',
+        '/tributario/nfse/tarifa-bancaria/lista.xhtml',
+        (SELECT ID FROM MENU WHERE LABEL = 'DES-IF' AND CAMINHO IS NULL), 20);

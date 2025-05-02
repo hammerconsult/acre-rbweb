@@ -1,0 +1,1 @@
+update basecargo set iniciovigencia = '01/01/1960' where iniciovigencia = '01/01/1986';

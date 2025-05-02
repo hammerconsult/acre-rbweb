@@ -1,0 +1,674 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="NotaDeEmpenho" pageWidth="595" pageHeight="842" columnWidth="454" leftMargin="85" rightMargin="56" topMargin="85" bottomMargin="56">
+	<property name="ireport.zoom" value="1.2100000000000104"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="531"/>
+	<parameter name="IMAGEM" class="java.lang.String"/>
+	<parameter name="SQL" class="java.lang.String">
+		<defaultValueExpression><![CDATA["1=1"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOCUMENTO" class="java.lang.String"/>
+	<parameter name="USUARIO" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT
+    ESTORNO.numero||'/'||exerc.ano as numero,
+    to_char(ESTORNO.dataestorno,'dd/MM/YYYY') as data_EMPENHO,
+    ESTORNO.HISTORICONOTA as historico_emp,
+    emp.tipoempenho as tipo,
+    TRIM(vworg.CODIGO) AS CD_ORGAO,
+    TRIM(vworg.DESCRICAO) AS DESC_ORGAO,
+    TRIM(vw.CODIGO) AS CD_UNIDADE,
+    TRIM(vw.DESCRICAO) AS DESC_UNIDADE,
+    f.codigo || '.' || sf.codigo || '.' || p.codigo || '.' || tpa.codigo || a.codigo || '.' || sub.codigo as CD_PROG_TRABALHO,
+    sub.descricao AS PROJETO_ATIVIDADE,
+    ct_desp.codigo as elemento,
+    ct_desp.descricao as especificao_despesa,
+    coalesce(pf.nome, pj.razaosocial) as nome_pessoa,
+    formatacpfcnpj(coalesce(pf.cpf, pj.cnpj)) as cpf_cnpj,
+    fonte_r.codigo || ' - ' || trim(fonte_r.descricao)  || ' (' || cdest.codigo || ')' as desc_destinacao,
+    ESTORNO.valor as valor,
+    RPAD(FRT_EXTENSO_MONETARIO(ESTORNO.VALOR)||' ',600,'* ') AS VALOR_EXTENSO,
+    COALESCE(ENDERECO.LOGRADOURO,'Pessoa não possui Logradouro') AS LOGRADOURO,
+    coalesce(endereco.localidade,'Pessoa não possui Localidade') as localidade,
+    A.DESCRICAO AS DESC_ACAO,
+   coalesce(lic.numero, disp.numeroDaDispensa, regext.numeromodalidade)  || ' - Processo Licitatório ' || coalesce(lic.numerolicitacao, disp.numerodadispensa, regext.numeroregistro) || ' - ' || to_char(coalesce(lic.emitidaem, disp.datadadispensa, regext.dataregistrocarona),'dd/MM/YYYY') as modalidade,
+    emp.MODALIDADELICITACAO as MODALIDADELICITACAO,
+    classe.codigo || ' - ' || classe.descricao as desc_classepessoa,
+    COALESCE(estorno.SALDODISPONIVEL,0) AS SALDO_ANTERIOR,
+    COALESCE(estorno.SALDODISPONIVEL,0) + ESTORNO.valor AS SALDO_POSTERIOR,
+    COALESCE(endereco.bairro,'Pessoa não possui bairro cadastrado') as bairro,
+    COALESCE(ENDERECO.uf,'sem UF ') AS UF,
+    COALESCE(SUBSTR(ENDERECO.CEP,1,5)||'-'||SUBSTR(ENDERECO.CEP,6,3),'sem CEP') AS CEP
+FROM
+      empenhoestorno ESTORNO
+INNER JOIN EMPENHO EMP ON ESTORNO.EMPENHO_ID = EMP.ID
+inner join empenho emp_original on emp.empenho_id = emp_original.id
+INNER JOIN fontedespesaorc FONTE ON EMP.fontedespesaorc_id = fonte.id
+INNER JOIN despesaorc DESPESA ON fonte.despesaorc_id = despesa.id
+INNER JOIN PROVISAOPPADESPESA PROVISAO ON DESPESA.PROVISAOPPADESPESA_ID= PROVISAO.ID
+inner join provisaoppafonte ppf on ppf.id = fonte.PROVISAOPPAFONTE_ID
+INNER JOIN SUBACAOPPA SUB ON SUB.ID = provisao.subacaoppa_id
+INNER JOIN ACAOPPA A ON A.ID = sub.acaoppa_id
+INNER JOIN TIPOACAOPPA TPA ON TPA.ID = A.TIPOACAOPPA_ID
+INNER JOIN programappa P ON P.ID = A.programa_id
+INNER JOIN FUNCAO F ON F.ID = A.funcao_id
+INNER JOIN SUBFUNCAO SF ON SF.ID = A.subfuncao_id
+INNER JOIN CONTA CT_DESP ON provisao.contadedespesa_id = CT_DESP.ID
+inner join exercicio exerc on emp.exercicio_id = exerc.id
+inner join vwhierarquiaorcamentaria vw on emp.unidadeorganizacional_id  = vw.subordinada_id
+inner join vwhierarquiaorcamentaria vworg on vw.superior_id  = vworg.subordinada_id
+INNER JOIN PESSOA Pes ON emp.fornecedor_id = Pes.id
+left join pessoafisica pf on pes.id = pf.id
+left join pessoajuridica pj on pes.id = pj.id
+left join enderecocorreio endereco on pes.enderecoprincipal_id = endereco.id
+left join contadedestinacao cd on cd.id = ppf.destinacaoderecursos_id
+left join conta cdest on cdest.id = cd.id
+left join fontederecursos fonte_r on fonte_r.id = cd.fontederecursos_id and fonte_r.exercicio_id = emp_original.exercicio_id
+left join contrato contrato on emp.contrato_id = contrato.id
+left join conlicitacao conlic on contrato.id = conlic.CONTRATO_ID
+left join licitacao lic on conlic.licitacao_id = lic.id
+
+left join condispensalicitacao conDisp on condisp.contrato_id = contrato.id
+left join dispensadelicitacao disp on disp.id = condisp.dispensadelicitacao_id
+
+left join CONREGPRECOEXTERNO conReg on conreg.contrato_id = contrato.id
+left join REGISTROSOLMATEXT regExt on regExt.id = conreg.regsolmatext_id
+LEFT JOIN CLASSECREDOR CLASSE ON EMP.CLASSECREDOR_ID = CLASSE.ID
+where EMP.categoriaorcamentaria='RESTO'
+and trunc(ESTORNO.dataestorno) between vw.iniciovigencia and coalesce(vw.fimvigencia, trunc(ESTORNO.dataestorno))
+AND trunc(ESTORNO.dataestorno) BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, trunc(ESTORNO.dataestorno))
+AND $P!{SQL}]]>
+	</queryString>
+	<field name="NUMERO" class="java.lang.String"/>
+	<field name="DATA_EMPENHO" class="java.lang.String"/>
+	<field name="HISTORICO_EMP" class="java.lang.String"/>
+	<field name="TIPO" class="java.lang.String"/>
+	<field name="CD_ORGAO" class="java.lang.String"/>
+	<field name="DESC_ORGAO" class="java.lang.String"/>
+	<field name="CD_UNIDADE" class="java.lang.String"/>
+	<field name="DESC_UNIDADE" class="java.lang.String"/>
+	<field name="CD_PROG_TRABALHO" class="java.lang.String"/>
+	<field name="PROJETO_ATIVIDADE" class="java.lang.String"/>
+	<field name="ELEMENTO" class="java.lang.String"/>
+	<field name="ESPECIFICAO_DESPESA" class="java.lang.String"/>
+	<field name="NOME_PESSOA" class="java.lang.String"/>
+	<field name="CPF_CNPJ" class="java.lang.String"/>
+	<field name="DESC_DESTINACAO" class="java.lang.String"/>
+	<field name="VALOR" class="java.math.BigDecimal"/>
+	<field name="VALOR_EXTENSO" class="java.lang.String"/>
+	<field name="LOGRADOURO" class="java.lang.String"/>
+	<field name="LOCALIDADE" class="java.lang.String"/>
+	<field name="DESC_ACAO" class="java.lang.String"/>
+	<field name="MODALIDADE" class="java.lang.String"/>
+	<field name="MODALIDADELICITACAO" class="java.lang.String"/>
+	<field name="DESC_CLASSEPESSOA" class="java.lang.String"/>
+	<field name="SALDO_ANTERIOR" class="java.math.BigDecimal"/>
+	<field name="SALDO_POSTERIOR" class="java.math.BigDecimal"/>
+	<field name="BAIRRO" class="java.lang.String"/>
+	<field name="UF" class="java.lang.String"/>
+	<field name="CEP" class="java.lang.String"/>
+	<pageHeader>
+		<band height="70">
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToBandHeight" x="368" y="40" width="86" height="30"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToBandHeight" x="267" y="40" width="101" height="30"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToBandHeight" x="0" y="40" width="267" height="30"/>
+			</rectangle>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToBandHeight" x="0" y="55" width="267" height="15" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle" markup="none">
+					<font fontName="Arial" size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{DOCUMENTO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="0" y="0" width="454" height="20"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[ Estado do Acre]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="19" width="454" height="20"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[ Municipio de Rio Branco]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement x="368" y="40" width="86" height="15"/>
+			</rectangle>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="369" y="57" width="85" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DATA_EMPENHO}]]></textFieldExpression>
+			</textField>
+			<rectangle>
+				<reportElement x="0" y="40" width="268" height="15"/>
+			</rectangle>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="268" y="57" width="99" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NUMERO}]]></textFieldExpression>
+			</textField>
+			<rectangle>
+				<reportElement x="267" y="40" width="101" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement x="0" y="40" width="101" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true" isItalic="false"/>
+				</textElement>
+				<text><![CDATA[  01.  Documento]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="268" y="40" width="90" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true" isItalic="false"/>
+				</textElement>
+				<text><![CDATA[  02. Número]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="369" y="40" width="73" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true" isItalic="false"/>
+				</textElement>
+				<text><![CDATA[  03.  Data]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<detail>
+		<band height="616" splitType="Stretch">
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="320" y="121" width="134" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToBandHeight" x="0" y="14" width="368" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToBandHeight" x="0" y="44" width="368" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="-1" width="368" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="29" width="368" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="320" y="58" width="134" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="-1" width="101" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  04.  Órgão]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="29" width="368" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  05.  Unidade Orçamentária  ]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="73" width="320" height="33"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="58" width="320" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="320" y="73" width="134" height="33"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="58" width="163" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  06.  Especificação da Ação]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="321" y="58" width="131" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  07.  Programa de Trabalho]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="320" y="106" width="134" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="121" width="160" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="106" width="160" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="160" y="121" width="160" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="160" y="106" width="160" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="106" width="158" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  08.   Especificação da Despesa]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="321" y="106" width="131" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  10.  Natureza da Despesa]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="160" y="106" width="158" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  09. Fonte de Recurso | Detalhamento]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="150" y="270" width="154" height="18"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="150" y="255" width="154" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="151" y="255" width="148" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  17. Valor da Nota R$]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="303" width="454" height="32"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="288" width="454" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="288" width="123" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  19. Valor por Extenso]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="151" width="320" height="74"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="320" y="151" width="134" height="29"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="320" y="195" width="134" height="30"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="320" y="180" width="134" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="320" y="136" width="134" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="321" y="137" width="110" height="13"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  12. CPF/CNPJ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="321" y="180" width="121" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  13. Classe da Pessoa]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="7" y="159" width="63" height="13"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="10"/>
+				</textElement>
+				<text><![CDATA[Nome:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="7" y="176" width="63" height="13"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="10"/>
+				</textElement>
+				<text><![CDATA[Logradouro:		]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="7" y="211" width="63" height="13"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="10"/>
+				</textElement>
+				<text><![CDATA[Cidade:]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="225" width="320" height="30"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="225" width="320" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="225" width="208" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  14. Modalidade]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="349" width="454" height="194"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="335" width="454" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="1" y="335" width="123" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  20. Histórico]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="136" width="320" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="136" width="164" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  11. Pessoa | Endereço]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="320" y="225" width="134" height="30"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="320" y="225" width="134" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="321" y="225" width="123" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  15. Tipo de Empenho]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="7" y="194" width="63" height="13"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="10"/>
+				</textElement>
+				<text><![CDATA[Bairro:]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="368" y="-1" width="86" height="30"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="368" y="-1" width="86" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="369" y="-1" width="73" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  04.a Código]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="368" y="29" width="86" height="29"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="368" y="29" width="86" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="369" y="29" width="74" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  05.a Código]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="255" width="150" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="255" width="148" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  16. Saldo Anterior R$]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="304" y="255" width="150" height="15"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="304" y="255" width="150" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="305" y="255" width="148" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  18. Saldo Atual R$]]></text>
+			</staticText>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="543" width="454" height="73"/>
+			</rectangle>
+			<line>
+				<reportElement positionType="Float" x="21" y="592" width="176" height="1"/>
+			</line>
+			<line>
+				<reportElement positionType="Float" x="256" y="593" width="176" height="1"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="1" y="46" width="366" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESC_UNIDADE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="1" y="17" width="366" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESC_ORGAO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="369" y="17" width="84" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CD_ORGAO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="369" y="46" width="84" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CD_UNIDADE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="322" y="75" width="132" height="31"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CD_PROG_TRABALHO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="1" y="75" width="317" height="31"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESC_ACAO}]]></textFieldExpression>
+			</textField>
+			<rectangle>
+				<reportElement positionType="Float" x="0" y="270" width="150" height="18"/>
+			</rectangle>
+			<rectangle>
+				<reportElement positionType="Float" x="304" y="270" width="150" height="18"/>
+			</rectangle>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="152" y="274" width="148" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="2" y="303" width="450" height="32"/>
+				<textElement textAlignment="Left">
+					<font fontName="Arial" size="8" isStrikeThrough="false"/>
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_EXTENSO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="1" y="124" width="158" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ESPECIFICAO_DESPESA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="322" y="124" width="132" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ELEMENTO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="161" y="124" width="160" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESC_DESTINACAO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="322" y="152" width="130" height="27"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CPF_CNPJ}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="322" y="196" width="130" height="29"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESC_CLASSEPESSOA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="75" y="161" width="245" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOME_PESSOA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="75" y="179" width="245" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LOGRADOURO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="75" y="213" width="176" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LOCALIDADE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="321" y="243" width="132" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[br.com.webpublico.enums.TipoEmpenho.valueOf($F{TIPO}).getDescricao()]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="2" y="350" width="450" height="192"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{HISTORICO_EMP} != null ? $F{HISTORICO_EMP} : "") + " Usuário Emissor: " + $P{USUARIO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="1" y="242" width="318" height="10">
+					<printWhenExpression><![CDATA[$F{MODALIDADELICITACAO} != null]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[br.com.webpublico.enums.ModalidadeLicitacaoEmpenho.valueOf($F{MODALIDADELICITACAO}).getDescricao() + " " + $F{MODALIDADE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="274" width="145" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SALDO_ANTERIOR}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="304" y="274" width="145" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SALDO_POSTERIOR}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="75" y="197" width="176" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BAIRRO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="253" y="198" width="21" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[CEP:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="256" y="214" width="18" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[U.F:]]></text>
+			</staticText>
+			<textField pattern="#####-##" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="278" y="198" width="40" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CEP}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="278" y="214" width="30" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{UF}]]></textFieldExpression>
+			</textField>
+			<rectangle>
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="0" y="542" width="454" height="15"/>
+			</rectangle>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="542" width="123" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[  21. Assinaturas]]></text>
+			</staticText>
+		</band>
+	</detail>
+</jasperReport>

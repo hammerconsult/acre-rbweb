@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript">
+            var timer;
+
+            function acompanharConsulta() {
+                console.log("acompanharConsulta");
+                timer = setInterval(function () {
+                    rcAcompanharConsulta();
+                }, 3000);
+            }
+
+            function finalizarConsulta() {
+                console.log("finalizarConsulta");
+                clearInterval(timer);
+                rcFinalizarConsulta();
+            }
+        </script>
+
+        <h:form id="formTabelaGenerica">
+
+            <p:remoteCommand name="rcAcompanharConsulta"
+                             actionListener="#{livroFiscalControlador.acompanharConsulta()}"/>
+            <p:remoteCommand name="rcFinalizarConsulta"
+                             actionListener="#{livroFiscalControlador.finalizarConsulta()}"
+                             oncomplete="aguarde.hide()" process="@form" update="@form"/>
+
+            <p:panel header="Consulta dos Livros Fiscais">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Competência:"/>
+                    <h:panelGrid columns="7">
+                        <p:selectOneMenu value="#{livroFiscalControlador.mesInicial}">
+                            <f:selectItems value="#{livroFiscalControlador.meses}"/>
+                        </p:selectOneMenu>
+                        <h:outputLabel value="/"/>
+                        <p:inputMask mask="9999"
+                                     value="#{livroFiscalControlador.exercicioInicial}" size="5"/>
+                        <h:outputLabel value=" à "/>
+                        <p:selectOneMenu value="#{livroFiscalControlador.mesFinal}">
+                            <f:selectItems value="#{livroFiscalControlador.meses}"/>
+                        </p:selectOneMenu>
+                        <h:outputLabel value="/"/>
+                        <p:inputMask mask="9999"
+                                     value="#{livroFiscalControlador.exercicioFinal}" size="5"/>
+                    </h:panelGrid>
+                    <fc:outputLabelObrigatorio value="Prestador: "/>
+                    <fc:novoAutocompleteCadastroEconomico
+                        value="#{livroFiscalControlador.cadastroEconomico}"
+                        id="cadastroEconomico"
+                        mostraBotoes="false"
+                        mostraSituacoes="false"
+                        listenerItemSelect="#{livroFiscalControlador.handleCadastroEconomico()}"
+                        caminhoAtual="/nfse/livro-fiscal/listar/"/>
+                </h:panelGrid>
+
+                <p:commandButton value="Consultar"
+                                 actionListener="#{livroFiscalControlador.consultar()}"
+                                 styleClass="mtop10 mrig05"
+                                 style="height: 30px;"
+                                 onclick="aguarde.show()"
+                                 update="@form"
+                                 icon="ui-icon-print"
+                                 title="Clique para imprimir o relatório"/>
+            </p:panel>
+
+            <br/>
+
+            <p:panel header="Livros Fiscais" rendered="#{livroFiscalControlador.consultaRealizada}">
+                <h:panelGrid columns="2" style="width: 100%;">
+                    <p:panel header="Serviços Prestados">
+                        <p:dataTable value="#{livroFiscalControlador.prestados}"
+                                     rendered="#{livroFiscalControlador.cadastroEconomico.enquadramentoVigente.instituicaoFinanceira}"
+                                     id="tabelaDesif"
+                                     var="dto"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop03"
+                                     emptyMessage="Não foram localizados registros para serem apresentados">
+                            <p:columnGroup type="header">
+                                <p:row>
+                                    <p:column headerText="Imprimir"/>
+                                    <p:column headerText="Referência" styleClass="alinhamentoEsquerda"/>
+                                    <p:column headerText="Quantidade Contas" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="Total de Serviços" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="ISSQN Próprio" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="Parecer"/>
+                                </p:row>
+                            </p:columnGroup>
+                            <p:column headerText="" style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-print"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{livroFiscalControlador.gerarLivroFiscal(dto)}"
+                                                 process="@this"
+                                                 title="Imprimir Livro da Referência."/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{dto.mes}/#{dto.exercicio}"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{dto.quantidade}"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{dto.valorServico}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{dto.issqnProprio}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide();dialogParecerFiscal.show()"
+                                                 actionListener="#{livroFiscalControlador.novoParecer(dto.mes, dto.exercicio)}"
+                                                 process="@this"
+                                                 update=":formDialogParecer"
+                                                 title="Ver os pareceres dos fiscais."/>
+
+                            </p:column>
+                        </p:dataTable>
+
+                        <p:dataTable value="#{livroFiscalControlador.prestados}"
+                                     rendered="#{!livroFiscalControlador.cadastroEconomico.enquadramentoVigente.instituicaoFinanceira}"
+                                     id="tabelaServiosPrestados"
+                                     var="dto"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop03"
+                                     emptyMessage="Não foram localizados registros para serem apresentados">
+                            <p:columnGroup type="header">
+                                <p:row>
+                                    <p:column headerText="Imprimir" styleClass="alinhamentoCentralizado"/>
+                                    <p:column headerText="Referência" styleClass="alinhamentoEsquerda"/>
+                                    <p:column headerText="Quantidade" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="Total de Serviços" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="ISSQN Próprio" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="ISSQN Retido" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="Parecer"/>
+                                </p:row>
+                            </p:columnGroup>
+                            <p:column headerText="" style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-print"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{livroFiscalControlador.gerarLivroFiscal(dto)}"
+                                                 process="@this"
+                                                 title="Imprimir Livro da Referência."/>
+                            </p:column>
+                            <p:column headerText="">
+                                <h:outputText value="#{dto.mes}/#{dto.exercicio}"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{dto.quantidade}"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{dto.valorServico}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{dto.issqnProprio}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{dto.issqnRetido}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide();dialogParecerFiscal.show()"
+                                                 actionListener="#{livroFiscalControlador.novoParecer(dto.mes, dto.exercicio)}"
+                                                 process="@this"
+                                                 update=":formDialogParecer"
+                                                 title="Ver os pareceres dos fiscais."/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:panel>
+
+                    <p:panel header="Serviços Tomados">
+                        <p:dataTable value="#{livroFiscalControlador.tomados}"
+                                     id="tabelaServicosTomados"
+                                     var="tomado"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     styleClass="mtop03"
+                                     emptyMessage="Não foram localizados registros para serem apresentados">
+                            <p:columnGroup type="header">
+                                <p:row>
+                                    <p:column headerText="Imprimir" styleClass="alinhamentoCentralizado"/>
+                                    <p:column headerText="Referência" styleClass="alinhamentoEsquerda"/>
+                                    <p:column headerText="Quantidade" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="Total de Serviços" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="ISSQN Próprio" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="ISSQN Retido" styleClass="alinhamentoDireita"/>
+                                    <p:column headerText="Parecer"/>
+                                </p:row>
+                            </p:columnGroup>
+                            <p:column headerText="" style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-print"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 actionListener="#{livroFiscalControlador.gerarLivroFiscal(tomado)}"
+                                                 process="@this"
+                                                 title="Imprimir Livro da Referência."/>
+                            </p:column>
+                            <p:column headerText="">
+                                <h:outputText value="#{tomado.mes}/#{tomado.exercicio}"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{tomado.quantidade}"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{tomado.valorServico}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{tomado.issqnProprio}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column headerText="" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{tomado.issqnRetido}" converter="moneyConverter"/>
+                            </p:column>
+                            <p:column style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide();dialogParecerFiscal.show()"
+                                                 actionListener="#{livroFiscalControlador.novoParecer(tomado.mes, tomado.exercicio)}"
+                                                 process="@this"
+                                                 update=":formDialogParecer"
+                                                 title="Ver os pareceres dos fiscais."/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:panel>
+                </h:panelGrid>
+            </p:panel>
+        </h:form>
+
+
+        <p:dialog modal="true"
+                  widgetVar="dialogParecerFiscal"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed!important;"
+                  id="dialogParecer"
+                  width="800">
+
+            <h:form id="formDialogParecer">
+                <p:panel header="Pareceres dos Fiscais" styleClass="mtop05">
+                    <h:panelGrid columns="2">
+
+                        <h:outputText value="Data: " style="margin-right: 20px"/>
+                        <h:outputText value="#{livroFiscalControlador.parecer.dataParecer}"
+                                      converter="javax.faces.DateTime"
+                                      style="margin-right: 20px" styleClass="negrito"/>
+
+                        <h:outputText value="Competência: " style="margin-right: 20px"/>
+                        <h:outputText value="#{livroFiscalControlador.parecer.mes.descricao}"
+                                      style="margin-right: 20px" styleClass="negrito"/>
+
+                        <h:outputText value="Exercício: " style="margin-right: 20px"/>
+                        <h:outputText value="#{livroFiscalControlador.parecer.ano}" style="margin-right: 20px"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Fiscal: " style="margin-right: 20px"/>
+                        <h:outputText value="#{livroFiscalControlador.parecer.fiscal}" style="margin-right: 20px"
+                                      styleClass="negrito"/>
+
+
+                        <h:outputText value="Parecer: " style="margin-right: 20px"/>
+                        <h:inputTextarea value="#{livroFiscalControlador.parecer.parecer}"
+                                         cols="50"
+                                         rows="5"
+                                         style="margin-right: 20px"/>
+
+
+                    </h:panelGrid>
+
+                    <h:panelGrid columns="4" styleClass="mtop20">
+                        <p:commandButton value="Confirmar"
+                                         title="Clique para confirmar a alteração."
+                                         icon="ui-icon-check"
+                                         styleClass="padrao mrig05"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         update="@form"
+                                         actionListener="#{livroFiscalControlador.salvarParecer()}"/>
+
+                        <p:commandButton value="Fechar"
+                                         icon="ui-icon-circle-close"
+                                         onstart="aguarde.show()"
+                                         process="@this"
+                                         styleClass="padrao"
+                                         title="Clique para fechar a janela."
+                                         oncomplete="dialogParecerFiscal.hide();aguarde.hide()"/>
+                    </h:panelGrid>
+
+                </p:panel>
+                <br/>
+                <div style="max-height: 300px; overflow:auto">
+                    <p:dataTable value="#{livroFiscalControlador.pareceres}"
+                                 id="tabelaParecer"
+                                 var="parecer"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop03"
+                                 paginator="true"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 rows="25"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Pareceres Fiscais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="5,10,25,50,100">
+                        <p:column headerText="Referência">
+                            <h:outputText value="#{parecer.mes.descricao}/#{parecer.ano}"/>
+                        </p:column>
+                        <p:column headerText="Data do Parecer" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{parecer.dataParecer}" converter="javax.faces.DateTime"/>
+                        </p:column>
+                        <p:column headerText="Parecer">
+                            <h:outputText value="#{parecer.parecer}"/>
+                        </p:column>
+                        <p:column headerText="Fiscal">
+                            <h:outputText value="#{parecer.fiscal}"/>
+                        </p:column>
+
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

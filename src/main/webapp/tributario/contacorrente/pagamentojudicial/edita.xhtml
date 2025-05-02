@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+    >
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{pagamentoJudicialControlador}"
+                                origem="#{pagamentoJudicialControlador.caminhoPadrao}/listar/"/>
+            <p:panel header="Processo de Compensação de Débitos">
+                <h:panelGrid columns="6" style="width: 50%">
+                    <h:outputText value="Exercício"/>
+                    <h:outputText value="Código"/>
+                    <h:outputText value="Data"/>
+                    <h:outputText value="Protocolo"/>
+                    <h:outputText value="Situação"/>
+                    <h:outputText value="Usuário"/>
+                    <p:inputText size="4" value="#{pagamentoJudicialControlador.selecionado.exercicio}"
+                                 styleClass="campo-bloqueado" readonly="true"/>
+                    <p:inputText id="codigo" size="10"
+                                 value="#{pagamentoJudicialControlador.selecionado.codigo}"
+                                 styleClass="campo-bloqueado"
+                                 readonly="true"/>
+                    <p:inputText id="data" size="12"
+                                 readonly="true"
+                                 styleClass="campo-bloqueado"
+                                 value="#{pagamentoJudicialControlador.selecionado.dataCompensacao}"
+                                 title="Data do Processo Judicial">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </p:inputText>
+
+                    <p:inputText id="protocolo"
+                                 value="#{pagamentoJudicialControlador.selecionado.numeroProtocolo}"
+                                 title="Digite o número do protocolo"
+                        />
+                    <p:inputText title="Situação do Processo de Débitos"
+                                 value="#{pagamentoJudicialControlador.selecionado.situacao.descricao}"
+                                 styleClass="azulnegrito"
+                                 readonly="true"/>
+                    <p:inputText title="Usuário responsável pelo Processo de Débitos"
+                                 value="#{pagamentoJudicialControlador.selecionado.usuario.login}"
+                                 styleClass="amarelonegrito" readonly="true"/>
+
+
+                </h:panelGrid>
+
+                <h:panelGrid columns="1" style="width: 70%">
+                    <fc:outputLabelObrigatorio value="Motivo ou Fundamentação Legal"/>
+                    <p:inputTextarea value="#{pagamentoJudicialControlador.selecionado.motivo}" style="width: 70%;"
+                                     maxlength="3000"
+                                     counter="conta" autoResize="true" counterTemplate="{0} Caracteres Restantes."/>
+                    <h:outputText id="conta"/>
+                </h:panelGrid>
+            </p:panel>
+            <br/>
+            <p:panel header="Consultar Débitos" id="debitos">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Valor a Compensar (R$):"/>
+                    <h:panelGroup>
+                        <h:panelGrid columns="4">
+                            <p:inputText value="#{pagamentoJudicialControlador.selecionado.valorACompensar}"
+                                         disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}"
+                                         onkeypress="mascaraMonetaria(this)" converter="moneyConverter">
+                                <p:ajax process="@this" listener="#{pagamentoJudicialControlador.setaSaldoInicial()}"
+                                        update="saldo"
+                                        event="blur"/>
+                            </p:inputText> &nbsp;
+                            <h:outputText value="Data Bloqueio: "/>
+                            <p:calendar value="#{pagamentoJudicialControlador.selecionado.dataBloqueio}"
+                                        pattern="dd/MM/yyyy"
+                                        onkeyup="mascara(this, Data)" maxlength="10" showOn="button" size="10"
+                                        disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}">
+                                <p:ajax event="blur" process="@this"/>
+                            </p:calendar>
+                        </h:panelGrid>
+                    </h:panelGroup>
+
+
+                    <h:outputText value="Saldo a Compensar"/>
+                    <p:inputText value="#{pagamentoJudicialControlador.selecionado.saldo}" styleClass="negrito"
+                                 id="saldo"
+                                 readonly="true">
+                        <f:convertNumber type="currency"/>
+                    </p:inputText>
+                    <h:outputText value="Valor Compensado"/>
+                    <p:inputText value="#{pagamentoJudicialControlador.valorCompensadoTotal}" styleClass="negrito"
+                                 readonly="true"
+                                 id="valorCompensado">
+                        <f:convertNumber type="currency"/>
+                    </p:inputText>
+                    <h:outputText value="Tipo de Consulta: "/>
+                    <h:selectOneMenu value="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario}"
+                                     disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}">
+                        <f:selectItems value="#{pagamentoJudicialControlador.tiposCadastro}"/>
+                        <p:ajax update="teste" event="change" process="@this" onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{pagamentoJudicialControlador.limpaCadastro()}"/>
+                    </h:selectOneMenu>
+                </h:panelGrid>
+                <h:panelGrid columns="2" id="teste">
+                    <p:autoComplete queryDelay="1000" value="#{pagamentoJudicialControlador.selecionado.cadastro}"
+                                    completeMethod="#{pagamentoJudicialControlador.completaCadastroEconomico}"
+                                    var="cmc" disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}"
+                                    size="70"
+                                    id="cadastroEconomico"
+                                    forceSelection="true"
+                                    scrollHeight="150" itemLabel="#{cmc.descricao}"
+                                    itemValue="#{cmc.id}"
+                                    converter="#{pagamentoJudicialControlador.converterCadastroEconomico}"
+                                    rendered="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario eq 'ECONOMICO'}">
+                        <p:ajax event="blur" process="@this"
+                                listener="#{pagamentoJudicialControlador.limpaCadastro()}"/>
+                    </p:autoComplete>
+                    <p:autoComplete queryDelay="1000" value="#{pagamentoJudicialControlador.selecionado.cadastro}"
+                                    rendered="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario eq 'IMOBILIARIO'}"
+                                    completeMethod="#{pagamentoJudicialControlador.completaCadastroImobiliario}"
+                                    var="bci"
+                                    id="cadastroImobiliario"
+                                    size="70" disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}"
+                                    forceSelection="true"
+                                    scrollHeight="150"
+                                    itemLabel="#{bci.inscricaoCadastral}"
+                                    itemValue="#{bci.id}"
+                                    converter="#{pagamentoJudicialControlador.converterCadastroImobiliario}">
+                        <p:ajax event="blur" process="@this"
+                                listener="#{pagamentoJudicialControlador.limpaCadastro()}"/>
+                        <p:ajax event="itemSelect" process="@this" update="debitos"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </p:autoComplete>
+                    <p:autoComplete queryDelay="1000" value="#{pagamentoJudicialControlador.selecionado.cadastro}"
+                                    completeMethod="#{pagamentoJudicialControlador.completaCadastroRural}"
+                                    var="bcr"
+                                    id="cadastroRural"
+                                    forceSelection="true"
+                                    scrollHeight="150"
+                                    size="70" disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}"
+                                    itemLabel="#{bcr}"
+                                    itemValue="#{bcr.id}"
+                                    converter="#{pagamentoJudicialControlador.converterCadastroRural}"
+                                    rendered="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario eq 'RURAL'}"
+                        >
+                        <p:ajax event="blur" process="@this"
+                                listener="#{pagamentoJudicialControlador.limpaCadastro()}"/>
+                    </p:autoComplete>
+
+                    <fc:novoAutocompletePessoa value="#{pagamentoJudicialControlador.selecionado.pessoa}"
+                                               situacoesPossiveis="#{pagamentoJudicialControlador.situacoesDisponiveis}"
+                                               caminhoAtual="/tributario/conta-corrente/processo-de-debitos/compensacao/novo/"
+                                               id="autoCompletePessoa" mostraSituacoes="false"
+                                               mostraBotoes="false"
+                                               listenerItemSelect="#{pagamentoJudicialControlador.limpaCadastro()}"
+                                               disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}"
+                                               rendered="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario eq 'PESSOA'}"/>
+                    <p:commandButton icon="ui-icon-search" oncomplete="consultaGenerica.show()"
+                                     disabled="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}"
+                                     rendered="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario ne null}"
+                                     update=":dlgConsultaGenerica"/>
+                </h:panelGrid>
+                <br/>
+                <br/>
+                <p:commandButton value="Buscar Débitos" update=":idDialogParcelas" styleClass="operacao"
+                                 icon="ui-icon-search" onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                 actionListener="#{pagamentoJudicialControlador.dialogBuscaDeDebitos()}"/>
+                <br/>
+                <br/>
+
+                <p:dataTable id="tabelaParcelas"
+                             rendered="#{!pagamentoJudicialControlador.selecionado.parcelas.isEmpty()}"
+                             style="width: 100% !important"
+                             var="parcelaSelecionado"
+                             emptyMessage="Nenhuma parcela encontrada"
+                             paginator="true"
+                             rowIndexVar="rowIx"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Parcelas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             value="#{pagamentoJudicialControlador.selecionado.parcelas}">
+                    <p:column headerText="Referência" style="width: 5%; text-align: center;">
+                        <h:outputText value="#{parcelaSelecionado.referencia}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Débito" style="width: 5%;">
+                        <h:outputText value="#{parcelaSelecionado.tipoDeDebito}"/>
+                    </p:column>
+                    <p:column headerText="Exercício" style="width: 5%; text-align: center;"
+                              sortBy="#{parcelaSelecionado.exercicio}" filterMatchMode="contains">
+                        <h:outputText value="#{parcelaSelecionado.exercicio}"/>
+                    </p:column>
+                    <p:column headerText="SD" style="width: 2%; text-align: center;">
+                        <h:outputText value="#{parcelaSelecionado.sd}"/>
+                    </p:column>
+                    <p:column headerText="Parcela" style="width: 2%; text-align: center;">
+                        <h:outputText value="#{parcelaSelecionado.parcela}"/>
+                    </p:column>
+                    <p:column headerText="Vencimento" style="width: 5%; text-align: center;">
+                        <h:outputText value="#{parcelaSelecionado.vencimento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Imposto" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.imposto}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+
+                    </p:column>
+                    <p:column headerText="Taxa" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.taxa}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+
+                    </p:column>
+                    <p:column headerText="Desconto" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.desconto}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+
+                    </p:column>
+                    <p:column headerText="Juros" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.juros}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+
+                    </p:column>
+                    <p:column headerText="Multa" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.multa}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+
+                    <p:column headerText="Correção" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.correcao}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+
+                    </p:column>
+                    <p:column headerText="Honorários" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.valorHonorarios}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Situação">
+                        <h:outputText value="#{parcelaSelecionado.situacao.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Total" style="text-align: right">
+                        <h:outputText value="#{parcelaSelecionado.total}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Residual" style="text-align: right">
+                        <h:outputText value="#{pagamentoJudicialControlador.getValorResidual(parcelaSelecionado)}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Compensado" style="text-align: right">
+                        <h:outputText value="#{pagamentoJudicialControlador.getValorCompensado(parcelaSelecionado)}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column>
+                        <p:commandButton icon="ui-icon-trash" update=":Formulario:debitos tabelaParcelas"
+                                         onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                         actionListener="#{pagamentoJudicialControlador.removerParcela(parcelaSelecionado)}"/>
+                    </p:column>
+                </p:dataTable>
+
+            </p:panel>
+            <p:commandButton id="salvar" value="Salvar" action="#{pagamentoJudicialControlador.salvar()}"
+                             onclick="aguarde.show()"
+                             disabled="#{pagamentoJudicialControlador.selecionado.situacao ne 'EM_ABERTO'}"
+                             ajax="false" icon="ui-icon-disk" style="height: 30px;"
+                             styleClass="mtop10 mrig05 prioritario"
+                             oncomplete="aguarde.hide()"/>
+            <p:commandButton id="cancelar" value="Fechar" action="lista" ajax="false" icon="ui-icon-cancel"
+                             styleClass="mtop10"
+                             style="height: 30px;"/>
+        </h:form>
+        <p:dialog header="Consulta do Cadastro" modal="true" widgetVar="consultaGenerica" width="900" height="500"
+                  id="dlgConsultaGenerica">
+            <h:form id="formularioConsultaDebito">
+                <fc:pesquisaGenerico id="lista"
+                                     caminhoAtual="edita"
+                                     nomeDaClasse="#{pagamentoJudicialControlador.nomeClasse}"
+                                     dialog="true"
+                                     pretty="true"
+                                     iconmSelecionar="check-icon.png"
+                                     novo="#{calculoTaxasDiversasControlador.novo()}"
+                                     selecionar="#{pagamentoJudicialControlador.selecionarObjetoPesquisaGenerico}"
+                                     mostrarHistorico="false"
+                                     mostrarBotaoNovo="false"
+                                     meuControlador="#{pagamentoJudicialControlador.componentePesquisa}"
+                                     guardarNaSessao="false"
+                                     pesquisaNoEnter="false"
+                                     utilizarTabelaPessoa="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario eq 'PESSOA' ? 'true': 'false'}"
+                                     updateSelecionarTabela=":Formulario"/>
+            </h:form>
+        </p:dialog>
+        <p:dialog id="idDialogParcelas" widgetVar="dialogParcelas" header="Consulta de Débitos" modal="true"
+                  width="1250" height="550" closable="false">
+            <h:form id="FormularioDialog">
+                <p:panel>
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Tipo de Consulta:"/>
+                        <p:inputText
+                            value="#{pagamentoJudicialControlador.selecionado.tipoCadastroTributario.descricao}"
+                            readonly="true" size="30"
+                            styleClass="negrito"/>
+                        <h:outputText value="Cadastro:"/>
+                        <h:panelGroup rendered="#{pagamentoJudicialControlador.selecionado.cadastro ne null}">
+                            <p:inputText value="#{pagamentoJudicialControlador.selecionado.cadastro}"
+                                         styleClass="negrito"
+                                         readonly="true"/>
+                        </h:panelGroup>
+                        <h:panelGroup rendered="#{pagamentoJudicialControlador.selecionado.pessoa ne null}">
+                            <p:inputText value="#{pagamentoJudicialControlador.selecionado.pessoa}" styleClass="negrito"
+                                         size="70"
+                                         readonly="true"/>
+                        </h:panelGroup>
+                        <h:outputText value="Descrição da Dívida: "/>
+                        <h:selectOneMenu value="#{pagamentoJudicialControlador.filtroDivida}"
+                                         converter="#{pagamentoJudicialControlador.converterDivida}">
+                            <f:selectItems value="#{pagamentoJudicialControlador.divida}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Situação da Dívida: "/>
+                        <h:panelGroup>
+                            <h:panelGrid columns="9">
+                                <h:outputText value="Do Exercício: "/>
+                                <p:selectBooleanCheckbox value="#{pagamentoJudicialControlador.dividaDoExercicio}">
+                                    <p:ajax/>
+                                </p:selectBooleanCheckbox> &nbsp;
+                                <h:outputText value="Dívida Ativa: "/>
+                                <p:selectBooleanCheckbox value="#{pagamentoJudicialControlador.dividaAtiva}">
+                                    <p:ajax/>
+                                </p:selectBooleanCheckbox> &nbsp;
+                                <h:outputText value="Dívida Ativa Ajuizada: "/>
+                                <p:selectBooleanCheckbox value="#{pagamentoJudicialControlador.dividaAtivaAzuijada}">
+                                    <p:ajax/>
+                                </p:selectBooleanCheckbox> &nbsp;
+                            </h:panelGrid>
+                        </h:panelGroup>
+                        <h:outputText value="Exercício: "/>
+                        <h:panelGrid columns="6">
+                            <fc:exercicioInicialFinal
+                                exercicioInicial="#{pagamentoJudicialControlador.filtroExercicioInicio}"
+                                exercicioFinal="#{pagamentoJudicialControlador.filtroExercicioFinal}"/>
+                        </h:panelGrid>
+                        <h:outputText value="Vencimento Inicial:"/>
+                        <p:calendar value="#{pagamentoJudicialControlador.vencimentoInicial}" pattern="dd/MM/yyyy"
+                                    onkeyup="mascara(this, Data)" maxlength="10" showOn="button" size="10">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:calendar>
+                        <h:outputText value="Vencimento Final:"/>
+                        <p:calendar value="#{pagamentoJudicialControlador.vencimentoFinal}" pattern="dd/MM/yyyy"
+                                    onkeyup="mascara(this, Data)" maxlength="10" showOn="button" size="10">
+                            <p:ajax event="blur" process="@this"/>
+                        </p:calendar>
+                        <h:outputText value="Valor a Compensar (R$):"/>
+                        <p:inputText value="#{pagamentoJudicialControlador.selecionado.valorACompensar}"
+                                     styleClass="negrito"
+                                     readonly="true">
+                            <f:convertNumber type="currency"/>
+                        </p:inputText>
+                        <h:outputText value="Saldo a Compensar (R$):"/>
+                        <p:inputText value="#{pagamentoJudicialControlador.selecionado.saldo}" styleClass="negrito"
+                                     readonly="true"
+                                     id="saldoDialog">
+                            <f:convertNumber type="currency"/>
+                        </p:inputText>
+                        <h:outputText value="Data Bloqueio: "
+                                      rendered="#{pagamentoJudicialControlador.selecionado.dataBloqueio ne null}"/>
+                        <p:inputText value="#{pagamentoJudicialControlador.selecionado.dataBloqueio}"
+                                     styleClass="negrito"
+                                     rendered="#{pagamentoJudicialControlador.selecionado.dataBloqueio ne null}"
+                                     readonly="true">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </p:inputText>
+                    </h:panelGrid>
+                    <br/>
+
+                    <p:separator/>
+                    <h:panelGrid columns="6">
+                        <p:commandButton value="Pesquisar" icon="ui-icon-search" styleClass="prioritario operacao"
+                                         onstart="statusDialog.show()"
+                                         oncomplete="statusDialog.hide()"
+                                         actionListener="#{pagamentoJudicialControlador.consultarParcelas()}"
+                                         update="tabelaConsultas"/>&nbsp;
+                        <p:commandButton value="Limpar Campos/Tabela" style="width: 200px;" icon="ui-icon-document"
+                                         onclick="aguarde.show()" oncomplete="aguarde.hide()" styleClass="operacao"
+                                         actionListener="#{pagamentoJudicialControlador.inicializaFiltros()}"
+                                         update=":FormularioDialog"/>&nbsp;
+                        <p:commandButton value="Fechar" icon="ui-icon-close" styleClass="operacao"
+                                         onclick="dialogParcelas.hide(); aguarde.show()" update=":Formulario"
+                                         oncomplete="aguarde.hide()"/> &nbsp;
+                    </h:panelGrid>
+                    <br/> <br/>
+                    <p:dataTable id="tabelaConsultas"
+                                 style="width: 100% !important"
+                                 var="parcela"
+                                 paginator="true"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Parcelas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 rowStyleClass="#{parcela.situacaoDescricaoEnum eq 'Em Aberto'? parcela.vencimento lt pagamentoJudicialControlador.definirDataDePesquisaDosAcrescimosDaParcela() ? 'vermelho': 'verde': ''}"
+                                 emptyMessage="Nenhuma parcela encontrada"
+                                 value="#{pagamentoJudicialControlador.resultadoConsulta}">
+                        <p:column>
+                            <p:commandButton styleClass="icone_verde"
+                                             update=":FormularioDialog:tabelaConsultas :FormularioDialog:saldoDialog"
+                                             disabled="#{!pagamentoJudicialControlador.possuiSaldo()}"
+                                             actionListener="#{pagamentoJudicialControlador.adicionarParcelas(parcela)}"
+                                             onstart="statusDialog.show()"
+                                             onsuccess="statusDialog.hide()"
+                                             title="Clique para adicionar a parcela no processo de compensação"
+                                             icon="ui-icon-circle-plus"/>
+                        </p:column>
+                        <p:column headerText="Referência" style="width: 5%; text-align: center;">
+                            <h:outputText value="#{parcela.referencia}"/>
+                        </p:column>
+                        <p:column headerText="Dívida" style="width: 12%;">
+                            <h:outputText value="#{parcela.divida}"/>
+                        </p:column>
+                        <p:column headerText="Débito" style="width: 5%;">
+                            <h:outputText value="#{parcela.tipoDeDebito}"/>
+                        </p:column>
+                        <p:column headerText="Exercício" style="width: 5%; text-align: center;"
+                                  sortBy="#{parcela.exercicio}" filterMatchMode="contains">
+                            <h:outputText value="#{parcela.exercicio}"/>
+                        </p:column>
+                        <p:column headerText="SD" style="width: 2%; text-align: center;">
+                            <h:outputText value="#{parcela.sd}"/>
+                        </p:column>
+                        <p:column headerText="Parcela" style="width: 2%; text-align: center;">
+                            <h:outputText value="#{parcela.parcela}"/>
+                        </p:column>
+                        <p:column headerText="Vencimento" style="width: 5%; text-align: center;">
+                            <h:outputText value="#{parcela.vencimentoToString}"/>
+                        </p:column>
+                        <p:column headerText="Imposto" style="text-align: right">
+                            <h:outputText value="#{parcela.valorImposto}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Taxa" style="text-align: right">
+                            <h:outputText value="#{parcela.valorTaxa}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Desconto" style="text-align: right">
+                            <h:outputText value="#{parcela.valorDesconto}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Juros" style="text-align: right">
+                            <h:outputText value="#{parcela.valorJuros}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Multa" style="text-align: right">
+                            <h:outputText value="#{parcela.valorMulta}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Correção" style="text-align: right">
+                            <h:outputText value="#{parcela.valorCorrecao}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Honorários" style="text-align: right">
+                            <h:outputText value="#{parcela.valorHonorarios}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Total" style="text-align: right">
+                            <h:outputText value="#{parcela.valorTotal}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Situação">
+                            <h:outputText value="#{parcela.situacaoDescricaoEnum}" title="cod. ${parcela.idParcela}"/>
+                        </p:column>
+                    </p:dataTable>
+                    <br/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+        <p:dialog widgetVar="mensagemSemSaldo"
+                  id="dialogDivida"
+                  header="Atenção! Não há mais saldo para Compensar"
+                  modal="true"
+                  resizable="false"
+                  height="70"
+                  width="400"
+                  closable="false"
+            >
+            <h:form id="formDialog">
+                <h:outputLabel
+                    value="Atenção! Não será mais possível adicionar um débito para a compensação, não possui mais saldo a ser compensado."
+                    styleClass="negrito"/>
+                <br/>
+
+                <div align="center">
+                    <p:commandButton value="Ok" icon="ui-icon-check"
+                                     styleClass="mtop10 mrig05 prioritario"
+                                     style="height: 30px;"
+                                     onclick="mensagemSemSaldo.hide(); aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                        />
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

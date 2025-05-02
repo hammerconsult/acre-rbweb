@@ -1,0 +1,1287 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:cc="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:panel header="Consulta Movimentação Materiais/Contábil" id="panelPrincipal">
+                <h:panelGrid columns="2" id="gridGeral">
+                    <fc:outputLabelObrigatorio value="Período:"/>
+                    <h:panelGroup>
+                        <p:calendar onkeypress="mascara(this, mdata)"
+                                    maxlength="12"
+                                    style="text-align: right"
+                                    autocomplete="off"
+                                    locale="pt_BR"
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.dataInicial}"
+                                    navigator="true"
+                                    size="10"
+                                    pattern="dd/MM/yyyy" showOn="button">
+                            <p:ajax event="blur" process="@this gridGeral"/>
+                            <p:ajax event="valueChange" process="@this gridGeral"/>
+                        </p:calendar>
+
+                        <h:outputText value=" à " styleClass="mlef05 mrig05"/>
+
+                        <p:calendar onkeypress="mascara(this, mdata)"
+                                    maxlength="12"
+                                    style="text-align: right"
+                                    autocomplete="off"
+                                    locale="pt_BR"
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.dataFinal}"
+                                    navigator="true"
+                                    size="10"
+                                    pattern="dd/MM/yyyy" showOn="button">
+                            <p:ajax event="dateSelect" process="@this gridGeral"/>
+                            <p:ajax event="valueChange" process="@this gridGeral"/>
+                        </p:calendar>
+
+                        <fc:botaoInformacao
+                                id="infoPeriodo"
+                                styleClassBotao="icone-30"
+                                detalhes="Período para as entradas/saídas materiais e bens de estoque/transf. bens de estoque e saldo do grupo contábil."/>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Unidade Orçamentária: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="undorcamentaria"
+                                    title="Informe a unidade orçamentária."
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.hierarquiaOrcamentaria}"
+                                    completeMethod="#{consultaMovimentacaoEstoqueContabilControlador.completarHierarquiaOrganizacional}"
+                                    var="ho"
+                                    size="70"
+                                    dropdown="true"
+                                    maxResults="30"
+                                    panelStyle="max-height: 250px; max-width: 800px"
+                                    process="@this"
+                                    itemLabel="#{ho}"
+                                    itemValue="#{ho.id}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                    </p:autoComplete>
+
+                    <h:outputText value="Grupo Material: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    title="Informe a unidade orçamentária."
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.grupoMaterial}"
+                                    completeMethod="#{consultaMovimentacaoEstoqueContabilControlador.completarGrupoMaterial}"
+                                    var="gp"
+                                    size="70"
+                                    dropdown="true"
+                                    maxResults="30"
+                                    panelStyle="max-height: 250px; max-width: 800px"
+                                    process="@this"
+                                    itemLabel="#{gp}"
+                                    itemValue="#{gp.id}"
+                                    converter="#{grupoMaterialControlador.converterGenerico}">
+                    </p:autoComplete>
+
+                    <h:outputText value="Saída Integrada? "/>
+                    <h:panelGroup style="display: flex; justify-content: flex-start; align-items: center">
+                        <p:selectBooleanCheckbox
+                            value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.saidaIntegrada}">
+                            <p:ajax process="@this" event="change"/>
+                        </p:selectBooleanCheckbox>
+
+                        <fc:botaoInformacao
+                                id="infoSaidaIntegrada"
+                                styleClassBotao="icone-18"
+                                detalhes="Utiliza o vinculo da associativa gerada entre as saídas de materiais e bens de estoque do contábil."/>
+                    </h:panelGroup>
+
+                    <h:outputText value="Exibir Nota Fiscal? "/>
+                    <h:panelGroup style="display: flex; justify-content: flex-start; align-items: center">
+                        <p:selectBooleanCheckbox
+                            value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.notaFiscal}">
+                            <p:ajax process="@this" event="change"/>
+                        </p:selectBooleanCheckbox>
+
+                        <fc:botaoInformacao
+                                id="infoExibirNotaFiscal"
+                                styleClassBotao="icone-18"
+                                detalhes="Recupera os documentos fiscais da entrada por compra e tenta encontrar um documento liquidado com os mesmos dados."/>
+                    </h:panelGroup>
+
+                    <h:outputText value="Somente grupos com diferença a conciliar "/>
+                    <h:panelGroup style="display: flex; justify-content: flex-start; align-items: center">
+                        <p:selectBooleanCheckbox
+                            value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.somenteDiferencaAConciliar}">
+                            <p:ajax process="@this Formulario:gridGeral"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update=":Formulario:tabGeral:tabela-movimentos :Formulario:tabGeral:tabela-comparativa"
+                                    event="change"
+                                    listener="#{consultaMovimentacaoEstoqueContabilControlador.aplicarFiltro()}"/>
+                        </p:selectBooleanCheckbox>
+
+                        <fc:botaoInformacao
+                                id="infoDiferencaAConciliar"
+                                styleClassBotao="icone-18"
+                                detalhes="Filtra para exibição somente os grupos com diferença a conciliar."/>
+                    </h:panelGroup>
+
+                    <h:outputText value="Somente grupos com diferença de estoque calculado "/>
+                    <h:panelGroup style="display: flex; justify-content: flex-start; align-items: center">
+                        <p:selectBooleanCheckbox
+                            value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.somenteDiferencaEstoque}">
+                            <p:ajax process="@this Formulario:gridGeral"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update=":Formulario:tabGeral:tabela-movimentos :Formulario:tabGeral:tabela-comparativa"
+                                    event="change"
+                                    listener="#{consultaMovimentacaoEstoqueContabilControlador.aplicarFiltro()}"/>
+                        </p:selectBooleanCheckbox>
+
+                        <fc:botaoInformacao
+                                id="infoDiferencaEstoqueCalculado"
+                                styleClassBotao="icone-18"
+                                detalhes="Filtra para exibição somente os grupos com diferença entre o fato gerador e o saldo calculado do estoque."/>
+                    </h:panelGroup>
+
+                    <h:outputText value="Somente grupos com inversão de saldo "/>
+                    <h:panelGroup style="display: flex; justify-content: flex-start; align-items: center">
+                        <p:selectBooleanCheckbox
+                            value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.somenteGrupoComInversaoSaldo}">
+                            <p:ajax process="@this Formulario:gridGeral"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update=":Formulario:tabGeral:tabela-movimentos :Formulario:tabGeral:tabela-comparativa"
+                                    event="change"
+                                    listener="#{consultaMovimentacaoEstoqueContabilControlador.aplicarFiltro()}"/>
+                        </p:selectBooleanCheckbox>
+
+                        <fc:botaoInformacao
+                            id="infoInversaoSaldo"
+                            styleClassBotao="icone-18"
+                            detalhes="Filtra para exibição somente os grupos com inversão de saldo contábil."/>
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <br/>
+
+                <div align="center">
+                    <p:commandButton value="Buscar Movimentação"
+                                     icon="ui-icon-search"
+                                     styleClass="mtop10 operacao prioritario mbot02"
+                                     process="@this gridGeral"
+                                     style="height: 25px"
+                                     update=":Formulario:tabGeral:tabela-movimentos :Formulario:tabGeral:tabela-comparativa"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     actionListener="#{consultaMovimentacaoEstoqueContabilControlador.consultar()}"/>
+
+                    <p:commandButton value="Comparativo por Grupo Material"
+                                     icon="ui-icon-print"
+                                     style="height: 30px"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="mtop10 mlef05"
+                                     actionListener="#{relatorioDeEstoquePorGrupoMaterialComparativoControlador.gerarRelatorio(consultaMovimentacaoEstoqueContabilControlador.filtro)}"
+                                     title="Clique para gerar o Relatório"/>
+
+                    <p:commandButton value="Demonstrativo Bens Estoque por Grupo"
+                                     icon="ui-icon-print"
+                                     style="height: 30px"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="mtop10 mlef05"
+                                     actionListener="#{relatorioDemonstrativoBensEstoqueControlador.gerarRelatorio(consultaMovimentacaoEstoqueContabilControlador.filtro)}"
+                                     title="Clique para gerar o Relatório"/>
+                </div>
+
+                <p:tabView id="tabGeral">
+                    <p:tab title="Movimentação por Grupo">
+                        <p:outputPanel id="panelMovGrupos">
+                            <p:dataTable id="tabela-movimentos"
+                                         emptyMessage="Não foram localizados registros para serem apresentados."
+                                         value="#{consultaMovimentacaoEstoqueContabilControlador.movimentacoes}"
+                                         var="mov"
+                                         styleClass="mtop02 table-hover">
+                                <f:facet name="header">
+                                    Grupos Materiais
+                                    <div class="pull-right">
+                                        <p:selectOneRadio
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.filtro.tipoMovimento}">
+                                            <f:selectItems
+                                                value="#{consultaMovimentacaoEstoqueContabilControlador.tiposMovimentosGrupo}"/>
+                                            <p:ajax event="change" process="@this"
+                                                    update=":Formulario:tabGeral:panelMovGrupos"/>
+                                        </p:selectOneRadio>
+                                    </div>
+                                </f:facet>
+                                <p:columnGroup type="header">
+                                    <p:row>
+                                        <p:column styleClass="alinhamentoEsquerda" headerText="Grupo" rowspan="3"
+                                                  style="border-right: grey !important;"/>
+
+                                        <c:if
+                                            test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.materiais}">
+                                            <p:column styleClass="alinhamentoCentralizado negrito"
+                                                      headerText="Materiais"
+                                                      colspan="4"
+                                                      style="color: #3c763d; background-color: #dff0d8; border-color: #d6e9c6"/>
+                                            <p:column styleClass="alinhamentoCentralizado negrito" headerText="Estoque"
+                                                      colspan="2"
+                                                      style=" color: #31708f; background-color: #d9edf7; border-color: #bce8f1"/>
+                                        </c:if>
+
+                                        <c:if
+                                            test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.contabil}">
+                                            <p:column styleClass="alinhamentoCentralizado negrito" headerText="Contábil"
+                                                      colspan="4"
+                                                      style=" color: #8a6d3b;background-color: #fcf8e3;border-color: #faebcc"/>
+                                        </c:if>
+                                    </p:row>
+
+                                    <p:row>
+                                        <c:if
+                                            test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.materiais}">
+                                            <p:column styleClass="alinhamentoDireita" headerText="Estoque Anter. (a)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Entrada (b)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Saída (c)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Estoque Calc. (d)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Estoque Atual (e)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Diferença (f)"/>
+                                        </c:if>
+
+                                        <c:if
+                                            test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.contabil}">
+                                            <p:column styleClass="alinhamentoDireita" headerText="Saldo Anter. (g)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Entrada (h)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Saída (i)"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="Saldo Atual (j)"/>
+                                        </c:if>
+                                    </p:row>
+
+                                    <p:row>
+                                        <c:if
+                                            test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.materiais}">
+                                            <p:column styleClass="alinhamentoDireita" headerText="(d) = (a + b - c)"
+                                                      colspan="4"/>
+                                            <p:column styleClass="alinhamentoDireita" headerText=""/>
+                                            <p:column styleClass="alinhamentoDireita" headerText="(f) = (d - e)"/>
+                                        </c:if>
+                                        <c:if
+                                            test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.contabil}">
+                                            <p:column styleClass="alinhamentoDireita" headerText="(j) = (g + h - i)"
+                                                      colspan="9"/>
+                                        </c:if>
+                                    </p:row>
+                                </p:columnGroup>
+
+                                <p:column styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{mov.grupoMaterial}" style="width: 15%"/>
+                                </p:column>
+                                <c:if
+                                    test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.materiais}">
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <h:outputText value="#{mov.saldoEstoqueAnterior}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoEstoqueAnteiror}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <p:commandLink
+                                            actionListener="#{consultaMovimentacaoEstoqueContabilControlador.selecionarMovimento(mov)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgEntradaMaterial.show()"
+                                            process="@this"
+                                            update=":form-entrada-material"
+                                            title="Clique para detalhar os movimentos de entrada do estoque.">
+                                            <h:outputText value="#{mov.totalEntradaEstoque}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:commandLink>
+
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralEntradaEstoque}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <p:commandLink
+                                            actionListener="#{consultaMovimentacaoEstoqueContabilControlador.selecionarMovimento(mov)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgMovSaidaEstoque.show()"
+                                            process="@this"
+                                            update=":form-mov-saida-estoque"
+                                            title="Clique para detalhar os movimentos de saída do estoque.">
+                                            <h:outputText value="#{mov.totalSaidaEstoque}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:commandLink>
+
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralSaidaEstoque}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <h:outputText value="#{mov.totalEstoqueCalculado}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralDiferencaEntradaSaida}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <p:commandLink
+                                            actionListener="#{consultaMovimentacaoEstoqueContabilControlador.selecionarMovimento(mov)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgMovEstoque.show()"
+                                            process="@this"
+                                            update=":form-mov-estoque"
+                                            title="Clique para detalhar os movimentos do estoque.">
+                                            <h:outputText value="#{mov.saldoEstoqueAtual}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:commandLink>
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoEstoqueAtual}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <h:outputText value="#{mov.diferencaEntradaSaidaComEstoque}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralDiferencaEntradaSaidaComEstoque}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                </c:if>
+                                <c:if
+                                    test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.detalhado or consultaMovimentacaoEstoqueContabilControlador.filtro.contabil}">
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width: 10%"
+                                              headerText="Saldo Anterior (g)">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(mov.saldoAnteriorGrupoContabil)}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>-#{mov.getSiglaCreditoDebito(mov.saldoAnteriorGrupoContabil)}
+
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoAnteriorGrupoContabil)}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>-#{consultaMovimentacaoEstoqueContabilControlador.getSiglaCreditoDebito(consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoAnteriorGrupoContabil)}
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <p:commandLink
+                                            actionListener="#{consultaMovimentacaoEstoqueContabilControlador.selecionarMovimento(mov)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgMovEntradaContabil.show()"
+                                            process="@this"
+                                            update=":form-entrada-contabil"
+                                            title="Clique para detalhar os movimentos de entradas contábeis.">
+                                            <h:outputText value="#{mov.totalEntradaContabil}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:commandLink>
+
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralEntradaContabil}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column  styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <p:commandLink
+                                            actionListener="#{consultaMovimentacaoEstoqueContabilControlador.selecionarMovimento(mov)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgSaidaContabil.show()"
+                                            process="@this"
+                                            update=":form-saida-contabil"
+                                            title="Clique para detalhar os movimentos de saídas contábeis.">
+                                            <h:outputText value="#{mov.totalSaidaContabil}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:commandLink>
+
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralSaidaContabil}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column styleClass="alinhamentoDireita"
+                                              style="width:10%;">
+                                        <p:commandLink
+                                            actionListener="#{consultaMovimentacaoEstoqueContabilControlador.selecionarMovimento(mov)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgMovGrupoContabil.show()"
+                                            process="@this"
+                                            update=":form-mov-grupo-contabil"
+                                            title="Clique para detalhar os movimentos do grupo material contábil.">
+                                            <h:outputText
+                                                value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(mov.saldoAtualGrupoContabil)}">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>-#{mov.getSiglaCreditoDebito(mov.saldoAtualGrupoContabil)}
+                                        </p:commandLink>
+
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                <h:outputText
+                                                    value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoAtualGrupoContabil)}"
+                                                    styleClass="negrito">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>-#{consultaMovimentacaoEstoqueContabilControlador.getSiglaCreditoDebito(consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoAtualGrupoContabil)}
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                </c:if>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Comparativo por Grupo">
+                        <p:dataTable id="tabela-comparativa"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     value="#{consultaMovimentacaoEstoqueContabilControlador.movimentacoes}"
+                                     var="mov"
+                                     styleClass="mtop02 table-hover">
+                            <f:facet name="header">
+                                Movimentos
+                            </f:facet>
+                            <p:columnGroup type="header">
+                                <p:row>
+                                    <p:column styleClass="alinhamentoEsquerda" headerText="Grupo" rowspan="2"
+                                              style="border-right: grey !important;"/>
+                                    <p:column styleClass="alinhamentoCentralizado negrito" headerText="Entrada"
+                                              colspan="3"
+                                              style="color: #3c763d; background-color: #dff0d8; border-color: #d6e9c6"/>
+                                    <p:column styleClass="alinhamentoCentralizado negrito" headerText="Saída"
+                                              colspan="3"
+                                              style=" color: #31708f; background-color: #d9edf7; border-color: #bce8f1"/>
+                                    <p:column styleClass="alinhamentoCentralizado negrito" headerText="Conciliação"
+                                              colspan="3"
+                                              style=" color: #8a6d3b;background-color: #fcf8e3;border-color: #faebcc"/>
+                                </p:row>
+
+                                <p:row>
+                                    <p:column styleClass="alinhamentoDireita" headerText="Contábil (a)"/>
+                                    <p:column styleClass="alinhamentoDireita" headerText="Materiais (b)"/>
+                                    <p:column styleClass="alinhamentoDireita" headerText="Diferença (c) = (a - b)"/>
+
+                                    <p:column styleClass="alinhamentoDireita" headerText="Contábil (d)"/>
+                                    <p:column styleClass="alinhamentoDireita" headerText="Materiais (e)"/>
+                                    <p:column styleClass="alinhamentoDireita" headerText="Diferença (f) = (d - e)"/>
+
+                                    <p:column styleClass="alinhamentoDireita" headerText="Contábil (g)"/>
+                                    <p:column styleClass="alinhamentoDireita" headerText="Materiais (h)"/>
+                                    <p:column styleClass="alinhamentoDireita" headerText="Diferença (i) = (g - h)"/>
+                                </p:row>
+                            </p:columnGroup>
+
+                            <p:column styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{mov.grupoMaterial}"/>
+                            </p:column>
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{mov.totalEntradaContabil}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralEntradaContabil}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{mov.totalEntradaEstoque}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralEntradaEstoque}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{mov.totalDiferencaEntrada}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralDiferencaEntrada}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{mov.totalSaidaContabil}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralSaidaContabil}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{mov.totalSaidaEstoque}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralSaidaEstoque}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{mov.totalDiferencaSaida}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralDiferencaSaida}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(mov.saldoAtualGrupoContabil)}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>-#{mov.getSiglaCreditoDebito(mov.saldoAtualGrupoContabil)}
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoAtualGrupoContabil)}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>-#{consultaMovimentacaoEstoqueContabilControlador.getSiglaCreditoDebito(consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoAtualGrupoContabil)}
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{mov.saldoEstoqueAtual}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralSaldoEstoqueAtual}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column styleClass="alinhamentoDireita"
+                                      style="width:10%;">
+                                <h:outputText value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(mov.totalDiferencaConciliacao)}" styleClass="#{mov.styleRow}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText><h:outputText value="-#{mov.getSiglaCreditoDebito(mov.totalDiferencaConciliacao)}"
+                                                             styleClass="#{mov.styleRow}"/>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.totalGeralDiferencaConciliacao}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>-#{consultaMovimentacaoEstoqueContabilControlador.getSiglaCreditoDebito(consultaMovimentacaoEstoqueContabilControlador.totalGeralDiferencaConciliacao)}
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+
+                        <div align="center">
+                            <p:commandButton value="Comparativo por Grupo Estoque/Contábil"
+                                             icon="ui-icon-print"
+                                             style="height: 30px"
+                                             actionListener="#{consultaMovimentacaoEstoqueContabilControlador.gerarComparativo()}"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="mtop10 mlef05"
+                                             title="Clique para gerar o Comparativo por Grupo Estoque/Contábil"/>
+                        </div>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+        </h:form>
+
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="900"
+                  max-height="450"
+                  widgetVar="dlgEntradaMaterial">
+            <h:form id="form-entrada-material">
+                <div style="overflow: scroll; max-height: 400px">
+
+                    <div class="alert alert-success col-lg-12 negrito">
+                        <table style="width: 100%">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    Grupo Entrada Material
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    Total (R$)
+                                </td>
+                            </tr>
+                            <tr style="font-size: 14px;" class="negrito">
+                                <td class="alinhamentoEsquerda">
+                                    #{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.grupoMaterial}
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalEntradaEstoque}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.entradasEstoque}"
+                        var="ent">
+                        <f:facet name="header">
+                            <div
+                                class="pull-left negrito">
+                                <cc:botao_informacao
+                                    styleClass="icone-20"
+                                    descricao="Valores recuperados da tabela movimento de estoque gerada a partir das telas de entradas de materiais."/>
+                                Total da Movimentação de Entrada no Estoque - Crédito (+)
+                            </div>
+
+                            <div class="pull-right">
+                                <h:outputText
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalCreditoMovimentosEstoque}"
+                                    styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </div>
+                        </f:facet>
+                        <c:if test="#{consultaMovimentacaoEstoqueContabilControlador.filtro.notaFiscal}">
+                            <p:column headerText="Nota Integrada" style="width: 2%" styleClass="centralizado">
+                                <div class="pull-left">
+                                    <p:rowToggler/>
+
+                                </div>
+                                <div class="pull-right">
+                                    <h:outputText value="#{ent.documentoFiscalIntegrado ? 'Sim' : 'Não'}"
+                                                  styleClass="#{ent.documentoFiscalIntegrado ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                                </div>
+                            </p:column>
+                        </c:if>
+                        <p:column headerText="Data" style="text-align: center; width: 10%">
+                            <h:outputText value="#{ent.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Movimento" style="text-align: left; width: 20%">
+                            <h:outputText value="#{ent.tipo.descricao}"/>
+
+                            <div style="display: #{ent.dataEntradaLevantamento ne null ? 'block' : 'none'}">
+                                <h:outputText value="#{ent.descricaoEntradaLevantamento}" escape="false"/>
+                            </div>
+                        </p:column>
+                        <p:column headerText="Número" style="text-align: right; width: 10%">
+                            <a href="#{request.contextPath}#{ent.tipo.link}#{ent.id}/"
+                               target="_blank">
+                                <h:outputText value="#{ent.numero}"/>
+                            </a>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" style="text-align: right; width: 20%">
+                            <h:outputText value="#{ent.valor}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:rowExpansion>
+                            <p:dataTable
+                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                rowIndexVar="rowIx"
+                                styleClass="mlef30"
+                                emptyMessage="Não foram localizados registros para serem apresentados"
+                                value="#{ent.documentosFiscais}"
+                                var="doc">
+                                <p:column headerText="Documento da Entrada" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{doc.doctoFiscalLiquidacao}"/>
+                                </p:column>
+                                <p:column headerText="Documento da Liquidação" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{doc.liquidacaoDoctoFiscal.doctoFiscalLiquidacao}"
+                                                  rendered="#{doc.liquidacaoDoctoFiscal.doctoFiscalLiquidacao ne null}"/>
+
+                                    <div class="alert alert-danger"
+                                         style="display: #{doc.liquidacaoDoctoFiscal.doctoFiscalLiquidacao eq null ? 'block' : 'none'}">
+                                        #{doc.mensagem}
+                                    </div>
+                                </p:column>
+                            </p:dataTable>
+                        </p:rowExpansion>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="900"
+                  max-height="450"
+                  widgetVar="dlgMovSaidaEstoque">
+            <h:form id="form-mov-saida-estoque">
+                <div style="overflow: scroll; max-height: 400px">
+                    <div class="alert alert-success col-lg-12 negrito">
+                        <table style="width: 100%">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    Grupo Saída Material
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    Total (R$)
+                                </td>
+                            </tr>
+                            <tr style="font-size: 14px;" class="negrito">
+                                <td class="alinhamentoEsquerda">
+                                    #{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.grupoMaterial}
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalSaidaEstoque}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saidasEstoque}"
+                        var="saida">
+                        <f:facet name="header">
+                            <div
+                                class="pull-left negrito">
+                                <cc:botao_informacao
+                                    styleClass="icone-20"
+                                    descricao="Movimentos recuperados da tabela movimento de estoque gerada a partir das telas de saídas de materiais."/>
+                                Total da Movimentação de Saída do Estoque - Débito (-)
+                            </div>
+
+                            <div class="pull-right">
+                                <h:outputText
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalDebitoMovimentosEstoque}"
+                                    styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </div>
+                        </f:facet>
+                        <p:column headerText="Data" style="text-align: center; width: 10%">
+                            <h:outputText value="#{saida.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Movimento" style="text-align: left; width: 15%">
+                            <h:outputText value="#{saida.tipo.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Número" style="text-align: right; width: 10%">
+                            <a href="#{request.contextPath}#{saida.tipo.link}#{saida.id}/"
+                               target="_blank">
+                                <h:outputText value="#{saida.numero}"/>
+                            </a>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" style="text-align: right; width: 20%">
+                            <h:outputText value="#{saida.valor}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="900"
+                  max-height="450"
+                  widgetVar="dlgMovEstoque">
+            <h:form id="form-mov-estoque">
+                <div style="overflow: scroll; max-height: 400px">
+                    <div class="alert alert-info col-lg-12 negrito">
+                        <table style="width: 100%">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    Grupo Estoque Material
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    Total (R$)
+                                </td>
+                            </tr>
+                            <tr style="font-size: 14px;" class="negrito">
+                                <td class="alinhamentoEsquerda">
+                                    #{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.grupoMaterial}
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saldoEstoqueAtual}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.movimentosEstoque}"
+                        var="movEst">
+                        <f:facet name="header">
+                            <table style="width: 100%; text-align: center">
+                                <tr>
+                                    <td class="alinhamentoEsquerda">
+                                        Estoque Anterior
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saldoEstoqueAnterior}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="centralizado">
+                                        Total de Crédito
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalCreditoMovimentosEstoque}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="centralizado">
+                                        Total de Débito
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalDebitoMovimentosEstoque}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        Estoque Atual
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saldoAtualMovimentoEstoque}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </table>
+                        </f:facet>
+                        <p:column headerText="Data" style="text-align: center; width: 10%">
+                            <h:outputText value="#{movEst.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Movimento" style="text-align: left; width: 30%">
+                            <h:outputText value="#{movEst.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Crédito (R$)" style="text-align: right; width: 15%">
+                            <h:outputText value="#{movEst.credito}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Débito (R$)" style="text-align: right; width: 15%">
+                            <h:outputText value="#{movEst.debito}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="900"
+                  max-height="450"
+                  widgetVar="dlgMovEntradaContabil">
+            <h:form id="form-entrada-contabil">
+                <div style="overflow: scroll; max-height: 400px">
+
+                    <div class="alert alert-warning col-lg-12 negrito">
+                        <table style="width: 100%">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    Grupo Entrada Contábil
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    Total (R$)
+                                </td>
+                            </tr>
+                            <tr style="font-size: 14px;" class="negrito">
+                                <td class="alinhamentoEsquerda">
+                                    #{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.grupoMaterial}
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalEntradaContabil}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.entradasContabil}"
+                        var="entCont">
+                        <f:facet name="header">
+                            <div
+                                class="pull-left negrito">
+                                <cc:botao_informacao
+                                    styleClass="icone-20"
+                                    descricao="Valores recuperados da tabela movimento grupo material gerada a partir das telas de entradas do contábil."/>
+                                Total da Movimentação Entrada Contábil (Bens de Estoque/Transf Bens Estoque) - Débito (-)
+                            </div>
+
+                            <div class="pull-right">
+                                <h:outputText
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalMovimentosEntradaContabil}"
+                                    styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </div>
+                        </f:facet>
+                        <p:column headerText="Data" style="text-align: center; width: 10%">
+                            <h:outputText value="#{entCont.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Número" style="text-align: right; width: 10%">
+                            <a href="#{request.contextPath}#{entCont.tipo.link}#{entCont.id}/"
+                               target="_blank">
+                                <h:outputText value="#{entCont.numero}"/>
+                            </a>
+                        </p:column>
+                        <p:column headerText="Movimento" style="text-align: left; width: 20%">
+                            <h:outputText value="#{entCont.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Lançamento" style="text-align: left; width: 30%">
+                            <h:outputText value="#{entCont.tipoLancamento.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" style="text-align: right; width: 20%">
+                            <h:outputText value="#{entCont.valor}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="900"
+                  max-height="450"
+                  widgetVar="dlgSaidaContabil">
+            <h:form id="form-saida-contabil">
+                <div style="overflow: scroll; max-height: 400px">
+                    <div class="alert alert-warning col-lg-12 negrito">
+                        <table style="width: 100%">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    Grupo Saída Contábil
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    Total (R$)
+                                </td>
+                            </tr>
+                            <tr style="font-size: 14px;" class="negrito">
+                                <td class="alinhamentoEsquerda">
+                                    #{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.grupoMaterial}
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalSaidaContabil}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saidasContabil}"
+                        var="saidaCont">
+                        <f:facet name="header">
+                            <div
+                                class="pull-left">
+                                <cc:botao_informacao
+                                    styleClass="icone-20"
+                                    descricao="Valores recuperados da tabela movimento grupo material gerada a partir das telas de saídas do contábil."/>
+                                Total da Movimentação Saída Contábil (Bens de Estoque/Transf Bens Estoque) - Crédito (+)
+                            </div>
+
+                            <div class="pull-right">
+                                <h:outputText
+                                    value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalMovimentosSaidaContabil}"
+                                    styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </div>
+                        </f:facet>
+                        <p:column headerText="Data" style="text-align: center; width: 10%">
+                            <h:outputText value="#{saidaCont.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Número" style="text-align: right; width: 10%">
+                            <a href="#{request.contextPath}#{saidaCont.tipo.link}#{saidaCont.id}/"
+                               target="_blank">
+                                <h:outputText value="#{saidaCont.numero}"/>
+                            </a>
+                        </p:column>
+                        <p:column headerText="Movimento" style="text-align: left; width: 30%">
+                            <h:outputText value="#{saidaCont.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Lançamento" style="text-align: left; width: 30%">
+                            <h:outputText value="#{saidaCont.tipoLancamento.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" style="text-align: right; width: 20%">
+                            <h:outputText value="#{saidaCont.valor}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="900"
+                  max-height="450"
+                  widgetVar="dlgMovGrupoContabil">
+            <h:form id="form-mov-grupo-contabil">
+                <div style="overflow: scroll; max-height: 400px">
+                    <div class="alert alert-warning col-lg-12 negrito">
+                        <table style="width: 100%">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    Saldo Grupo Material Contábil
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    Saldo (R$)
+                                </td>
+                            </tr>
+                            <tr style="font-size: 14px;" class="negrito">
+                                <td class="alinhamentoEsquerda">
+                                    #{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.grupoMaterial}
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saldoAtualGrupoContabil)}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.movimentosGrupoMaterialContabil}"
+                        var="movGrupoCont">
+                        <f:facet name="header">
+                            <table style="width: 100%; text-align: center">
+                                <tr>
+                                    <td class="alinhamentoEsquerda">
+                                        Saldo Anterior
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saldoAnteriorGrupoContabil)}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="centralizado">
+                                        Total de Débito
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalDebitoMovimentosGrupoMaterialContabil}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoEsquerda">
+                                        Total de Crédito
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.totalCreditoMovimentosGrupoMaterialContabil}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        Saldo Atual
+                                        <h:outputText
+                                            value="#{consultaMovimentacaoEstoqueContabilControlador.getValorFormatado(consultaMovimentacaoEstoqueContabilControlador.movimentoSelecionado.saldoMovimentosGrupoMaterialContabil)}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </table>
+                        </f:facet>
+                        <p:column headerText="Data" style="text-align: center; width: 5%">
+                            <h:outputText value="#{movGrupoCont.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Operação" style="text-align: left; width: 30%">
+                            <h:outputText value="#{movGrupoCont.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Tipo Lançamento" style="text-align: left; width: 5%">
+                            <h:outputText value="#{movGrupoCont.tipoLancamento.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Débito (R$)" style="text-align: right; width: 10%">
+                            <h:outputText value="#{movGrupoCont.debito}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Crédito (R$)" style="text-align: right; width: 10%">
+                            <h:outputText value="#{movGrupoCont.credito}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+
+    </ui:define>
+</ui:composition>
+</html>

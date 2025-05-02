@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:remoteCommand name="rcAcompanharBuscaInformacoes"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.acompanharBuscaInformacoes()}"
+                             update=":formProcessando"/>
+
+            <p:remoteCommand name="rcFinalizarBuscaInformacoes"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.finalizarBuscaInformacoes()}"
+                             update="@form" oncomplete="dialogProcessando.hide()"/>
+
+            <p:remoteCommand name="rcAcompanharDadosExportacaoArquivo"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.acompanharDadosExportacaoArquivo()}"
+                             update=":formProcessando"/>
+
+            <p:remoteCommand name="rcFinalizarDadosExportacaoArquivo"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.finalizarDadosExportacaoArquivo()}"/>
+
+            <p:remoteCommand name="rcAcompanharExportacaoArquivo"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.acompanharExportacaoArquivo()}"
+                             update=":formProcessando"/>
+
+            <p:remoteCommand name="rcFinalizarExportacaoArquivo"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.finalizarExportacaoArquivo()}"
+                             update="@form" oncomplete="dialogProcessando.hide()"/>
+
+            <fc:cabecalhoPretty auditavel="#{true}"
+                                id="cpCabecalhoPretty"
+                                origem="#{arquivoInconsistenciaSimplesNacionalControlador.caminhoPadrao}listar/"
+                                controlador="#{arquivoInconsistenciaSimplesNacionalControlador}"/>
+
+            <p:panel header="Simples Nacional">
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Código:"/>
+                    <h:outputText value="Preenchido automaticamente ao salvar" styleClass="negrito"
+                                  rendered="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.isCodigoVazio()}"/>
+                    <h:outputText value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.codigo}"
+                                  styleClass="negrito"
+                                  rendered="#{!arquivoInconsistenciaSimplesNacionalControlador.selecionado.isCodigoVazio()}"/>
+
+                    <h:outputLabel value="Data da Operação:"/>
+                    <h:outputText value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.dataCadastro}"
+                                  converter="javax.faces.DateTime" styleClass="negrito"/>
+
+                    <h:outputLabel value="Usuário:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.usuarioSistema.pessoaFisica.nome}"/>
+                </h:panelGrid>
+            </p:panel>
+
+            <p:panel id="panelUpload" header="Arquivo de Importação" styleClass="mtop05 mbot10">
+                <p:dataTable id="tabelaItem"
+                             value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.detentorArquivoComposicao.arquivosComposicao}"
+                             var="arquivoComposicao"
+                             styleClass="mtop05"
+                             rowIndexVar="rowIx"
+                             emptyMessage="Nenhum arquivo cadastrado.">
+
+                    <p:column headerText="Data do Upload" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{arquivoComposicao.dataUpload}">
+                            <f:convertDateTime pattern="dd/MM/yyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Descrição" style="text-align: left">
+                        <p:inputText value="#{arquivoComposicao.arquivo.descricao}" size="100" maxlength="100"
+                                     rendered="#{arquivoComposicao.arquivo.id eq null}"/>
+                        <h:outputText value="#{arquivoComposicao.arquivo.descricao}"
+                                      rendered="#{arquivoComposicao.arquivo.id ne null}"/>
+                    </p:column>
+                    <p:column headerText="Visualizar"
+                              style="width: 10%; text-align: center">
+                        <a title="Visualizar o arquivo de importação."
+                           href="${facesContext.externalContext.requestContextPath}/arquivos/#{arquivoComposicao.arquivo.nome}?id=#{arquivoComposicao.arquivo.id}">#{arquivoComposicao.arquivo.nome}</a>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+
+            <p:commandButton value="Buscar Informações"
+                             icon="ui-icon-search"
+                             onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                             process="@this" update="@this"
+                             actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.buscarInformacoes()}"/>
+
+            <p:panel id="dadosProcesso"
+                     styleClass="mtop10"
+                     header="Dados Processados"
+                     rendered="#{arquivoInconsistenciaSimplesNacionalControlador.itensArquivoProcessado ne null}">
+                <p:tabView>
+                    <p:tab title="CNPJs com débitos vencidos">
+                        <p:dataTable
+                            paginator="true"
+                            id="tabela-debitos"
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rowIndexVar="rowIx"
+                            styleClass="mtop05 mbot05"
+                            emptyMessage="Não foram localizados registros para serem apresentados"
+                            rows="10"
+                            paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Cadastro Econômico&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                            rowsPerPageTemplate="10,25,50,100"
+                            value="#{arquivoInconsistenciaSimplesNacionalControlador.getCNPJSComDebitosVencidos()}"
+                            var="item">
+                            <p:column headerText="CNPJ" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.cnpj}"/>
+                            </p:column>
+                            <p:column headerText="Razão Social" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.razaoSocial}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="CNPJs sem Cadastro Econômico">
+                        <p:dataTable
+                            paginator="true"
+                            id="tabela-cnpj-sem-cmc"
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rowIndexVar="rowIx"
+                            styleClass="mtop05 mbot05"
+                            emptyMessage="Não foram localizados registros para serem apresentados"
+                            rows="10"
+                            paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>CNPJ sem Cadastro Econômico&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                            rowsPerPageTemplate="10,25,50,100"
+                            value="#{arquivoInconsistenciaSimplesNacionalControlador.getPessoasSemCMC()}"
+                            var="item">
+                            <p:column headerText="CNPJ" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.cnpj}"/>
+                            </p:column>
+                            <p:column headerText="Razão Social" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.razaoSocial}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="CNPJs sem cadastro no sistema">
+                        <p:dataTable
+                            paginator="true"
+                            id="tabela-pessoa-sem-cadastro"
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rowIndexVar="rowIx"
+                            styleClass="mtop05 mbot05"
+                            emptyMessage="Não foram localizados registros para serem apresentados"
+                            rows="10"
+                            paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>CNPJ sem Cadastro&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                            rowsPerPageTemplate="10,25,50,100"
+                            value="#{arquivoInconsistenciaSimplesNacionalControlador.getCNPJSSemCadastro()}"
+                            var="item">
+                            <p:column headerText="CNPJ" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.cnpj}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="CNPJ(s) sem débitos vencidos">
+                        <p:dataTable
+                            paginator="true"
+                            id="tableContribuintesSemDebitos"
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rowIndexVar="rowIx"
+                            styleClass="mtop05 mbot05"
+                            emptyMessage="Não foram localizados registros para serem apresentados"
+                            rows="10"
+                            paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Cadastro Econômico&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                            rowsPerPageTemplate="10,25,50,100"
+                            value="#{arquivoInconsistenciaSimplesNacionalControlador.getCNPJSSemDebitosVencidos()}"
+                            var="item">
+                            <p:column headerText="CNPJ" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.cnpj}"/>
+                            </p:column>
+                            <p:column headerText="Razão Social" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{item.razaoSocial}"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:panel header="Arquivos Exportados" styleClass="mtop10">
+                <p:outputPanel id="opArquivosExportados">
+                    <h:panelGrid columns="3">
+                        <fc:outputLabelObrigatorio value="Tipo de Exportação: "/>
+                        <p:selectOneMenu value="#{arquivoInconsistenciaSimplesNacionalControlador.tipoExportacao}">
+                            <f:selectItems value="#{arquivoInconsistenciaSimplesNacionalControlador.selectItemsTiposExportacao()}"/>
+                        </p:selectOneMenu>
+                    </h:panelGrid>
+
+                    <p:commandButton value="Exportar Arquivo" icon="ui-icon-circle-arrow-s"
+                                     styleClass="operacao"
+                                     title="Click aqui para fazer a exportação do arquivo desejado."
+                                     onclick="aguarde.show()" oncomplete="aguarde.hide()"
+                                     process="opArquivosExportados"
+                                     actionListener="#{arquivoInconsistenciaSimplesNacionalControlador.exportarArquivo()}"/>
+
+                    <p:dataTable value="#{arquivoInconsistenciaSimplesNacionalControlador.selecionado.arquivosExportados}"
+                                 styleClass="mtop10"
+                                 var="arquivoExportacao"
+                                 emptyMessage="Nenhuma arquivo exportado.">
+                        <p:column headerText="Data de Exportação" style="text-align: center">
+                            <h:outputText value="#{arquivoExportacao.dataExportacao}">
+                                <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Usuário de Exportação" style="text-align: left">
+                            <h:outputText value="#{arquivoExportacao.usuarioExportacao}"/>
+                        </p:column>
+                        <p:column headerText="Tipo de Exportação" style="text-align: center">
+                            <h:outputText value="#{arquivoExportacao.tipoExportacao.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Download" style="text-align: center">
+                            <p:commandButton id="downloadLink"
+                                             ajax="false"
+                                             icon="ui-icon-circle-arrow-s"
+                                             process="@form"
+                                             styleClass="mrig05"
+                                             title="Pressione para baixar o arquivo"
+                                             update="@this"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()">
+                                <p:fileDownload
+                                    value="#{assistenteDetentorArquivoControlador.baixarAnexo(arquivoExportacao.arquivoExportacao)}"/>
+                            </p:commandButton>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </p:panel>
+            <fc:rodapeVisualizarPretty id="rpRodapePretty"
+                                       mostrarEditar="false"
+                                       controlador="#{arquivoInconsistenciaSimplesNacionalControlador}"/>
+        </h:form>
+
+        <p:dialog modal="true" width="800" id="dlgProcessando" widgetVar="dialogProcessando" closable="false">
+            <div class="alert alert-info centralizado" id="mensagemFim">
+                <h:form id="formProcessando">
+                    <fc:acompanhamentoBarraProgresso assistenteBarraProgresso="#{arquivoInconsistenciaSimplesNacionalControlador.assistenteDoProcessoArquivo}"/>
+                </h:form>
+            </div>
+        </p:dialog>
+
+        <script type="application/javascript">
+            var timer;
+
+            function acompanharBuscaInformacoes() {
+                console.log('acompanharBuscaInformacoes');
+                dialogProcessando.show();
+                timer = setInterval(function () {
+                    console.log('timer');
+                    rcAcompanharBuscaInformacoes();
+                }, 2000);
+            }
+
+            function finalizarBuscaInformacoes() {
+                console.log('finalizarBuscaInformacoes');
+                clearInterval(timer);
+                rcFinalizarBuscaInformacoes();
+            }
+
+            function acompanharDadosExportacaoArquivo() {
+                console.log('acompanharDadosExportacaoArquivo');
+                dialogProcessando.show();
+                timer = setInterval(function () {
+                    console.log('timer');
+                    rcAcompanharDadosExportacaoArquivo();
+                }, 2000);
+            }
+
+            function finalizarDadosExportacaoArquivo() {
+                console.log('finalizarDadosExportacaoArquivo');
+                clearInterval(timer);
+                rcFinalizarDadosExportacaoArquivo();
+            }
+
+            function acompanharExportacaoArquivo() {
+                console.log('acompanharExportacaoArquivo');
+                timer = setInterval(function () {
+                    console.log('timer');
+                    rcAcompanharExportacaoArquivo();
+                }, 2000);
+            }
+
+            function finalizarExportacaoArquivo() {
+                console.log('finalizarExportacaoArquivo');
+                clearInterval(timer);
+                rcFinalizarExportacaoArquivo();
+            }
+        </script>
+    </ui:define>
+</ui:composition>
+</html>

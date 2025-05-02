@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:panel header="Monitoramento do Redis">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Situação:"/>
+                    <h:outputText
+                        styleClass="#{monitoramentoRedisControlador.jedis.isConnected() ? 'verdenegrito':'vermelhonegrito'}"
+                        value="#{monitoramentoRedisControlador.jedis.isConnected() ? 'Conectado':'Desconectado'}"/>
+                </h:panelGrid>
+
+                <p:commandButton title="Clique remover todos os indice"
+                                 value="Remover todos"
+                                 icon="ui-icon-trash"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{monitoramentoRedisControlador.apagarTodosIndice()}"
+                                 styleClass="mtop10 mrig05 operacao prioritario"
+                                 update="@form"/>
+
+                <p:commandButton title="Clique para recriar indices das notificações"
+                                 value="Recriar indices da notificação"
+                                 icon="ui-icon-refresh"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{monitoramentoRedisControlador.recriarIndicesNotificacao()}"
+                                 styleClass="mtop10 mrig05 operacao prioritario"
+                                 update="@form"/>
+
+                <p:commandButton title="Clique para reconectar no Redis"
+                                 value="Reconectar Redis"
+                                 icon="ui-icon-refresh"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 actionListener="#{monitoramentoRedisControlador.reconectar()}"
+                                 styleClass="mtop10 mrig05 operacao prioritario"
+                                 update="@form"/>
+
+                <p:tabView>
+
+                    <p:tab title="Indices">
+                        <p:dataList
+                                    styleClass="datalist-sem-borda mlef02"
+                                    value="#{monitoramentoRedisControlador.redisSistema.indices}"
+                                    var="item" itemType="disc">
+                            <p:commandButton title="Clique buscar informação deste indice"
+                                             icon="ui-icon-info"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{monitoramentoRedisControlador.informacaoIndice(item)}"
+                                             styleClass="mtop10 mrig05"
+                                             update="@form"/>
+                            <p:commandButton title="Clique remover este indice"
+                                             icon="ui-icon-trash"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{monitoramentoRedisControlador.apagarIndice(item)}"
+                                             styleClass="mtop10 mrig05"
+                                             update="@form"/>
+                            <h:outputText value="#{item.nome}"/>
+
+                        </p:dataList>
+
+
+                    </p:tab>
+
+                    <p:tab title="Informações">
+                        <p:dataList
+                            styleClass="datalist-sem-borda mlef02"
+                            value="#{monitoramentoRedisControlador.redisSistema.informacoes}"
+                            var="informacao" itemType="disc">
+
+                            <h:outputText value="#{informacao.nome}"/>
+
+                        </p:dataList>
+
+                    </p:tab>
+                </p:tabView>
+
+            </p:panel>
+
+
+
+        </h:form>
+
+        <div id="modalDetalhesIndice" class="modal hide fade"
+             tabindex="-1" role="dialog"
+             style="width: 80%; left: 30%"
+             aria-labelledby="modalDetalhesIndice"
+             aria-hidden="true">
+            <p:outputPanel id="formDlgExecucao">
+                <div class="modal-header alert alert-info" style="text-align: center">
+                    <div class="centralizado">
+                        Informações do Indice
+                    </div>
+                </div>
+
+                <div class="modal-body">
+                    <div>
+
+                        <br/>
+                        <div align="center" class="alert alert-success" style="padding: 4px">
+                            <strong>Notificações (#{monitoramentoRedisControlador.redisIndice.quantidade})</strong>
+                        </div>
+                        <p:dataTable
+                            rendered="#{monitoramentoRedisControlador.redisIndice ne null}"
+                            id="tabela-notificacoes"
+                            lazy="true"
+                            value="#{monitoramentoRedisControlador.redisIndice.notificacoes}"
+                            var="notificacao"
+                            styleClass="mtop10"
+                            rowIndexVar="rowIx"
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rows="10"
+                            rowsPerPageTemplate="10,50,100,200,300"
+                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                            paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Notificações&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            paginator="true"
+                            emptyMessage="Nenhuma notificação encontrado.">
+
+                            <p:column headerText="ID" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{notificacao.id}"/>
+                            </p:column>
+
+                            <p:column headerText="Título" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{notificacao.titulo}"/>
+                            </p:column>
+
+                            <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{notificacao.descricao}"/>
+                            </p:column>
+
+                            <p:column headerText="Link" styleClass="alinhamentoEsquerda">
+                                <p:commandLink value="#{notificacao.url}"
+                                               style="color: #0044cc !important;"
+                                               actionListener="#{notificacaoControlador.navega(notificacao)}"/>
+                            </p:column>
+
+                        </p:dataTable>
+                    </div>
+                </div>
+                <div class="modal-footer">
+
+                    <p:commandButton icon="ui-icon-close"
+                                     styleClass="padrao"
+                                     value="Fechar"
+                                     onclick="$('#modalDetalhesIndice').modal('hide');"/>
+                </div>
+            </p:outputPanel>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans:beans xmlns:beans="http://www.springframework.org/schema/beans"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns="http://www.springframework.org/schema/security"
+             xsi:schemaLocation="http://www.springframework.org/schema/security
+              http://www.springframework.org/schema/security/spring-security-3.2.xsd
+  http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+    <http pattern="/javax.faces.resource/**" security="none"/>
+    <http pattern="/faces/javax.faces.resource/**" security="none"/>
+    <http pattern="/css/**" security="none"/>
+    <http pattern="/faces/css/**" security="none"/>
+    <http pattern="/img/**" security="none"/>
+    <http pattern="/faces/img/**" security="none"/>
+    <http pattern="/spring/javax.faces.resource/**" security="none"/>
+    <http pattern="/spring/mensagens/mensagem-externa**" security="none"/>
+    <http pattern="/faces/login.xhtml" security="none"/>
+    <http pattern="/arquivologo" security="none"/>
+    <http pattern="/faces/erro404.xhtml" security="none"/>
+    <http auto-config="true" authentication-manager-ref="authenticationManager"
+          entry-point-ref="restAuthenticationEntryPoint"
+          access-decision-manager-ref="accessDecisionManager">
+        <intercept-url pattern="/WSIntegraSoftplanImpl*" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <intercept-url pattern="/spring/integracao/**" access="ROLE_API"/>
+        <intercept-url pattern="/spring/rh/**" access="ROLE_API"/>
+        <intercept-url pattern="/spring/report/**" access="ROLE_API"/>
+        <intercept-url pattern="/spring/aplicacao/status/" access="ROLE_API"/>
+        <intercept-url pattern="/spring/nfse/**" access="ROLE_API"/>
+        <intercept-url pattern="/spring/tributario/**" access="ROLE_API"/>
+        <intercept-url pattern="/spring/pix/**" access="ROLE_API"/>
+        <intercept-url pattern="/primepush/**" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <intercept-url pattern="/j_spring_security_switch_user" access="ROLE_ADMIN"/>
+        <intercept-url pattern="/**" access="ROLE_USER"/>
+
+        <custom-filter after="BASIC_AUTH_FILTER" ref="apiKeyAuthenticationFilter"/>
+        <custom-filter position="SWITCH_USER_FILTER" ref="switchUserProcessingFilter"/>
+
+        <form-login login-processing-url="/j_spring_security_check"
+                    login-page="/faces/login.xhtml"
+                    authentication-success-handler-ref="usuarioSistemaAuthenticationSuccessHandler"
+                    authentication-failure-url="/faces/login.xhtml?login_error"
+        />
+        <logout logout-url="/logout/" logout-success-url="/faces/login.xhtml"/>
+    </http>
+    <authentication-manager alias="authenticationManager">
+        <authentication-provider ref="usuarioSistemaAuthenticationProvider"/>
+    </authentication-manager>
+    <beans:bean id="dataSource"
+                class="org.springframework.jndi.JndiObjectFactoryBean">
+        <beans:property name="jndiName" value="java:/app/datasources/webPublicoJNDI"/>
+    </beans:bean>
+
+    <!--<beans:bean id="liquibase" class="liquibase.integration.spring.SpringLiquibase">-->
+    <!--<beans:property name="dataSource" ref="dataSource" />-->
+    <!--<beans:property name="changeLog" value="classpath:br/com/webpublico/changelog/changelog-master.xml" />-->
+    <!--</beans:bean>-->
+
+    <beans:bean id="usuarioSistemaAuthenticationProvider"
+                class="br.com.webpublico.seguranca.UsuarioSistemaAuthenticationProvider"/>
+    <beans:bean id="usuarioSistemaAuthenticationSuccessHandler"
+                class="br.com.webpublico.seguranca.UsuarioSistemaAuthenticationSuccessHandler"/>
+
+    <beans:bean id="restAuthenticationEntryPoint" class="br.com.webpublico.seguranca.RestAuthenticationEntryPoint"/>
+    <beans:bean id="accessDecisionManager" class="org.springframework.security.access.vote.UnanimousBased">
+        <beans:property name="decisionVoters">
+            <beans:list>
+                <beans:bean class="org.springframework.security.access.vote.AuthenticatedVoter"/>
+                <beans:bean class="org.springframework.security.access.vote.RoleVoter"/>
+                <beans:bean class="br.com.webpublico.seguranca.UsuarioSistemaAutorizadoVoter"/>
+            </beans:list>
+        </beans:property>
+    </beans:bean>
+
+    <beans:bean id="apiKeyAuthenticationFilter"
+                class="br.com.webpublico.seguranca.ApiKeyAuthenticationFilter"/>
+
+    <beans:bean id="switchUserProcessingFilter"
+                class="br.com.webpublico.seguranca.CustomSwitchUserFilter">
+        <beans:property name="userDetailsService" ref="usuarioSistemaService"/>
+        <beans:property name="switchUserUrl" value="/j_spring_security_switch_user"/>
+        <beans:property name="exitUserUrl" value="/j_spring_security_exit_user"/>
+        <beans:property name="targetUrl" value="/home"/>
+    </beans:bean>
+
+</beans:beans>

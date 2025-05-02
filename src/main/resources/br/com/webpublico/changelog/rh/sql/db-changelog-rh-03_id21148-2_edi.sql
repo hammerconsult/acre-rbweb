@@ -1,0 +1,1 @@
+UPDATE PENSAOALIMENTICIA set vinculofp_id = (select apo.id from APOSENTADORIA apo where apo.CONTRATOFP_ID in (select vinculofp_id from PENSAOALIMENTICIA) and apo.CONTRATOFP_ID = vinculofp_id ) where vinculofp_ID in (select ap.contratofp_id from APOSENTADORIA ap)

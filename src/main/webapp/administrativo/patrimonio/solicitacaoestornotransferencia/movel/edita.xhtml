@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            window.onload = function () {
+                buscarBensAoEditar();
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerAcompanhaSalvar;
+
+            function acompanharSalvar() {
+                timerAcompanhaSalvar = setInterval(
+                    function () {
+                        rcAtualizaCompFutures();
+                    }, 1000);
+            }
+
+            var timerPesquisa;
+
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                aguarde.show();
+                finalizarPesquisa();
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{solicitacaoEstornoTransferenciaControlador}"
+                                origem="#{solicitacaoEstornoTransferenciaControlador.caminhoPadrao}listar/"/>
+
+            <p:remoteCommand
+                id="btnBuscarItens"
+                name="buscarBensAoEditar"
+                actionListener="#{solicitacaoEstornoTransferenciaControlador.buscarBensAoEditar()}"/>
+
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{solicitacaoEstornoTransferenciaControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                actionListener="#{solicitacaoEstornoTransferenciaControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{solicitacaoEstornoTransferenciaControlador.consultarFutureSalvar()}"
+                name="rcAtualizaCompFutures"/>
+
+            <p:panel id="panelPrincipal" header="Solicitação de Estorno de Transferência de Bens Móveis">
+                <p:tabView id="tabGeral" styleClass="mtop05">
+                    <p:tab title="Dados da Solicitação" id="tabViewPrincipal">
+                        <h:panelGrid columns="2" id="gridGeral">
+                            <h:outputText value="Código:"/>
+                            <h:outputLabel styleClass="negrito"
+                                           value="#{solicitacaoEstornoTransferenciaControlador.selecionado.codigo == null
+                                 ? 'Código gerado automaticamente ao concluir a operação' : solicitacaoEstornoTransferenciaControlador.selecionado.codigo}"/>
+
+                            <h:outputText value="Data de Criação:"/>
+                            <h:outputText
+                                value="#{solicitacaoEstornoTransferenciaControlador.selecionado.dataDeCriacao}"
+                                styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputText value="Situação:"/>
+                            <h:outputText styleClass="negrito"
+                                          value="#{solicitacaoEstornoTransferenciaControlador.selecionado.situacao.descricao}"/>
+
+                            <h:outputText value="Solicitante:"/>
+                            <h:outputText styleClass="negrito"
+                                          value="#{solicitacaoEstornoTransferenciaControlador.selecionado.solicitante.nome}"/>
+
+                            <fc:outputLabelObrigatorio value="Efetivação de Transferência:"/>
+                            <p:autoComplete queryDelay="1000" id="loteefetivacao"
+                                            var="lote"
+                                            value="#{solicitacaoEstornoTransferenciaControlador.selecionado.loteEfetivacaoTransferencia}"
+                                            itemLabel="#{lote}"
+                                            itemValue="#{lote.id}"
+                                            converter="#{loteEfetivacaoTransferenciaBemControlador.converterGenerico}"
+                                            maxResults="50"
+                                            dropdown="true"
+                                            panelStyle="max-height: 230px;max-width: 800px"
+                                            forceSelection="true"
+                                            size="70"
+                                            completeMethod="#{solicitacaoEstornoTransferenciaControlador.completaLoteEfetivacao}">
+                                <p:ajax event="itemSelect"
+                                        process="@this"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"/>
+                            </p:autoComplete>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Pesquisar"
+                                         title="Clique para pesquisar"
+                                         icon="ui-icon-search"
+                                         actionListener="#{solicitacaoEstornoTransferenciaControlador.pesquisarBens()}"
+                                         process=":Formulario:tabGeral:gridGeral @this"
+                                         styleClass="prioritario mrig05 mtop10 pesquisar"
+                                         onstart="aguarde.show()"
+                                         style="width: 150px"
+                                         update="tabelaBens outputPanelAnexo :Formulario:msgInconsistencias"/>
+
+                        <p:dataTable id="tabelaBens"
+                                     value="#{solicitacaoEstornoTransferenciaControlador.bensDisponiveis}"
+                                     var="bem"
+                                     styleClass="mtop05"
+                                     rowIndexVar="rowIx"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     paginator="true"
+                                     rows="100"
+                                     rowsPerPageTemplate="100,200,300"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}">
+                            <p:column style="width: 5%; text-align: center;">
+                                <f:facet name="header">
+                                    <p:commandButton icon="ui-icon-check"
+                                                     styleClass="vinteLarguraVinteAltura"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     process="tabelaBens"
+                                                     update="tabelaBens :Formulario:tabGeral:gridGeral"
+                                                     rendered="#{!solicitacaoEstornoTransferenciaControlador.mostrarBotaoSelecionarTodos()}"
+                                                     actionListener="#{solicitacaoEstornoTransferenciaControlador.desmarcarTodos()}"/>
+                                    <p:commandButton
+                                        styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                        value=""
+                                        process="tabelaBens"
+                                        update="tabelaBens :Formulario:tabGeral:gridGeral"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"
+                                        rendered="#{solicitacaoEstornoTransferenciaControlador.mostrarBotaoSelecionarTodos()}"
+                                        actionListener="#{solicitacaoEstornoTransferenciaControlador.selecionarTodos()}"/>
+                                </f:facet>
+
+                                <p:commandButton icon="ui-icon-check"
+                                                 styleClass="vinteLarguraVinteAltura"
+                                                 process="tabelaBens"
+                                                 update="tabelaBens :Formulario:tabGeral:gridGeral"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 rendered="#{solicitacaoEstornoTransferenciaControlador.itemSelecionado(bem)}"
+                                                 actionListener="#{solicitacaoEstornoTransferenciaControlador.desmarcarItem(bem)}"/>
+
+                                <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                 value=""
+                                                 process="tabelaBens"
+                                                 update="tabelaBens :Formulario:tabGeral:gridGeral"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 rendered="#{!solicitacaoEstornoTransferenciaControlador.itemSelecionado(bem)}"
+                                                 actionListener="#{solicitacaoEstornoTransferenciaControlador.selecionarItem(bem)}"/>
+                            </p:column>
+
+                            <p:column headerText="Registro Patrimonial" style="width: 5%;  text-align: left;">
+                                <h:outputText value="#{bem.identificacao}"/>
+                            </p:column>
+                            <p:column headerText="Bem" style="width: 40%;  text-align: left;">
+                                <h:outputText value="#{bem.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Unidade Administrativa de Destino"
+                                      style="width: 45%; text-align: left;">
+                                <h:outputText value="#{bem.administrativa}"/>
+                                <f:facet name="footer">
+                                    <div class="alinhamentoDireita">
+                                        <h:outputText value="Total" styleClass="negrito"/>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column headerText="Valor do Bem (R$)" styleClass="alinhamentoDireita">
+                                <div style="text-align: right;">
+                                    <h:outputText value="#{bem.valorOriginal}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+
+                                    <f:facet name="footer">
+                                        <div class="alinhamentoDireita">
+                                            <h:outputText
+                                                value="#{solicitacaoEstornoTransferenciaControlador.valorTotalBens}"
+                                                styleClass="negrito">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </div>
+                                    </f:facet>
+                                </div>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Inconsistências" id="tabInconsistencias">
+                        <p:outputPanel id="outputPanelInconsistencias">
+                            <ad:inconsistencias-pesquisa-bens
+                                inconsistencias="#{solicitacaoEstornoTransferenciaControlador.assistente.mensagens}"/>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab title="Anexos" id="tabAnexos">
+                        <p:outputPanel id="outputPanelAnexo">
+                            <fc:filesUploadWP selecionado="#{solicitacaoEstornoTransferenciaControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+
+                <p:outputPanel id="msgInconsistencias">
+                    <ad:alerta-pesquisa-com-inconsistencias
+                        render="#{solicitacaoEstornoTransferenciaControlador.assistente.hasInconsistencias()}"/>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{solicitacaoEstornoTransferenciaControlador}"/>
+
+            <p:commandButton value="Concluir"
+                             onclick="if (!confirm('Tem certeza que deseja concluir esta solicitação de estorno?')) {return false; } else {aguarde.show();}"
+                             icon="ui-icon-check"
+                             disabled="#{!solicitacaoEstornoTransferenciaControlador.selecionado.isEmElaboracao()}"
+                             styleClass="mlef05 mtop10 prioritario operacao"
+                             actionListener="#{solicitacaoEstornoTransferenciaControlador.concluirSolicitacao()}"/>
+        </h:form>
+
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Solicitação de Estorno de Transferência de Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{solicitacaoEstornoTransferenciaControlador.assistente.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{solicitacaoEstornoTransferenciaControlador.assistente.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{solicitacaoEstornoTransferenciaControlador.assistente.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{solicitacaoEstornoTransferenciaControlador.assistente.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{solicitacaoEstornoTransferenciaControlador.assistente.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{solicitacaoEstornoTransferenciaControlador.assistente.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{solicitacaoEstornoTransferenciaControlador.assistente.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Consulta de Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:outputText
+                            value="#{solicitacaoEstornoTransferenciaControlador.assistente.descricaoProcesso}"/><br/>
+
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/> <br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

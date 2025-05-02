@@ -1,0 +1,1184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components" xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:fccd="http://java.sun.com/jsf/composite/components/tributario/consulta-de-debitos"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function setaFoco(arg) {
+                document.getElementById(arg).focus()
+            }
+
+            function mudaClasse(id) {
+                var mudar = '#parcela' + id
+                if ($(mudar).hasClass("info")) {
+                    $(mudar).removeClass("info");
+                } else {
+                    $(mudar).addClass("info");
+                }
+            }
+
+            var timerConsulta;
+
+            window.onload = function () {
+                var inputPessoa = document.getElementById('Formulario:autoCompletePessoa:autoCompletePessoa_input');
+                var inputCMC = document.getElementById('Formulario:cadastroEconomico_input');
+                var inputBCI = document.getElementById('Formulario:cadastroImobiliario_input');
+                var inputBCR = document.getElementById('Formulario:cadastroRural_input');
+                var botao = document.getElementById('Formulario:botaoPesquisar');
+
+                if ((inputPessoa != null &amp;&amp; inputPessoa.value != null &amp;&amp; inputPessoa.value.trim().length > 0)
+                    || (inputCMC != null &amp;&amp; inputCMC.value != null &amp;&amp; inputCMC.value.trim().length > 0)
+                    || (inputBCI != null &amp;&amp; inputBCI.value != null &amp;&amp; inputBCI.value.trim().length > 0)
+                    || (inputBCR != null &amp;&amp; inputBCR.value != null &amp;&amp; inputBCR.value.trim().length > 0)
+                ) {
+                    botao.click();
+                }
+            }
+
+            function acompanhaConsulta() {
+                timerConsulta = setInterval(function () {
+                    rcAtualizaCompQuery();
+                }, 1000);
+            }
+
+            function terminaConsulta() {
+                clearInterval(timerConsulta);
+                window.scrollTo(0, document.body.scrollHeight);
+
+            }
+        </script>
+        <p:dialog modal="true" widgetVar="consultando"
+                  style="position: fixed !important; z-index: 99999999 !important;"
+                  position="center"
+                  showHeader="false"
+                  draggable="false" closable="false" resizable="false">
+            <h:form id="formConsulta">
+                <center>
+                    <p:outputPanel style="color: darkgray"
+                                   rendered="#{consultaDebitoControlador.contadorConsulta.calculados > 0}">
+                        <h:outputText
+                            value="Atualizando os Acréscimos"/><br/>
+
+                        <h:outputText
+                            value="#{consultaDebitoControlador.contadorConsulta.calculados}
+                         de #{consultaDebitoControlador.contadorConsulta.total} - "
+                            escape="true"
+                        />
+                        <h:outputText
+                            value="#{consultaDebitoControlador.contadorConsulta.porcentagemDoCalculo}"
+                            escape="true"
+                            converter="converterDouble"/>%
+                        <br/>
+                    </p:outputPanel>
+                    <p:outputPanel
+                        rendered="#{consultaDebitoControlador.contadorConsulta == null or consultaDebitoControlador.contadorConsulta.calculados == 0}">
+                        <h:outputText
+                            value="Consultando Débitos"
+                            style="color: darkgray"/>
+                        <br/>
+                    </p:outputPanel>
+                    <h:graphicImage value="/img/ajaxloading.gif"/>
+                </center>
+            </h:form>
+        </p:dialog>
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":formConsulta"
+                process="@this"
+                actionListener="#{consultaDebitoControlador.executarDependenciasDaConsulta}"
+                name="rcAtualizaCompQuery"/>
+
+            <p:panel header="Consulta de Débitos ">
+                <p:panel id="filtros">
+                    <p:watermark value="Ex. 100120050381001" for="cadastroImobiliario"/>
+                    <p:watermark value="Ex. JOSÉ BONFIN DE SOUZA, 022.567.121-16" for="pessoa"/>
+                    <p:watermark value="Ex. 0037124, JOSÉ BONFIN DE SOUZA, 022.567.121-16" for="cadastroEconomico"/>
+                    <p:watermark value="Ex. 6194382, SERINGAL BOM DESTINO" for="cadastroRural"/>
+                    <p:watermark value="Ex. 6194382, SERINGAL BOM DESTINO" for="divida"/>
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 70%" valign="top">
+                                <h:panelGrid columns="2" id="cadastros"
+                                             style="height: 30px; vertical-align: middle !important;">
+                                    <fc:outputLabelObrigatorio value="Tipo de Cadastro: "/>
+
+                                    <h:selectOneMenu value="#{consultaDebitoControlador.tipoCadastroTributario}"
+                                                     disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                     styleClass="mtop05 mlef02">
+                                        <f:selectItems value="#{consultaDebitoControlador.tiposCadastro}"/>
+                                        <p:ajax update="@form" event="change"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"
+                                                listener="#{consultaDebitoControlador.limparCadastroSituacao()}"/>
+                                    </h:selectOneMenu>
+
+                                    <h:panelGrid columns="1" style="height: 30px; vertical-align: middle !important;"
+                                                 cellpadding="0" cellspacing="0">
+                                        <fc:outputLabelObrigatorio value="Cadastro: "/>
+                                    </h:panelGrid>
+
+                                    <h:panelGroup>
+                                        <h:panelGrid columns="2" styleClass="verticalAlignTop">
+                                            <h:panelGroup
+                                                rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'ECONOMICO'}">
+                                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0"
+                                                             style="height: 30px; vertical-align: middle !important;">
+                                                    <h:selectOneMenu title="Selecione a Situação do Cadastro Econômico."
+                                                                     disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                                     styleClass="mrig03 mtop03"
+                                                                     value="#{consultaDebitoControlador.situacaoCadastroEconomico}"
+                                                                     id="situacaocadastroeconomico">
+                                                        <f:selectItems
+                                                            value="#{processoParcelamentoControlador.buscarSituacoesCadastroEconomico()}"/>
+                                                        <p:ajax event="change" update="cadastros" process="cadastros"
+                                                                listener="#{consultaDebitoControlador.limpaCadastro()}"/>
+                                                    </h:selectOneMenu>
+
+                                                    <p:autoComplete queryDelay="1000"
+                                                                    value="#{consultaDebitoControlador.cadastro}"
+                                                                    completeMethod="#{consultaDebitoControlador.completarCadastroEconomico}"
+                                                                    var="cmc"
+                                                                    disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                                    size="70"
+                                                                    dropdown="true"
+                                                                    id="cadastroEconomico"
+                                                                    forceSelection="true"
+                                                                    scrollHeight="150" itemLabel="#{cmc.descricao}"
+                                                                    itemValue="#{cmc.id}"
+                                                                    converter="#{consultaDebitoControlador.converterCadastroEconomico}">
+                                                        <p:ajax event="blur" process="@this"/>
+                                                    </p:autoComplete>
+                                                </h:panelGrid>
+                                            </h:panelGroup>
+
+                                            <h:panelGroup
+                                                rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'IMOBILIARIO'}">
+                                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0"
+                                                             style="height: 30px; vertical-align: middle !important;">
+                                                    <h:selectOneMenu
+                                                        title="Selecione a Situação do Cadastro Imobiliário."
+                                                        disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                        styleClass="mrig03 mtop03"
+                                                        value="#{consultaDebitoControlador.situacaoCadastroImobiliario}"
+                                                        id="situacaocadastroimobiliario">
+                                                        <f:selectItems
+                                                            value="#{processoParcelamentoControlador.buscarSituacoes()}"/>
+                                                        <p:ajax event="change" update="cadastros" process="cadastros"
+                                                                listener="#{consultaDebitoControlador.limpaCadastro()}"/>
+                                                    </h:selectOneMenu>
+
+                                                    <p:autoComplete queryDelay="1000"
+                                                                    value="#{consultaDebitoControlador.cadastro}"
+                                                                    completeMethod="#{consultaDebitoControlador.completarCadastroImobiliario}"
+                                                                    var="bci"
+                                                                    id="cadastroImobiliario"
+                                                                    disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                                    dropdown="true"
+                                                                    size="70"
+                                                                    forceSelection="true"
+                                                                    scrollHeight="150"
+                                                                    itemLabel="#{bci.inscricaoCadastral}"
+                                                                    itemValue="#{bci.id}"
+                                                                    converter="#{consultaDebitoControlador.converterCadastroImobiliario}">
+                                                        <p:ajax event="blur" process="@this"/>
+                                                        <p:ajax event="itemSelect" process="@this" update="cadastros"
+                                                                onstart="aguarde.show()"
+                                                                oncomplete="aguarde.hide()"
+                                                                listener="#{consultaDebitoControlador.selecionarCadastroImobiliario}"/>
+                                                    </p:autoComplete>
+
+                                                    <h:outputText value="Proprietários:" styleClass="azulnegrito mrig02"
+                                                                  rendered="#{consultaDebitoControlador.propriedades ne null and !consultaDebitoControlador.propriedades.isEmpty()}"/>
+                                                    <ui:repeat value="#{consultaDebitoControlador.propriedades}"
+                                                               var="prop">
+                                                        <h:outputText
+                                                            value="#{prop.pessoa.nome} (#{prop.pessoa.cpf_Cnpj})"
+                                                            styleClass="negrito"/><br/>
+                                                    </ui:repeat>
+
+                                                    <h:outputText value="Compromissários: "
+                                                                  styleClass="azulnegrito mrig02"
+                                                                  rendered="#{consultaDebitoControlador.compromissarios ne null and !consultaDebitoControlador.compromissarios.isEmpty()}"/>
+                                                    <ui:repeat value="#{consultaDebitoControlador.compromissarios}"
+                                                               var="compro">
+                                                        <h:outputText
+                                                            value="#{compro.compromissario.nome} (#{compro.compromissario.cpf_Cnpj})"
+                                                            styleClass="negrito"/><br/>
+                                                    </ui:repeat>
+                                                </h:panelGrid>
+                                            </h:panelGroup>
+
+                                            <h:panelGroup
+                                                rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'RURAL'}">
+                                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0"
+                                                             style="height: 30px; vertical-align: middle !important;">
+                                                    <h:selectOneMenu title="Selecione a Situação do Cadastro Rural."
+                                                                     styleClass="mrig03 mtop03"
+                                                                     disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                                     value="#{consultaDebitoControlador.situacaoCadastroRural}"
+                                                                     id="situacaocadastrorural">
+                                                        <f:selectItems
+                                                            value="#{processoParcelamentoControlador.buscarSituacoes()}"/>
+                                                        <p:ajax event="change" update="cadastros" process="cadastros"
+                                                                listener="#{consultaDebitoControlador.limpaCadastro()}"/>
+                                                    </h:selectOneMenu>
+
+                                                    <p:autoComplete queryDelay="1000"
+                                                                    value="#{consultaDebitoControlador.cadastro}"
+                                                                    completeMethod="#{consultaDebitoControlador.completarCadastroRural}"
+                                                                    disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                                    var="bcr"
+                                                                    id="cadastroRural"
+                                                                    dropdown="true"
+                                                                    forceSelection="true"
+                                                                    scrollHeight="150"
+                                                                    size="70"
+                                                                    itemLabel="#{bcr}"
+                                                                    itemValue="#{bcr.id}"
+                                                                    converter="#{consultaDebitoControlador.converterCadastroRural}">
+                                                        <p:ajax event="blur" process="@this"/>
+                                                    </p:autoComplete>
+                                                </h:panelGrid>
+                                            </h:panelGroup>
+
+                                            <h:panelGroup
+                                                rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'PESSOA'}">
+                                                <h:panelGrid columns="2" cellpadding="0" cellspacing="0"
+                                                             style="height: 30px; vertical-align: middle !important;">
+                                                    <h:selectOneMenu title="Selecione a Situação do Cadastro da Pessoa."
+                                                                     styleClass="mrig03 mtop03 width100"
+                                                                     disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                                     value="#{consultaDebitoControlador.situacaoCadastroPessoa}"
+                                                                     id="situacaocadastropessoa">
+                                                        <f:selectItems
+                                                            value="#{processoParcelamentoControlador.buscarSituacoesPessoa()}"/>
+                                                        <p:ajax event="change" update="cadastros" process="cadastros"
+                                                                listener="#{consultaDebitoControlador.limpaCadastro()}"/>
+                                                    </h:selectOneMenu>
+
+                                                    <p:outputPanel id="pessoa">
+                                                        <fc:novoAutocompletePessoa
+                                                            value="#{consultaDebitoControlador.filtroContribuinte}"
+                                                            situacoesPossiveis="#{consultaDebitoControlador.situacoesDisponiveis}"
+                                                            disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                            caminhoAtual="/tributario/atendimento-ao-contribuinte/consulta-de-debitos/"
+                                                            id="autoCompletePessoa"
+                                                            mostraSituacoes="false"
+                                                            mostraBotoes="false"/>
+                                                    </p:outputPanel>
+                                                </h:panelGrid>
+                                            </h:panelGroup>
+
+
+                                            <p:commandButton icon="ui-icon-search" oncomplete="consultaGenerica.show()"
+                                                             disabled="#{!empty consultaDebitoControlador.cadastrosPorPagina}"
+                                                             update=":dlgConsultaGenerica"/>
+                                        </h:panelGrid>
+                                    </h:panelGroup>
+
+                                    <p:selectBooleanCheckbox
+                                        value="#{consultaDebitoControlador.consultarCadastrosInativos}"
+                                        rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'PESSOA'}"/>
+                                    <h:outputLabel
+                                        value="Consultar também todos os débitos de C.M.C e Cadastros Imobiliários Inativos."
+                                        rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'PESSOA'}"/>
+
+                                    <h:outputText value="Dívida: "/>
+                                    <h:panelGroup id="dividasSelecionadas">
+                                        <table class="table">
+                                            <c:forEach items="#{consultaDebitoControlador.dividasSeleciondas}"
+                                                       var="divida">
+                                                <tr>
+                                                    <td>
+                                                        <h:outputText value="#{divida.descricao}" styleClass="negrito"/>
+                                                    </td>
+                                                    <td>
+                                                        <p:commandButton icon="ui-icon-trash"
+                                                                         onstart="aguarde.show()"
+                                                                         oncomplete="aguarde.hide()"
+                                                                         actionListener="#{consultaDebitoControlador.removerDivida(divida)}"
+                                                                         process="dividasSelecionadas"
+                                                                         update="dividasSelecionadas"/>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                            <tr>
+                                                <td>
+                                                    <h:selectOneMenu value="#{consultaDebitoControlador.divida}"
+                                                                     id="divida"
+                                                                     style="max-width: 400px"
+                                                                     converter="#{consultaDebitoControlador.converterDivida}">
+                                                        <f:selectItem itemValue="#{null}" itemLabel=" "/>
+                                                        <f:selectItems value="#{consultaDebitoControlador.dividas}"/>
+                                                        <p:ajax event="change" process="@this"
+                                                                onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                                                update="@this gridTipoDebito"
+                                                                listener="#{consultaDebitoControlador.ajustarTiposDeDividas()}"/>
+                                                    </h:selectOneMenu>
+                                                </td>
+                                                <td>
+                                                    <p:commandButton icon="ui-icon-arrowthickstop-1-s"
+                                                                     styleClass="prioritario"
+                                                                     onstart="aguarde.show()"
+                                                                     oncomplete="aguarde.hide()"
+                                                                     actionListener="#{consultaDebitoControlador.adicionarDivida()}"
+                                                                     process="dividasSelecionadas"
+                                                                     update="dividasSelecionadas"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </h:panelGroup>
+                                    <h:outputText value="Exercício: "/>
+                                    <h:panelGrid columns="5">
+                                        <h:outputText value="Inicial: "/>
+                                        <p:inputMask mask="9999" id="exericicioInicial"
+                                                     value="#{consultaDebitoControlador.exercicioInicial}"
+                                                     converter="#{consultaDebitoControlador.converterExercicio}"
+                                                     size="10">
+                                            <p:ajax event="blur" process="exericicioInicial"/>
+                                        </p:inputMask>
+                                        <h:outputText value="Final: "/>
+                                        <p:inputMask mask="9999" id="exercicioFinal"
+                                                     value="#{consultaDebitoControlador.exercicioFinal}"
+                                                     converter="#{consultaDebitoControlador.converterExercicio}"
+                                                     size="10">
+                                            <p:ajax event="blur" process="exercicioFinal"/>
+                                        </p:inputMask>
+                                    </h:panelGrid>
+
+                                    <h:outputText value="Vencimento: "/>
+                                    <h:panelGrid columns="4">
+                                        <h:outputText value="Inicial: "/>
+                                        <p:calendar value="#{consultaDebitoControlador.vencimentoInicial}"
+                                                    onkeyup="mascara(this, mdata)"
+                                                    size="10"
+                                                    pattern="dd/MM/yyyy" locale="pt_BR" navigator="true">
+
+                                        </p:calendar>
+                                        <h:outputText value="Final: "/>
+                                        <p:calendar value="#{consultaDebitoControlador.vencimentoFinal}"
+                                                    onkeyup="mascara(this, mdata)"
+                                                    size="10"
+                                                    pattern="dd/MM/yyyy" locale="pt_BR" navigator="true">
+                                        </p:calendar>
+                                    </h:panelGrid>
+
+                                    <h:outputText value="Pagamento: "/>
+                                    <h:panelGrid columns="4">
+                                        <h:outputText value="Inicial: "/>
+                                        <p:calendar value="#{consultaDebitoControlador.pagamentoInicial}"
+                                                    onkeyup="mascara(this, mdata)"
+                                                    size="10"
+                                                    pattern="dd/MM/yyyy" locale="pt_BR" navigator="true">
+
+                                        </p:calendar>
+                                        <h:outputText value="Final: "/>
+                                        <p:calendar value="#{consultaDebitoControlador.pagamentoFinal}"
+                                                    onkeyup="mascara(this, mdata)"
+                                                    size="10"
+                                                    pattern="dd/MM/yyyy" locale="pt_BR" navigator="true">
+                                        </p:calendar>
+                                    </h:panelGrid>
+
+                                    <h:outputText value="Tipo de Débito: "/>
+                                    <h:panelGrid columns="10" id="gridTipoDebito">
+                                        <h:selectBooleanCheckbox
+                                            disabled="#{consultaDebitoControlador.temDividaDoExercicio}"
+                                            value="#{consultaDebitoControlador.pesquisaExercicio}">
+                                            <p:ajax event="change" process="@this"/>
+                                        </h:selectBooleanCheckbox>
+
+                                        <h:outputText value="Do Exercício"/>
+                                        <h:selectBooleanCheckbox
+                                            disabled="#{consultaDebitoControlador.temDividaDeDividaAtiva}"
+                                            value="#{consultaDebitoControlador.pesquisaDividaAtiva}">
+                                            <p:ajax event="change" update="gridTipoDebito" process="@this"
+                                                    listener="#{consultaDebitoControlador.desmarcaParcelamentoOriginados()}"/>
+                                        </h:selectBooleanCheckbox>
+                                        <h:outputText value="Dívida Ativa"/>
+                                        <h:selectBooleanCheckbox
+                                            disabled="#{consultaDebitoControlador.temDividaDeDividaAtiva}"
+                                            value="#{consultaDebitoControlador.pesquisaDividaAjuizada}">
+                                            <p:ajax event="change" update="gridTipoDebito" process="@this"
+                                                    listener="#{consultaDebitoControlador.desmarcaParcelamentoOriginados()}"/>
+                                        </h:selectBooleanCheckbox>
+                                        <h:outputText value="Dívida Ativa Ajuizada"/>
+
+                                        <h:selectBooleanCheckbox
+                                            value="#{consultaDebitoControlador.pesquisaDebitoProtestado}">
+                                            <p:ajax event="change" process="@this"/>
+                                        </h:selectBooleanCheckbox>
+
+                                        <h:outputText value="Débito Protestado"/>
+
+                                        <h:selectBooleanCheckbox
+                                            disabled="#{(!consultaDebitoControlador.pesquisaDividaAtiva
+                                                 and !consultaDebitoControlador.pesquisaDividaAjuizada
+                                                 and !consultaDebitoControlador.temDividaDeDividaAtiva)
+                                                 or consultaDebitoControlador.temDividaDeParcelamento
+                                                 }"
+                                            value="#{consultaDebitoControlador.pesquisaParcelamentoDividaAtiva}">
+                                            <p:ajax event="change" process="@this"/>
+                                        </h:selectBooleanCheckbox>
+                                        <h:outputText value="Parcelamento Originados da Dívida Ativa"/>
+                                    </h:panelGrid>
+                                    <h:outputText value="Ordenação: "/>
+                                    <h:panelGroup id="painelOrdenacao">
+                                        <table class="table">
+                                            <c:forEach items="#{consultaDebitoControlador.camposOrdenacao}"
+                                                       var="campoOrd">
+                                                <tr>
+                                                    <td>
+                                                        <h:outputText value="#{campoOrd.descricao}"
+                                                                      styleClass="negrito"/>
+                                                    </td>
+                                                    <td>
+                                                        <p:commandButton icon="ui-icon-trash"
+                                                                         onstart="aguarde.show()"
+                                                                         oncomplete="aguarde.hide()"
+                                                                         actionListener="#{consultaDebitoControlador.removerOrdenacao(campoOrd)}"
+                                                                         process="painelOrdenacao"
+                                                                         update="painelOrdenacao"/>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                            <tr>
+                                                <td>
+                                                    <h:selectOneMenu value="#{consultaDebitoControlador.campoOrdenacao}"
+                                                                     id="campoOrdenacao"
+                                                                     style="max-width: 400px">
+                                                        <f:selectItem itemValue="#{null}" itemLabel=" "/>
+                                                        <f:selectItems
+                                                            value="#{consultaDebitoControlador.camposParaOrdenar}"/>
+                                                        <p:ajax event="change" process="@this" update="@this"/>
+                                                    </h:selectOneMenu>
+                                                </td>
+                                                <td>
+                                                    <p:commandButton icon="ui-icon-arrowthickstop-1-s"
+                                                                     styleClass="prioritario"
+                                                                     onstart="aguarde.show()"
+                                                                     oncomplete="aguarde.hide()"
+                                                                     actionListener="#{consultaDebitoControlador.adicionarOrdenacao()}"
+                                                                     process="painelOrdenacao"
+                                                                     update="painelOrdenacao"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </h:panelGroup>
+                                    
+                                    <p:selectBooleanCheckbox
+                                        value="#{consultaDebitoControlador.mostrarEnderecoCadastro}"/>
+                                    <h:outputLabel value="Exibir Endereços"/>
+
+                                    <p:selectBooleanCheckbox
+                                        value="#{consultaDebitoControlador.consultarQuadroSocietario}"
+                                        rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'ECONOMICO' or consultaDebitoControlador.tipoCadastroTributario eq 'PESSOA'}"/>
+                                    <h:outputLabel
+                                        value="Consultar também todos os C.M.C.'s onde o contribuinte vinculado ao C.M.C. selecionado fizer parte do quadro societário."
+                                        rendered="#{consultaDebitoControlador.tipoCadastroTributario eq 'ECONOMICO' or consultaDebitoControlador.tipoCadastroTributario eq 'PESSOA'}"/>
+                                </h:panelGrid>
+                                <br/>
+                                <h:panelGrid columns="3">
+                                    <p:commandButton value="Pesquisar"
+                                                     id="botaoPesquisar"
+                                                     icon="ui-icon-search"
+                                                     process="filtros"
+                                                     update="filtros"
+                                                     actionListener="#{consultaDebitoControlador.iniciarPesquisaParaContaCorrente()}"
+                                                     onstart="consultando.show()"
+                                                     styleClass="operacao prioritario"
+                                                     onclick="acompanhaConsulta()"/>
+                                    &nbsp;
+                                    <p:commandButton value="Nova Pesquisa"
+                                                     icon="ui-icon-document"
+                                                     styleClass="operacao"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     actionListener="#{consultaDebitoControlador.limparCampos()}"
+                                                     process="@this"
+                                                     update=":Formulario"/>
+                                </h:panelGrid>
+                            </td>
+                            <td style="width: 30%" valign="top">
+                                <p:panel id="situacoes" style="width: 100%; max-height: 200px; overflow-y: scroll">
+                                    <p:dataTable value="#{consultaDebitoControlador.todasAsSituacoes}" var="situacao"
+                                                 selection="#{consultaDebitoControlador.situacoes}"
+                                                 rowKey="#{situacao}"
+                                                 style="width: 100%">
+                                        <p:column selectionMode="multiple" style="width:2%;"/>
+                                        <p:column headerText="Situações">
+                                            <h:outputText value="#{situacao.descricao}"/>
+                                        </p:column>
+                                    </p:dataTable>
+                                </p:panel>
+                            </td>
+                        </tr>
+                    </table>
+                </p:panel>
+                <br/>
+                <p:remoteCommand actionListener="#{consultaDebitoControlador.cleanScoped()}" name="onExitJsfPage"/>
+                <p:panel style="width: 100%; border: 0;"
+                         styleClass="panel-sem-margem-padding"
+                         id="tabelaConsultas">
+
+                    <p:panel
+                        style="width: 100%; border: 0; text-align: center"
+                        styleClass="panel-sem-margem-padding"
+                        visible="#{(consultaDebitoControlador.cadastros eq null
+                          or consultaDebitoControlador.cadastros.size() == 0)
+                          and consultaDebitoControlador.consultou}">
+                        <div class="alert">
+                            <strong>Atenção</strong>
+                            Nenhum Débito foi encontrado para os filtros informados
+                        </div>
+                    </p:panel>
+
+                    <p:panel style="width: 100%; border: 0;"
+                             styleClass="panel-sem-margem-padding"
+                             visible="#{consultaDebitoControlador.cadastros ne null
+                          and consultaDebitoControlador.cadastros.size() gt 0}">
+                        <p:outputPanel rendered="#{consultaDebitoControlador.totalPaginas gt 1}">
+                            <div class="centralizado alert">
+                                <strong>Atenção!</strong><br/>
+                                O filtro utilizado para a consulta trouxe muitos resultados, a visualização nesta página é
+                                limitada a 500 registros, você pode navegar entre as páginas pressionando os botões abaixo.
+                                <br/>
+                                A impressão do demonstrativo não é limitada, ao pressionar o botão de impressão do demonstrativo
+                                todos os débitos serão exibidos.
+                            </div>
+                            <div class="centralizado">
+                                <h:outputText
+                                    value="#{consultaDebitoControlador.paginaAtual + 1} de #{consultaDebitoControlador.totalPaginas}"/>
+                                <br/>
+                                <p:commandButton
+                                    process="@form"
+                                    icon="ui-icon-seek-first"
+                                    disabled="#{consultaDebitoControlador.paginaAtual == 0}"
+                                    actionListener="#{consultaDebitoControlador.irParaPrimeiraPagina}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                                <p:commandButton
+                                    process="@form"
+                                    icon="ui-icon-seek-prev"
+                                    disabled="#{consultaDebitoControlador.paginaAtual == 0}"
+                                    actionListener="#{consultaDebitoControlador.irParaPaginaAnterior()}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                                <p:commandButton
+                                    process="@form"
+                                    disabled="#{(consultaDebitoControlador.paginaAtual +1) ge consultaDebitoControlador.totalPaginas}"
+                                    icon="ui-icon-seek-next"
+                                    actionListener="#{consultaDebitoControlador.irParaProximaPagina()}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                                <p:commandButton
+                                    process="@form"
+                                    disabled="#{(consultaDebitoControlador.paginaAtual +1) ge consultaDebitoControlador.totalPaginas}"
+                                    icon="ui-icon-seek-end"
+                                    actionListener="#{consultaDebitoControlador.irParaUltimaPagina()}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                            </div>
+                            <br/>
+                        </p:outputPanel>
+                        <h:panelGrid columns="2">
+                            <p:commandLink
+                                actionListener="#{consultaDebitoControlador.selecionarTodasParcelas()}"
+                                update="Formulario:tabelaConsultas"
+                                onclick="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                style="">
+                                <div
+                                    class="icone-30 #{consultaDebitoControlador.todasParcelasEstaoSelecionadas ? 'ui-icon-check':'ui-icon-uncheck-boolean'}"
+                                    style="background-repeat: no-repeat!important; background-position: center!important;"/>
+                            </p:commandLink>
+                            <h:outputText value="Selecionar Todas Parcelas" styleClass="negrito"/>
+                        </h:panelGrid>
+                        <ui:repeat value="#{consultaDebitoControlador.cadastrosPorPagina}" var="cadastro"
+                                   varStatus="status">
+                            <br/>
+
+                            <div id="Formulario:j_idt73_header"
+                                 class="ui-panel-titlebar ui-widget-header ui-helper-clearfix ui-corner-all">
+                                <span class="ui-panel-title">
+                                 #{cadastro.tipo.descricao}: #{cadastro.cadastro} #{cadastro.situacao} #{cadastro.endereco ne null ? ' - ' : ''} #{cadastro.endereco}
+                                </span>
+                            </div>
+
+
+                            <table class="table table-striped mtop10" id="tabelaConsultaParcelas">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <p:commandLink
+                                            rendered="#{!consultaDebitoControlador.isTodasParcelasEstaoSelecionadas(cadastro)}"
+                                            actionListener="#{consultaDebitoControlador.selecionarParcelasDoCadastro(cadastro)}"
+                                            update="@form"
+                                            onclick="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            style="">
+                                            <i class="fa fa-circle-o text-muted"> </i>
+                                        </p:commandLink>
+                                        <p:commandLink
+                                            rendered="#{consultaDebitoControlador.isTodasParcelasEstaoSelecionadas(cadastro)}"
+                                            actionListener="#{consultaDebitoControlador.removerParcelasDoCadastro(cadastro)}"
+                                            update="@form"
+                                            onclick="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            style="">
+                                            <i class="fa fa-check-circle-o text-success"> </i>
+                                        </p:commandLink>
+                                    </th>
+                                    <th class="column-referencia" title="Referência">Referência</th>
+                                    <th class="column-divida" title="Dívida">Dívida</th>
+                                    <th class="column-valores" style="text-align: left !important;"
+                                        title="Exercício">Exercício
+                                    </th>
+                                    <th class="column-valores" style="min-width: 30px; text-align: left !important;"
+                                        title="Tipo de Débito²">Tipo de Débito²
+                                    </th>
+                                    <th class="column-valores" style="text-align: left !important;"
+                                        title="Parcela">Parcela
+                                    </th>
+                                    <th class="column-valores" style="text-align: left !important;" title="SD">SD</th>
+                                    <th class="column-valores" style="text-align: left !important;"
+                                        title="Vencimento">Vencimento
+                                    </th>
+                                    <th class="column-valores" style="text-align: left !important;"
+                                        title="Pagamento">Pagamento
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;"
+                                        title="Imposto">Imposto
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;; min-width: 70px"
+                                        title="Taxa / M.P.¹">Taxa / M.P.¹
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;"
+                                        title="Desconto">Desconto
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;" title="Juros">Juros
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;" title="Multa">Multa
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;"
+                                        title="Correção">Correção
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;"
+                                        title="Honorários">Honorários
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;" title="Total">Total
+                                    </th>
+                                    <th class="column-valores" style="text-align: right !important;" title="Pago">Pago
+                                    </th>
+                                    <th class="column-situacao" style="text-align: center !important;"
+                                        title="Situação">Situação
+                                    </th>
+                                    <th class="column-valores" style="text-align: center !important;"
+                                        title="Emitido">Emitido
+                                    </th>
+                                    <th class="column-valores" style="text-align: center !important;"
+                                        title="Informações">Info
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <ui:repeat value="#{consultaDebitoControlador.mapaPorPagina[cadastro]}" var="parcela">
+                                    <tr style="#{parcela.situacaoDescricaoEnum eq 'Em Aberto' or parcela.situacaoDescricaoEnum eq 'Aguardando' or parcela.situacaoDescricaoEnum eq 'Aguardando Pagamento por Bloqueio Judicial' ? parcela.vencido ? (parcela.cotaUnica and parcela.vencido) ? 'background: #EDEDED': 'color:  #b94a48;': 'color: #468847;': ''}  "
+                                        id="parcela#{parcela.idParcela}">
+                                        <td>
+                                            <p:commandLink
+                                                actionListener="#{consultaDebitoControlador.selecionarParcela(parcela)}"
+                                                update="@this" onclick="mudaClasse(#{parcela.idParcela})"
+                                                disabled="#{(parcela.situacaoDescricaoEnum ne 'Em Aberto' and parcela.situacaoDescricaoEnum ne 'Aguardando' and parcela.situacaoDescricaoEnum ne 'Aguardando Pagamento por Bloqueio Judicial') or (parcela.cotaUnica and parcela.vencido) or (parcela.bloqueiaImpressao)}"
+                                                style="">
+                                                <i class="fa #{consultaDebitoControlador.selecionados.contains(parcela) ? 'fa-check-circle-o text-success':'fa-circle-o text-muted'}"> </i>
+
+                                            </p:commandLink>
+                                        </td>
+                                        <td class="column-referencia">
+                                            <h:outputText value="#{parcela.referencia}" title="#{parcela.referencia}"/>
+                                        </td>
+                                        <td class="column-divida">
+                                            <h:outputText value="#{parcela.divida}" title="#{parcela.divida}"/>
+                                        </td>
+                                        <td>
+                                            <h:outputText value="#{parcela.exercicio}"/>
+                                        </td>
+                                        <td>
+                                            <h:outputText value="#{parcela.siglaTipoDeDebito}"/>
+                                        </td>
+                                        <td>
+                                            <h:outputText value="#{parcela.parcela}" title="cod. ${parcela.idParcela}"/>
+                                        </td>
+                                        <td>
+                                            <h:outputText value="#{parcela.sd}"/>
+                                        </td>
+                                        <td>
+                                            <h:outputText value="#{parcela.vencimentoToString}"/>
+                                        </td>
+                                        <td>
+                                            <h:outputText value="#{parcela.pagamentoToString}"/>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorImposto}" title="Imposto">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorTaxa}" title="Taxa">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorDesconto}" title="Desconto">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorJuros}" title="Juros">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorMulta}" title="Multa">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorCorrecao}" title="Correção">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorHonorarios}" title="Honorários">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorTotal}" title="Total">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td style="text-align: right !important;">
+                                            <h:outputText value="#{parcela.valorPago}" title="Pago">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td class="column-situacao" style="text-align: center !important;">
+                                            <h:outputText value="#{parcela.situacaoDescricaoEnum}"
+                                                          title="#{parcela.situacaoDescricaoEnum}"/>
+                                        </td>
+                                        <td style="text-align: center !important;">
+                                            <h:outputText value="#{parcela.emitido ? 'Sim': 'Não'}"
+                                                          title="#{consultaDebitoControlador.mostrarNumeroDAM(parcela.idParcela, parcela.emitido)}"/>
+                                        </td>
+                                        <td style="text-align: center !important;">
+                                            <fccd:botao-informacoes-adicionais
+                                                id="btn-inf-adicionais"
+                                                parcela="#{parcela}"
+                                                idComponenteDialog="dialog-inf-adc"/>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalImposto}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalTaxa}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalDesconto}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalJuros}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalMulta}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalCorrecao}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalHonorarios}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalGeral}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th style="text-align: right">
+                                        <h:outputText
+                                            value="#{consultaDebitoControlador.mapaTotaisPorPagina[cadastro].totalPago}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </ui:repeat>
+                        <br/>
+                        <div style="width: 100%">
+                            <table style="width: 100%; border: 0">
+                                <tr>
+                                    <td style="width: 50%; vertical-align: top">
+                                        <table
+                                            style="border: 1px solid; border-color: #92b8d3; font-size: 11px; color: #000000; width: 100%; height: 30px;">
+                                            <caption class="ui-widget-header"> Legenda</caption>
+                                            <tr>
+                                                <td style="width: 15px; text-align: center">
+                                                    <div style="width: 10px; height: 10px; background-color: #468847;"/>
+                                                </td>
+                                                <td> À Vencer</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width: 15px; text-align: center">
+                                                    <div style="background-color: #b94a48; width: 10px; height: 10px;"/>
+                                                </td>
+                                                <td> Vencida</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width: 15px; text-align: center; vertical-align: top">
+                                                    <h:outputText value="¹" styleClass="negrito"/>
+                                                </td>
+                                                <td> Taxa: Referente à(s) taxa(s) dos tributos de IPTU, ISSQN, ITBI, Nota Fiscal Avulsa, Alvará, Documentos Oficiais, Taxas Diversas, Dívidas Diversas, Rendas Patrimoniais, CEASA, NFS-e, RBTrans;</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width: 15px; text-align: center; vertical-align: top">
+                                                    <h:outputText value="¹" styleClass="negrito"/>
+                                                </td>
+                                                <td> M.P.: Referente à Multa Punitiva do tributo de Fiscalização de ISSQN.</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width: 15px; text-align: center; vertical-align: top">
+                                                    <h:outputText value="²" styleClass="negrito"/>
+                                                </td>
+                                                <td> Tipo De Débito: EX - Do Exercício, DA - Dívida Ativa, DAP - Dívida Ativa Protestada, AJZ - Dívida Ativa Ajuizada, AJZP - Dívida Ativa Ajuizada e Protestada</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td style="width: 50%">
+                                        <table style="width: 50%; margin-left: 50%; text-align: right;"
+                                               class="table table-bordered">
+                                            <c:if test="#{consultaDebitoControlador.totalPaginas gt 1}">
+                                                <tr>
+                                                    <td colspan="2" style="text-align: center">
+                                                        <h:outputText value="Total por Situação Por Página"
+                                                                      style="color: steelblue; font-weight: bold"/>
+                                                    </td>
+                                                </tr>
+                                                <ui:repeat
+                                                    value="#{consultaDebitoControlador.situacoesDasParcelasPorPagina}"
+                                                    var="total">
+                                                    <tr>
+                                                        <td>
+                                                            <h:outputText value="Total  #{total}:"/>
+                                                        </td>
+                                                        <td style="text-align: right">
+                                                            <h:outputText
+                                                                value="#{consultaDebitoControlador.totaisSituacaoPorPagina[total]}"
+                                                                readonly="true"
+                                                                styleClass="negrito">
+                                                                <f:convertNumber pattern="#,##0.00"/>
+                                                            </h:outputText>
+                                                        </td>
+                                                    </tr>
+                                                </ui:repeat>
+                                            </c:if>
+
+                                            <tr>
+                                                <td colspan="2" style="text-align: center">
+                                                    <h:outputText value="Total por Situação Geral"
+                                                                  style="color: steelblue; font-weight: bold"/>
+                                                </td>
+                                            </tr>
+                                            <ui:repeat value="#{consultaDebitoControlador.situacoesDasParcelas}"
+                                                       var="total">
+                                                <tr>
+                                                    <td>
+                                                        <h:outputText value="Total  #{total}:"/>
+                                                    </td>
+                                                    <td style="text-align: right">
+                                                        <h:outputText
+                                                            value="#{consultaDebitoControlador.totaisSituacao[total]}"
+                                                            readonly="true"
+                                                            styleClass="negrito">
+                                                            <f:convertNumber pattern="#,##0.00"/>
+                                                        </h:outputText>
+                                                    </td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <p:outputPanel rendered="#{consultaDebitoControlador.totalPaginas gt 1}">
+                            <div class="centralizado alert">
+                                <strong>Atenção!</strong><br/>
+                                O filtro utilizado para a consulta trouxe muitos resultados, a visualização nesta página é
+                                limitada a 500 registros, você pode navegar entre as páginas pressionando os botões abaixo.
+                                <br/>
+                                A impressão do demonstrativo não é limitada, ao pressionar o botão de impressão do demonstrativo
+                                todos os débitos serão exibidos.
+                            </div>
+                            <div class="centralizado">
+                                <h:outputText
+                                    value="#{consultaDebitoControlador.paginaAtual + 1} de #{consultaDebitoControlador.totalPaginas}"/>
+                                <br/>
+                                <p:commandButton
+                                    process="@form"
+                                    icon="ui-icon-seek-first"
+                                    disabled="#{consultaDebitoControlador.paginaAtual == 0}"
+                                    actionListener="#{consultaDebitoControlador.irParaPrimeiraPagina}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                                <p:commandButton
+                                    process="@form"
+                                    icon="ui-icon-seek-prev"
+                                    disabled="#{consultaDebitoControlador.paginaAtual == 0}"
+                                    actionListener="#{consultaDebitoControlador.irParaPaginaAnterior()}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                                <p:commandButton
+                                    process="@form"
+                                    disabled="#{(consultaDebitoControlador.paginaAtual +1) ge consultaDebitoControlador.totalPaginas}"
+                                    icon="ui-icon-seek-next"
+                                    actionListener="#{consultaDebitoControlador.irParaProximaPagina()}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                                <p:commandButton
+                                    process="@form"
+                                    disabled="#{(consultaDebitoControlador.paginaAtual +1) ge consultaDebitoControlador.totalPaginas}"
+                                    icon="ui-icon-seek-end"
+                                    actionListener="#{consultaDebitoControlador.irParaUltimaPagina()}"
+                                    onstart="aguarde.show()"
+                                    onsuccess="aguarde.hide()"
+                                    update=":Formulario"/>
+                            </div>
+                        </p:outputPanel>
+                        <br/>
+                        <p:panel styleClass="centralizado">
+                            <p:commandButton value="Gerar DAM"
+                                             actionListener="#{consultaDebitoControlador.prepararImpressaoOrEnvioDam(false)}"
+                                             process="@form"
+                                             disabled="#{consultaDebitoControlador.resultados.isEmpty()}"
+                                             update=":formConfirmaDam"
+                                             styleClass="operacao prioritario btnImprimeDam"
+                                             icon="ui-icon-print"/>
+                            <p:commandButton
+                                value="Enviar DAM por e-mail"
+                                icon="ui-icon-mail-closed"
+                                onclick="aguarde.show(); "
+                                update=":formEmails"
+                                actionListener="#{consultaDebitoControlador.prepararImpressaoOrEnvioDam(true)}"
+                                oncomplete="aguarde.hide()"
+                                styleClass="operacao"/>
+
+
+                            <fc:botaoTargetBlank actionListener="#{consultaDebitoControlador.imprimirConsulta()}"
+
+                                                 label="Imprimir Demonstrativo"/>
+
+                            <br/>
+                        </p:panel>
+
+                    </p:panel>
+
+                </p:panel>
+            </p:panel>
+
+
+        </h:form>
+
+        <p:dialog header="Confirmação de Lançamento do DAM"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="confirmaDam">
+            <h:form id="formConfirmaDam">
+                <div class="centralizado">
+                    <h:outputText value="Você selecionou mais de uma parcela. O que deseja fazer? "
+                                  rendered="#{consultaDebitoControlador.maisDeUmaParcela}"
+                                  styleClass="negrito"/>
+                </div>
+                <h:panelGrid columns="2">
+                    <h:outputText value="Valor: R$"/>
+                    <h:outputText value="#{consultaDebitoControlador.valorDam}" styleClass="negrito">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </h:panelGrid>
+
+                <div class="alert alert-info">
+                    <strong>Atenção! </strong> Para parcelas vencidas ou DAMs agrupados será gerado um DAM com vencimento para o último dia útil do mês.
+                    (<h:outputText value="#{consultaDebitoControlador.vencimentoDam}" styleClass="negrito">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>)
+                </div>
+                <p:separator/>
+                <h:panelGrid columns="2" style="width: 100%" styleClass="centralizado">
+                    <p:commandButton
+                        value="#{consultaDebitoControlador.maisDeUmaParcela ? 'DAM Individual' : 'Imprimir DAM'}"
+                        icon="ui-icon-print"
+                        onclick="aguarde.show()"
+                        oncomplete="aguarde.hide();confirmaDam.hide()"
+                        actionListener="#{consultaDebitoControlador.imprimirDamIndividual()}"
+                        styleClass="operacao"/>
+
+                    <p:commandButton value="DAM Agrupado"
+                                     rendered="#{consultaDebitoControlador.maisDeUmaParcela}"
+                                     icon="ui-icon-print"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();confirmaDam.hide()"
+                                     styleClass="operacao"
+                                     actionListener="#{consultaDebitoControlador.imprimirDamAgrupado()}"/>
+                </h:panelGrid>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Enviar e-mail com o(s) DAM(s) em anexo"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="listaEmails">
+            <h:form id="formEmails">
+                <div class="centralizado">
+                    <h:outputText value="Você selecionou mais de uma parcela. O que deseja fazer? "
+                                  rendered="#{consultaDebitoControlador.maisDeUmaParcela}"
+                                  styleClass="negrito"/>
+                </div>
+                <h:panelGrid columns="2">
+                    <h:outputText value="Valor: R$"/>
+                    <h:outputText value="#{consultaDebitoControlador.valorDam}" styleClass="negrito">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </h:panelGrid>
+
+                <div class="alert alert-info">
+                    <strong>Atenção! </strong> Para parcelas vencidas ou DAMs agrupados será gerado um DAM com vencimento para o último dia útil do mês.
+                    (<h:outputText value="#{consultaDebitoControlador.vencimentoDam}" styleClass="negrito">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>)
+                </div>
+                <br/>
+                <div class="alert warn">
+                    Por favor digite os e-mails de envio separados por (",")
+                </div>
+                <h:panelGrid columns="2" styleClass="mtop10">
+                    <fc:outputLabelObrigatorio value="E-mail(s):" for="emails"/>
+                    <p:inputTextarea id="emails" value="#{consultaDebitoControlador.emails}" rows="1" cols="70"
+                                     maxlength="255"/>
+                    <fc:outputLabelObrigatorio value="Mensagem:" for="mensagem"/>
+                    <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                        <p:inputTextarea title="Informe a mensagem do e-mail."
+                                         value="#{consultaDebitoControlador.mensagemEmail}"
+                                         rows="4"
+                                         cols="70"
+                                         id="mensagem"
+                                         maxlength="255"
+                                         counter="counterMensagem"
+                                         counterTemplate="{0} Caracteres restantes."
+                                         autoResize="true"/>
+                        <h:outputText id="counterMensagem"
+                                      styleClass="mlef05"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+                <p:separator/>
+                <h:panelGrid columns="2" style="width: 100%" styleClass="centralizado">
+                    <p:commandButton
+                        value="#{consultaDebitoControlador.maisDeUmaParcela ? 'Enviar DAM Individual' : 'Enviar DAM'}"
+                        icon="ui-icon-arrowreturnthick-1-n"
+                        onclick="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                        actionListener="#{consultaDebitoControlador.enviarDAMsPorEmailIndividual()}"
+                        styleClass="operacao"/>
+
+                    <p:commandButton value="Enviar DAM Agrupado"
+                                     rendered="#{consultaDebitoControlador.maisDeUmaParcela}"
+                                     icon="ui-icon-arrowreturnthick-1-n"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="operacao"
+                                     actionListener="#{consultaDebitoControlador.enviarDAMsPorEmailAgrupado()}"/>
+                </h:panelGrid>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Consulta do Cadastro" modal="true" widgetVar="consultaGenerica" width="900" height="500"
+                  id="dlgConsultaGenerica">
+            <h:form id="formularioConsultaDebito">
+                <fc:pesquisaGenerico id="lista"
+                                     caminhoAtual="edita"
+                                     nomeDaClasse="#{consultaDebitoControlador.nomeClasse}"
+                                     dialog="true"
+                                     pretty="true"
+                                     iconmSelecionar="check-icon.png"
+                                     novo="#{calculoTaxasDiversasControlador.novo()}"
+                                     selecionar="#{consultaDebitoControlador.selecionarObjetoPesquisaGenerico}"
+                                     mostrarHistorico="false"
+                                     mostrarBotaoNovo="false"
+                                     meuControlador="#{consultaDebitoControlador.componentePesquisa}"
+                                     guardarNaSessao="false"
+                                     pesquisaNoEnter="false"
+                                     utilizarTabelaPessoa="#{consultaDebitoControlador.tipoCadastroTributario eq 'PESSOA' ? 'true': 'false'}"
+                                     updateSelecionarTabela=":Formulario"/>
+            </h:form>
+        </p:dialog>
+
+        <fccd:dialog-informacoes-adicionais id="dialog-inf-adc"></fccd:dialog-informacoes-adicionais>
+
+    </ui:define>
+</ui:composition>
+</html>

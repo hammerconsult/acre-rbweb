@@ -1,0 +1,20 @@
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'TRIBUTÁRIO > FISCALIZAÇÃO AMBIENTAL > LICENCIAMENTO AMBIENTAL > PROCESSO > VISUALIZAR',
+     '/tributario/licenciamentoambiental/processo/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'TRIBUTÁRIO > FISCALIZAÇÃO AMBIENTAL > LICENCIAMENTO AMBIENTAL > PROCESSO > EDITA',
+     '/tributario/licenciamentoambiental/processo/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'TRIBUTÁRIO > FISCALIZAÇÃO AMBIENTAL > LICENCIAMENTO AMBIENTAL > PROCESSO > LISTA',
+     '/tributario/licenciamentoambiental/processo/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+insert into menu (id, label, caminho, pai_id, ordem)
+values (hibernate_sequence.nextval, 'PROCESSO',
+        '/tributario/licenciamentoambiental/processo/lista.xhtml',
+        (SELECT ID FROM menu WHERE LABEL = 'LICENCIAMENTO AMBIENTAL'),
+        2);

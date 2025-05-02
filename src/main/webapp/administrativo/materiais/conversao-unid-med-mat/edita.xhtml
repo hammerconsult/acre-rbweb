@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty id="cpCabecalhoPretty"
+                                origem="#{conversaoUnidadeMedidaMaterialControlador.caminhoPadrao}listar/"
+                                controlador="#{conversaoUnidadeMedidaMaterialControlador}"/>
+
+            <p:remoteCommand name="limparDadosUnidadeAdm"
+                             process="@this"
+                             update=":Formulario:unidade-orcamentaria :Formulario:localEstoque :Formulario:panelMateriais"
+                             actionListener="#{conversaoUnidadeMedidaMaterialControlador.limparDadosUnidadeAdm()}"/>
+
+            <p:remoteCommand name="limparDadosUnidadeOrc"
+                             process="@this"
+                             update=":Formulario:localEstoque"
+                             actionListener="#{conversaoUnidadeMedidaMaterialControlador.limparDadosUnidadeOrc()}"/>
+
+            <p:panel header="Conversão de Unidade de Medida Material">
+                <h:panelGrid columns="2" id="gridGeral">
+                    <h:outputText value="Número:" for="numero"/>
+                    <h:outputText
+                        value="#{conversaoUnidadeMedidaMaterialControlador.selecionado.numero == null ? 'Gerado automaticamente ao concluir' : conversaoUnidadeMedidaMaterialControlador.selecionado.numero}"
+                        id="numero"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Data:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{conversaoUnidadeMedidaMaterialControlador.selecionado.dataMovimento}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                    <h:outputText value="Situação:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{conversaoUnidadeMedidaMaterialControlador.selecionado.situacao.descricao}"/>
+
+                    <h:outputText value="Usuário:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{conversaoUnidadeMedidaMaterialControlador.selecionado.usuario}"/>
+
+                    <fc:outputLabelObrigatorio value="Unidade Administrativa:"/>
+                    <p:autoComplete id="unidadeAdm"
+                                    value="#{conversaoUnidadeMedidaMaterialControlador.hierarquiaAdministrativa}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    disabled="#{conversaoUnidadeMedidaMaterialControlador.hasMateriaisAdicionado()}"
+                                    size="70"
+                                    onkeyup="if(keyUpCampoVazio(this)){limparDadosUnidadeAdm();}"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px; max-width: 700px"
+                                    var="ho"
+                                    itemValue="#{ho}"
+                                    itemLabel="#{ho}"
+                                    maxResults="50"
+                                    completeMethod="#{conversaoUnidadeMedidaMaterialControlador.completarHierarquiaOrganizacional}">
+                        <p:ajax event="itemSelect"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                update=":Formulario:unidade-orcamentaria :Formulario:localEstoque"
+                                process="@this"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Unidade Orçamentária: "/>
+                    <p:outputPanel id="unidade-orcamentaria">
+                        <h:selectOneMenu
+                            onkeyup="if(keyUpCampoVazio(this)){limparDadosUnidadeOrc();}"
+                            disabled="#{conversaoUnidadeMedidaMaterialControlador.selecionado.unidadeAdministrativa eq null
+                                        or conversaoUnidadeMedidaMaterialControlador.hasMateriaisAdicionado()}"
+                            value="#{conversaoUnidadeMedidaMaterialControlador.selecionado.unidadeOrcamentaria}"
+                            converter="#{unidadeOrganizacionalControlador.converterGenerico}">
+                            <f:selectItems
+                                value="#{conversaoUnidadeMedidaMaterialControlador.unidadesOrcamentarias}"/>
+                            <p:ajax event="valueChange" process="@this" update=":Formulario:localEstoque"/>
+                        </h:selectOneMenu>
+                    </p:outputPanel>
+
+                    <fc:outputLabelObrigatorio value="Local de Estoque: "/>
+                    <p:outputPanel id="localEstoque">
+                        <h:selectOneMenu
+                            disabled="#{conversaoUnidadeMedidaMaterialControlador.selecionado.unidadeOrcamentaria eq null
+                                       or conversaoUnidadeMedidaMaterialControlador.hasMateriaisAdicionado()}"
+                            value="#{conversaoUnidadeMedidaMaterialControlador.selecionado.localEstoque}"
+                            converter="#{localEstoqueControlador.converterGenerico}">
+                            <f:selectItems
+                                value="#{conversaoUnidadeMedidaMaterialControlador.locaisEstoque}"/>
+                            <p:ajax event="valueChange" process="@this"/>
+                        </h:selectOneMenu>
+                    </p:outputPanel>
+                </h:panelGrid>
+
+                <p:panel header="Conversão" id="panelMateriais">
+                    <table>
+                        <tr>
+                            <td style="vertical-align: top; width: 50%">
+                                <p:fieldset legend="Material da Saída"
+                                            rendered="#{conversaoUnidadeMedidaMaterialControlador.itemConversao ne null}">
+                                    <h:panelGrid columns="2" id="gridMaterialSaida">
+                                        <fc:outputLabelObrigatorio value="Material: " for="material"/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        id="material"
+                                                        title="Digite o nome do Material"
+                                                        value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.materialSaida}"
+                                                        completeMethod="#{conversaoUnidadeMedidaMaterialControlador.completarMaterialSaida}"
+                                                        var="matSaida"
+                                                        size="40"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 700px"
+                                                        maxResults="100"
+                                                        onclick="this.select()"
+                                                        itemLabel="#{matSaida.toStringAutoComplete()}"
+                                                        itemValue="#{matSaida.id}"
+                                                        converter="#{materialControlador.converterGenerico}">
+                                            <p:ajax event="itemSelect"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    listener="#{conversaoUnidadeMedidaMaterialControlador.atribuirValoresEstoqueMaterialSaida}"
+                                                    update=":Formulario:panelMateriais"
+                                                    process="@this"/>
+                                        </p:autoComplete>
+
+                                        <h:outputText value="Unidade de Medida:"/>
+                                        <h:outputText styleClass="negrito"
+                                                      value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.materialSaida.unidadeMedida}"/>
+
+                                        <h:outputText value="Grupo:"/>
+                                        <h:outputText styleClass="negrito"
+                                                      value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.materialSaida.grupo}"/>
+
+                                    </h:panelGrid>
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <p:panel>
+                                                    <div align="center" class="alert alert-info"
+                                                         style="padding: 1%">
+                                                        Saída
+                                                    </div>
+                                                    <h:panelGrid columns="2">
+                                                        <h:outputText value="Quantidade:"/>
+                                                        <p:inputText
+                                                            title="Digite a quantidade de entrada do material."
+                                                            size="15"
+                                                            value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.quantidadeSaida}"
+                                                            onkeydown="mascara(this, soNumeros)">
+                                                            <p:ajax event="blur"
+                                                                    update="vlTotalSaida"
+                                                                    listener="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.calcularValorTotalSaida}"
+                                                                    process="@this"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Valor Unitário:"/>
+                                                        <p:inputText styleClass="negrito"
+                                                                     disabled="true"
+                                                                     size="15"
+                                                                     value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.valorUnitarioSaida}">
+                                                            <f:convertNumber pattern="#,##0.0000"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Valor Total:"/>
+                                                        <p:outputPanel id="vlTotalSaida">
+                                                            <p:inputText styleClass="negrito"
+                                                                         disabled="true"
+                                                                         size="15"
+                                                                         converter="converterBigDecimal2CasasSemArredondamento"
+                                                                         value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.valorTotalSaida}">
+                                                            </p:inputText>
+                                                        </p:outputPanel>
+                                                    </h:panelGrid>
+                                                </p:panel>
+                                            </td>
+
+                                            <td style="vertical-align: top; width: 1%">
+
+                                            </td>
+
+                                            <td>
+                                                <p:panel>
+                                                    <div align="center" class="alert alert-block"
+                                                         style="padding: 1%">
+                                                        Estoque Atual
+                                                    </div>
+                                                    <h:panelGrid columns="2">
+                                                        <h:outputText value="Quantidade:"/>
+                                                        <p:inputText styleClass="negrito"
+                                                                     disabled="true"
+                                                                     size="15"
+                                                                     value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.estoqueSaida.fisico}">
+                                                            <f:convertNumber pattern="#,##0.0000"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Valor Unitário:"/>
+                                                        <p:inputText styleClass="negrito"
+                                                                     disabled="true"
+                                                                     size="15"
+                                                                     value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.estoqueSaida.custoMedio}">
+                                                            <f:convertNumber pattern="#,##0.0000"/>
+                                                        </p:inputText>
+
+                                                        <h:outputText value="Valor Total:"/>
+                                                        <p:inputText styleClass="negrito"
+                                                                     disabled="true"
+                                                                     size="15"
+                                                                     converter="converterBigDecimal2CasasSemArredondamento"
+                                                                     value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.estoqueSaida.financeiro}">
+                                                        </p:inputText>
+                                                    </h:panelGrid>
+                                                </p:panel>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </p:fieldset>
+                            </td>
+                            <td style="vertical-align: top; width: 1%">
+
+                            </td>
+                            <td style="vertical-align: top; width: 45%">
+                                <p:fieldset legend="Material da Entrada"
+                                            rendered="#{conversaoUnidadeMedidaMaterialControlador.itemConversao ne null}">
+                                    <h:panelGrid columns="2" id="gridMaterialEntrada">
+                                        <fc:outputLabelObrigatorio value="Material: " for="material"/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        id="acMaterialEntrada"
+                                                        title="Digite o nome do Material"
+                                                        value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.materialEntrada}"
+                                                        completeMethod="#{conversaoUnidadeMedidaMaterialControlador.completarMaterialEntrada}"
+                                                        var="matEnt"
+                                                        size="40"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 700px"
+                                                        maxResults="100"
+                                                        onclick="this.select()"
+                                                        itemLabel="#{matEnt.toStringAutoComplete()}"
+                                                        itemValue="#{matEnt.id}"
+                                                        converter="#{materialControlador.converterGenerico}">
+                                            <p:ajax event="itemSelect"
+                                                    onstart="aguarde.show()"
+                                                    oncomplete="aguarde.hide()"
+                                                    update=":Formulario:gridMaterialEntrada"
+                                                    process="@this"/>
+                                        </p:autoComplete>
+
+                                        <h:outputText value="Unidade de Medida:"/>
+                                        <h:outputText styleClass="negrito"
+                                                      value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.materialEntrada.unidadeMedida}"/>
+
+                                        <h:outputText value="Grupo:"/>
+                                        <h:outputText styleClass="negrito"
+                                                      value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.materialEntrada.grupo}"/>
+                                    </h:panelGrid>
+
+                                    <p:panel>
+                                        <div align="center" class="alert alert-success"
+                                             style="padding: 1%">
+                                            Entrada
+                                        </div>
+                                        <h:panelGrid columns="2">
+                                            <fc:outputLabelObrigatorio value="Quantidade: "/>
+                                            <p:inputText title="Digite a quantidade de entrada do material."
+                                                         value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.quantidadeEntrada}"
+                                                         onkeydown="mascara(this, soNumeros)">
+                                                <p:ajax event="blur"
+                                                        update="vlTotalEnt"
+                                                        listener="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.calcularValorTotalEntrada}"
+                                                        process="@this"/>
+                                            </p:inputText>
+
+                                            <fc:outputLabelObrigatorio value="Valor Unitário: "/>
+                                            <p:inputText title="Digite o valor unitário para o material."
+                                                         value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.valorUnitarioEntrada}"
+                                                         onkeypress="mascaraMonetariaDinamica(this, 6, 4, false)">
+                                                <f:convertNumber pattern="#,##0.0000"/>
+                                                <p:ajax event="blur"
+                                                        update="vlTotalEnt"
+                                                        listener="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.calcularValorTotalEntrada}"
+                                                        process="@this"/>
+                                            </p:inputText>
+
+                                            <h:outputText value="Valor Total:"/>
+                                            <p:outputPanel id="vlTotalEnt">
+                                                <p:inputText styleClass="negrito"
+                                                             disabled="true"
+                                                             converter="converterBigDecimal2CasasSemArredondamento"
+                                                             value="#{conversaoUnidadeMedidaMaterialControlador.itemConversao.valorTotalEntrada}"/>
+                                            </p:outputPanel>
+                                        </h:panelGrid>
+                                    </p:panel>
+                                </p:fieldset>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <p:commandButton
+                        actionListener="#{conversaoUnidadeMedidaMaterialControlador.novoMaterial()}"
+                        rendered="#{conversaoUnidadeMedidaMaterialControlador.itemConversao eq null}"
+                        style="width: 100px"
+                        value="Novo"
+                        onstart="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                        styleClass="mtop10"
+                        icon="ui-icon-circle-plus"
+                        update=":Formulario:panelMateriais"
+                        process="@this"/>
+
+                    <p:commandButton
+                        actionListener="#{conversaoUnidadeMedidaMaterialControlador.adicionarMaterial()}"
+                        rendered="#{conversaoUnidadeMedidaMaterialControlador.itemConversao ne null}"
+                        value="Adicionar"
+                        onstart="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                        styleClass="mtop10 mrig05 prioritario"
+                        style="width: 100px"
+                        icon="ui-icon-check"
+                        update=":Formulario:panelMateriais :Formulario:gridGeral"
+                        process="@this"/>
+
+                    <p:commandButton
+                        actionListener="#{conversaoUnidadeMedidaMaterialControlador.cancelarMaterial()}"
+                        rendered="#{conversaoUnidadeMedidaMaterialControlador.itemConversao ne null}"
+                        value="Cancelar"
+                        style="width: 100px"
+                        onstart="aguarde.show()"
+                        oncomplete="aguarde.hide()"
+                        styleClass="mtop10"
+                        icon="ui-icon-cancel"
+                        update=":Formulario:panelMateriais"
+                        process="@this"/>
+
+                    <p:dataTable paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 id="tabelaMateriais"
+                                 emptyMessage="Não foram localizados registros para esta saida."
+                                 value="#{conversaoUnidadeMedidaMaterialControlador.selecionado.itens}"
+                                 var="item">
+
+                        <p:columnGroup type="header">
+                            <p:row>
+                                <p:column styleClass="alinhamentoCentralizado"
+                                          headerText="Ações"
+                                          rowspan="2"/>
+                                <p:column styleClass="alinhamentoCentralizado negrito fundoBranco"
+                                          headerText="Saída"
+                                          colspan="5"
+                                          style="color: black; border-left: 1px solid !important; border-left-color: lightgrey !important;"/>
+                                <p:column styleClass="alinhamentoCentralizado negrito fundoBranco"
+                                          headerText="Entrada"
+                                          colspan="5"
+                                          style="border-left: 1px solid !important; border-left-color: lightgrey !important;"/>
+                            </p:row>
+
+                            <p:row>
+                                <p:column styleClass="alinhamentoEsquerda" headerText="Material"/>
+                                <p:column styleClass="alinhamentoEsquerda" headerText="Uni. Med."/>
+                                <p:column styleClass="alinhamentoDireita" headerText="Quantidade"/>
+                                <p:column styleClass="alinhamentoDireita"
+                                          headerText="Valor Unitário (R$)"/>
+                                <p:column styleClass="alinhamentoDireita"
+                                          headerText="Valor Total (R$)"/>
+
+                                <p:column styleClass="alinhamentoEsquerda" headerText="Material"/>
+                                <p:column styleClass="alinhamentoEsquerda" headerText="Uni. Med."/>
+                                <p:column styleClass="alinhamentoDireita" headerText="Quantidade"/>
+                                <p:column styleClass="alinhamentoDireita"
+                                          headerText="Valor Unitário (R$)"/>
+                                <p:column styleClass="alinhamentoDireita"
+                                          headerText="Valor Total (R$)"/>
+                            </p:row>
+                        </p:columnGroup>
+
+                        <p:column headerText="Ação" style="width: 15%;text-align: center">
+                            <p:commandButton icon="ui-icon-pencil"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="mrig05"
+                                             disabled="#{conversaoUnidadeMedidaMaterialControlador.itemConversao ne null}"
+                                             actionListener="#{conversaoUnidadeMedidaMaterialControlador.editarMaterial(item)}"
+                                             title="Clique para alterar este registro."
+                                             process="@this"
+                                             update=":Formulario:panelMateriais"/>
+
+                            <p:commandButton update="tabelaMateriais :Formulario:gridGeral"
+                                             process="@this"
+                                             actionListener="#{conversaoUnidadeMedidaMaterialControlador.removerMaterial(item)}"
+                                             title="Clique para remover este registro."
+                                             icon="ui-icon-trash"
+                                             oncomplete="aguarde.hide()"
+                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                             disabled="#{conversaoUnidadeMedidaMaterialControlador.itemConversao ne null}"/>
+                        </p:column>
+                        <p:column headerText="Material"
+                                  style="width: 25%; text-align: left;">
+                            <h:outputText value="#{item.materialSaida}"/>
+                        </p:column>
+                        <p:column headerText="Und. Med." style="text-align: center">
+                            <h:outputLabel value="#{item.materialSaida.unidadeMedida.sigla}"/>
+                        </p:column>
+                        <p:column headerText="Quantidade" style="text-align: right">
+                            <h:outputLabel value="#{item.quantidadeSaida}"/>
+                        </p:column>
+                        <p:column headerText="Valor Unitário" style="text-align: right">
+                            <h:outputLabel value="#{item.valorUnitarioSaida}">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputLabel>
+                        </p:column>
+                        <p:column headerText="Valor Total" style="text-align: right">
+                            <h:outputLabel value="#{item.valorTotalSaida}"
+                                           converter="converterBigDecimal2CasasSemArredondamento"/>
+                        </p:column>
+
+                        <p:column headerText="Material"
+                                  style="width: 25%; text-align: left;">
+                            <h:outputText value="#{item.materialEntrada}"/>
+                        </p:column>
+                        <p:column headerText="Und. Med." style="text-align: center">
+                            <h:outputLabel value="#{item.materialEntrada.unidadeMedida.sigla}"/>
+                        </p:column>
+                        <p:column headerText="Quantidade" style="text-align: right">
+                            <h:outputLabel value="#{item.quantidadeEntrada}"/>
+                        </p:column>
+                        <p:column headerText="Valor Unitário" style="text-align: right">
+                            <h:outputLabel value="#{item.valorUnitarioEntrada}">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputLabel>
+                        </p:column>
+                        <p:column headerText="Valor Total" style="text-align: right">
+                            <h:outputLabel value="#{item.valorTotalEntrada}"
+                                           converter="converterBigDecimal2CasasSemArredondamento"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+            </p:panel>
+
+            <fc:rodapePretty id="rpRodapePretty" controlador="#{conversaoUnidadeMedidaMaterialControlador}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

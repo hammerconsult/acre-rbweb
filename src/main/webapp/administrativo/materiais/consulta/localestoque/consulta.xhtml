@@ -1,0 +1,593 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <f:event type="preRenderView" listener="#{consultaLocalEstoqueControlador.listenerPreRender()}"/>
+
+            <p:panel header="Consulta Local de Estoque">
+                <h:panelGrid columns="2" id="gridPrincipal">
+                    <fc:outputLabelObrigatorio value="Tipo de Consulta: "/>
+                    <h:selectOneMenu value="#{consultaLocalEstoqueControlador.filtro.tipoConsulta}">
+                        <f:selectItems value="${consultaLocalEstoqueControlador.tiposConsulta}"/>
+                        <p:ajax event="change" process="@this gridPrincipal"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Data de Referência:"/>
+                    <p:calendar onkeypress="mascara(this, mdata)"
+                                maxlength="10"
+                                style="text-align: right"
+                                autocomplete="off"
+                                showOn="button"
+                                title="Digite a data de referência."
+                                value="#{consultaLocalEstoqueControlador.filtro.dataReferencia}"
+                                locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                size="15"/>
+
+                    <fc:outputLabelObrigatorio value="Local de Estoque: " for="localEstoque"/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="localEstoque"
+                                    title="Digite o local de estoque dos material(is) desejados."
+                                    value="#{consultaLocalEstoqueControlador.filtro.localEstoque}"
+                                    completeMethod="#{consultaLocalEstoqueControlador.completarLocalEstoque}"
+                                    var="localEstoque"
+                                    maxResults="50"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px; max-width: 800px"
+                                    size="70"
+                                    itemLabel="#{localEstoque}"
+                                    itemValue="#{localEstoque.id}"
+                                    converter="#{localEstoqueControlador.converterGenerico}">
+                        <p:ajax event="itemSelect"
+                                process="@this"
+                                update=":Formulario:orclocal"
+                                listener="#{consultaLocalEstoqueControlador.limparCampos()}"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </p:autoComplete>
+
+                    <h:outputLabel value="Unidade Orçamentária: " for="orclocal"/>
+                    <h:panelGrid columns="2">
+                        <h:selectOneMenu id="orclocal"
+                                         value="#{consultaLocalEstoqueControlador.filtro.orcamentaria}"
+                                         converter="#{unidadeOrganizacionalControlador.converterGenerico}">
+                            <f:selectItems value="#{consultaLocalEstoqueControlador.hierarquiasOrcamentarias}"/>
+                            <p:ajax event="valueChange" process="@this" update="@this" onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"/>
+                        </h:selectOneMenu>
+                        <fc:botaoInformacao id="orclocalpresente"
+                                            resumo="Unidade(s) Orçamentária(s) presente(s) no local de estoque."/>
+                    </h:panelGrid>
+
+                    <h:outputText value="Grupo Material: "/>
+                    <h:panelGrid>
+                        <p:autoComplete queryDelay="1000"
+                                        id="grupoMaterial"
+                                        title="Digite o grupo de materias desejados."
+                                        value="#{consultaLocalEstoqueControlador.filtro.grupoMaterial}"
+                                        completeMethod="#{grupoMaterialControlador.completaGrupoMaterial}"
+                                        var="gm"
+                                        size="70"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px; max-width: 800px"
+                                        itemLabel="#{gm}"
+                                        itemValue="#{gm.id}"
+                                        converter="#{grupoMaterialControlador.converterGenerico}">
+                            <p:ajax event="itemSelect"
+                                    update="@this Formulario:material"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    process="@this"
+                                    listener="#{consultaLocalEstoqueControlador.addGrupoMaterial()}"/>
+                        </p:autoComplete>
+
+                        <p:outputPanel id="pn-grupos">
+                            <table class="table">
+                                <ui:repeat
+                                    value="#{consultaLocalEstoqueControlador.filtro.gruposMateriais}"
+                                    var="grupo">
+                                    <tr>
+                                        <td>
+                                            <h:outputText value="#{grupo}"
+                                                          styleClass="negrito"/>
+                                        </td>
+                                        <td style="width: 8px;">
+                                            <p:commandButton icon="ui-icon-trash"
+                                                             actionListener="#{consultaLocalEstoqueControlador.removeGrupoMaterial(grupo)}"
+                                                             onclick="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"/>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </table>
+                        </p:outputPanel>
+                    </h:panelGrid>
+
+                    <h:outputText value="Perecibilidade: "/>
+                    <h:selectOneMenu title="Selecione uma perecibilidade."
+                                     value="#{consultaLocalEstoqueControlador.filtro.perecibilidade}"
+                                     id="perecibilidade">
+                        <f:selectItems value="#{consultaLocalEstoqueControlador.perecibilidades}"/>
+                        <p:ajax event="change" process="@this" update="material"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Situação Material: "/>
+                    <h:selectOneMenu title="Selecione uma situação."
+                                     value="#{consultaLocalEstoqueControlador.filtro.statusMaterial}"
+                                     id="situacao">
+                        <f:selectItems value="#{consultaLocalEstoqueControlador.statusMateriais}"/>
+                        <p:ajax event="change" process="@this" update="material"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Material: "/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000"
+                                        id="material"
+                                        title="Digite o material para pesquisa."
+                                        value="#{consultaLocalEstoqueControlador.filtro.material}"
+                                        completeMethod="#{consultaLocalEstoqueControlador.completaMaterialDoLocalEstoque}"
+                                        var="material"
+                                        maxResults="100"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px; max-width: 800px"
+                                        size="70"
+                                        process="@this"
+                                        itemLabel="#{material}"
+                                        itemValue="#{material.id}"
+                                        converter="#{materialControlador.converterGenerico}">
+                            <p:ajax event="itemSelect" update="@this" process="@this" onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"/>
+                        </p:autoComplete>
+
+                        <p:watermark value="Materiais que podem estar no local de estoque" for="material"/>
+                    </h:panelGroup>
+
+                    <h:outputText value="Estoque com Saldo: "/>
+                    <h:panelGrid columns="2">
+                        <h:selectOneMenu title="Selecione um tipo de comparação."
+                                         value="#{consultaLocalEstoqueControlador.filtro.tipoComparacao}"
+                                         id="comparacao">
+                            <f:selectItems value="#{consultaLocalEstoqueControlador.tiposComparacao}"/>
+                        </h:selectOneMenu>
+
+                        <p:inputText value="#{consultaLocalEstoqueControlador.filtro.quantidade}"
+                                     title="Digite o valor do saldo em estoque que deseja filtrar."
+                                     size="10"
+                                     styleClass="alinhamentoDireita"
+                                     id="inputSaldoEstoque">
+                            <f:convertNumber pattern="#,###"/>
+                        </p:inputText>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:commandButton value="Pesquisar"
+                                 title="Clique para pesquisar"
+                                 icon="ui-icon-search"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="prioritario mtop10"
+                                 actionListener="#{consultaLocalEstoqueControlador.consultar()}"
+                                 process="@this gridPrincipal"
+                                 update=":Formulario:panelConsulta"
+                                 style="width: 150px"/>
+
+                <p:commandButton value="Limpar Dados"
+                                 title="Clique para limpar os filtros/dados da consulta."
+                                 icon="ui-icon-atualizar"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="mlef05 mtop10"
+                                 actionListener="#{consultaLocalEstoqueControlador.consulta()}"
+                                 process="@this"
+                                 update=":Formulario:panelConsulta :Formulario:gridPrincipal"
+                                 style="width: 150px"/>
+
+                <p:outputPanel id="panelConsulta">
+                    <div class="alert alert-info alinhamentoCentralizado mtop05"
+                         style="font-size: 13px; display: #{!consultaLocalEstoqueControlador.hasLocaisEstoquePesquisa() ? 'block' : 'none'}">
+                        Não foram localizados registros.
+                    </div>
+                    <ui:repeat value="#{consultaLocalEstoqueControlador.locaisEstoque}"
+                               var="local">
+                        <p:panel id="panelLocal"
+                                 header="Local de Estoque: #{local.localEstoque}"
+                                 styleClass="mtop10"
+                                 toggleable="true"
+                                 toggleSpeed="80" toggleTitle="Clique para expandir/recolher.">
+                            <p:dataTable id="tableLocais"
+                                         rendered="#{consultaLocalEstoqueControlador.filtro.tipoConsulta.consultaSintetica}"
+                                         value="#{local.materiais}"
+                                         var="estmat"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         emptyMessage="Não foram localizados registros." paginator="true">
+                                <p:column headerText="Material" style="text-align: left">
+                                    <h:outputText value="#{estmat}"/>
+                                </p:column>
+                                <p:column headerText="Unid. Med." style="text-align: center">
+                                    <h:outputText value="#{estmat.unidadeMedida}"/>
+                                </p:column>
+                                <p:column headerText="Grupo" style="text-align: left">
+                                    <h:outputText value="#{estmat.grupoMaterial}"/>
+                                </p:column>
+                                <p:column headerText="Méd. Hospitalar" style="text-align: center">
+                                    <h:outputText value="#{estmat.medicoHospitalar ? 'Sim' : 'Não'}"/>
+                                </p:column>
+                                <p:column headerText="Controle Lote" style="text-align: center">
+                                    <div class="pull-left">
+                                        <h:outputText value="#{estmat.controleLote ? 'Sim' : 'Não'}"/>
+                                    </div>
+                                    <div class="pull-right">
+                                        <p:rowToggler rendered="#{estmat.controleLote}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Qtde Estoque" style="text-align: right">
+                                    <p:commandLink
+                                        actionListener="#{consultaLocalEstoqueControlador.selecionarMaterialBuscandoOrigemLocalEstoque(estmat)}"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide();dlgMovEstoque.show()"
+                                        process="@this"
+                                        update=":form-mov-estoque"
+                                        title="Clique para detalhar os movimentos de origem.">
+                                        <h:outputText value="#{estmat.quantidadeEstoqueFormatada}"/>
+                                    </p:commandLink>
+                                </p:column>
+                                <p:column headerText="Qtde Reservada" style="text-align: right">
+                                    <p:commandLink
+                                        actionListener="#{consultaLocalEstoqueControlador.selecionarMaterial(estmat)}"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide();dlgReserva.show()"
+                                        process="@this"
+                                        update=":form-dlg-reserva"
+                                        title="Clique para detalhar as reservas do material.">
+                                        <h:outputText value="#{estmat.quantidadeReservadaFormatada}"/>
+                                    </p:commandLink>
+                                </p:column>
+                                <p:column headerText="Qtde Disponível" style="text-align: right">
+                                    <h:outputText value="#{estmat.quantidadeDisponivelFormatada}"/>
+                                </p:column>
+                                <p:column headerText="Valor Unit. (R$)" style="text-align: right">
+                                    <fc:output-mascara-unidade-medida tipoMascara="#{estmat.mascaraValorUnitario}"
+                                                                      value="#{estmat.valorUnitario}"/>
+                                </p:column>
+                                <p:column headerText="Valor Total (R$)" style="text-align: right">
+                                    <h:outputText value="#{estmat.valorEstoque}"
+                                                  converter="converterBigDecimal2CasasSemArredondamento"/>
+                                </p:column>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText value="Total Geral (R$): "/>
+                                        <h:outputText value="#{local.valorTotalMateriais}"
+                                                      converter="converterBigDecimal2CasasSemArredondamento"/>
+                                    </div>
+                                </f:facet>
+                                <p:rowExpansion>
+                                    <p:dataTable id="tableLotes" var="lote"
+                                                 style="width: 50% !important; margin-left: 50% !important;"
+                                                 emptyMessage="Não foram localizados registros."
+                                                 value="#{estmat.lotes}">
+                                        <p:column headerText="Identificação" style="text-align: left; width: 55%">
+                                            <h:outputText value="#{lote.identificacao}"/>
+                                        </p:column>
+                                        <p:column headerText="Validade" style="text-align: left; width: 15%">
+                                            <h:outputText value="#{lote.validade}">
+                                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                            </h:outputText>
+                                        </p:column>
+                                        <p:column headerText="Quantidade" style="text-align: right; width: 30%">
+                                            <h:outputText value="#{lote.quantidadeFormatada}"/>
+                                        </p:column>
+                                        <p:columnGroup type="footer" id="footerLotes">
+                                            <p:row id="rowFooterLotes">
+                                                <p:column colspan="2" style="text-align:right"
+                                                          styleClass="negrito"
+                                                          footerText="Quantidade Total: "/>
+                                                <p:column styleClass="negrito" style="text-align:right"
+                                                          footerText="#{estmat.quantidadeTotalLotes}"/>
+                                            </p:row>
+                                        </p:columnGroup>
+                                    </p:dataTable>
+                                </p:rowExpansion>
+                            </p:dataTable>
+
+
+                            <p:dataGrid value="#{local.orcamentarias}" var="leo" columns="1"
+                                        rendered="#{consultaLocalEstoqueControlador.filtro.tipoConsulta.consultaAnalitica}">
+                                <div class="alert alert-info" align="center">
+                                    <h:outputText value="Unidade Orçamentária: #{leo.hierarquiaOrganizacional}"
+                                                  styleClass="negrito"/>
+                                </div>
+                                <p:dataTable id="tableMateriaisLeo"
+                                             value="#{leo.materiais}"
+                                             var="estmat"
+                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             rowIndexVar="rowIx"
+                                             styleClass="mtop05 mbot20"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                             rowsPerPageTemplate="10,25,50,100"
+                                             emptyMessage="Não foram localizados registros." paginator="true">
+                                    <p:column headerText="Material" style="text-align: left">
+                                        <h:outputText value="#{estmat}"/>
+                                    </p:column>
+                                    <p:column headerText="Unid. Med." style="text-align: center">
+                                        <h:outputText value="#{estmat.unidadeMedida}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo" style="text-align: left">
+                                        <h:outputText value="#{estmat.grupoMaterial}"/>
+                                    </p:column>
+                                    <p:column headerText="Méd. Hospitalar" style="text-align: center">
+                                        <h:outputText value="#{estmat.medicoHospitalar ? 'Sim' : 'Não'}"/>
+                                    </p:column>
+                                    <p:column headerText="Controle Lote" style="text-align: center">
+                                        <div class="pull-left">
+                                            <h:outputText value="#{estmat.controleLote ? 'Sim' : 'Não'}"/>
+                                        </div>
+                                        <div class="pull-right">
+                                            <p:rowToggler rendered="#{estmat.controleLote}"/>
+                                        </div>
+                                    </p:column>
+                                    <p:column headerText="Qtde Estoque" style="text-align: right">
+                                        <p:commandLink
+                                            actionListener="#{consultaLocalEstoqueControlador.selecionarMaterialBuscandoOrigemLocalEstoqueOrcamentario(estmat, leo)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgMovEstoque.show()"
+                                            process="@this"
+                                            update=":form-mov-estoque"
+                                            title="Clique para detalhar os movimentos de origem.">
+                                            <h:outputText value="#{estmat.quantidadeEstoqueFormatada}"/>
+                                        </p:commandLink>
+                                    </p:column>
+                                    <p:column headerText="Qtde Reservada" style="text-align: right">
+                                        <p:commandLink
+                                            actionListener="#{consultaLocalEstoqueControlador.selecionarMaterial(estmat)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide();dlgReserva.show()"
+                                            process="@this"
+                                            update=":form-dlg-reserva"
+                                            title="Clique para detalhar as reservas do material.">
+                                            <h:outputText value="#{estmat.quantidadeReservadaFormatada}"/>
+                                        </p:commandLink>
+                                    </p:column>
+                                    <p:column headerText="Qtde Disponível" style="text-align: right">
+                                        <h:outputText value="#{estmat.quantidadeDisponivelFormatada}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Unita. (R$)" style="text-align: right">
+                                        <fc:output-mascara-unidade-medida tipoMascara="#{estmat.mascaraValorUnitario}"
+                                                                          value="#{estmat.valorUnitario}"/>
+
+                                    </p:column>
+                                    <p:column headerText="Valor Total (R$)" style="text-align: right">
+                                        <h:outputText value="#{estmat.valorEstoque}"
+                                                      converter="converterBigDecimal2CasasSemArredondamento"/>
+                                    </p:column>
+                                    <f:facet name="footer">
+                                        <div align="right">
+                                            <h:outputText value="Total Geral (R$): "/>
+                                            <h:outputText value="#{leo.valorTotalMateriais}"
+                                                          converter="converterBigDecimal2CasasSemArredondamento"/>
+                                        </div>
+                                    </f:facet>
+                                    <p:rowExpansion>
+                                        <p:dataTable id="tableLeo" var="lote"
+                                                     style="width: 50% !important; margin-left: 50% !important;"
+                                                     emptyMessage="Não foram localizados registros."
+                                                     value="#{estmat.lotes}">
+                                            <p:column headerText="Identificação" style="text-align: left; width: 55%">
+                                                <h:outputText value="#{lote.identificacao}"/>
+                                            </p:column>
+                                            <p:column headerText="Validade" style="text-align: left; width: 15%">
+                                                <h:outputText value="#{lote.validade}">
+                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Quantidade" style="text-align: right; width: 30%">
+                                                <h:outputText value="#{lote.quantidadeFormatada}"/>
+                                            </p:column>
+                                            <p:columnGroup type="footer" id="footerLeo">
+                                                <p:row id="rowFooterLeo">
+                                                    <p:column colspan="2" style="text-align:right"
+                                                              styleClass="negrito"
+                                                              footerText="Quantidade Total: "/>
+                                                    <p:column styleClass="negrito" style="text-align:right"
+                                                              footerText="#{estmat.quantidadeTotalLotes}"/>
+                                                </p:row>
+                                            </p:columnGroup>
+                                        </p:dataTable>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:dataGrid>
+
+                        </p:panel>
+                    </ui:repeat>
+
+
+                    <div align="center">
+                        <p:commandButton value="Gerar Relatório"
+                                         icon="ui-icon-print"
+                                         style="height: 30px"
+                                         rendered="#{consultaLocalEstoqueControlador.hasLocaisEstoquePesquisa()}"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mtop10 mrig05"
+                                         actionListener="#{consultaLocalEstoqueControlador.gerarRelatorio()}"
+                                         title="Clique para gerar o Relatório"/>
+
+                        <p:commandButton value="Gerar Excel"
+                                         ajax="false"
+                                         icon="ui-icon-excel"
+                                         process="@this"
+                                         rendered="#{consultaLocalEstoqueControlador.hasLocaisEstoquePesquisa()}"
+                                         id="bt-gerar-excel"
+                                         style="height: 30px"
+                                         styleClass="mtop10"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         onclick="PrimeFaces.monitorDownload(start, stop)"
+                                         title="Clique para fazer o download do arquivo em excel.">
+                            <p:fileDownload value="#{consultaLocalEstoqueControlador.gerarExcel()}"/>
+                        </p:commandButton>
+                    </div>
+                </p:outputPanel>
+            </p:panel>
+        </h:form>
+
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="1000"
+                  max-height="400"
+                  widgetVar="dlgReserva">
+            <h:form id="form-dlg-reserva">
+                <p:dataTable
+                    styleClass="mtop10"
+                    style="overflow: scroll; max-height: 400px; width: auto;"
+                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                    rowIndexVar="rowIx"
+                    emptyMessage="Não foram localizados registros para serem apresentados"
+                    value="#{consultaLocalEstoqueControlador.consultaLocalEstoqueMaterial.reservasEstoque}"
+                    var="res">
+                    <f:facet name="header">
+                        Reservas do Material #{consultaLocalEstoqueControlador.consultaLocalEstoqueMaterial}
+                    </f:facet>
+                    <p:column headerText="Origem" style="text-align: left">
+                        <h:outputText value="#{res.origemReserva}"/>
+                    </p:column>
+                    <p:column headerText="Número" style="text-align: left">
+                        <p:commandLink process="@none"
+                                       icon="ui-icon-search"
+                                       style="width: 23px; height: 23px"
+                                       styleClass="mrig10 mlef05"
+                                       update="@none"
+                                       onclick="window.open('#{request.contextPath}#{consultaLocalEstoqueControlador.getCaminhoOrigemReservaEstoque(res)}', '_blank')">
+                            <h:outputText
+                                styleClass="negrito"
+                                value="#{res.numeroOrigemReserva}"/>
+                        </p:commandLink>
+                    </p:column>
+                    <p:column headerText="Data" style="text-align: center;">
+                        <h:outputText value="#{res.dataReserva}">
+                            <f:convertDateTime type="date"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Unidade Requerente" style="text-align: left;">
+                        <fc:codigo-descricao-hierarquia tipoHierarquia="ADMINISTRATIVA"
+                                                        styleClass="default"
+                                                        dataMovimento="#{res.dataReserva}"
+                                                        unidadeOrganizacional="#{res.unidadeReserva}"/>
+                    </p:column>
+                    <p:column headerText="Quantidade" style="text-align: right">
+                        <h:outputText value="#{res.quantidadeReservadaFormatada}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  width="900"
+                  max-height="450"
+                  widgetVar="dlgMovEstoque">
+            <h:form id="form-mov-estoque">
+                <div style="overflow: scroll; max-height: 400px">
+                    <div class="alert alert-info col-lg-12 negrito">
+                        <table style="width: 100%">
+                            <tr>
+                                <td class="alinhamentoEsquerda">
+                                    Material
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    Total Estoque
+                                </td>
+                            </tr>
+                            <tr style="font-size: 14px;" class="negrito">
+                                <td class="alinhamentoEsquerda">
+                                    #{consultaLocalEstoqueControlador.consultaLocalEstoqueMaterial.getCodigoDescricaoMaterial()}
+                                </td>
+                                <td class="alinhamentoDireita">
+                                    <h:outputText
+                                        value="#{consultaLocalEstoqueControlador.consultaLocalEstoqueMaterial.quantidadeEstoqueFormatada}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p:dataTable
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{consultaLocalEstoqueControlador.consultaLocalEstoqueMaterial.movimentacaoGrupoMaterial.movimentosEstoque}"
+                        var="movEst">
+                        <f:facet name="header">
+                            <table style="width: 100%; text-align: center">
+                                <tr>
+                                    <td class="alinhamentoDireita" style="width: 78%">
+                                        Total Entradas
+                                        <h:outputText
+                                            value="#{consultaLocalEstoqueControlador.consultaLocalEstoqueMaterial.movimentacaoGrupoMaterial.totalCreditoMovimentosEstoque}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        Total Saídas
+                                        <h:outputText
+                                            value="#{consultaLocalEstoqueControlador.consultaLocalEstoqueMaterial.movimentacaoGrupoMaterial.totalDebitoMovimentosEstoque}"
+                                            styleClass="negrito">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </td>
+                                </tr>
+                            </table>
+                        </f:facet>
+                        <p:column headerText="Data" style="text-align: center; width: 10%">
+                            <h:outputText value="#{movEst.data}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Movimento" style="text-align: left; width: 30%">
+                            <h:outputText value="#{movEst.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Entrada" style="text-align: right; width: 15%">
+                            <h:outputText value="#{movEst.credito}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Saída" style="text-align: right; width: 15%">
+                            <h:outputText value="#{movEst.debito}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

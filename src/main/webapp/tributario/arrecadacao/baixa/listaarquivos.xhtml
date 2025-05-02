@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui" xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function iniciaPagamento() {
+                dialogPagamento.show();
+                $('.botaoFimProcesso').css('display', 'none');
+                timer = setInterval(function () {
+                    posPagamento();
+                }, 3000);
+
+            }
+
+            function terminaPagamento() {
+                clearInterval(timer);
+                $('#mensagemFim').removeClass('alert-info');
+                $('#mensagemFim').addClass('alert-success');
+                $('.botaoFimProcesso').css('display', 'block');
+                finalPagamento();
+            }
+
+            function iniciaEstorno() {
+                aguarde.show();
+                timer = setInterval(function () {
+                    posEstorno();
+                }, 1000);
+            }
+
+            function terminaEstorno() {
+                aguarde.hide();
+            }
+        </script>
+        <h:form id="Formulario" enctype="multipart/form-data">
+            <p:remoteCommand name="posPagamento" actionListener="#{loteBaixaControlador.consultaProcessoUnico()}"
+                             update=":formPagamento:barra"/>
+
+            <p:remoteCommand name="posEstorno" actionListener="#{loteBaixaControlador.consultaEstorno()}"/>
+
+            <p:remoteCommand name="finalPagamento" update=":formPagamento"/>
+            <p:panel header="Arrecadação por Arquivo de Retorno Bancário">
+                <div class="alert alert-info">
+                    Podem ser selecionados arquivos de retorno bancário ou arquivos de arrecadação do simples nacional(DAF607)!
+                </div>
+                <h:panelGrid columns="3">
+                    <p:fileUpload fileUploadListener="#{loteBaixaControlador.sobeArquivos}"
+                                  mode="advanced"
+                                  auto="true"
+                                  multiple="true"
+                                  onstart="aguarde.show()"
+                                  oncomplete="aguarde.hide()"
+                                  styleClass="somenteBotao"
+                                  allowTypes="/(\.|\/)(ret|RET|par|PAR|txt|TXT|dat|DAT)$/"
+                                  label="Procurar ..."
+                                  update="geraArquivos"/>
+
+                    <p:commandButton styleClass="mtop02"
+                                     icon="ui-icon-check"
+                                     value="Confirmar Importação do(s) Arquivo(s)"
+                                     id="geraArquivos"
+                                     update="@form"
+                                     onstart="statusDialog.show();" onsuccess="statusDialog.hide();"
+                                     disabled="#{loteBaixaControlador.fileUploadEvents.isEmpty()}"
+                                     actionListener="#{loteBaixaControlador.gerarArquivos}"/>
+                    <p:panel style="border: 0" id="numeroLista"
+                             visible="#{!loteBaixaControlador.fileUploadEvents.isEmpty()}">
+                        <h:outputText
+                            value="Arquivo(s) importado(s) com sucesso! Pressione o botão 'Confirmar Importação'."
+                            styleClass="azulnegrito"/>
+                    </p:panel>
+                </h:panelGrid>
+            </p:panel>
+            <br/>
+            <p:tabView>
+                <p:tab title="Não Processados">
+                    <p:panel header="Lista de Arquivos de Retorno Bancário Não Processados">
+                        <p:dataTable id="tabelaNaoProcessados" rows="10" var="objeto"
+                                     widgetVar="tabelaNaoProcessados"
+                                     emptyMessage="Nenhum arquivo com a situação 'Não Processado' foi encontrado"
+                                     paginator="true"
+                                     paginatorTemplate="{CurrentPageReport}
+                                         {FirstPageLink} {PreviousPageLink}
+                                         {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     rowsPerPageTemplate="10,50,100,500,1000"
+                                     value="#{loteBaixaControlador.arquivosAProcessar}"
+                                     style="text-align: center; font-size: 8pt;"
+                                     rowKey="#{objeto.id}"
+                                     selection="#{loteBaixaControlador.arquivosAProcessarSelecionados}"
+                                     rowStyleClass="#{!objeto.arquivoLoteBaixa.valido ? 'vermelhonegrito' : 'azulnegrito'}">
+                            <f:facet name="header">
+                                <p:outputPanel>
+                                    <h:outputText value="Busca: "/>
+                                    <h:inputText id="globalFilter" onkeyup="tabelaNaoProcessados.filter()" size="70"/>
+                                </p:outputPanel>
+                            </f:facet>
+                            <p:column selectionMode="multiple" style="width:16px;text-align:center"/>
+                            <p:column headerText="Tipo de Arquivo"
+                                      sortBy="#{objeto.arquivoLoteBaixa.tipoArquivoBancarioTributario}"
+                                      filterBy="#{objeto.arquivoLoteBaixa.tipoArquivoBancarioTributario}"
+                                      filterStyle="width:70px!important">
+                                <h:outputText value="#{objeto.arquivoLoteBaixa.tipoArquivoBancarioTributario}"
+                                              title="#{objeto.arquivoLoteBaixa.tipoArquivoBancarioTributario.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Banco" sortBy="#{objeto.codigoBanco} - #{objeto.banco}"
+                                      filterBy="#{objeto.codigoBanco} - #{objeto.banco}"
+                                      filterStyle="width:70px!important">
+                                <h:outputText value="#{objeto.codigoBanco} - #{objeto.banco}"/>
+                            </p:column>
+                            <p:column headerText="Número do Arquivo" sortBy="#{objeto.numero}"
+                                      filterBy="#{objeto.numero}" filterStyle="width:70px!important">
+                                <h:outputText value="#{objeto.numero}"/>
+                            </p:column>
+                            <p:column headerText="Data Pagamento" sortBy="#{objeto.dataPagamento}"
+                                      filterBy="#{objeto.dataPagamento}"
+                                      filterStyle="width:70px!important">
+                                <h:outputText value="#{objeto.dataPagamento}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value=" #{!objeto.arquivoLoteBaixa.valido? ' -':''}"/>
+                            </p:column>
+                            <p:column headerText="Data Movimentação" sortBy="#{objeto.dataMovimentacao}"
+                                      filterBy="#{objeto.dataMovimentacao}" filterStyle="width:70px!important">
+                                <h:outputText value="#{objeto.dataMovimentacao}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value=" #{!objeto.arquivoLoteBaixa.valido? ' -':''}"/>
+                            </p:column>
+                            <p:column headerText="Valor Total" sortBy="#{objeto.valorTotalArquivo}"
+                                      filterBy="#{objeto.valorTotalArquivo}" filterStyle="width:70px!important">
+                                <h:outputText value="#{objeto.valorTotalArquivo}">
+                                    <f:convertNumber pattern="###,###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="#{!objeto.arquivoLoteBaixa.valido? ' -':''}"/>
+                            </p:column>
+                            <p:column headerText="Opções">
+                                <p:commandButton icon="ui-icon-play"
+                                                 title="clique para processar o lote"
+                                                 disabled="#{!objeto.arquivoLoteBaixa.valido}"
+                                                 update=":form_dialogoLancaLote"
+                                                 onstart="statusDialog.show();" onsuccess="statusDialog.hide();"
+                                                 actionListener="#{loteBaixaControlador.processaArquivo}">
+                                    <f:attribute value="#{objeto.arquivoLoteBaixa}" name="objeto"/>
+                                </p:commandButton>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 title="clique para excluir o arquivo"
+                                                 update="@form"
+                                                 onstart="statusDialog.show();" onsuccess="statusDialog.hide();"
+                                                 actionListener="#{loteBaixaControlador.excluirArquivo}"
+                                                 onclick="if(!confirm('Deseja excluir este registro?')) return false;"
+                                >
+                                    <f:attribute value="#{objeto.arquivoLoteBaixa}" name="objeto"/>
+                                </p:commandButton>
+
+                                <a target="_blank"
+                                   href='${facesContext.externalContext.requestContextPath}/arquivos/#{objeto.arquivoLoteBaixa.arquivo.nome}?id=#{objeto.arquivoLoteBaixa.arquivo.id}'>
+                                    <p:button icon="ui-icon-arrowthickstop-1-s" title="Download do Arquivo"/>
+                                </a>
+                            </p:column>
+                        </p:dataTable>
+                        <br/>
+
+                        <div class="alert alinhamentoCentralizado">
+                            <strong>Atenção!</strong>
+                            A lista apresenta Arquivos de Retorno divididos por lote, ao processar um arquivo composto de vários lotes, todos lotes serão processados juntos.
+                        </div>
+                        <br/>
+                        <center>
+                            <p:commandButton title="Clique para processar todos os arquivos"
+                                             value="Processar Todos"
+                                             update=":form_dialogoLancaTodosLotes"
+                                             icon="ui-icon-play"
+                                             actionListener="#{loteBaixaControlador.agruparContas()}"
+                                             styleClass="operacao"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide(); dialogoLancaTodosLotes.show()"/>
+                            <!--actionListener="{loteBaixaControlador.processaTodosArquivos}"/>-->
+                        </center>
+                    </p:panel>
+                </p:tab>
+                <p:tab title="Processados">
+                    <p:panel header="Filtros" id="painelProcessados">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Banco e conta bancária"/>
+                            <h:selectOneMenu value="#{loteBaixaControlador.arquivoLoteBaixa.conta}"
+                                             converter="#{loteBaixaControlador.converterConta}">
+                                <f:selectItems value="#{loteBaixaControlador.contas}"/>
+                                <p:ajax event="change" listener="#{loteBaixaControlador.selecionaContaArquivo()}"
+                                        process="@this"/>
+                            </h:selectOneMenu>
+                            <h:outputText value="Número do Arquivo"/>
+                            <p:inputText value="#{loteBaixaControlador.numeroArquivo}"/>
+                            <h:outputText value="Data de Pagamento"/>
+                            <h:panelGrid columns="3">
+                                <p:calendar value="#{loteBaixaControlador.dataPagamentoInicial}"
+                                            showOn="button"
+                                            navigator="true"
+                                            size="15"
+                                            pattern="dd/MM/yyyy"/>
+                                <h:outputText value="a"/>
+                                <p:calendar value="#{loteBaixaControlador.dataPagamentoFinal}"
+                                            showOn="button"
+                                            navigator="true"
+                                            size="15"
+                                            pattern="dd/MM/yyyy"/>
+                            </h:panelGrid>
+                            <h:outputText value="Data Movimentação"/>
+                            <h:panelGrid columns="3">
+                                <p:calendar value="#{loteBaixaControlador.dataMovimentoInicial}"
+                                            showOn="button"
+                                            navigator="true"
+                                            size="15"
+                                            pattern="dd/MM/yyyy"/>
+                                <h:outputText value="a"/>
+                                <p:calendar value="#{loteBaixaControlador.dataMovimentoFinal}"
+                                            showOn="button"
+                                            navigator="true"
+                                            size="15"
+                                            pattern="dd/MM/yyyy"/>
+                            </h:panelGrid>
+                            <h:outputText value="Situação"/>
+                            <h:selectOneMenu value="#{loteBaixaControlador.situacaoLoteBaixa}"
+                            >
+                                <f:selectItems value="#{loteBaixaControlador.situacoesLote}"/>
+                            </h:selectOneMenu>
+
+                        </h:panelGrid>
+                        <br/>
+                        <hr/>
+                        <h:panelGrid columns="2">
+                            <p:commandButton value="Pesquisar"
+                                             actionListener="#{loteBaixaControlador.pesquisaArquivos()}"
+                                             update="@form"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             icon="ui-icon-search" styleClass="operacao prioritario"/>
+                            <p:commandButton value="Limpar" icon="ui-icon-cancel" styleClass="operacao"/>
+                        </h:panelGrid>
+
+                        <p:dataTable id="tabelaProcessados" rows="10" var="objeto"
+                                     widgetVar="tabelaProcessados"
+                                     emptyMessage="Nenhum arquivo com a situação 'Processado' foi encontrado"
+                                     value="#{loteBaixaControlador.arquivosProcessados}"
+                        >
+                            <f:facet name="header">
+                                <table style="width: 100%;">
+                                    <tr style="width: 100%;">
+                                        <td style="width: 10px;">
+                                            <p:commandButton value="1"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela ${loteBaixaControlador.quantidadeFiltroArquivos eq 1 ? 'prioritario' : ''}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             update="@form"
+                                                             actionListener="#{loteBaixaControlador.defineNumeroPesquisa(1)}"
+                                            />
+
+                                            <p:commandButton value="10"
+                                                             update="@form"
+                                                             actionListener="#{loteBaixaControlador.defineNumeroPesquisa(10)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela mlef03 ${loteBaixaControlador.quantidadeFiltroArquivos eq 10 ? 'prioritario' : ''}"/>
+
+                                            <p:commandButton value="25"
+                                                             update="@form"
+                                                             actionListener="#{loteBaixaControlador.defineNumeroPesquisa(25)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela mlef03 ${loteBaixaControlador.quantidadeFiltroArquivos eq 25 ? 'prioritario' : ''}"/>
+
+                                            <p:commandButton value="50"
+                                                             update="@form"
+                                                             actionListener="#{loteBaixaControlador.defineNumeroPesquisa(50)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela mlef03 ${loteBaixaControlador.quantidadeFiltroArquivos eq 50 ? 'prioritario' : ''}"/>
+
+                                            <p:commandButton value="100"
+                                                             update="@form"
+                                                             actionListener="#{loteBaixaControlador.defineNumeroPesquisa(100)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela mlef03 ${loteBaixaControlador.quantidadeFiltroArquivos eq 100 ? 'prioritario' : ''}"/>
+
+                                            <p:commandButton value="500"
+                                                             update="@form"
+                                                             actionListener="#{loteBaixaControlador.defineNumeroPesquisa(500)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela mlef03 ${loteBaixaControlador.quantidadeFiltroArquivos eq 500 ? 'prioritario' : ''}"/>
+
+                                            <p:commandButton value="TODOS"
+                                                             update="@form"
+                                                             actionListener="#{loteBaixaControlador.defineNumeroPesquisa(0)}"
+                                                             onstart="aguarde.show()"
+                                                             oncomplete="aguarde.hide()"
+                                                             styleClass="botaoSemPadding negrito botao-cabecalho-tabela mlef03 ${loteBaixaControlador.quantidadeFiltroArquivos eq 0 ? 'prioritario' : ''}">
+                                            </p:commandButton>
+                                        </td>
+
+                                    </tr>
+                                </table>
+                            </f:facet>
+                            <p:column headerText="Tipo de Arquivo">
+                                <h:outputText
+                                    value="#{objeto.arquivoLoteBaixa.tipoArquivoBancarioTributario}"/>
+                            </p:column>
+                            <p:column headerText="Banco e Conta Bancária">
+                                <h:outputText
+                                    value="#{configuracaoTributarioControlador.getDescricaoConta(objeto.loteBaixa.subConta)}"/>
+                            </p:column>
+                            <p:column headerText="Número do Arquivo">
+                                <h:outputText value="#{objeto.numero}"/>
+                            </p:column>
+                            <p:column headerText="Data de Pagamento">
+                                <h:outputText value="#{objeto.dataPagamento}">
+                                    <f:convertDateTime pattern="dd/MM/yyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Data de Movimento">
+                                <h:outputText value="#{objeto.dataMovimentacao}">
+                                    <f:convertDateTime pattern="dd/MM/yyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Valor">
+                                <h:outputText value="#{objeto.valorTotalArquivo}">
+                                    <f:convertNumber pattern="###,###,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="#{!objeto.arquivoLoteBaixa.valido? ' -':''}"/>
+                            </p:column>
+                            <p:column headerText="Situação do Lote">
+                                <h:outputText value="#{objeto.loteBaixa.situacaoLoteBaixa.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Operações">
+                                <h:panelGrid columns="3">
+                                    <p:button icon="ui-icon-search"
+                                              title="clique para visualizar o lote de baixa"
+                                              href="../editar/${objeto.loteBaixa.id}"
+                                    />
+                                    <p:button icon="ui-icon-arrowthickstop-1-s"
+                                              href="${facesContext.externalContext.requestServletPath}/arquivos/${objeto.arquivoLoteBaixa.arquivo.nome}?id=${objeto.arquivoLoteBaixa.arquivo.id}"
+                                    />
+                                </h:panelGrid>
+                            </p:column>
+
+                        </p:dataTable>
+                    </p:panel>
+                    <br/>
+
+                    <div class="alert alert-error alinhamentoCentralizado">
+                        <strong>Atenção!</strong>
+                        A lista apresenta Arquivos de Retorno divididos por lote, ao estornar um arquivo composto de vários lotes, todos lotes serão estornados juntos.
+                    </div>
+                </p:tab>
+            </p:tabView>
+        </h:form>
+        <p:dialog id="dlgLancaLote" header="Confirme as seguintes opções para continuar INDIVIDUAL"
+                  modal="true" widgetVar="dialogoLancaLote" resizable="false">
+            <h:form id="form_dialogoLancaLote">
+                <center>
+                    <h:outputText value="Banco e Conta Bancária:"/><br/>
+                    <p:selectOneMenu id="bancoConta" value="#{loteBaixaControlador.arquivoLoteBaixa.conta}"
+                                     style="min-width: 300px"
+                                     converter="#{loteBaixaControlador.converterConta}">
+                        <f:selectItems value="#{loteBaixaControlador.contasPorBanco}"/>
+                        <p:ajax event="change" listener="#{loteBaixaControlador.selecionaContaArquivo()}"
+                                process="@this"/>
+                    </p:selectOneMenu>
+                    <br/>
+                    <h:outputText styleClass="vermelhonegrito"
+                                  value="Nenhum banco ou conta foi encontrado nas configurações do tributário para o código informado no arquivo"
+                                  rendered="#{loteBaixaControlador.contasPorBanco.size() eq 0}"/>
+                    <br/>
+                    <p:commandButton value="Confirmar" icon="ui-icon-check" styleClass="operacao"
+                                     update=":Formulario form_dialogoLancaLote"
+                                     actionListener="#{loteBaixaControlador.salvaArquivo()}"
+                                     onclick="aguarde.show()"
+                                     disabled="#{loteBaixaControlador.contasPorBanco.size() eq 0}"/>
+                    <p:commandButton value="Cancelar" icon="ui-icon-cancel" styleClass="operacao"
+                                     onstart="dialogoLancaLote.hide()"
+                                     oncomplete="aguarde.hide()"
+                                     onclick="aguarde.show()"/>
+                </center>
+            </h:form>
+        </p:dialog>
+        <p:dialog id="dlgLancaTodosLotes" header="Confirme as seguintes opções para continuar"
+                  modal="true" widgetVar="dialogoLancaTodosLotes" resizable="false" position="center">
+            <h:form id="form_dialogoLancaTodosLotes">
+                <table class="table">
+                    <c:forEach items="#{loteBaixaControlador.bancosAgrupados}" var="banco">
+                        <tr>
+                            <td>
+                                <h:outputText value="#{banco}"/>
+                            </td>
+                            <td>
+                                <p:selectOneMenu value="#{loteBaixaControlador.agrupadoresDeConta[banco]}"
+                                                 converter="#{loteBaixaControlador.converterConta}"
+                                                 style="width: 100%;">
+                                    <f:selectItems value="#{loteBaixaControlador.getContasPorBanco(banco)}"/>
+                                    <p:ajax event="change"
+                                            rocess="@this" update="@this"/>
+                                </p:selectOneMenu>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                </table>
+                <br/>
+                <h:outputText styleClass="vermelhonegrito"
+                              value="Nenhum banco ou conta foi encontrado nas configurações do tributário para o código informado no arquivo"
+                              rendered="#{loteBaixaControlador.contasPorBanco.size() eq 0}"/>
+
+                <center>
+                    <div class="alert alinhamentoCentralizado">
+                        <strong>Atenção!</strong>
+                        A lista apresenta Arquivos de Retorno divididos por lote, ao processar um arquivo composto de vários lotes, todos lotes serão processados juntos.
+                    </div>
+                    <p:commandButton value="Confirmar" icon="ui-icon-check" styleClass="operacao"
+                                     update=":Formulario form_dialogoLancaTodosLotes"
+                                     oncomplete="aguarde.hide();"
+                                     onclick="aguarde.show();"
+                                     disabled="#{empty loteBaixaControlador.arquivosAProcessarSelecionados}"
+                                     actionListener="#{loteBaixaControlador.processaTodosArquivos()}"/>
+                    <p:commandButton value="Cancelar" icon="ui-icon-cancel" styleClass="operacao"
+                                     onclick="dialogoLancaTodosLotes.hide()"/>
+
+                </center>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true" width="800" id="dlgPagando" widgetVar="dialogPagamento" closable="false">
+            <div class="alert alert-info centralizado" id="mensagemFim">
+                <h:form id="formPagamento">
+                    <p:outputPanel id="barra">
+                        <fc:acompanhamentoBarraProgresso assistenteBarraProgresso="#{loteBaixaControlador.processoArquivo}"/>
+                    </p:outputPanel>
+                    <p:outputPanel id="botao">
+                        <div class="botaoFimProcesso">
+                            <p:commandButton
+                                actionListener="#{loteBaixaControlador.redirecionarParaVisualizar}"
+                                value="Continuar"
+                                onclick="aguarde.show()"
+                                styleClass="operacao"
+                                icon="ui-icon-check"/>
+                        </div>
+                    </p:outputPanel>
+                </h:form>
+            </div>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,84 @@
+package br.com.webpublico.entidadesauxiliares;
+
+import br.com.webpublico.entidades.Calculo;
+import br.com.webpublico.enums.TipoProcessoDebito;
+import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
+
+import java.math.BigDecimal;
+import java.util.Date;
+
+import static br.com.webpublico.util.Util.traduzirEnum;
+
+/**
+ * Created by Wellington on 11/05/2017.
+ */
+public class VOConsultaProcessoDebito extends AbstractVOConsultaLancamento {
+
+    private Long codigoProcesso;
+    private String tipoProcesso;
+    private Integer anoProcesso;
+
+    public VOConsultaProcessoDebito() {
+    }
+
+    public VOConsultaProcessoDebito(Object[] obj) {
+        preencheObjeto(obj);
+    }
+
+    public void preencheObjeto(Object[] resultado) {
+        this.setResultadoParcela(new ResultadoParcela());
+        this.getResultadoParcela().setIdCadastro(resultado[0] != null ? ((BigDecimal) resultado[0]).longValue() : null);
+        this.getResultadoParcela().setCadastro(resultado[1] != null ? (String) resultado[1] : "");
+        this.getResultadoParcela().setExercicio(((BigDecimal) resultado[2]).intValue());
+        this.getResultadoParcela().setIdPessoa(((BigDecimal) resultado[3]).longValue());
+        this.getResultadoParcela().setIdCalculo(((BigDecimal) resultado[4]).longValue());
+        this.getResultadoParcela().setSd(((BigDecimal) resultado[5]).intValue());
+        this.getResultadoParcela().setIdValorDivida(((BigDecimal) resultado[6]).longValue());
+        this.getResultadoParcela().setEmissao((Date) resultado[7]);
+        this.getResultadoParcela().setIdParcela(((BigDecimal) resultado[8]).longValue());
+        this.getResultadoParcela().setIdOpcaoPagamento(((BigDecimal) resultado[9]).longValue());
+        this.getResultadoParcela().setCotaUnica(((BigDecimal) resultado[10]).compareTo(BigDecimal.ZERO) > 0);
+        this.getResultadoParcela().setVencimento((Date) resultado[11]);
+        this.getResultadoParcela().setSituacao(resultado[12] != null ? (String) resultado[12] : "");
+        this.getResultadoParcela().setReferencia(resultado[13] != null ? (String) resultado[13] : "");
+        this.getResultadoParcela().setParcela(resultado[14] != null ? (String) resultado[14] : "");
+        this.getResultadoParcela().setValorOriginal((BigDecimal) resultado[15]);
+        this.getResultadoParcela().setDivida((String) resultado[16]);
+        this.getResultadoParcela().setIdDivida(((BigDecimal) resultado[17]).longValue());
+        this.getResultadoParcela().setDividaAtiva(((BigDecimal) resultado[18]).compareTo(BigDecimal.ZERO) > 0);
+        this.getResultadoParcela().setDividaAtivaAjuizada(((BigDecimal) resultado[19]).compareTo(BigDecimal.ZERO) > 0);
+        this.getResultadoParcela().setPagamento(resultado[20] != null ? (Date) resultado[20] : null);
+        this.getResultadoParcela().setIdConfiguracaoAcrescimo(((BigDecimal) resultado[21]).longValue());
+        this.getResultadoParcela().setTipoCadastro(resultado[22] != null ? (String) resultado[22] : "");
+        this.getResultadoParcela().setTipoCalculo(Calculo.TipoCalculo.INSCRICAO_DA.name());
+        this.setCpfOrCnpj(resultado[23] != null ? (String) resultado[23] : "");
+        this.setNomeOrRazaoSocial(resultado[24] != null ? (String) resultado[24] : "");
+        this.codigoProcesso = ((BigDecimal) resultado[25]).longValue();
+        this.tipoProcesso = traduzirEnum(TipoProcessoDebito.class, (String) resultado[26]).getDescricao();
+        this.anoProcesso = ((BigDecimal) resultado[27]).intValue();
+    }
+
+    public Long getCodigoProcesso() {
+        return codigoProcesso;
+    }
+
+    public void setCodigoProcesso(Long codigoProcesso) {
+        this.codigoProcesso = codigoProcesso;
+    }
+
+    public String getTipoProcesso() {
+        return tipoProcesso;
+    }
+
+    public void setTipoProcesso(String tipoProcesso) {
+        this.tipoProcesso = tipoProcesso;
+    }
+
+    public Integer getAnoProcesso() {
+        return anoProcesso;
+    }
+
+    public void setAnoProcesso(Integer anoProcesso) {
+        this.anoProcesso = anoProcesso;
+    }
+}

@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function iniciarConciliacao() {
+                dialogProgressBar.show();
+                timer = setInterval(function () {
+                    verificarConciliacao();
+                }, 1000);
+            }
+
+            function terminarConciliacao() {
+                clearInterval(timer);
+                dialogProgressBar.hide();
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand name="verificarConciliacao"
+                             process="@this"
+                             update=":formDialogProgressBar"
+                             actionListener="#{conciliacaoArquivoControlador.finalizarConciliacao()}"/>
+
+            <fc:cabecalhoPretty controlador="#{conciliacaoArquivoControlador}"
+                                origem="#{conciliacaoArquivoControlador.caminhoPadrao}novo/"/>
+
+            <p:panel styleClass="mtop10" header="Importação do Arquivo de Conciliação">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Usuário: "/>
+                    <h:outputText value="#{conciliacaoArquivoControlador.selecionado.usuarioSistema}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Data: "/>
+                    <h:outputText value="Atualizado após salvar com a data atual."
+                                  rendered="#{conciliacaoArquivoControlador.operacaoNovo}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="#{conciliacaoArquivoControlador.selecionado.dataCadastro}"
+                                  rendered="#{conciliacaoArquivoControlador.operacaoEditar}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                    </h:outputText>
+
+                    <h:outputText value="Data da Conciliação: "/>
+                    <h:outputText value="#{conciliacaoArquivoControlador.selecionado.dataCadastro}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy HH:mm:ss"/>
+                    </h:outputText>
+
+                    <h:outputText value="Conta Bancária: "/>
+                    <h:outputText value="#{conciliacaoArquivoControlador.selecionado.contaBancariaEntidade}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Tipos Correspondentes: "
+                                               rendered="#{conciliacaoArquivoControlador.operacaoNovo}"/>
+                    <h:panelGrid columns="2" cellpadding="0" cellspacing="0"
+                                 rendered="#{conciliacaoArquivoControlador.operacaoNovo}">
+                        <p:selectManyCheckbox id="idTipoFiltro"
+                                              value="#{conciliacaoArquivoControlador.tiposFiltrosSelecionados}"
+                                              disabled="#{conciliacaoArquivoControlador.operacaoEditar}"
+                                              layout="pageDirection">
+                            <f:selectItems value="#{conciliacaoArquivoControlador.tiposFiltros}"
+                                           var="tipof" itemLabel="&lt;b>#{tipof.descricao}&lt;/b>"
+                                           itemValue="#{tipof.name()}"/>
+                            <p:ajax event="change" process="@this"/>
+                        </p:selectManyCheckbox>
+
+                        <co:botao_informacao
+                            styleClass="mlef05 vinteLarguraVinteAltura"
+                            descricao="Irá buscar os movimentos no sistema utilizando os campos&lt;br/&gt;do arquivo de acordo com o que foi selecionado."/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Tipos Movimentos: "
+                                               rendered="#{conciliacaoArquivoControlador.operacaoNovo}"/>
+                    <h:panelGrid columns="2" cellpadding="0" cellspacing="0"
+                                 rendered="#{conciliacaoArquivoControlador.operacaoNovo}">
+                        <p:selectManyCheckbox id="idTipoMovimento"
+                                              value="#{conciliacaoArquivoControlador.tiposMovimentosSelecionados}"
+                                              disabled="#{conciliacaoArquivoControlador.operacaoEditar}"
+                                              layout="pageDirection">
+                            <f:selectItems value="#{conciliacaoArquivoControlador.tiposMovimentos}"
+                                           var="tipom" itemLabel="&lt;b>#{tipom.descricao}&lt;/b>"
+                                           itemValue="#{tipom.name()}"/>
+                            <p:ajax event="change" process="@this"/>
+                        </p:selectManyCheckbox>
+
+                        <co:botao_informacao
+                            styleClass="mlef05 vinteLarguraVinteAltura"
+                            descricao="Irá buscar os movimentos do arquivo de acordo com os tipos selecionado."/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Arquivo: "/>
+                    <h:panelGrid columns="3" cellpadding="0" cellspacing="0">
+                        <p:fileUpload mode="advanced"
+                                      auto="true"
+                                      label="Selecionar Arquivo"
+                                      style="margin-top: 25px !important;"
+                                      allowTypes="/(\.|\/)(ofx|OFX|txt|TXT)$/"
+                                      onstart="aguarde.show()"
+                                      oncomplete="aguarde.hide()"
+                                      invalidFileMessage="Extensão do arquivo inválida."
+                                      rendered="#{conciliacaoArquivoControlador.selecionado.arquivo eq null}"
+                                      fileUploadListener="#{conciliacaoArquivoControlador.importar}"
+                                      update=":Formulario">
+                        </p:fileUpload>
+
+                        <h:panelGroup
+                            rendered="#{conciliacaoArquivoControlador.selecionado.arquivo ne null and conciliacaoArquivoControlador.selecionado.arquivo.id ne null}">
+                            <a target="_blank"
+                               href='${facesContext.externalContext.requestContextPath}/arquivos/#{conciliacaoArquivoControlador.selecionado.arquivo.nome}?id=#{conciliacaoArquivoControlador.selecionado.arquivo.id}'>
+                                <h:outputText styleClass="azulnegrito"
+                                              value="#{conciliacaoArquivoControlador.selecionado.arquivo.nome}"/>
+                            </a>
+                        </h:panelGroup>
+
+                        <h:outputText styleClass="negrito"
+                                      rendered="#{conciliacaoArquivoControlador.selecionado.arquivo ne null and conciliacaoArquivoControlador.selecionado.arquivo.id eq null}"
+                                      value="#{conciliacaoArquivoControlador.selecionado.arquivo.nome}"/>
+
+                        <p:commandButton
+                            rendered="#{conciliacaoArquivoControlador.selecionado.arquivo ne null}"
+                            disabled="#{conciliacaoArquivoControlador.operacaoEditar}"
+                            icon="ui-icon-trash"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"
+                            styleClass="botao-transparente icone-25 mlef10"
+                            title="Clique para remover o arquivo."
+                            update=":Formulario"
+                            onclick="if (!confirm('Tem certeza que deseja remover este arquivo?')) {return false; } else {aguarde.show();}"
+                            actionListener="#{conciliacaoArquivoControlador.removerArquivo()}"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <h:panelGroup id="legenda">
+                <table
+                    style="border: 1px solid; border-color: #92b8d3; font-size: 11px; color: #000000; width: 100%; height: 30px; margin-top: 10px;">
+                    <caption class="ui-widget-header"> Legenda</caption>
+                    <tr>
+                        <td style="width: 1.3%; text-align: left">
+                            <div style="width: 10px; height: 10px; background-color: #468847;"/>
+                        </td>
+                        <td style="text-align: left; width: 32%"> Achou correspondente no sistema.</td>
+
+                        <td style="width: 1.3%; text-align: left">
+                            <div style="width: 10px; height: 10px; background-color: peru; font-weight: bold"/>
+                        </td>
+                        <td style="text-align: left; width: 32%"> Achou mais de um correspondente no sistema.</td>
+
+                        <td style="width: 1.3%; text-align: left">
+                            <div style="background-color: #b94a48; width: 10px; height: 10px;"/>
+                        </td>
+                        <td style="text-align: left; width: 32%"> Não encontrou correspondente no sistema, pode gerar uma pendência ao conciliar adicionando informações no botão 'Pêndencias' ou editando individualmente.</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 1.3%; text-align: left"></td>
+                        <td style="text-align: left; width: 32%">
+                            <h:outputText value="Qtd: #{conciliacaoArquivoControlador.quantidadeSucesso}"
+                                          styleClass="verdenegrito"/>
+                        </td>
+                        <td style="width: 1.3%; text-align: left"></td>
+                        <td style="text-align: left; width: 32%">
+                            <h:outputText value="Qtd: #{conciliacaoArquivoControlador.quantidadeAlerta}"
+                                          styleClass="amarelonegrito"/>
+                        </td>
+                        <td style="width: 1.3%; text-align: left"></td>
+                        <td style="text-align: left; width: 32%">
+                            <h:outputText value="Qtd: #{conciliacaoArquivoControlador.quantidadeErro}"
+                                          styleClass="vermelhonegrito"/>
+                        </td>
+                    </tr>
+                </table>
+                </h:panelGroup>
+                <p:dataTable id="tabelaMovimentos" paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{conciliacaoArquivoControlador.selecionado.movimentos}"
+                             filteredValue="#{conciliacaoArquivoControlador.movimentosFiltrados}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>MOVIMENTOS DO ARQUIVO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="mov">
+                    <p:column headerText="Ações" style="width: 8%;text-align: center"
+                              rendered="#{!conciliacaoArquivoControlador.arquivoConciliado}">
+                        <p:commandButton id="btnRemoverMovimentoArquivo"
+                                         update=":Formulario:tabelaMovimentos :Formulario:legenda"
+                                         process="@this"
+                                         actionListener="#{conciliacaoArquivoControlador.removerMovimentoArquivo(mov)}"
+                                         title="Clique para remover este registro."
+                                         icon="ui-icon-trash"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"/>
+
+                        <p:commandButton icon="ui-icon-pencil"
+                                         disabled="#{conciliacaoArquivoControlador.arquivoConciliado}"
+                                         rendered="#{mov.movimentosSistemas.isEmpty()}"
+                                         style="height: 30px"
+                                         styleClass="mlef05"
+                                         update="@this :formPendenciaUnica"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         process="@this"
+                                         onclick="dialogPendenciaUnica.show()"
+                                         actionListener="#{conciliacaoArquivoControlador.editarMovimentoArquivo(mov)}"
+                                         title="Clique para poder informar os campos necessários para poder gerar a pendência."/>
+                    </p:column>
+                    <p:column headerText="Correspondentes"
+                              style="text-align: center; width: 6%;">
+                        <p:rowToggler/>
+                    </p:column>
+                    <p:column headerText="Tipo" styleClass="alinhamentoEsquerda" filterBy="#{mov.tipo.descricao}">
+                        <h:outputText value="#{mov.tipo ne null ? mov.tipo.descricao : ''}"
+                                      styleClass="#{mov.styleText}"/>
+                    </p:column>
+                    <p:column headerText="Data" styleClass="alinhamentoCentralizado" filterBy="#{mov.dataMovimentoFormatada}">
+                        <h:outputText value="#{mov.dataMovimento}"
+                                      styleClass="#{mov.styleText}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Identificador" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{mov.identificador}"
+                                      styleClass="#{mov.styleText}"/>
+                    </p:column>
+                    <p:column headerText="Número Documento" styleClass="alinhamentoEsquerda" filterBy="#{mov.numeroDocumento}">
+                        <h:outputText value="#{mov.numeroDocumento}"
+                                      styleClass="#{mov.styleText}"/>
+                    </p:column>
+                    <p:column headerText="Histórico" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{mov.historico}"
+                                      styleClass="#{mov.styleText}"/>
+                    </p:column>
+                    <p:column headerText="Valor" styleClass="alinhamentoDireita" filterBy="#{mov.valorFormatado}">
+                        <h:outputText value="#{mov.valor}"
+                                      styleClass="#{mov.styleText}">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:rowExpansion>
+                        <div class="thumbnail mtop05">
+                            <h:panelGroup rendered="#{mov.movimentosSistemas.isEmpty()}"
+                                          id="groupMovimentosNaoEncontrados">
+                                <div style="padding: 2px;" align="left" class="#{mov.styleBackGround}">
+                                    <h:outputText
+                                        value="Nenhum movimento correspondente encontrado com os filtros utilizados."
+                                        styleClass="#{mov.styleText}"/>
+                                    <h:panelGroup rendered="#{mov.unidadeOrganizacional ne null}">
+                                        <br/>
+                                        <div align="center">
+                                            <h:outputText
+                                                value="Informações Adicionais da Futura Pendência"
+                                                styleClass="#{mov.styleText}"/>
+                                            <br/>
+                                            <h:outputText
+                                                value="Unidade Orçamentária: #{mov.unidadeOrganizacional}"
+                                                styleClass="#{mov.styleText}"/>
+                                            <br/>
+                                            <h:outputText
+                                                value="Conta Financeira: #{mov.subConta}"
+                                                styleClass="#{mov.styleText}"/>
+                                            <br/>
+                                            <h:outputText
+                                                value="Tipo: #{mov.tipoConciliacao}"
+                                                styleClass="#{mov.styleText}"/>
+                                            <br/>
+                                            <h:outputText
+                                                value="Operação: #{mov.tipoOperacaoConcilicaoBancaria ne null ? mov.tipoOperacaoConcilicaoBancaria.descricao : ''}"
+                                                styleClass="#{mov.styleText}"/>
+                                        </div>
+                                    </h:panelGroup>
+                                </div>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{!mov.movimentosSistemas.isEmpty()}"
+                                          id="groupMovimentosEncontrados">
+                                <div style="padding: 2px;background-color: lightgrey;" align="center">
+                                    Movimentos Correspondentes
+                                </div>
+                                <table id="tabelaMovimentosSistemas" class="table table-condensed">
+                                    <tr>
+                                        <th class="alinhamentoCentralizado" style="width: 3%"></th>
+                                        <th class="alinhamentoEsquerda">Tipo</th>
+                                        <th class="alinhamentoCentralizado" style="width: 8%">Data Mov.</th>
+                                        <th class="alinhamentoCentralizado" style="width: 8%">Data Conc.</th>
+                                        <th class="alinhamentoEsquerda" style="width: 7%">Número</th>
+                                        <th class="alinhamentoEsquerda">Conta Financeira</th>
+                                        <th class="alinhamentoEsquerda">Operação</th>
+                                        <th class="alinhamentoEsquerda">Situação</th>
+                                        <th class="alinhamentoDireita">Valor</th>
+                                    </tr>
+                                    <ui:repeat
+                                        value="#{mov.movimentosSistemas}"
+                                        var="movSistema">
+                                        <tr>
+                                            <td class="alinhamentoCentralizado #{movSistema.styleBackGround}"
+                                                style="width: 3%">
+                                                <p:commandButton id="btnRemoverMovimentoArquivoSistema"
+                                                                 update=":Formulario:tabelaMovimentos :Formulario:legenda"
+                                                                 process="@this :Formulario:tabelaMovimentos"
+                                                                 styleClass="icone-25"
+                                                                 actionListener="#{conciliacaoArquivoControlador.removerMovimentoArquivoSistema(mov, movSistema)}"
+                                                                 rendered="#{movSistema.dataConciliacao ne null}"
+                                                                 disabled="#{conciliacaoArquivoControlador.arquivoConciliado}"
+                                                                 title="Clique para remover este registro."
+                                                                 icon="ui-icon-trash"
+                                                                 onstart="aguarde.show()"
+                                                                 oncomplete="aguarde.hide()"
+                                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"/>
+
+                                                <h:selectBooleanCheckbox
+                                                    styleClass="botao-transparente trintaAltura"
+                                                    rendered="#{movSistema.dataConciliacao eq null}"
+                                                    disabled="#{conciliacaoArquivoControlador.arquivoConciliado}"
+                                                    value="#{movSistema.correspondente}">
+                                                    <p:ajax event="valueChange" process="@this"
+                                                            update=":Formulario:tabelaMovimentos:groupMovimentosEncontrados"
+                                                            onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                                            listener="#{movSistema.atualizarStyles()}"/>
+                                                </h:selectBooleanCheckbox>
+                                            </td>
+                                            <td class="alinhamentoEsquerda #{movSistema.styleBackGround}">
+                                                <a href="#{request.contextPath}#{movSistema.tipoMovimento.caminhoPadrao}ver/#{movSistema.movimentoId}/"
+                                                   target="_blank"
+                                                   style="font-weight: bold !important; color: #275971;">
+                                                    <h:outputText styleClass="#{movSistema.styleText}"
+                                                                  value="#{movSistema.tipoMovimento.descricao}"/>
+                                                </a>
+                                            </td>
+                                            <td class="alinhamentoCentralizado #{movSistema.styleBackGround}"
+                                                style="width: 8%">
+                                                <h:outputText value="#{movSistema.dataMovimento}"
+                                                              styleClass="#{movSistema.styleText}">
+                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td class="alinhamentoCentralizado #{movSistema.styleBackGround}"
+                                                style="width: 8%">
+                                                <h:outputText value="#{movSistema.dataConciliacao}"
+                                                              styleClass="#{movSistema.styleText}">
+                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td class="alinhamentoCentralizado #{movSistema.styleBackGround}"
+                                                style="width: 7%">
+                                                <h:outputText value="#{movSistema.numeroENumeroOBN600}"
+                                                              escape="false"
+                                                              styleClass="#{movSistema.styleText}"/>
+                                            </td>
+                                            <td class="alinhamentoEsquerda #{movSistema.styleBackGround}">
+                                                <h:outputText value="#{movSistema.subConta}"
+                                                              styleClass="#{movSistema.styleText}"/>
+                                            </td>
+                                            <td class="alinhamentoEsquerda #{movSistema.styleBackGround}">
+                                                <h:outputText
+                                                    styleClass="#{movSistema.styleText}"
+                                                    value="#{movSistema.tipoOperacaoConciliacao ne null ? movSistema.tipoOperacaoConciliacao.descricao : ''}"/>
+                                            </td>
+                                            <td class="alinhamentoEsquerda #{movSistema.styleBackGround}">
+                                                <h:outputText
+                                                    styleClass="#{movSistema.styleText}"
+                                                    value="#{movSistema.situacao ne null ? movSistema.situacao.descricao : ''}"/>
+                                            </td>
+                                            <td class="alinhamentoDireita #{movSistema.styleBackGround}">
+                                                <h:outputText value="#{movSistema.valor}"
+                                                              styleClass="#{movSistema.styleText}">
+                                                    <f:convertNumber type="currency"/>
+                                                </h:outputText>
+                                            </td>
+                                        </tr>
+                                    </ui:repeat>
+                                </table>
+                            </h:panelGroup>
+                        </div>
+                    </p:rowExpansion>
+                </p:dataTable>
+            </p:panel>
+            <fc:rodapePretty controlador="#{conciliacaoArquivoControlador}"/>
+
+            <p:commandButton value="Pêndencias"
+                             icon="ui-icon-refresh"
+                             disabled="#{conciliacaoArquivoControlador.arquivoConciliado}"
+                             style="height: 30px"
+                             styleClass="mtop10 mlef05"
+                             update="@this :formPendencias"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             process="@this"
+                             onclick="dialogPendencias.show()"
+                             actionListener="#{conciliacaoArquivoControlador.buscarFuturasPendencias()}"
+                             title="Clique para poder informar os campos necessários para poder gerar as pendências."/>
+
+            <p:commandButton id="btnFinalizar"
+                             value="Conciliar"
+                             disabled="#{conciliacaoArquivoControlador.arquivoConciliado}"
+                             rendered="#{conciliacaoArquivoControlador.operacaoEditar}"
+                             actionListener="#{conciliacaoArquivoControlador.conciliar()}"
+                             icon="ui-icon-calendar-plus"
+                             title="Clique para concilar."
+                             style="height: 30px"
+                             styleClass="mtop10 mlef05"
+                             update="@this" process="@this"/>
+        </h:form>
+
+        <p:dialog widgetVar="dialogProgressBar"
+                  width="800"
+                  closable="false"
+                  showHeader="false"
+                  modal="true"
+                  hideEffect="clip"
+                  resizable="false"
+                  position="center"
+                  dynamic="true">
+            <h:form id="formDialogProgressBar">
+                <div class="alert alert-success centralizado mtop05">
+                    <strong>Aguarde, </strong> o processo de conciliação está sendo executado...
+                </div>
+
+                <p:panel style="text-align: center; width: 100%; border: 0px;"
+                         visible="#{conciliacaoArquivoControlador.barraProgressoItens.calculando}"
+                         id="panelBarra">
+
+                    <h:outputText
+                        value="#{conciliacaoArquivoControlador.barraProgressoItens.mensagens}"
+                        escape="false"/>
+
+                    <br/>
+                    <h:outputText
+                        value="Total: #{conciliacaoArquivoControlador.barraProgressoItens.total}"
+                        styleClass="negrito"/>
+                    <br/>
+                    <h:outputText
+                        value="Processados: #{conciliacaoArquivoControlador.barraProgressoItens.processados}"
+                        styleClass="negrito"/>
+
+
+                    <div class="progress progress-striped active" id="barraProgresso">
+                        <div class="bar"
+                             style="width: #{conciliacaoArquivoControlador.barraProgressoItens.porcentagemDoCalculo}%;">
+                            <h:outputText
+                                value="#{conciliacaoArquivoControlador.barraProgressoItens.porcentagemDoCalculo}"
+                                styleClass="negrito">
+                                <f:convertNumber type="number" maxFractionDigits="2"/>
+                            </h:outputText>
+                            <h:outputText value="%"/>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <h:outputText
+                        value="Tempo Decorrido: #{conciliacaoArquivoControlador.barraProgressoItens.tempoDecorrido}"
+                        styleClass="negrito"/>
+
+                    <br/>
+                    <h:outputText
+                        value="Tempo Estimado: #{conciliacaoArquivoControlador.barraProgressoItens.tempoEstimado}"
+                        styleClass="negrito"/>
+
+                    <br/>
+                    <p:commandButton icon="ui-icon-cancel"
+                                     styleClass="operacao prioritario"
+                                     value="Abortar"
+                                     update="@this"
+                                     process="@this"
+                                     immediate="true"
+                                     rendered="#{conciliacaoArquivoControlador.barraProgressoItens.calculando}"
+                                     actionListener="#{conciliacaoArquivoControlador.abortarConciliacao()}"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogPendencias"
+                  modal="true"
+                  resizable="false"
+                  closable="false"
+                  draggable="false"
+                  showHeader="false"
+                  onShow="redimensionarLadosDialog(this.id);redimensionarAlturaDialog(this.id)"
+                  width="1000"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formPendencias">
+                <p:panel header="Pendências">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Unidade Orçamentária: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        size="70"
+                                        title="Informe a unidade orçamentária."
+                                        value="#{conciliacaoArquivoControlador.hierarquiaOrganizacional}"
+                                        completeMethod="#{conciliacaoArquivoControlador.completarHierarquiasOrcamentarias}"
+                                        maxResults="10"
+                                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                        var="uo"
+                                        itemValue="#{uo.id}"
+                                        itemLabel="#{uo}"/>
+
+                        <fc:outputLabelObrigatorio value="Conta Financeira: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        size="70"
+                                        title="Informe a conta financeira."
+                                        value="#{conciliacaoArquivoControlador.subConta}"
+                                        completeMethod="#{conciliacaoArquivoControlador.completarContasFinanceiras}"
+                                        maxResults="10"
+                                        converter="#{contaFinanceiraControlador.converterGenerico}"
+                                        var="sc"
+                                        itemValue="#{sc.id}"
+                                        itemLabel="#{sc}"/>
+
+                        <fc:outputLabelObrigatorio value="Tipo de Conciliação: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        size="70"
+                                        title="Informe o tipo de conciliação."
+                                        value="#{conciliacaoArquivoControlador.tipoConciliacao}"
+                                        completeMethod="#{conciliacaoArquivoControlador.completarTiposConciliacoes}"
+                                        maxResults="10"
+                                        converter="#{tipoConciliacaoControlador.converterGenerico}"
+                                        var="tc"
+                                        itemValue="#{tc.id}"
+                                        itemLabel="#{tc}"/>
+
+                        <fc:outputLabelObrigatorio value="Operação da Conciliação: "/>
+                        <h:selectOneMenu id="operacao"
+                                         value="#{conciliacaoArquivoControlador.tipoOperacaoConcilicaoBancaria}">
+                            <f:selectItems value="#{conciliacaoArquivoControlador.operacoesConciliacoes}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Mostrar Somente Não Informadas?"/>
+                        <h:selectBooleanCheckbox
+                            styleClass="botao-transparente trintaAltura"
+                            value="#{conciliacaoArquivoControlador.mostrarSomenteNaoInformadas}">
+                            <p:ajax event="valueChange" process="@this"
+                                    update="tabelaFuturasPendencias"
+                                    onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                    listener="#{conciliacaoArquivoControlador.buscarFuturasPendencias()}"/>
+                        </h:selectBooleanCheckbox>
+                    </h:panelGrid>
+
+                    <p:dataTable id="tabelaFuturasPendencias" paginator="true"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{conciliacaoArquivoControlador.futurasPendencias}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>MOVIMENTOS DO ARQUIVO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="mov">
+                        <p:column style="width: 5%;text-align: center">
+                            <f:facet name="header">
+                                <p:column style="width: 5%;" styleClass="alinhamentoCentralizado">
+                                    <h:selectBooleanCheckbox
+                                        styleClass="botao-transparente trintaAltura"
+                                        value="#{conciliacaoArquivoControlador.selecionarTodos}">
+                                        <p:ajax event="valueChange" process="@this"
+                                                update="tabelaFuturasPendencias"
+                                                onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                                listener="#{conciliacaoArquivoControlador.selecionarOuDesselecionarTodasFuturasPendencias()}"/>
+                                    </h:selectBooleanCheckbox>
+                                </p:column>
+                            </f:facet>
+                            <h:selectBooleanCheckbox value="#{mov.selecionado}"
+                                                     styleClass="botao-transparente trintaAltura">
+                            </h:selectBooleanCheckbox>
+                        </p:column>
+                        <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{mov.tipo ne null ? mov.tipo.descricao : ''}"/>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{mov.dataMovimento}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Identificador" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{mov.identificador}"/>
+                        </p:column>
+                        <p:column headerText="Número Documento" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{mov.numeroDocumento}"/>
+                        </p:column>
+                        <p:column headerText="Histórico" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{mov.historico}"/>
+                        </p:column>
+                        <p:column headerText="Valor" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{mov.valor}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+                <div style="text-align: center">
+                    <p:commandButton value="Atualizar"
+                                     icon="ui-icon-refresh"
+                                     process="@this :formPendencias"
+                                     update="@none"
+                                     styleClass="padrao mtop10"
+                                     actionListener="#{conciliacaoArquivoControlador.atualizarFuturasPendencias()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     process="@this"
+                                     styleClass="padrao mlef05 mtop10"
+                                     actionListener="#{conciliacaoArquivoControlador.limparVariaveisDialogPendencias()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="dialogPendencias.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogPendenciaUnica"
+                  modal="true"
+                  resizable="false"
+                  closable="false"
+                  draggable="false"
+                  showHeader="false"
+                  onShow="redimensionarLadosDialog(this.id);"
+                  width="1000"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formPendenciaUnica">
+                <p:panel header="Pendências">
+                    <h:panelGrid columns="2">
+                        <fc:outputLabelObrigatorio value="Unidade Orçamentária: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        size="70"
+                                        title="Informe a unidade orçamentária."
+                                        value="#{conciliacaoArquivoControlador.hierarquiaOrganizacional}"
+                                        completeMethod="#{conciliacaoArquivoControlador.completarHierarquiasOrcamentarias}"
+                                        maxResults="10"
+                                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                        var="uo"
+                                        itemValue="#{uo.id}"
+                                        itemLabel="#{uo}"/>
+
+                        <fc:outputLabelObrigatorio value="Conta Financeira: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        size="70"
+                                        title="Informe a conta financeira."
+                                        value="#{conciliacaoArquivoControlador.subConta}"
+                                        completeMethod="#{conciliacaoArquivoControlador.completarContasFinanceiras}"
+                                        maxResults="10"
+                                        converter="#{contaFinanceiraControlador.converterGenerico}"
+                                        var="sc"
+                                        itemValue="#{sc.id}"
+                                        itemLabel="#{sc}"/>
+
+                        <fc:outputLabelObrigatorio value="Tipo de Conciliação: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        size="70"
+                                        title="Informe o tipo de conciliação."
+                                        value="#{conciliacaoArquivoControlador.tipoConciliacao}"
+                                        completeMethod="#{conciliacaoArquivoControlador.completarTiposConciliacoes}"
+                                        maxResults="10"
+                                        converter="#{tipoConciliacaoControlador.converterGenerico}"
+                                        var="tc"
+                                        itemValue="#{tc.id}"
+                                        itemLabel="#{tc}"/>
+
+                        <fc:outputLabelObrigatorio value="Operação da Conciliação: "/>
+                        <h:selectOneMenu id="operacaoUnica"
+                                         value="#{conciliacaoArquivoControlador.tipoOperacaoConcilicaoBancaria}">
+                            <f:selectItems value="#{conciliacaoArquivoControlador.operacoesConciliacoes}"/>
+                        </h:selectOneMenu>
+                    </h:panelGrid>
+                </p:panel>
+                <div style="text-align: center">
+                    <p:commandButton value="Atualizar"
+                                     icon="ui-icon-refresh"
+                                     process="@this :formPendenciaUnica"
+                                     update="@none"
+                                     styleClass="padrao mtop10"
+                                     actionListener="#{conciliacaoArquivoControlador.atualizarMovimentoArquivo()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     process="@this"
+                                     styleClass="padrao mlef05 mtop10"
+                                     actionListener="#{conciliacaoArquivoControlador.limparMovimentoArquivo()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="dialogPendenciaUnica.hide(); aguarde.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

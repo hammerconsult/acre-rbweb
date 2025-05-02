@@ -1,0 +1,550 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            window.onload = function () {
+                buscarBensAoEditar();
+            }
+
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            function acompanharSalvar() {
+                timer = setInterval(function () {
+                    rcAtualizaCompFutures();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timer);
+                rcFinalizaFutureSalvar();
+            }
+
+            var timerPesquisa;
+            function iniciarPesquisa() {
+                $("#dlgPesquisa").modal({backdrop: 'static', keyboard: false});
+                $("#dlgPesquisa").modal('show');
+                timerPesquisa = setInterval(function () {
+                    consultarAndamentoPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                $("#dlgPesquisa").modal('hide');
+                aguarde.show();
+                finalizarPesquisa();
+            }
+        </script>
+
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand
+                id="btnBuscarItens"
+                name="buscarBensAoEditar"
+                actionListener="#{solicitacaoBaixaPatrimonialControlador.buscarBensAoEditar()}"/>
+
+            <p:remoteCommand
+                update=":FormularioPesquisa"
+                actionListener="#{solicitacaoBaixaPatrimonialControlador.acompanharPesquisa}"
+                name="consultarAndamentoPesquisa"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                actionListener="#{solicitacaoBaixaPatrimonialControlador.finalizarPesquisa}"
+                name="finalizarPesquisa"/>
+
+            <p:remoteCommand
+                oncomplete="aguarde.hide()"
+                update=":FormularioSalvar"
+                actionListener="#{solicitacaoBaixaPatrimonialControlador.finalizarProcesssoSalvar}"
+                name="rcFinalizaFutureSalvar"/>
+
+            <p:remoteCommand
+                update=":FormularioSalvar"
+                actionListener="#{solicitacaoBaixaPatrimonialControlador.consultarFutureSalvar}"
+                name="rcAtualizaCompFutures"/>
+
+            <fc:cabecalhoPretty controlador="#{solicitacaoBaixaPatrimonialControlador}"
+                                origem="#{solicitacaoBaixaPatrimonialControlador.caminhoPadrao}listar/"/>
+
+            <p:panel id="panelPrincipal" header="Solicitação Baixa de Bem Imóvel">
+                <p:tabView id="tabViewPrincipal" styleClass="mtop05">
+                    <p:tab id="tabDadosSolicitacao" title="Dados da Solicitação">
+
+                        <p:outputPanel id="panelGeral">
+                            <h:panelGrid columns="2" id="gridDadosSolicitacao" cellspacing="2" cellpadding="2">
+                                <h:outputLabel value="Código:"/>
+                                <h:outputLabel
+                                    value="${solicitacaoBaixaPatrimonialControlador.selecionado.codigo == null ? 'Código gerado ao concluir' : solicitacaoBaixaPatrimonialControlador.selecionado.codigo}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Data:"/>
+                                <h:outputText
+                                    value="#{solicitacaoBaixaPatrimonialControlador.selecionado.dataSolicitacao}"
+                                    styleClass="negrito">
+                                    <f:convertDateTime locale="pt_BR" pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+
+                                <h:outputText value="Situação:"/>
+                                <h:outputText
+                                    value="${solicitacaoBaixaPatrimonialControlador.selecionado.situacao.descricao}"
+                                    styleClass="negrito"/>
+
+                                <h:outputText value="Usuário:"/>
+                                <h:outputText
+                                    value="#{solicitacaoBaixaPatrimonialControlador.selecionado.usuarioSistema.pessoaFisica.nome}"
+                                    styleClass="negrito"/>
+
+                                <fc:outputLabelObrigatorio value="Tipo de Baixa: "/>
+                                <h:selectOneMenu id="tipobaixa"
+                                                 disabled="#{solicitacaoBaixaPatrimonialControlador.desabilitarTipoBaixa()}"
+                                                 value="#{solicitacaoBaixaPatrimonialControlador.selecionado.tipoBaixa}">
+                                    <f:selectItems value="#{solicitacaoBaixaPatrimonialControlador.tiposDeBaixaImovel}"/>
+                                    <p:ajax event="change"
+                                            process="@this"
+                                            update=":Formulario:tabViewPrincipal:gridDadosSolicitacao
+                                                    :Formulario:tabViewPrincipal:outPutPanelBens
+                                                    :Formulario:tabViewPrincipal:panel-anexos"
+                                            listener="#{solicitacaoBaixaPatrimonialControlador.processaSelecaoTipoBaixa()}"
+                                            oncomplete="aguarde.hide()"
+                                            onstart="aguarde.show()"/>
+                                </h:selectOneMenu>
+
+                                <fc:outputLabelObrigatorio for="acUnidadeOrganizacionalPesquisa"
+                                                           rendered="#{!solicitacaoBaixaPatrimonialControlador.selecionado.isTipoBaixaAlienacao()}"
+                                                           value="Unidade Administrativa:"/>
+                                <p:autoComplete queryDelay="1000" id="acUnidadeOrganizacionalPesquisa"
+                                                rendered="#{!solicitacaoBaixaPatrimonialControlador.selecionado.isTipoBaixaAlienacao()}"
+                                                title="Informe a Unidade Administrativa"
+                                                value="#{solicitacaoBaixaPatrimonialControlador.selecionado.hierarquiaAdministrativa}"
+                                                completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalAdministrativaOndeUsuarioLogadoEhGestorPatrimonio}"
+                                                var="unidade"
+                                                disabled="#{!empty solicitacaoBaixaPatrimonialControlador.bensSelecionados}"
+                                                size="70"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 700px"
+                                                maxResults="30"
+                                                itemLabel="#{unidade}"
+                                                itemValue="#{unidade.id}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                    <p:ajax process="@this"
+                                            event="itemSelect"
+                                            update=":Formulario:tabViewPrincipal:outPutPanelBens :Formulario:tabViewPrincipal:panel-anexos"
+                                            listener="#{solicitacaoBaixaPatrimonialControlador.processaSelecaoDeHierarquia()}"
+                                            onstart="aguarde.show();"
+                                            oncomplete="aguarde.hide();"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio for="alienacao"
+                                                           rendered="#{solicitacaoBaixaPatrimonialControlador.selecionado.isTipoBaixaAlienacao()}"
+                                                           value="Efetivação da Alienação:"/>
+                                <p:autoComplete queryDelay="1000"
+                                                id="alienacao"
+                                                rendered="#{solicitacaoBaixaPatrimonialControlador.selecionado.isTipoBaixaAlienacao()}"
+                                                title="Informe o leilão da alienação"
+                                                value="#{solicitacaoBaixaPatrimonialControlador.selecionado.leilaoAlienacao}"
+                                                completeMethod="#{solicitacaoBaixaPatrimonialControlador.completarLeilaoAlienacaoParaBaixar}"
+                                                var="leilao"
+                                                size="70"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 700px"
+                                                maxResults="50"
+                                                itemValue="#{leilao}"
+                                                itemLabel="#{leilao}"
+                                                converter="#{leilaoAlienacaoControlador.converterGenerico}">
+                                    <p:ajax process="@this"
+                                            event="itemSelect"
+                                            listener="#{solicitacaoBaixaPatrimonialControlador.processarSelecaoLeilaoAlienacao()}"
+                                            oncomplete="aguarde.hide()"
+                                            onstart="aguarde.show()"/>
+                                </p:autoComplete>
+
+                                <fc:outputLabelObrigatorio value="Motivo:"/>
+                                <h:panelGrid columns="2"
+                                             cellpadding="0"
+                                             cellspacing="0">
+                                    <p:inputTextarea title="Digite o motivo da solicitação de baixa !"
+                                                     value="#{solicitacaoBaixaPatrimonialControlador.selecionado.motivo}"
+                                                     id="motivo"
+                                                     cols="70"
+                                                     maxlength="255"
+                                                     autoResize="true" counterTemplate="{0} Caracteres Restantes."
+                                                     counter="counter-motivo"/>
+                                    <h:outputText id="counter-motivo"
+                                                  style="color: #497692"
+                                                  styleClass="mlef05"/>
+                                </h:panelGrid>
+                            </h:panelGrid>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab id="tabBens" title="Pesquisar Bens">
+                        <p:outputPanel id="outPutPanelBens">
+                            <p:panel style="border: 0;"
+                                     rendered="#{!solicitacaoBaixaPatrimonialControlador.selecionado.isTipoBaixaAlienacao()}">
+
+                                <h:panelGrid columns="2">
+                                    <h:outputText value="Unidade Administrativa:"/>
+                                    <h:outputText id="unidade-administrativa"
+                                                  value="#{solicitacaoBaixaPatrimonialControlador.filtroPesquisaBem.hierarquiaAdministrativa}"
+                                                  styleClass="negrito"/>
+
+                                    <h:outputLabel value="Unidade Orçamentária:" for="orcamentariaAll"/>
+                                    <p:selectOneMenu
+                                        value="#{solicitacaoBaixaPatrimonialControlador.filtroPesquisaBem.hierarquiaOrcamentaria}"
+                                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                        id="orcamentariaAll">
+                                        <p:ajax event="valueChange"
+                                                process="@this"
+                                                onstart="aguarde.show()"
+                                                oncomplete="aguarde.hide()"/>
+                                        <f:selectItems
+                                            value="#{solicitacaoBaixaPatrimonialControlador.buscarHierarquiaOrganizacionalOrcamentaria()}"/>
+                                    </p:selectOneMenu>
+
+                                    <h:outputText value="Grupo Patrimonial:"/>
+                                    <p:autoComplete queryDelay="1000" widgetVar="grupo"
+                                                    id="grupoBem"
+                                                    title="Digite a descrição"
+                                                    value="#{solicitacaoBaixaPatrimonialControlador.filtroPesquisaBem.grupoBem}"
+                                                    completeMethod="#{grupoBemControlador.completaGrupoBem}"
+                                                    var="grupo"
+                                                    process="@this"
+                                                    onclick="this.select()"
+                                                    size="70"
+                                                    dropdown="true"
+                                                    panelStyle="max-height: 250px;width: 700px"
+                                                    itemLabel="#{grupo}"
+                                                    itemValue="#{grupo.id}"
+                                                    forceSelection="true"
+                                                    converter="#{grupoBemControlador.converterGenerico}"/>
+
+                                    <h:outputText value="Bem:"/>
+                                    <ad:auto-complete-bens
+                                        bem="#{solicitacaoBaixaPatrimonialControlador.filtroPesquisaBem.bem}"
+                                        visualizarCampos="true"
+                                        id="acBem"
+                                        tipoBem="IMOVEIS"
+                                        estadoDoBemDiferenteDe="BAIXADO"
+                                        unidadeOrganizacional="#{solicitacaoBaixaPatrimonialControlador.unidadeAdministrativa}"/>
+                                </h:panelGrid>
+
+                                <p:commandButton value="Pesquisar"
+                                                 title="Clique para pesquisar"
+                                                 icon="ui-icon-search"
+                                                 id="botaoPesquisar"
+                                                 actionListener="#{solicitacaoBaixaPatrimonialControlador.pesquisaBens()}"
+                                                 process=":Formulario:tabViewPrincipal:outPutPanelBens :Formulario:tabViewPrincipal:panelGeral"
+                                                 styleClass="prioritario mrig05 pesquisar mtop05"
+                                                 style="width: 150px"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"/>
+
+                                <p:dataTable id="tableencontrados"
+                                             value="#{solicitacaoBaixaPatrimonialControlador.bensDisponiveis}"
+                                             var="bem"
+                                             styleClass="mtop02"
+                                             rowIndexVar="rowIx"
+                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             rows="10"
+                                             rowsPerPageTemplate="10,50,100,200,300"
+                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             paginator="true"
+                                             emptyMessage="Não foram localizados registros para serem apresentados.">
+                                    <p:column style="width:16px" headerText="Detalhes">
+                                        <p:rowToggler/>
+                                    </p:column>
+
+                                    <p:column style="width: 5%; text-align: center;">
+                                        <f:facet name="header">
+                                            <p:commandButton icon="ui-icon-check"
+                                                             styleClass="vinteLarguraVinteAltura"
+                                                             onstart="aguarde.show();"
+                                                             oncomplete="aguarde.hide();"
+                                                             process="tableencontrados"
+                                                             update="tableencontrados :Formulario:tabViewPrincipal:panelGeral"
+                                                             rendered="#{!solicitacaoBaixaPatrimonialControlador.mostrarBotaoSelecionarTodos()}"
+                                                             actionListener="#{solicitacaoBaixaPatrimonialControlador.desmarcarTodos()}"/>
+                                            <p:commandButton
+                                                styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                value=""
+                                                process="tableencontrados"
+                                                update="tableencontrados :Formulario:tabViewPrincipal:panelGeral"
+                                                onstart="aguarde.show();"
+                                                oncomplete="aguarde.hide();"
+                                                rendered="#{solicitacaoBaixaPatrimonialControlador.mostrarBotaoSelecionarTodos()}"
+                                                actionListener="#{solicitacaoBaixaPatrimonialControlador.selecionarTodos()}"/>
+                                        </f:facet>
+
+                                        <p:commandButton icon="ui-icon-check"
+                                                         styleClass="vinteLarguraVinteAltura"
+                                                         process="tableencontrados"
+                                                         update="tableencontrados :Formulario:tabViewPrincipal:panelGeral"
+                                                         onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         rendered="#{solicitacaoBaixaPatrimonialControlador.itemSelecionado(bem)}"
+                                                         actionListener="#{solicitacaoBaixaPatrimonialControlador.desmarcarItem(bem)}"/>
+
+                                        <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                         value=""
+                                                         process="tableencontrados @this"
+                                                         update="tableencontrados :Formulario:tabViewPrincipal:panelGeral"
+                                                         onstart="aguarde.show();"
+                                                         oncomplete="aguarde.hide();"
+                                                         rendered="#{!solicitacaoBaixaPatrimonialControlador.itemSelecionado(bem)}"
+                                                         actionListener="#{solicitacaoBaixaPatrimonialControlador.selecionarItem(bem)}"/>
+                                    </p:column>
+
+
+                                    <p:column headerText="Registro Patrimonial" style="width: 5%; text-align: left">
+                                        <h:outputText value="#{bem.identificacao}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição" style="width: 30%; text-align: left">
+                                        <h:outputText value="#{bem.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo Patrimonial" style="width: 30%; text-align: left">
+                                        <h:outputText value="#{bem.ultimoEstado.grupoBem}"/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Orçamentária" style="width: 20%; text-align: left">
+                                        <p:column headerText="Unidade Orçamentária"
+                                                  style="width: 10%; text-align: left;">
+                                            <h:outputText value="#{bem.orcamentaria}"/>
+                                        </p:column>
+                                        <f:facet name="footer">
+                                            <div align="right">
+                                                Total Geral do(s) Bem(ns) Selecionado(s):
+                                            </div>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column headerText="Valor Original (R$)" style="width: 10%; text-align: right">
+                                        <div style="text-align: right;">
+                                            <h:outputText value="#{bem.valorOriginal}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                            <f:facet name="footer">
+                                                <h:outputText
+                                                    value="#{solicitacaoBaixaPatrimonialControlador.valorTotalOriginalBensSelecionados}">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </f:facet>
+                                        </div>
+                                    </p:column>
+                                    <p:column headerText="Valor Ajustes (R$)" style="width: 10%; text-align: right">
+                                        <div style="text-align: right;">
+                                            <h:outputText value="#{bem.valorDosAjustes}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                            <f:facet name="footer">
+                                                <h:outputText
+                                                    value="#{solicitacaoBaixaPatrimonialControlador.valorTotalAjusteBensSelecionados}">
+                                                    <f:convertNumber pattern="###,##0.00"/>
+                                                </h:outputText>
+                                            </f:facet>
+                                        </div>
+                                    </p:column>
+
+                                    <p:rowExpansion>
+                                        <ad:detalhes-estado-bem bem="#{bem.ultimoEstado}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:panel>
+
+                            <p:outputPanel id="op-alienacao">
+                                <p:dataTable id="tb-unidades"
+                                             value="#{solicitacaoBaixaPatrimonialControlador.bensPorUnidade}"
+                                             var="unidadeAdm"
+                                             rendered="#{solicitacaoBaixaPatrimonialControlador.selecionado.isTipoBaixaAlienacao()}"
+                                             emptyMessage="Nenhum unidade com bens para solicitação de baixa encontrado."
+                                             styleClass="mtop10"
+                                             rowIndexVar="rowIx"
+                                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             rowsPerPageTemplate="10,25,50"
+                                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Unidades&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                >
+                                    <p:column style="width:16px" headerText="Bens">
+                                        <p:rowToggler/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Administrativa" styleClass="alinhamentoEsquerda">
+                                        <h:outputText
+                                            value="#{unidadeAdm.hierarquiaAdministrativa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <p:dataTable id="tb-item-solicitacao"
+                                                     value="#{unidadeAdm.bensAgrupados}"
+                                                     var="item"
+                                                     emptyMessage="Nenhum bem encontrado."
+                                                     rowIndexVar="rowIx"
+                                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                     paginator="true"
+                                                     rows="10"
+                                                     rowsPerPageTemplate="10,25,50,100"
+                                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                        >
+                                            <p:column headerText="Bem" styleClass="alinhamentoEsquerda">
+                                                <h:outputText value="#{item.bem}"/>
+                                            </p:column>
+                                            <p:column headerText="Estado do Bem" styleClass="alinhamentoEsquerda">
+                                                <h:outputText
+                                                    value="#{item.estadoBem}"/>
+                                            </p:column>
+                                            <p:column headerText="Data de Aquisição"
+                                                      styleClass="alinhamentoCentralizado">
+                                                <h:outputText
+                                                    value="#{item.dataAquisicao}"
+                                                    converter="javax.faces.DateTime"/>
+                                            </p:column>
+                                            <p:column headerText="Unidade Orçamentária"
+                                                      styleClass="alinhamentoEsquerda">
+                                                <h:outputText
+                                                    value="#{item.unidadeOrcamentaria}"/>
+                                            </p:column>
+                                            <p:column headerText="Valor Original" styleClass="alinhamentoDireita">
+                                                <h:outputText value="#{item.valorOriginal}">
+                                                    <f:convertNumber pattern="R$ ###,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Valor Depreciação" styleClass="alinhamentoDireita">
+                                                <h:outputText
+                                                    value="#{item.valorDepreciacao}">
+                                                    <f:convertNumber pattern="R$ ###,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Valor Amortização" styleClass="alinhamentoDireita">
+                                                <h:outputText
+                                                    value="#{item.valorAmortizacao}">
+                                                    <f:convertNumber pattern="R$ ###,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Valor Exaustão" styleClass="alinhamentoDireita">
+                                                <h:outputText
+                                                    value="#{item.valorExaustao}">
+                                                    <f:convertNumber pattern="R$ ###,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Valor Ajuste de Perdas"
+                                                      styleClass="alinhamentoDireita">
+                                                <h:outputText
+                                                    value="#{item.valorAjustePerda}">
+                                                    <f:convertNumber pattern="R$ ###,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                            <p:column headerText="Valor Líquido" styleClass="alinhamentoDireita">
+                                                <h:outputText
+                                                    value="#{item.valorLiquido}">
+                                                    <f:convertNumber pattern="R$ ###,##0.00"/>
+                                                </h:outputText>
+                                            </p:column>
+                                        </p:dataTable>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </p:outputPanel>
+                    </p:tab>
+
+                    <p:tab id="tabAnexosSolicitacao" title="Anexos">
+                        <p:outputPanel id="panel-anexos">
+                            <fc:filesUploadWP selecionado="#{solicitacaoBaixaPatrimonialControlador.selecionado}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{solicitacaoBaixaPatrimonialControlador}"/>
+        </h:form>
+
+        <div id="dlgSalvar" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Salvando Solicitação de Baixa Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{solicitacaoBaixaPatrimonialControlador.assistenteMovimentacao.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{solicitacaoBaixaPatrimonialControlador.assistenteMovimentacao.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{solicitacaoBaixaPatrimonialControlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{solicitacaoBaixaPatrimonialControlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{solicitacaoBaixaPatrimonialControlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{solicitacaoBaixaPatrimonialControlador.assistenteMovimentacao.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{solicitacaoBaixaPatrimonialControlador.assistenteMovimentacao.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+
+        <div id="dlgPesquisa" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Consultando Bens</strong>
+                </div>
+            </div>
+            <h:form id="FormularioPesquisa">
+                <div class="modal-body" style="text-align: center">
+                    <div>
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/> <br/><br/>
+                        Pesquisando registros, essa ação pode levar alguns minutos, por favor aguarde.
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

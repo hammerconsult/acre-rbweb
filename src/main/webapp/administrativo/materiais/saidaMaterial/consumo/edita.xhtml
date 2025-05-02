@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="application/javascript">
+            function ajustaTamanhoDaTabelaFilha(coluna) {
+                coluna = coluna.replace(/\s/g, '');
+                var width = $(".travaTamanhoTabela" + coluna).width();
+                $(".copiaTamanhoTabela" + coluna).css("width", width);
+            }
+
+            setTimeout(function () {
+                organizarColunaTabelaItens()
+            }, 500);
+
+            function organizarColunaTabelaItens(){
+                ajustaTamanhoDaTabelaFilha('LocaldeEstoque');
+                ajustaTamanhoDaTabelaFilha('Lote');
+                ajustaTamanhoDaTabelaFilha('EstoqueAtual');
+                ajustaTamanhoDaTabelaFilha('Quantidade');
+                ajustaTamanhoDaTabelaFilha('VlUnit');
+                ajustaTamanhoDaTabelaFilha('VlTotal');
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty id="cpCabecalhoPretty"
+                                origem="#{saidaConsumoMaterialControlador.caminhoPadrao}listar/"
+                                controlador="#{saidaConsumoMaterialControlador}"/>
+
+            <p:remoteCommand name="limparDadosRequisicao"
+                             process="@this"
+                             update="label-unid-req input-unid-req btn-ver-requisicao :Formulario:panel-itens"
+                             actionListener="#{saidaConsumoMaterialControlador.limparDadosRequisicao()}"/>
+
+            <p:panel header="Saída de Material por Consumo" id="panelPrincipal">
+                <h:panelGrid columns="2" id="grid">
+                    <h:outputText value="Número:" for="numero"/>
+                    <h:outputText
+                        value="#{saidaConsumoMaterialControlador.selecionado.numero == null ? 'Gerado automaticamente ao concluir' : saidaConsumoMaterialControlador.selecionado.numero}"
+                        id="numero"
+                        styleClass="negrito"/>
+
+                    <h:outputText value="Data:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{saidaConsumoMaterialControlador.selecionado.dataSaida}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                                <h:outputText value="Situação:"/>
+                                <h:outputText styleClass="negrito"
+                                              value="#{saidaConsumoMaterialControlador.selecionado.situacao.descricao}"/>
+
+                    <h:outputText value="Responsável:"/>
+                    <h:outputText styleClass="negrito"
+                                  value="#{saidaConsumoMaterialControlador.selecionado.usuario.pessoaFisica.nome}"/>
+
+                    <fc:outputLabelObrigatorio value="Requisição:"/>
+                    <h:panelGroup>
+                        <p:autoComplete queryDelay="1000"
+                                        id="requisicao"
+                                        title="Informe a requisição."
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px;max-width: 800px"
+                                        maxResults="50"
+                                        value="#{saidaConsumoMaterialControlador.selecionado.requisicaoMaterial}"
+                                        completeMethod="#{saidaConsumoMaterialControlador.completarRequisicaoMaterial}"
+                                        var="req"
+                                        itemLabel="#{req.toStringAutoComplete()}"
+                                        itemValue="#{req.id}"
+                                        size="70"
+                                        disabled="#{saidaConsumoMaterialControlador.isOperacaoEditar()}"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparDadosRequisicao();}"
+                                        converter="#{requisicaoMaterialControlador.converterGenerico}">
+                            <p:ajax event="itemSelect"
+                                    process="@this"
+                                    listener="#{saidaConsumoMaterialControlador.buscarLocaisEstoqueArmazenamento}"
+                                    update=":Formulario:panel-itens label-unid-req input-unid-req btn-ver-requisicao"
+                                    onstart="aguarde.show();"
+                                    oncomplete="aguarde.hide();"/>
+                        </p:autoComplete>
+
+                        <p:outputPanel id="btn-ver-requisicao">
+                            <p:commandButton process="@none"
+                                             icon="ui-icon-search"
+                                             styleClass="mlef05"
+                                             disabled="#{saidaConsumoMaterialControlador.selecionado.requisicaoMaterial eq null}"
+                                             update="@none"
+                                             onclick="window.open('#{request.contextPath}/requisicao-de-material/ver/#{saidaConsumoMaterialControlador.selecionado.requisicaoMaterial.id}/','_blank');"/>
+                        </p:outputPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Retirado Por:"/>
+                    <p:inputText value="#{saidaConsumoMaterialControlador.selecionado.retiradoPor}"
+                                 size="70"
+                                 maxlength="250"/>
+
+                    <p:outputPanel id="label-unid-req">
+                        <h:outputText value="Unidade Requerente:"
+                                      rendered="#{saidaConsumoMaterialControlador.selecionado.requisicaoMaterial ne null}"/>
+                    </p:outputPanel>
+                    <p:outputPanel id="input-unid-req">
+                        <h:outputText
+                            styleClass="negrito"
+                            rendered="#{saidaConsumoMaterialControlador.selecionado.requisicaoMaterial ne null}"
+                            value="#{saidaConsumoMaterialControlador.hierarquiaAdministrativa}"/>
+                    </p:outputPanel>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Baixa:"/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="tipoConsumo"
+                                    title="Informe o tipo de baixa."
+                                    value="#{saidaConsumoMaterialControlador.selecionado.tipoBaixaBens}"
+                                    completeMethod="#{saidaConsumoMaterialControlador.completarTipoBaixaPorConsumo}"
+                                    converter="#{tipoBaixaBensControlador.converterGenerico}"
+                                    forceSelection="true"
+                                    dropdown="true"
+                                    panelStyle="max-height: 250px;max-width: 700px"
+                                    maxResults="50"
+                                    var="ti"
+                                    itemLabel="#{ti}"
+                                    itemValue="#{ti.id}"
+                                    size="70"/>
+
+                    <fc:outputLabelObrigatorio value="Histórico: "/>
+                    <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                        <p:inputTextarea id="historico"
+                                         value="#{saidaConsumoMaterialControlador.selecionado.historico}"
+                                         cols="70"
+                                         maxlength="255"
+                                         autoResize="true"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter"
+                                         title="Informe o histórico."/>
+                        <h:outputText id="counter" styleClass="mlef05 azul"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:outputPanel id="panel-itens">
+                    <div
+                        class="thumbnail mtop10"
+                        style="overflow: scroll; width: auto; max-height: 450px; display: #{saidaConsumoMaterialControlador.selecionado.requisicaoMaterial ne null ? 'block' : 'none'}">
+                        <div
+                            style="padding: 4px"
+                            align="center"
+                            class="alert alert-info negrito">
+                            ITENS SAÍDA MATERIAL
+                        </div>
+                        <table class="table table-condensed table-hover" style="width: 100%"
+                               id="tableOut">
+                            <tr>
+                                <th class="alinhamentoEsquerda" style="width: 20%">Material</th>
+                                <th class="alinhamentoEsquerda" style="width: 7%">Unid. Med.</th>
+                                <th class="alinhamentoDireita" style="width: 10%">Qtde a Atender</th>
+
+                                <th class="travaTamanhoTabelaLocaldeEstoque"
+                                    style="text-align: left; width: 25%">Local de Estoque
+                                </th>
+                                <th class="travaTamanhoTabelaLote"
+                                    style="text-align: left; width: 9%">Lote
+                                </th>
+                                <th class="travaTamanhoTabelaEstoqueAtual"
+                                    style="text-align: right; width: 10%">
+                                    Estoque Atual
+                                </th>
+                                <th class="travaTamanhoTabelaQuantidade"
+                                    style="text-align: right; width: 10%">
+                                    Quantidade
+                                </th>
+                                <th class="travaTamanhoTabelaVlUnit"
+                                    style="text-align: right; width: 20%">
+                                    Vl Unit
+
+                                    <fc:botaoInformacao id="btn-info-unitario"
+                                                        styleClassBotao="icone-16"
+                                                        detalhes="De acordo com a Lei 4320/64, Art. 106, III, o Sistema deverá contabilizar o material pelo preço médio ponderado, que é a forma de calcular o valor do estoque considerando o custo total dos itens armazenados e a quantidade de unidades disponíveis. Esse método não leva em conta a ordem cronológica de entrada ou saída dos materiais, mas sim a média dos preços de compra. A fórmula do preço médio ponderado é: &lt;br/>&lt;br/>
+
+                                                                                  Preço Médio Ponderado = Valor total do estoque / Quantidade de itens armazenados &lt;br/>&lt;br/>
+
+                                                                                  Por exemplo, suponha que esta entidade tenha comprado 100 canetas por R$ 1,00 cada e depois 50 canetas por R$ 1,20 cada. O valor total do estoque é R$ 160,00 (100 x 1,00 + 50 x 1,20) e a quantidade de itens armazenados é 150 canetas. Portanto, o preço médio ponderado de cada caneta é: &lt;br/>&lt;br/>
+
+                                                                                  &lt;b>Preço Médio Ponderado = 160 / 150 &lt;/b> &lt;br/>
+                                                                                   &lt;b>Preço Médio Ponderado = R$ 1,07  &lt;/b> &lt;br/>&lt;br/>
+
+                                                                                  Esse valor é o que será usado para contabilizar as saídas do estoque, independentemente da data de compra das canetas. O preço médio não refleti a realidade do mercado ou as variações de preços dos fornecedores"/>
+                                </th>
+                                <th class="travaTamanhoTabelaVlTotal"
+                                    style="text-align: right; width: 20%">Vl Total
+                                </th>
+                            </tr>
+
+                            <c:forEach items="#{saidaConsumoMaterialControlador.itensSaidaRequisicao}"
+                                       varStatus="indexOut"
+                                       var="itemAprov">
+                                <tr>
+                                    <td class="alinhamentoEsquerda">
+                                        <h:outputText
+                                            value="#{itemAprov.itemAvaliacaoMaterial.material.codigoDescricaoCurta}"
+                                            title="#{itemAprov.itemAvaliacaoMaterial.material.descricao}"/>
+                                    </td>
+                                    <td class="alinhamentoEsquerda">
+                                        <h:outputText
+                                            value="#{itemAprov.itemAvaliacaoMaterial.material.unidadeMedida.sigla}"/>
+                                    </td>
+                                    <td class="alinhamentoDireita">
+                                        <fc:output-mascara-unidade-medida
+                                            value="#{itemAprov.itemAvaliacaoMaterial.itemRequisicaoMaterial.quantidadeAAtender}"
+                                            tipoMascara="#{itemAprov.itemAvaliacaoMaterial.material.mascaraQuantidade}"/>
+                                    </td>
+
+                                    <td colspan="7">
+                                        <table style="width: 100%;" id="tableIn">
+                                            <c:forEach items="#{itemAprov.itensSaida}"
+                                                       varStatus="indexIn"
+                                                       var="itemSd">
+                                                <tr>
+                                                    <td class="copiaTamanhoTabelaLocaldeEstoque"
+                                                        style="text-align: left">
+                                                        <h:outputText value="#{itemSd.localEstoque.codigoDescricao}"
+                                                                      title="#{itemSd.localEstoque}"/>
+                                                        /
+                                                        <h:outputText value="#{itemSd.hierarquiaOrc.codigo}"
+                                                                      styleClass="azulnegrito"
+                                                                      title="#{itemSd.hierarquiaOrc.descricao}"/>
+                                                    </td>
+                                                    <td class="copiaTamanhoTabelaLote" style="text-align: left">
+                                                        <div class="label label-info"
+                                                             style="display: #{itemSd.loteMaterial ne null ? 'block' : 'none'}">
+                                                            <h:outputText value="#{itemSd.loteMaterial.identificacao}"/>
+                                                            <br/>
+                                                            <h:outputText value="#{itemSd.loteMaterial.validade}">
+                                                                <f:convertDateTime type="date"/>
+                                                            </h:outputText>
+                                                        </div>
+
+                                                        <h:outputText value="Não requer lote"
+                                                                      rendered="#{itemSd.loteMaterial eq null}"/>
+                                                    </td>
+                                                    <td class="copiaTamanhoTabelaEstoqueAtual"
+                                                        style="text-align: right">
+                                                        <fc:output-mascara-unidade-medida
+                                                            value="#{itemSd.quantidadeEstoqueAtual}"
+                                                            tipoMascara="#{itemSd.material.mascaraQuantidade}"/>
+                                                    </td>
+                                                    <td class="copiaTamanhoTabelaQuantidade" style="text-align: right">
+                                                        <p:outputPanel id="qtdeItem#{indexOut.index}#{indexIn.index}">
+                                                            <fc:input-mascara-unidade-medida
+                                                                size="10"
+                                                                process="@this"
+                                                                update=":Formulario:vlTotal#{indexOut.index}#{indexIn.index}
+                                                                    :Formulario:qtdeItem#{indexOut.index}#{indexIn.index}
+                                                                    :Formulario:vlUnitario#{indexOut.index}#{indexIn.index}
+                                                                    :Formulario:vlTotalGeral"
+                                                                value="#{itemSd.quantidade}"
+                                                                listener="#{saidaConsumoMaterialControlador.processarItemSaidaMaterial(itemSd, itemAprov)}"
+                                                                tipoMascara="#{itemSd.material.mascaraQuantidade}"/>
+                                                        </p:outputPanel>
+                                                    </td>
+                                                    <td class="copiaTamanhoTabelaVlUnit" style="text-align: right">
+                                                        <p:outputPanel id="vlUnitario#{indexOut.index}#{indexIn.index}">
+                                                            <h:outputText value="#{itemSd.valorUnitario}"
+                                                                          title="#{itemSd.valorUnitarioDecimal}">
+                                                                <f:convertNumber type="currency" pattern="#,##0.0000"/>
+                                                            </h:outputText>
+                                                        </p:outputPanel>
+                                                    </td>
+                                                    <td class="copiaTamanhoTabelaVlTotal" style="text-align: right">
+                                                        <p:outputPanel id="vlTotal#{indexOut.index}#{indexIn.index}">
+                                                            <h:outputText value="#{itemSd.valorTotal}">
+                                                                <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                                            </h:outputText>
+                                                        </p:outputPanel>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+
+                            <tr>
+                                <td colspan="9">
+                                    <div align="right">
+                                        <p:outputPanel id="vlTotalGeral"
+                                                       style="font-size: 14px"
+                                                       styleClass="label label-default">
+                                            Total Geral (R$)
+                                            <h:outputText
+                                                value="#{saidaConsumoMaterialControlador.valorTotalItens}">
+                                                <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </p:outputPanel>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </p:outputPanel>
+            </p:panel>
+
+            <p:commandButton value="Salvar"
+                             id="cbSalvar"
+                             styleClass="mtop10 mrig05 prioritario"
+                             style="height: 30px;"
+                             icon="ui-icon-disk"
+                             title="Clique para salvar o registro"
+                             actionListener="#{saidaConsumoMaterialControlador.salvarSemMovimentar()}"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"/>
+
+            <fc:rodapePretty id="rpRodapePretty"
+                             controlador="#{saidaConsumoMaterialControlador}"
+                             ocultarSalvar="true"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

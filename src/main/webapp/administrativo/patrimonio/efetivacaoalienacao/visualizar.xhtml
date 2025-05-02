@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            var timerSalvar;
+            function acompanharSalvar() {
+                timerSalvar = setInterval(function () {
+                    console.log("acompanharSalvar()")
+                    rcAcompanharSalvar();
+                }, 1000);
+            }
+
+            function finalizarSalvar() {
+                clearInterval(timerSalvar);
+                rcFinalizarSalvar();
+            }
+        </script>
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand
+                actionListener="#{leilaoAlienacaoControlador.consultarFutureSalvar()}"
+                update=":FormularioSalvar"
+                name="rcAcompanharSalvar"/>
+
+            <p:remoteCommand
+                actionListener="#{leilaoAlienacaoControlador.finalizarSalvar()}"
+                update=":FormularioSalvar"
+                name="rcFinalizarSalvar"/>
+
+            <fc:cabecalhoPretty controlador="#{leilaoAlienacaoControlador}"
+                                auditavel="true"
+                                origem="#{leilaoAlienacaoControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Detalhes da Efetivação da Alienação de Bem Móvel">
+                <p:tabView id="tabView" styleClass="mtop05">
+                    <p:tab title="Efetivação da Alienação">
+
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Código: "/>
+                            <h:outputLabel
+                                value="#{leilaoAlienacaoControlador.selecionado.codigo == null ? 'Gerado automaticamente ao concluir.' : leilaoAlienacaoControlador.selecionado.codigo}"
+                                styleClass="negrito"/>
+
+                            <h:outputText value="Data da Efetivação: "/>
+                            <h:outputText
+                                value="${leilaoAlienacaoControlador.selecionado.dataEfetivacao}"
+                                styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputLabel value="Situação: "/>
+                            <h:outputText
+                                value="#{leilaoAlienacaoControlador.selecionado.situacaoAlienacao.descricao}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Responsável: "/>
+                            <h:outputText
+                                value="#{leilaoAlienacaoControlador.selecionado.responsavel.pessoaFisica.nome}"
+                                styleClass="negrito"/>
+
+                            <h:outputText value="Descrição: "/>
+                            <h:outputText value="#{leilaoAlienacaoControlador.selecionado.descricao}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Avaliação de Alienação: "/>
+                            <h:outputText value="#{leilaoAlienacaoControlador.selecionado.avaliacaoAlienacao}"
+                                          styleClass="negrito"/>
+
+                        </h:panelGrid>
+
+                        <p:dataTable
+                            paginator="true"
+                            id="tabela-lotes"
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rowIndexVar="rowIx"
+                            styleClass="mtop10"
+                            value="#{leilaoAlienacaoControlador.selecionado.lotesLeilaoAlienacao}"
+                            rows="10"
+                            paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Lotes do Leilão&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                            emptyMessage="Não foram localizados registros para serem apresentados."
+                            var="loteLeilao">
+                            <p:column style="width:5%" headerText="Bens">
+                                <p:rowToggler/>
+                            </p:column>
+                            <p:column headerText="Lote" style="width: 70%; text-align: left;">
+                                <h:outputText value="#{loteLeilao.loteAvaliacaoAlienacao}"/>
+                            </p:column>
+                            <p:column headerText="Valor do Lote (R$)" style="width: 10%; text-align: right;">
+                                <h:outputText
+                                    value="#{leilaoAlienacaoControlador.buscarValorTotalAvaliadoDosItens(loteLeilao.loteAvaliacaoAlienacao)}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+
+                            <p:column headerText="Arrematado?" style="text-align: center; width: 10%;">
+                                <h:outputText value="#{loteLeilao.arrematado ? 'Sim' : 'Não'}"/>
+                            </p:column>
+
+                            <p:column headerText="Valor Arrematado (R$)" style="text-align: right; width: 15%;">
+                                <h:outputText
+                                    value="#{loteLeilao.valorArrematado}">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Documento(s)" style="text-align: center; width: 5%;">
+                                <p:commandButton icon="ui-icon-document"
+                                                 process="@this"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 onclick="dialogDocs.show()"
+                                                 update=":form-documento"
+                                                 actionListener="#{leilaoAlienacaoControlador.atribuirDetentorSelecionado(loteLeilao)}"/>
+                            </p:column>
+                            <p:rowExpansion>
+                                <p:dataTable
+                                    paginator="true"
+                                    id="tabela-bens"
+                                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    rowIndexVar="rowIx"
+                                    styleClass="mtop05"
+                                    emptyMessage="Não foram localizados registros para serem apresentados"
+                                    value="#{loteLeilao.itensAvaliados}"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Bens do Lotes&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                    rowsPerPageTemplate="10,25,50,100"
+                                    var="itemLote">
+                                    <p:column headerText="Registro Patrimonial">
+                                        <h:outputText value="#{itemLote.registroPatrimonial}"/>
+                                    </p:column>
+                                    <p:column headerText="Registro Anterior">
+                                        <h:outputText value="#{itemLote.registroAnterior}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição" style="width: 30%; text-align: left; ">
+                                        <h:outputText value="#{itemLote.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Orçamentária"
+                                              style="width: 35%; text-align: left;">
+                                        <h:outputText value="#{itemLote.unidadeOrcamentaria}"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Original (R$)"
+                                              styleClass="alinhamentoDireita"
+                                              style="text-align: left;">
+                                        <h:outputLabel value="#{itemLote.valorOriginal}"
+                                                       converter="moedaConverter"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Líquido (R$)"
+                                              styleClass="alinhamentoDireita"
+                                              style=" text-align: left;">
+                                        <h:outputLabel
+                                            value="#{itemLote.valorLiquido}"
+                                            converter="moedaConverter"/>
+                                    </p:column>
+                                    <p:column headerText="Valor Avaliado (R$)" style="text-align: right;">
+                                        <h:outputText value="#{itemLote.valorAvaliado}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                        <f:facet name="footer">
+                                            <h:outputText value="Valor Total do Lote"
+                                                          styleClass="alinhamentoDireita negrito"/>
+                                        </f:facet>
+                                    </p:column>
+                                    <p:column headerText="Valor Proporcional Arrematado (R$)"
+                                              style="text-align: right;">
+                                        <h:outputText value="#{itemLote.valorArrematado}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                        <f:facet name="footer">
+                                            <h:outputText
+                                                value="#{leilaoAlienacaoControlador.getValorTotalProporciaonalArrematado(loteLeilao)}">
+                                                <f:convertNumber pattern="###,##0.00"/>
+                                            </h:outputText>
+                                        </f:facet>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:rowExpansion>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Anexos">
+                        <fc:filesUploadWP selecionado="#{leilaoAlienacaoControlador.selecionado}"
+                                          isTelaEditar="false"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <fc:rodapeVisualizarPretty id="rodape"
+                                       mostrarExcluir="false"
+                                       controlador="#{leilaoAlienacaoControlador}"
+                                       mostrarEditar="#{leilaoAlienacaoControlador.selecionado.isEmElaboracao()}"/>
+
+            <p:commandButton value="Concluir Efetivação"
+                             icon="ui-icon-check"
+                             id="btnConcluir"
+                             onclick="if (!confirm('Tem certeza que deseja concluir esta efetivação?')) {return false; } else {aguarde.show();}"
+                             rendered="#{leilaoAlienacaoControlador.selecionado.isEmElaboracao()}"
+                             actionListener="#{leilaoAlienacaoControlador.concluirEfetivacao()}"
+                             styleClass="mtop10 mlef05 prioritario operacao"/>
+
+            <p:commandButton value="Imprimir Relatório"
+                             icon="ui-icon-print"
+                             style="height: 30px"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="mtop10 mlef05"
+                             actionListener="#{leilaoAlienacaoControlador.gerarRelatorioConferencia()}"
+                             title="Clique para gerar o Relatório"/>
+        </h:form>
+
+        <p:dialog showHeader="false"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  widgetVar="dialogDocs"
+                  closable="false">
+            <h:form id="form-documento">
+                <p:dataTable paginator="true"
+                             id="tabela-documentos"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop10"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{leilaoAlienacaoControlador.leilaoLote.detentDoctoFiscalLiquidacao.doctoLista}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Documentos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="detentor">
+
+                    <p:column headerText="Data do Documento" style="width:10%; text-align: center;">
+                        <h:outputText value="#{detentor.doctoFiscalLiquidacao.dataDocto}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Número" style="width:10%; text-align: center;">
+                        <h:outputText value="#{detentor.doctoFiscalLiquidacao.numero}"/>
+                    </p:column>
+                    <p:column headerText="Série" style="width:10%; text-align: center;">
+                        <h:outputText value="#{detentor.doctoFiscalLiquidacao.serie}"/>
+                    </p:column>
+                    <p:column headerText="UF" style="width:2%; text-align: center;">
+                        <h:outputText value="#{detentor.doctoFiscalLiquidacao.uf}"/>
+                    </p:column>
+                    <p:column headerText="Tipo do Documento" style="width:10%; text-align: center;">
+                        <h:outputText
+                            value="#{detentor.doctoFiscalLiquidacao.tipoDocumentoFiscal.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" style="width:10%; text-align: right;">
+                        <h:outputText value="#{detentor.doctoFiscalLiquidacao.total}"
+                                      converter="moneyConverter"/>
+                    </p:column>
+
+                    <p:columnGroup id="totaldocumento" type="footer"
+                                   rendered="#{leilaoAlienacaoControlador.leilaoLote.detentDoctoFiscalLiquidacao ne null}">
+                        <p:row>
+                            <p:column styleClass="azulnegrito" colspan="5"
+                                      style="text-align:right"
+                                      footerText="Valor Total"/>
+                            <p:column colspan="1" style="text-align: right">
+                                <f:facet name="footer">
+                                    <h:outputText
+                                        value="#{leilaoAlienacaoControlador.valorTotalDocumentoLote()}"
+                                        styleClass="azulnegrito"
+                                        converter="moneyConverter"/>
+                                </f:facet>
+                            </p:column>
+                        </p:row>
+                    </p:columnGroup>
+
+                </p:dataTable>
+
+                <div style="text-align: center;">
+                    <p:commandButton value="Fechar"
+                                     styleClass="mtop10 padrao"
+                                     icon="ui-icon-close"
+                                     process="@none"
+                                     onclick="dialogDocs.hide();"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <div id="dlgConcluir" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Concluindo Efetivação de Alienação de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioSalvar">
+
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{leilaoAlienacaoControlador.assistenteMovimentacao.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{leilaoAlienacaoControlador.assistenteMovimentacao.total == 0 ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05 mlef05"/>
+                    </div>
+
+                    <div
+                        style="#{leilaoAlienacaoControlador.assistenteMovimentacao.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{leilaoAlienacaoControlador.assistenteMovimentacao.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="display: block">
+                            <div class="bar"
+                                 style="width: #{leilaoAlienacaoControlador.assistenteMovimentacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+
+                    <br/>
+                    <div align="center"
+                         style="display: block">
+                        <h:outputText
+                            value="Tempo Decorrido #{leilaoAlienacaoControlador.assistenteMovimentacao.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{leilaoAlienacaoControlador.assistenteMovimentacao.tempoEstimado}"/>
+                    </div>
+                </div>
+
+            </h:form>
+        </div>
+
+    </ui:define>
+</ui:composition>
+</html>

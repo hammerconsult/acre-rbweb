@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      >
+    <ui:composition template="/corpo.xhtml">
+        <ui:define name="body">
+            <h:form id="Formulario">
+                <p:messages id="msgs" showDetail="true"/>
+                <p:panel header="Lançamento de ISS Estimado">
+                    <h:panelGrid columns="3">
+                        <h:outputText value="C.M.C.: "/>
+                        <p:autoComplete queryDelay="1000" value="#{calculaISSControlador.cadastroEconomico}"
+                                        completeMethod="#{calculaISSControlador.completaCadastroEconomicoIssEstimado}"
+                                        converter="#{calculaISSControlador.converterCE}"
+                                        var="ce"
+                                        itemValue="#{ce.id}"
+                                        itemLabel="#{ce.inscricaoCadastral} #{ce.pessoa.nomeCpfCnpj}"
+                                        forceSelection="true"
+                                        maxResults="10"
+                                        size="100">
+                            <p:ajax event="itemSelect" listener="#{calculaISSControlador.selecionarCadastroEconomicoEstimado}" update="@form"/>
+                        </p:autoComplete>
+                        <p:commandButton icon="ui-icon-search" oncomplete="consultaGenerica.show()"
+                                         update=":dlgConsultaGenerica"/>
+                        <h:outputText value="Exercício: "/>
+                        <p:inputText value="#{calculaISSControlador.exercicio}" maxlength="4" size="10"
+                                     converter="#{calculaISSControlador.converterExercicio}"/>
+                        <p:spacer />
+                        <h:outputText value="Mês de Referência: "/>
+                        <h:selectOneMenu value="#{calculaISSControlador.mesReferencia}" disabled="#{calculaISSControlador.boqueiaMesRefencia}">
+                            <f:selectItems value="#{calculaISSControlador.meses}"/>
+                        </h:selectOneMenu>
+                    </h:panelGrid>
+                </p:panel>
+                <br/>
+                <p:panel style="text-align: left">
+                    <p:commandButton value="Calcular" icon="ui-icon-calculator" disabled="#{calculaISSControlador.processoCalculoISS ne null}"
+                                     styleClass="operacao"
+                                     update="@form" actionListener="#{calculaISSControlador.calcularIssEstimado}"/>
+                    <p:commandButton value="Efetivar Cálculo e Gerar DAM"
+                                     styleClass="operacao" icon="ui-icon-check"
+                                     disabled="#{calculaISSControlador.processoCalculoISS ne null ? calculaISSControlador.dividaefetivada : true}"
+                                     onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                     actionListener="#{calculaISSControlador.salvaEstimado}" update="@form :FormularioConfimaCalculo:msgConfirmaCalculo" onclick="if (!confirm('Deseja realmente efetivar o cálculo e gerar o DAM?'))
+                                                 return false;"/>
+                    <fc:botaoTargetBlank icon="ui-icon-print" actionListener="#{calculaISSControlador.imprimirDAM()}"  disabled="#{!calculaISSControlador.dividaefetivada}" label="Imprimir DAM"/>
+                    <p:commandButton value="Limpar Dados" icon="ui-icon-document" actionListener="#{calculaISSControlador.novo}" update="@form" styleClass="operacao"/>
+                    <p:commandButton styleClass="operacao" value="Fechar" icon="ui-icon-circle-close" onclick="if (!confirm('Tem certeza que deseja sair do lançamento ?'))
+                                                 return false;" action="lista"/>
+                </p:panel>
+                <br/>
+                <p:panel visible="#{calculaISSControlador.processoCalculoISS ne null}" id="processo">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Data: "/>
+                        <h:outputText value="#{calculaISSControlador.processoCalculoISS.dataLancamento}" styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                        <h:outputText value="Mês de Referência: "/>
+                        <h:outputText value="#{calculaISSControlador.processoCalculoISS.mesReferencia == -1? 'ANUAL': calculaISSControlador.processoCalculoISS.mesReferencia}" styleClass="negrito"/>
+                        <h:outputText value="Exercício: "/>
+                        <h:outputText value="#{calculaISSControlador.processoCalculoISS.exercicio}" styleClass="negrito"/>
+                    </h:panelGrid>
+                    <br/>
+                    <p:dataTable value="#{calculaISSControlador.processoCalculoISS.calculos}" var="calulo">
+                        <f:facet name="header">
+                            <h:outputText value="Calculo"/>
+                        </f:facet>
+                        <p:column headerText="Valor do ISS Estimado (UFM)" style="text-align: right">
+                            <h:outputText value="#{calculaISSControlador.valorCalculadoEmUfm}" styleClass="azulnegrito">
+                                <f:convertNumber pattern="#,##0.0000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor do ISS Estimado (R$)" style="text-align: right">
+                            <h:outputText value="#{calulo.valorCalculado}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+                <p:messages showSummary="true" showDetail="true"/>
+            </h:form>
+            <h:form id="FormularioConfimaCalculo">
+                <p:dialog widgetVar="confirmaCalculo" id="confirmaCalculo" width="500" modal="true"
+                          resizable="false">
+                    <h:outputText  id="msgConfirmaCalculo" value="Não foi possível continuar. Já existe um lançamento realizado para esta referência!"/>
+                    <p:panel style="border: 0; text-align: center;" >
+                        <p:commandButton value="Abortar Lançamento"
+                                         icon="ui-icon-seek-prev" oncomplete="confirmaCalculo.hide()" actionListener="#{calculaISSControlador.novo}" update=":Formulario"/>
+                    </p:panel>
+                </p:dialog>
+            </h:form>
+            <p:dialog header="Consulta do Cadastro" modal="true" widgetVar="consultaGenerica" width="900" height="500"
+                      id="dlgConsultaGenerica">
+                <h:form id="formularioConsultaDebito">
+                    <fc:pesquisaGenerico id="lista"
+                                         caminhoAtual="edita"
+                                         nomeDaClasse="CadastroEconomico"
+                                         dialog="true"
+                                         pretty="true"
+                                         iconmSelecionar="check-icon.png"
+                                         novo="#{calculoTaxasDiversasControlador.novo()}"
+                                         selecionar="#{calculaISSControlador.selecionarObjetoPesquisaGenerico}"
+                                         mostrarHistorico="false"
+                                         mostrarBotaoNovo="false"
+                                         meuControlador="#{calculaISSControlador.tipoISSESTIMADO}"
+                                         guardarNaSessao="false"
+                                         pesquisaNoEnter="false"
+                                         updateSelecionarTabela=":Formulario"/>
+                </h:form>
+            </p:dialog>
+        </ui:define>
+    </ui:composition>
+</html>

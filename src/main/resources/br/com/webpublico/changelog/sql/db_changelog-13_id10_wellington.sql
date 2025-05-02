@@ -1,0 +1,1 @@
+update naturezajuridica set tiponaturezajuridica = 'FISICA' where tiponaturezajuridica = 'AUTONOMO'

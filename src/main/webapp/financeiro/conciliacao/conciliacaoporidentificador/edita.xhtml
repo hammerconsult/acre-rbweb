@@ -1,0 +1,936 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:remoteCommand update="lancamento data"
+                             process="@this"
+                             name="atualizarPagina"
+                             actionListener="#{conciliacaoBancariaPorIdentificadorControlador.definirNullParaElementoPagina}"/>
+
+            <p:panel header="Conciliação por Identificador">
+
+                <h:panelGrid columns="2">
+                    <h:outputLabel value="Unidade Organizacional: " for="unidade"/>
+                    <h:outputText id="unidade"
+                                  value="#{conciliacaoBancariaPorIdentificadorControlador.conciliacao.unidadeOrganizacional}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Conta Bancária Entidade: " for="cbentidade"/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="cbentidade"
+                                    size="70" title="Informe uma Conta Bancária Entidade"
+                                    value="#{conciliacaoBancariaPorIdentificadorControlador.conciliacao.contaBancaria}"
+                                    completeMethod="#{conciliacaoBancariaPorIdentificadorControlador.completarContaBancariaEntidade}"
+                                    converter="#{contaBancariaEntidadeControlador.converterGenerico}"
+                                    onkeyup="if(keyUpCampoVazio(this)){atualizarPagina()}"
+                                    var="cbe"
+                                    itemValue="#{cbe.id}"
+                                    itemLabel="#{cbe.toStringAutoComplete()}">
+                        <p:ajax event="itemSelect"
+                                update="lancamento data"
+                                process="@this panelLancamentoPendencia"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{conciliacaoBancariaPorIdentificadorControlador.recuperarPorContaBancaria}"/>
+                    </p:autoComplete>
+
+                    <fc:outputLabelObrigatorio value="Data de Conciliação: " for="data"/>
+                    <h:panelGrid columns="4" style="width: 100%">
+                        <p:calendar id="data"
+                                    value="#{conciliacaoBancariaPorIdentificadorControlador.conciliacao.data}"
+                                    pattern="dd/MM/yyyy"
+                                    size="12"
+                                    navigator="true"
+                                    showButtonPanel="true"
+                                    style="margin-left: -4px"
+                                    disabled="#{conciliacaoBancariaPorIdentificadorControlador.conciliacao.contaBancaria eq null}"
+                                    onkeypress="mascara(this, mdata)">
+                            <p:ajax event="dateSelect"
+                                    update="tabelaPendencias lancamento panelLancamentoPendencia data panelFiltros panelSaldoConstante"
+                                    process="@this panelLancamentoPendencia"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{conciliacaoBancariaPorIdentificadorControlador.recuperarMovimentosPorData()}"/>
+                            <p:ajax event="valueChange"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    update="tabelaPendencias lancamento panelLancamentoPendencia data panelFiltros panelSaldoConstante"
+                                    process="@this panelLancamentoPendencia"
+                                    listener="#{conciliacaoBancariaPorIdentificadorControlador.recuperarMovimentosPorData()}"/>
+                        </p:calendar>
+
+                        <div class="alert alert-info" style="padding: 4px">
+                            Toda movimentação de conciliação bancária será realizada a partir desta data.
+                        </div>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Identificador: " for="acidentificador"
+                                               styleAsterisco="color: blue !important"/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="acidentificador"
+                                    size="70" title="Informe o Identificador"
+                                    value="#{conciliacaoBancariaPorIdentificadorControlador.identificador}"
+                                    completeMethod="#{conciliacaoBancariaPorIdentificadorControlador.completarIdentificadores}"
+                                    converter="#{identificadorControlador.converterGenerico}"
+                                    onkeyup="keyUpCampoVazio(this)"
+                                    var="ident"
+                                    forceSelection="true"
+                                    itemValue="#{ident.id}"
+                                    itemLabel="#{ident}">
+                    </p:autoComplete>
+
+                </h:panelGrid>
+
+                <p:panel styleClass="semBorda"
+                         style="padding: 0"
+                         visible="#{conciliacaoBancariaPorIdentificadorControlador.conciliacao.contaBancaria.id ne null}"
+                         id="lancamento">
+                    <table class="mrig15">
+                        <tr valign="top">
+                            <td style="width: 52%;height: 100%!important;">
+                                <p:outputPanel id="panelLancamentoPendencia">
+                                    <co:titulo-panel titulo="Lançamento de Pendência" separator="true"
+                                                     navegavel="false"/>
+
+                                    <h:panelGrid columns="2" style="width: 100%;height: 100%">
+                                        <h:outputText value="Número: "/>
+                                        <h:outputText
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.id ne null ? conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.numero : 'Gerado automaticamente'}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Data de Lançamento: "/>
+                                        <h:outputText
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.data}"
+                                            id="dataLanc"
+                                            styleClass="negrito">
+                                            <f:convertDateTime type="date"/>
+                                        </h:outputText>
+
+                                        <h:outputText value="Data de Conciliação: "/>
+                                        <p:calendar
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.dataConciliacao}"
+                                            onkeypress="mascara(this, mdata)"
+                                            title="Informe a data para conciliar o lançamento."
+                                            id="dataConciliacao"
+                                            showButtonPanel="true"
+                                            navigator="true"
+                                            size="21"
+                                            pattern="dd/MM/yyyy"/>
+
+                                        <fc:outputLabelObrigatorio value="Conta Financeira: " for="subconta"/>
+                                        <p:autoComplete queryDelay="1000" id="subconta"
+                                                        forceSelection="true"
+                                                        size="70"
+                                                        title="Informe uma Conta Financeira"
+                                                        value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.subConta}"
+                                                        completeMethod="#{conciliacaoBancariaPorIdentificadorControlador.completarContaFinanceira}"
+                                                        converter="#{contaFinanceiraControlador.converterGenerico}"
+                                                        var="sub"
+                                                        itemValue="#{sub.id}"
+                                                        itemLabel="#{sub}"
+                                                        maxResults="10">
+                                            <p:ajax event="itemSelect"
+                                                    process="@this"
+                                                    listener="#{conciliacaoBancariaPorIdentificadorControlador.definirUnidadeDaContaFinancieraNaPendencia()}"/>
+                                        </p:autoComplete>
+
+                                        <fc:outputLabelObrigatorio value="Operação da Conciliação: " for="operacao"/>
+                                        <h:selectOneMenu
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.tipoOperacaoConciliacao}"
+                                            id="operacao">
+                                            <f:selectItems
+                                                value="#{conciliacaoBancariaPorIdentificadorControlador.tipoOperacaoConcilicaoBancaria}"/>
+                                        </h:selectOneMenu>
+
+                                        <fc:outputLabelObrigatorio value="Tipo de Conciliação: " for="tipoConciliacao"/>
+                                        <p:autoComplete queryDelay="1000" id="tipoConciliacao"
+                                                        value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.tipoConciliacao}"
+                                                        completeMethod="#{conciliacaoBancariaPorIdentificadorControlador.completarTipoConciliacao}"
+                                                        converter="#{tipoConciliacaoControlador.converterGenerico}"
+                                                        size="70"
+                                                        var="tipoConciliacao"
+                                                        itemLabel="#{tipoConciliacao}"
+                                                        itemValue="#{tipoConciliacao.id}"/>
+
+                                        <fc:outputLabelObrigatorio value="Histórico: " for="historico"/>
+                                        <h:panelGrid columns="2">
+                                            <p:inputTextarea id="historico"
+                                                             value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.historico}"
+                                                             cols="50" rows="3" maxlength="255"
+                                                             style="margin-left: -3px"
+                                                             autoResize="true"
+                                                             counterTemplate="{0} Caracteres Restantes"
+                                                             counter="counter"/>
+                                            <h:outputText id="counter"/>
+                                        </h:panelGrid>
+
+                                        <fc:outputLabelObrigatorio value="Valor: " for="valor"/>
+                                        <fc:inputMoeda
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.lancamentoConciliacaoBancaria.valor}"
+                                            id="valor"/>
+                                    </h:panelGrid>
+
+                                    <p:commandButton icon="ui-icon-disk"
+                                                     value="Salvar"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     styleClass="operacao mtop10 mrig05"
+                                                     title="Clique para salvar uma nova pendência."
+                                                     actionListener="#{conciliacaoBancariaPorIdentificadorControlador.salvarPendencia()}"
+                                                     process="panelLancamentoPendencia"
+                                                     update="panelLancamentoPendencia tabelaPendencias"/>
+
+                                    <p:commandButton icon="ui-icon-cancel"
+                                                     value="Cancelar"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     styleClass="operacao mtop10"
+                                                     title="Clique para cancelar lançamento de pendência."
+                                                     actionListener="#{conciliacaoBancariaPorIdentificadorControlador.cancelarPendencia()}"
+                                                     process=":Formulario:panelLancamentoPendencia"
+                                                     update=":Formulario:panelLancamentoPendencia"/>
+                                </p:outputPanel>
+                            </td>
+
+                            <td style="width: 7%;">
+
+                            </td>
+
+                            <td style="width: 45%;height: 100%!important;">
+                                <p:outputPanel id="panelSaldoConstante">
+                                    <co:titulo-panel titulo="Saldo Constante no Extrato Bancário" navegavel="false"
+                                                     style="margin-bottom: 0!important"
+                                                     separator="true"/>
+
+                                    <p:outputPanel
+                                        rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id ne null}"
+                                        id="msgSaldo">
+                                        <div class="alert alert-info" align="center" style="margin-top: -10px;">
+                                            Recuperado o Último Saldo Bancário
+                                        </div>
+                                    </p:outputPanel>
+
+                                    <h:panelGrid columns="2" id="gridSaldo">
+                                        <h:outputText value="Número: "/>
+                                        <h:outputText
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.numero}"
+                                            id="numeroSaldo"
+                                            rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id ne null}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Gerado automaticamente"
+                                                      rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id eq null}"
+                                                      styleClass="negrito"/>
+
+                                        <h:outputText value="Data: "
+                                                      rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id ne null}"/>
+
+                                        <fc:outputLabelObrigatorio value="Data: "
+                                                                   rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id eq null}"/>
+
+                                        <h:outputText
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.dataSaldo}"
+                                            id="outputDataSaldo"
+                                            rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id ne null}"
+                                            styleClass="negrito">
+                                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                        </h:outputText>
+
+                                        <p:calendar id="dataSaldo"
+                                                    value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.dataSaldo}"
+                                                    rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id eq null}"
+                                                    onkeyup="mascara(this, mdata)"
+                                                    pattern="dd/MM/yyyy"
+                                                    size="21">
+                                            <p:ajax event="dateSelect" update="gridSaldo"/>
+                                        </p:calendar>
+
+                                        <h:outputText value="Banco: "/>
+                                        <h:outputText
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.contaBancariaEntidade.agencia.banco}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Agência: "/>
+                                        <h:outputText
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.contaBancariaEntidade.agencia}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Conta Bancária: "/>
+                                        <h:outputText
+                                            value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.contaBancariaEntidade}"
+                                            styleClass="negrito"/>
+
+                                        <h:outputText value="Histórico: " for="historico"/>
+                                        <h:panelGrid columns="2">
+                                            <p:inputTextarea id="historicoSaldo"
+                                                             value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.historico}"
+                                                             cols="35" rows="4" maxlength="255"
+                                                             style="margin-left: -3px"
+                                                             autoResize="true"
+                                                             counterTemplate="{0} Caracteres Restantes"
+                                                             counter="counterSaldo"/>
+                                            <h:outputText id="counterSaldo"/>
+                                        </h:panelGrid>
+
+                                        <h:outputText value="Valor: "
+                                                      rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id ne null}"/>
+
+                                        <fc:outputLabelObrigatorio value="Valor: "
+                                                                   for="valorSaldo"
+                                                                   id="outputSaldo"
+                                                                   rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id eq null}"/>
+
+                                        <h:panelGrid columns="4">
+                                            <fc:inputMoeda
+                                                value="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.valor}"
+                                                id="valorSaldo"/>
+
+                                            <co:botao_informacao descricao="&lt;b>Atualizar Saldo: &lt;/b>&lt;br/>&lt;br/>
+                                          Para atualizar o saldo constante, altere o campo Valor/Histórico e clique em no botão 'Salvar'.
+                                          &lt;br/>Para inserir um novo saldo clique no botão 'Novo'."
+                                                                 rendered="#{conciliacaoBancariaPorIdentificadorControlador.saldoConstContaBancaria.id ne null}"/>
+
+                                        </h:panelGrid>
+                                    </h:panelGrid>
+                                    <p:commandButton icon="ui-icon-plusthick"
+                                                     value="Novo"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this"
+                                                     update=":Formulario:gridSaldo"
+                                                     styleClass="operacao mrig05 mtop10"
+                                                     title="Clique para inserir um novo saldo bancário."
+                                                     actionListener="#{conciliacaoBancariaPorIdentificadorControlador.novoSaldo()}"
+                                    />
+
+                                    <p:commandButton icon="ui-icon-disk"
+                                                     value="Salvar"
+                                                     styleClass="operacao mrig05 mtop10"
+                                                     title="Clique para salvar saldo."
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="Formulario:panelSaldoConstante"
+                                                     actionListener="#{conciliacaoBancariaPorIdentificadorControlador.salvarSaldo()}"
+                                                     update="Formulario:panelSaldoConstante"/>
+
+                                    <p:commandButton icon="ui-icon-atualizar"
+                                                     value="Atualizar"
+                                                     styleClass="operacao mrig05 mtop10"
+                                                     title="Clique para cancelar a operação."
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide()"
+                                                     process="@this"
+                                                     update=":Formulario:gridSaldo"
+                                                     actionListener="#{conciliacaoBancariaPorIdentificadorControlador.atualizarSaldo()}"
+                                    />
+
+                                    <p:commandButton onstart="aguarde.show()"
+                                                     icon="ui-icon-search"
+                                                     value="Consultar Histórico Saldo"
+                                                     styleClass="operacao mtop10"
+                                                     oncomplete="aguarde.hide();dialogHistorico.show()"
+                                                     actionListener="#{conciliacaoBancariaPorIdentificadorControlador.buscarHistoricoSaldo}"
+                                                     process="@this"
+                                                     update=":formSaldo:tabelaSaldo"/>
+                                </p:outputPanel>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <hr/>
+                    <table style="width:80%;text-align: center;"
+                           align="center">
+                        <tr>
+                            <td>
+                                <h:panelGrid columns="2">
+                                    <p:commandButton
+                                        icon="ui-icon-lupa"
+                                        process="@this"
+                                        update="@none"
+                                        styleClass="operacao"
+                                        title="Clique para abrir panel filtros da pendência."
+                                        value="Filtrar"
+                                        onclick="$('#divFiltros').slideToggle('fast');"
+                                        style="display: block"
+                                    />
+                                </h:panelGrid>
+                            </td>
+                            <td>
+                                <h:commandLink
+                                    actionListener="#{conciliacaoBancariaPorIdentificadorControlador.navegarParaGerarReceita()}">
+                                    <p:commandButton icon="ui-icon-circle-plus"
+                                                     title="Clique para Gerar Receita."
+                                                     process="@this"
+                                                     update="@none"
+                                                     style="height: 30px;"
+                                                     value="Lançar Receita"/>
+                                </h:commandLink>
+                            </td>
+                            <td>
+                                <h:commandLink
+                                    actionListener="#{conciliacaoBancariaPorIdentificadorControlador.navegarParaConciliacaoManual()}"
+                                    target="_blank">
+                                    <p:commandButton icon="ui-icon-calendar-plus"
+                                                     title="Clique para conciliar manual."
+                                                     process="@none"
+                                                     update="@none"
+                                                     style="height: 30px;"
+                                                     value="Conciliar Manual"/>
+                                </h:commandLink>
+                            </td>
+                            <td>
+                                <p:commandButton icon="ui-icon-print"
+                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.gerarRelatorioConciliacao(true)}"
+                                                 value="Imprimir Conciliação"
+                                                 process="@this"
+                                                 update="@none"
+                                                 style="height: 30px;"
+                                                 title="Clique para imprimir o relatório de conciliação."/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="alert alert-info">
+                        As Pendências são referente ao exercício logado. Para buscar pendências de outros exercícios, utilize os filtros clicando no botão
+                        <Strong>'Filtrar'</Strong>.
+                    </div>
+
+                    <div id="divFiltros" style="display: none">
+                        <p:panel id="panelFiltros" header="Filtros da Pendência" styleClass="mtop05"
+                                 style="border-bottom: 0">
+                            <table>
+                                <tr valign="top">
+                                    <td style="width: 50%;height: 100%!important;">
+                                        <h:panelGrid columns="2" id="gridFiltros" cellpadding="2">
+                                            <h:outputText value="Data Inicial: "/>
+                                            <p:calendar title="Selecione a data inicial"
+                                                        id="dataInicial"
+                                                        size="12"
+                                                        navigator="true"
+                                                        value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.dataInicial}"
+                                                        pattern="dd/MM/yyyy"
+                                                        onkeypress="mascara(this, mdata)"/>
+
+                                            <h:outputText value="Data Final: "/>
+                                            <p:calendar title="Selecione a data final"
+                                                        id="dataFinal"
+                                                        size="12"
+                                                        navigator="true"
+                                                        value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.dataFinal}"
+                                                        pattern="dd/MM/yyyy"
+                                                        onkeypress="mascara(this, mdata)"/>
+
+                                            <h:outputText value="Conta Financeira:"/>
+                                            <p:autoComplete queryDelay="1000"
+                                                            value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.contaFinanceira}"
+                                                            converter="#{contaFinanceiraControlador.converterGenerico}"
+                                                            completeMethod="#{conciliacaoBancariaPorIdentificadorControlador.completarContaFinanceiraFiltro}"
+                                                            var="conta"
+                                                            itemLabel="#{conta}"
+                                                            itemValue="#{conta.id}"
+                                                            forceSelection="true"
+                                                            size="70"
+                                                            title="Selecione uma conta financeira."
+                                                            maxResults="10"/>
+
+                                            <h:outputText value="Conciliado: " for="conci"/>
+                                            <h:selectOneMenu
+                                                value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.conciliado}"
+                                                id="conci">
+                                                <f:selectItems
+                                                    value="#{conciliacaoBancariaPorIdentificadorControlador.tiposConciliados}"/>
+                                            </h:selectOneMenu>
+
+                                        </h:panelGrid>
+                                    </td>
+
+                                    <td style="width: 50%;height: 100%!important;">
+                                        <h:panelGrid columns="2">
+                                            <h:outputText value="Número: "/>
+                                            <p:inputText
+                                                value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.numero}"
+                                                maxlength="10"
+                                                size="12"
+                                                title="Informe um número."/>
+
+                                            <h:outputText value="Data de Conciliação Inicial: "/>
+                                            <p:calendar title="Selecione a data de conciliação inicial"
+                                                        id="dataConciliacaoInicial"
+                                                        size="12"
+                                                        navigator="true"
+                                                        value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.dataConciliacaoInicial}"
+                                                        pattern="dd/MM/yyyy"
+                                                        onkeypress="mascara(this, mdata)"/>
+
+                                            <h:outputText value="Data de Conciliação Final: "/>
+                                            <p:calendar title="Selecione a data de conciliação final"
+                                                        id="dataConciliacaoFinal"
+                                                        size="12"
+                                                        navigator="true"
+                                                        value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.dataConciliacaoFinal}"
+                                                        pattern="dd/MM/yyyy"
+                                                        onkeypress="mascara(this, mdata)"/>
+
+                                            <h:outputText value="Operação da Conciliação: " for="operacaoFiltro"/>
+                                            <h:selectOneMenu
+                                                value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.operacaoConciliacao}"
+                                                id="operacaoFiltro">
+                                                <f:selectItems
+                                                    value="#{conciliacaoBancariaPorIdentificadorControlador.tipoOperacaoConcilicaoBancaria}"/>
+                                            </h:selectOneMenu>
+
+                                            <h:outputText value="Tipo de Conciliação: "
+                                                          for="tipoConciliacaoFiltro"/>
+                                            <p:autoComplete queryDelay="1000"
+                                                            id="tipoConciliacaoFiltro"
+                                                            value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.tipoConciliacao}"
+                                                            completeMethod="#{conciliacaoBancariaPorIdentificadorControlador.completarTipoConciliacao}"
+                                                            converter="#{tipoConciliacaoControlador.converterGenerico}"
+                                                            size="70"
+                                                            maxlength="10"
+                                                            title="Selecione o tipo de conciliação."
+                                                            var="tipoConciliacao"
+                                                            itemLabel="#{tipoConciliacao}"
+                                                            itemValue="#{tipoConciliacao.id}"/>
+
+                                            <h:outputText value="Valor: "/>
+                                            <fc:inputMoeda
+                                                value="#{conciliacaoBancariaPorIdentificadorControlador.filtroPendencia.valor}"/>
+                                        </h:panelGrid>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p:commandButton value="Pesquisar"
+                                             id="btnPesquisa"
+                                             title="Clique para pesquisar as pendências."
+                                             icon="ui-icon-search"
+                                             actionListener="#{conciliacaoBancariaPorIdentificadorControlador.pesquisarPendencias}"
+                                             styleClass="mtop10 mrig05 padrao"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update=":Formulario:tabelaPendencias :Formulario:panelIdentificadores"
+                                             process="@this panelFiltros"/>
+
+                            <p:commandButton value="Limpar Filtros"
+                                             id="btnLimpar"
+                                             title="Clique para limpar os filtros."
+                                             icon="ui-icon-clear"
+                                             actionListener="#{conciliacaoBancariaPorIdentificadorControlador.preencherFiltrosPendencia()}"
+                                             styleClass="mtop10 mrig05 padrao"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             update="panelFiltros"
+                                             process="@this"/>
+                        </p:panel>
+                    </div>
+
+                    <p:outputPanel id="panelPendencias">
+                        <p:dataTable
+                            value="#{conciliacaoBancariaPorIdentificadorControlador.movimentosSemIdentificador}"
+                            var="pendencia"
+                            id="tabelaPendencias"
+                            rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'vinteAltura'}"
+                            paginator="true"
+                            rows="10"
+                            paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>PENDÊNCIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                            emptyMessage="Não foram localizados registros para serem apresentados."
+                            rowIndexVar="rowlx">
+
+                            <p:column headerText="Ações" style="width: 7%; text-align: center">
+                                <p:commandButton icon="ui-icon-pencil"
+                                                 title="Clique para alterar este registro."
+                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.alterarMovimento(pendencia)}"
+                                                 update=":Formulario:panelLancamentoPendencia"
+                                                 disabled="#{pendencia.tipoMovimento ne 'LANCCONCILIACAOBANCARIA'}"
+                                                 process="@this"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 title="Clique para remover este registro."
+                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.removerMovimento(pendencia)}"
+                                                 update=":Formulario:tabelaPendencias"
+                                                 process="@this"
+                                                 styleClass="mlef05"
+                                                 disabled="#{pendencia.tipoMovimento ne 'LANCCONCILIACAOBANCARIA'}"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) return false;"/>
+                            </p:column>
+
+                            <p:column headerText="Baixar" style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-check"
+                                                 title="Clique para baixar esta pendência."
+                                                 update=":Formulario:tabelaPendencias"
+                                                 process="@this"
+                                                 disabled="#{pendencia.situacao ne 'ABERTO'}"
+                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.baixarMovimento(pendencia, true)}"
+                                                 onclick="if (!confirm('Tem certeza que deseja baixar essa pendência?')) return false;aguarde.show()"
+                                                 oncomplete="aguarde.hide()"/>
+                            </p:column>
+
+                            <p:column headerText="Conciliar" style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-circle-arrow-s"
+                                                 title="Clique para conciliar esta pendência."
+                                                 rendered="#{pendencia.dataConciliacao eq null}"
+                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.conciliarMovimento(pendencia, true)}"
+                                                 update=":Formulario:tabelaPendencias"
+                                                 process="@this"
+                                                 onclick="if (!confirm('Tem certeza que deseja conciliar essa pendência?')) return false;aguarde.show()"
+                                                 oncomplete="aguarde.hide()"/>
+
+                                <p:commandButton icon="ui-icon-calendar-minus"
+                                                 title="Clique para estornar a conciliação desta pendência."
+                                                 rendered="#{pendencia.dataConciliacao ne null}"
+                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.estornarConciliacaoMovimento(pendencia)}"
+                                                 update=":Formulario:tabelaPendencias"
+                                                 process="@this"
+                                                 onclick="if (!confirm('Tem certeza que deseja conciliar essa pendência?')) return false;aguarde.show()"
+                                                 oncomplete="aguarde.hide()"/>
+                            </p:column>
+
+                            <p:column headerText="Identificar" style="width: 5%; text-align: center">
+                                <p:commandButton icon="ui-icon-link"
+                                                 title="Clique para identificar esta pendência."
+                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.identificarMovimento(pendencia)}"
+                                                 update=":Formulario:tabelaPendencias :Formulario:panelIdentificadores"
+                                                 process="@this :Formulario:acidentificador"
+                                                 onclick="if (!confirm('Tem certeza que deseja identificar essa pendência?')) return false;aguarde.show()"
+                                                 oncomplete="aguarde.hide()"/>
+                            </p:column>
+
+                            <p:column headerText="Histórico" style="width: 5%;">
+                                <p:rowToggler/>
+                            </p:column>
+
+                            <p:column headerText="Número"
+                                      sortBy="#{pendencia.numero}"
+                                      styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{pendencia.numero}"/>
+                            </p:column>
+                            <p:column headerText="Data de Lançamento"
+                                      sortBy="#{utilBean.dataAsString(pendencia.dataMovimento)}"
+                                      styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{utilBean.dataAsString(pendencia.dataMovimento)}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Data de Conciliação"
+                                      styleClass="alinhamentoCentralizado"
+                                      sortBy="#{utilBean.dataAsString(pendencia.dataConciliacao)}">
+                                <h:outputText value="#{pendencia.dataConciliacao}"
+                                              rendered="#{pendencia.dataConciliacao ne null}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                                <h:outputText value="Não Conciliado"
+                                              styleClass="azulnegrito"
+                                              rendered="#{pendencia.dataConciliacao eq null}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pendencia.subConta}"/>
+                            </p:column>
+                            <p:column headerText="Operação da Conciliação"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{pendencia.tipoOperacaoConciliacao.numero} - #{pendencia.tipoOperacaoConciliacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Tipo de Movimento"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pendencia.tipoMovimento.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Situação"
+                                      styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pendencia.situacao.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Débito (R$)"
+                                      styleClass="alinhamentoDireita">
+                                <h:outputText value="#{utilBeanContabil.getValorAsString(pendencia.debito)}"/>
+                            </p:column>
+                            <p:column headerText="Crédito (R$)"
+                                      styleClass="alinhamentoDireita">
+                                <h:outputText value="#{utilBeanContabil.getValorAsString(pendencia.credito)}"/>
+                            </p:column>
+
+                            <f:facet name="footer">
+                                <div align="right">
+                                    <h:outputText value="Total de Débito: "/>
+                                    <p:spacer width="5"/>
+                                    <h:outputText
+                                        value="#{conciliacaoBancariaPorIdentificadorControlador.totalDeDebito}"
+                                        size="15"
+                                        converter="moneyConverter"/>
+                                    <br/>
+                                    <p:spacer width="5"/>
+                                    <h:outputText value="Total de Crédito: "/>
+                                    <p:spacer width="5"/>
+                                    <h:outputText
+                                        value="#{conciliacaoBancariaPorIdentificadorControlador.totalDeCredito}"
+                                        size="15"
+                                        converter="moneyConverter"/>
+                                    <br/>
+                                    <p:spacer width="5"/>
+                                    <h:outputText value="Total: "/>
+                                    <p:spacer width="5"/>
+                                    <h:outputText value="#{conciliacaoBancariaPorIdentificadorControlador.totalGeral}"
+                                                  size="15"
+                                                  converter="moneyConverter"/>
+                                    <p:spacer width="5"/>
+                                </div>
+                            </f:facet>
+
+                            <p:rowExpansion>
+                                <br/>
+                                <p:spacer width="5"/>
+                                <h:outputText value="Histórico: "/>
+                                <h:outputText value="#{pendencia.historico}" styleClass="negrito"/>
+                            </p:rowExpansion>
+
+                        </p:dataTable>
+                    </p:outputPanel>
+
+                    <br/>
+
+                    <p:outputPanel id="panelIdentificadores">
+                        <table class="igualDataTable">
+                            <thead>
+                            <tr>
+                                <td colspan="10">
+                                    IDENTIFICADORES
+                                </td>
+                            </tr>
+                            </thead>
+                            <tr>
+                                <th style="width: 80px">Movimentos</th>
+                                <th style="width: 80px">Baixar</th>
+                                <th style="width: 80px">Conciliar</th>
+                                <th>Identificador</th>
+                                <th>Total (R$)</th>
+                            </tr>
+                            <ui:repeat
+                                value="#{conciliacaoBancariaPorIdentificadorControlador.movimentosComIdentificador}"
+                                varStatus="index"
+                                var="movComIdentificador">
+                                <tr>
+                                    <td style="text-align: center">
+                                        <a data-toggle="collapse" href="#linha#{index.index}">
+                                            <i class="icon-th-list"></i>
+                                        </a>
+                                    </td>
+                                    <td style="text-align: center">
+                                        <p:commandButton icon="ui-icon-check"
+                                                         title="Clique para baixar este identificador."
+                                                         actionListener="#{conciliacaoBancariaPorIdentificadorControlador.baixarPorIdentificador(movComIdentificador)}"
+                                                         disabled="#{!conciliacaoBancariaPorIdentificadorControlador.hasMovimentosDiferenteDeNaoAplicavel(movComIdentificador)} or #{conciliacaoBancariaPorIdentificadorControlador.hasTodosMovimentosBaixados(movComIdentificador)}"
+                                                         update=":Formulario:panelIdentificadores"
+                                                         process="@this"
+                                                         onclick="if (!confirm('Tem certeza que deseja baixar esse identificador?')) return false;aguarde.show()"
+                                                         oncomplete="aguarde.hide()"/>
+                                    </td>
+                                    <td style="text-align: center">
+
+                                        <p:commandButton icon="ui-icon-circle-arrow-s"
+                                                         title="Clique para conciliar esse identificador."
+                                                         actionListener="#{conciliacaoBancariaPorIdentificadorControlador.conciliarPorIdentificador(movComIdentificador)}"
+                                                         rendered="#{!conciliacaoBancariaPorIdentificadorControlador.hasTodosMovimentosConciliados(movComIdentificador)}"
+                                                         update=":Formulario:panelIdentificadores"
+                                                         process="@this"
+                                                         onclick="if (!confirm('Tem certeza que deseja conciliar esse identificador?')) return false;aguarde.show()"
+                                                         oncomplete="aguarde.hide()"/>
+
+
+                                        <p:commandButton icon="ui-icon-calendar-minus"
+                                                         title="Clique para estornar a conciliação desse identificador."
+                                                         actionListener="#{conciliacaoBancariaPorIdentificadorControlador.estornarConciliacaoPorIdentificador(movComIdentificador)}"
+                                                         rendered="#{conciliacaoBancariaPorIdentificadorControlador.hasTodosMovimentosConciliados(movComIdentificador)}"
+                                                         update=":Formulario:panelIdentificadores"
+                                                         process="@this"
+                                                         onclick="if (!confirm('Tem certeza que deseja estornar a conciliação desse identificador?')) return false;aguarde.show()"
+                                                         oncomplete="aguarde.hide()"/>
+                                    </td>
+                                    <td>
+                                        <h:outputText value="#{movComIdentificador.identificador}"/>
+                                    </td>
+                                    <td style="text-align: right">
+                                        <h:outputText
+                                            value="#{utilBeanContabil.getValorAsString(movComIdentificador.valorTotalIdentificador)}"/>
+                                    </td>
+
+                                </tr>
+                                <tr style="background: #D9E9E9">
+                                    <td colspan="10">
+                                        <div id="linha#{index.index}" class="collapse out">
+                                            <p:outputPanel id="tabelaConsultas#{index.index}">
+                                                <table class="igualDataTable" id="movimentosIdentificados">
+                                                    <tr>
+                                                        <th colspan="11">
+                                                            Movimentos Identificados
+                                                        </th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Operação</th>
+                                                        <th>Número</th>
+                                                        <th>Data de Lançamento</th>
+                                                        <th>Data de Conciliação</th>
+                                                        <th>Conta Financeira</th>
+                                                        <th>Operação da Conciliação</th>
+                                                        <th>Tipo de Movimento</th>
+                                                        <th>Situação</th>
+                                                        <th>Débito (R$)</th>
+                                                        <th>Crédito (R$)</th>
+                                                    </tr>
+                                                    <ui:repeat
+                                                        var="pendencia"
+                                                        value="#{movComIdentificador.movimentos}">
+                                                        <tr>
+                                                            <td style="text-align: center">
+                                                                <p:commandButton icon="ui-icon-trash"
+                                                                                 title="Clique para remover este registro."
+                                                                                 actionListener="#{conciliacaoBancariaPorIdentificadorControlador.retirarIdentificador(pendencia)}"
+                                                                                 update=":Formulario:tabelaPendencias  :Formulario:panelIdentificadores"
+                                                                                 process="@this"
+                                                                                 styleClass="mlef05"
+                                                                                 onstart="aguarde.show()"
+                                                                                 oncomplete="aguarde.hide()"
+                                                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro do identificador?')) return false;"/>
+                                                            </td>
+                                                            <td>
+                                                                <h:outputText value="#{pendencia.numero}"/>
+                                                            </td>
+                                                            <td>
+                                                                <h:outputText
+                                                                    value="#{utilBean.dataAsString(pendencia.dataMovimento)}">
+                                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                                </h:outputText>
+                                                            </td>
+                                                            <td>
+                                                                <h:outputText value="#{pendencia.dataConciliacao}"
+                                                                              rendered="#{pendencia.dataConciliacao ne null}">
+                                                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                                                </h:outputText>
+                                                                <h:outputText value="Não Conciliado"
+                                                                              styleClass="azulnegrito"
+                                                                              rendered="#{pendencia.dataConciliacao eq null}"/>
+                                                            </td>
+                                                            <td>
+                                                                <h:outputText value="#{pendencia.subConta}"/>
+                                                            </td>
+                                                            <td>
+                                                                <h:outputText
+                                                                    value="#{pendencia.tipoOperacaoConciliacao.numero} - #{pendencia.tipoOperacaoConciliacao.descricao}"/>
+                                                            </td>
+                                                            <td>
+                                                                <h:outputText
+                                                                    value="#{pendencia.tipoMovimento.descricao}"/>
+                                                            </td>
+                                                            <td>
+                                                                <h:outputText
+                                                                    value="#{pendencia.situacao.descricao}"/>
+                                                            </td>
+                                                            <td style="text-align: right">
+                                                                <h:outputText
+                                                                    value="#{utilBeanContabil.getValorAsString(pendencia.debito)}"/>
+                                                            </td>
+                                                            <td style="text-align: right">
+                                                                <h:outputText
+                                                                    value="#{utilBeanContabil.getValorAsString(pendencia.credito)}"/>
+                                                            </td>
+                                                        </tr>
+                                                    </ui:repeat>
+                                                </table>
+                                            </p:outputPanel>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                        </table>
+                    </p:outputPanel>
+                </p:panel>
+            </p:panel>
+        </h:form>
+
+        <p:dialog widgetVar="dialogHistorico"
+                  resizable="false"
+                  modal="true"
+                  closable="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  dynamic="true">
+
+            <h:form id="formSaldo">
+                <p:dataTable id="tabelaSaldo"
+                             var="saldo"
+                             value="#{conciliacaoBancariaPorIdentificadorControlador.historicosSaldoConstante}"
+                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginator="true"
+                             styleClass="mtop05"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>HISTÓRICOS DE SALDO&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+
+                    <p:column headerText="Ações" style="text-align: center">
+                        <p:commandButton icon="ui-icon-pencil"
+                                         title="Clique para alterar este registro."
+                                         actionListener="#{conciliacaoBancariaPorIdentificadorControlador.alterarSaldoConstante(saldo)}"
+                                         update=":Formulario:gridSaldo"
+                                         process="@this :Formulario:gridSaldo"
+                                         onstart="aguarde.show()"
+                                         oncomplete="dialogHistorico.hide();aguarde.hide()"/>
+
+                        <p:commandButton icon="ui-icon-trash"
+                                         title="Clique para remover este registro."
+                                         actionListener="#{conciliacaoBancariaPorIdentificadorControlador.removerSaldoConstante(saldo)}"
+                                         update=":formSaldo:tabelaSaldo :Formulario:gridSaldo"
+                                         process="@this :Formulario:gridSaldo"
+                                         styleClass="mlef05"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         onclick="if (!confirm('Tem certeza que deseja remover este registro?')) return false;"/>
+
+                    </p:column>
+
+                    <p:column headerText="Número"
+                              filterBy="#{saldo.numero}"
+                              filterMatchMode="contains"
+                              styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{saldo.numero}"/>
+                    </p:column>
+                    <p:column headerText="Data"
+                              filterBy="#{saldo.dataSaldo}"
+                              filterMatchMode="contains"
+                              styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{saldo.dataSaldo}">
+                            <f:convertDateTime type="date"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Histórico" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{saldo.historico}" rendered="#{saldo.historico ne null}"/>
+                        <h:outputText value="Histórico não cadastrado" rendered="#{saldo.historico eq null}"/>
+                    </p:column>
+                    <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{saldo.valor}">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+
+    </ui:define>
+</ui:composition>
+</html>

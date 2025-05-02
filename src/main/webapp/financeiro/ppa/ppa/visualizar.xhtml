@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui">
+<ui:composition template="/corpo.xhtml">
+<ui:define name="body">
+<h:form id="Formulario">
+    <fc:cabecalhoPretty auditavel="#{true}" controlador="#{pPAControlador}" origem="#{pPAControlador.caminhoPadrao}listar/"/>
+
+    <p:panel header="Detalhes do PPA" id="panelPPA">
+        <h:panelGrid columns="2" cellspacing="2">
+            <h:outputText value="Planejamento Estratégico: "/>
+            <h:outputText value="#{pPAControlador.selecionado.planejamentoEstrategico.descricao}"
+                          styleClass="negrito"/>
+
+            <h:outputText value="Versão: "/>
+            <h:outputText value="#{pPAControlador.selecionado.versao}"
+                          styleClass="negrito"/>
+
+            <h:outputText value="Data de Aprovação: " rendered="#{pPAControlador.selecionado.aprovacao ne null}"/>
+            <h:outputText value="#{pPAControlador.selecionado.aprovacao}"
+                          rendered="#{pPAControlador.selecionado.aprovacao ne null}"
+                          styleClass="negrito">
+                <f:convertDateTime type="date"/>
+            </h:outputText>
+
+            <h:outputText value="Lei: "/>
+            <h:outputText value="#{pPAControlador.selecionado.atoLegal.nome}"
+                          styleClass="negrito"/>
+
+            <h:outputText value="Descrição: "/>
+            <h:outputText value="#{pPAControlador.selecionado.descricao}"
+                          styleClass="negrito"/>
+        </h:panelGrid>
+    </p:panel>
+
+    <h:panelGrid columns="6" id="gridBotoes">
+        <p:button value="Editar"
+                         id="btEditar"
+                         styleClass="prioritario mtop10 mrig05 editar"
+                         style="height: 30px;"
+                         icon="ui-icon-pencil"
+                         title="Clique para editar o registro"
+                         disabled="#{!autorizacao.isPodeEditar(request)}"
+                         href="../../editar/#{pPAControlador.urlKeyValue}"
+                         process="@this"
+                />
+
+        <p:commandButton value="Excluir"
+                         id="cbExcluir"
+                         style="height: 30px;"
+                         styleClass="mrig05 mtop10"
+                         icon="ui-icon-closethick"
+                         process="@this"
+                         disabled="#{!autorizacao.isPodeExcluir(request)}"
+                         title="Clique para excluir o registro"
+                         actionListener="#{pPAControlador.excluir()}"
+                         onclick="if (!confirm('Deseja excluir este registro?'))
+                                         return false;"/>
+
+        <p:commandButton id="geraVersao"
+                         value="Gerar Nova Versão"
+                         update=":Formulario-versao"
+                         style="height: 30px;"
+                         styleClass="mrig05 mtop10"
+                         oncomplete="aguarde.hide();dialogVersao.show()"
+                         onstart="aguarde.show()"
+                         rendered="#{pPAControlador.verificaAprovacao('versao')}"
+                         title="Clique para gerar uma nova versão do PPA."
+                         icon="ui-icon-document"/>
+
+        <p:commandButton id="aprovaPpa"
+                         value="Aprovar PPA"
+                         rendered="#{pPAControlador.verificaAprovacao('aprova')}"
+                         style="height: 30px;"
+                         styleClass="mrig05 mtop10"
+                         update=":formDialog"
+                         onclick="aguarde.show()"
+                         oncomplete="aguarde.hide()"
+                         actionListener="#{pPAControlador.abrirDialogAprovarPPA()}"
+                         title="Clique para aprovar o PPA."
+                         process="@this"
+                         icon="ui-icon-check"/>
+
+        <p:commandButton id="btGerarContabilizacao"
+                         value="Gerar Contabilização"
+                         disabled="#{pPAControlador.selecionado.contabilizado}"
+                         update=":formCont"
+                         style="height: 30px;"
+                         process="@this"
+                         onclick="aguarde.show()"
+                         oncomplete="aguarde.hide()"
+                         styleClass="mrig05 mtop10"
+                         actionListener="#{pPAControlador.validaPPAContabilizacao()}"
+                         title="Clique para contabilizar o PPA."
+                         icon="ui-icon-deferir"/>
+
+        <p:commandButton value="Cancelar"
+                         id="cbCancelar"
+                         styleClass="mtop10"
+                         style="height: 30px;"
+                         icon="ui-icon-cancel"
+                         process="@this"
+                         title="Clique para cancelar e retornar a página anterior"
+                         actionListener="#{pPAControlador.cancelar()}"/>
+    </h:panelGrid>
+
+</h:form>
+<p:dialog id="dialogDataAprov"
+          showHeader="false"
+          dynamic="true"
+          resizable="false"
+          widgetVar="dialogDataAprovacao"
+          position="center"
+          modal="true"
+          closable="false">
+    <h:form id="formDialog">
+        <p:panel header="Aprovação do PPA" styleClass="mtop05 mbot05">
+            <h:panelGrid columns="2">
+                <fc:outputLabelObrigatorio value="Data e Hora Aprovação: "/>
+                <p:calendar value="#{pPAControlador.selecionado.aprovacao}"
+                            navigator="true"
+                            onkeyup="mascara(this, mDataHora)"
+                            title="Informe a data e hora de aprovação."
+                            pattern="dd/MM/yyyy HH:mm"
+                            id="dataAprovacao"/>
+
+                <fc:outputLabelObrigatorio value="Lei: "/>
+                <p:autoComplete queryDelay="1000"
+                                id="atoLegal"
+                                title="Informe a Lei com propósito PPA e do exercício logado."
+                                value="#{pPAControlador.selecionado.atoLegal}"
+                                completeMethod="#{pPAControlador.completaAtoLegal}"
+                                var="atoLegal"
+                                size="70"
+                                maxResults="10"
+                                itemLabel="#{atoLegal.nome} "
+                                itemValue="#{atoLegal.id}"
+                                converter="#{pPAControlador.converterAtoLegal}"/>
+
+            </h:panelGrid>
+
+            <p:commandButton value="Aprovar"
+                             id="btnAprovar"
+                             icon="ui-icon-check"
+                             title="Clique para aprovar o PPA."
+                             styleClass="mtop20 mrig05 padrao"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             actionListener="#{pPAControlador.aprovaPpa()}"
+                    />
+
+            <p:commandButton value="Cancelar"
+                             id="btnCancelar"
+                             styleClass="padrao mtop20 mlef05"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             actionListener="#{pPAControlador.cancelaAprovacaoPPA()}"
+                             title="Clique para cancelar a aprovação do PPA."
+                             update="@this"
+                             process="@this"
+                             icon="ui-icon-cancel"/>
+
+
+        </p:panel>
+    </h:form>
+</p:dialog>
+
+
+<p:dialog id="dialogContabilizacao"
+          dynamic="true"
+          resizable="false"
+          showHeader="false"
+          widgetVar="dialogCont"
+          position="center"
+          modal="true"
+          closable="false">
+    <h:form id="formCont">
+        <center>
+            <p:panel header="Contabilização" styleClass="mtop05 mbot05">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Data da Contabilização: "/>
+                    <p:calendar value="#{pPAControlador.dtContabilizacao}"
+                                navigator="true"
+                                onkeyup="mascara(this, mDataHora)"
+                                pattern="dd/MM/yyyy HH:mm"
+                                id="dataContabilizacao"/>
+                </h:panelGrid>
+
+                <p:commandButton value="Contabilizar"
+                                 id="btnContabilizacao"
+                                 icon="ui-icon-check"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="padrao prioritario mtop20 mrig10"
+                                 actionListener="#{pPAControlador.geraContabilizacao}"/>
+
+                <p:commandButton value="Cancelar"
+                                 id="btnCancelarCont"
+                                 icon="ui-icon-cancel"
+                                 onclick="aguarde.show()"
+                                 oncomplete="aguarde.hide();dialogCont.hide()"
+                                 process="@this"
+                                 styleClass="padrao mtop20"
+                                 pdate="@none"/>
+            </p:panel>
+        </center>
+    </h:form>
+</p:dialog>
+
+<p:dialog id="dialogGerarNovaVersao"
+          widgetVar="dialogVersao"
+          showHeader="false"
+          position="center"
+          resizable="false"
+          dynamic="true"
+          modal="true"
+          closable="false">
+    <h:form id="Formulario-versao">
+        <center>
+            <p:panel header="Gerar Nova Versão" styleClass="mtop05 mbot05">
+
+                <br/>
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Exercício: "/>
+                    <p:inputText value="#{pPAControlador.exercicioVersaoPPA}"
+                                 id="exInicial"
+                                 maxlength="4"
+                                 size="21"
+                                 converter="#{exercicioControlador.converterExercicio}"/>
+                </h:panelGrid>
+
+                <h:panelGrid columns="2">
+                    <p:commandButton id="geraVersao"
+                                     value="Gerar"
+                                     styleClass="prioritario padrao mtop20 mrig05"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     rendered="#{pPAControlador.verificaAprovacao('versao')}"
+                                     actionListener="#{pPAControlador.geraNovaVersao()}"
+                                     title="Clique para gerar uma nova versão do PPA."
+                                     icon="ui-icon-disk"/>
+
+                    <p:commandButton value="Fechar"
+                                     id="btnCancelarCont"
+                                     icon="ui-icon-close"
+                                     styleClass="mtop20 padrao"
+                                     process="@this"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();dialogVersao.hide()"/>
+                </h:panelGrid>
+            </p:panel>
+        </center>
+    </h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>
+</html>

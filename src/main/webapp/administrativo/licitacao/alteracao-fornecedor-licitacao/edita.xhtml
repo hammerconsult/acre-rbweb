@@ -1,0 +1,839 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty controlador="#{alteracaoFornecedorLicitacaoControlador}"
+                                origem="#{alteracaoFornecedorLicitacaoControlador.caminhoPadrao}listar/"/>
+
+            <p:remoteCommand name="limparCamposFornecedor"
+                             process="@this"
+                             update=":Formulario:panel-geral :Formulario:bt-ver-licitacao :Formulario:btn-ver-dispensa :Formulario:tipo-alteracao"
+                             actionListener="#{alteracaoFornecedorLicitacaoControlador.limparCampos()}"/>
+
+            <p:panel header="Alteração do Fornecedor da Licitação">
+                <h:panelGrid columns="2" id="grid-geral">
+                    <h:outputLabel value="Número: "/>
+                    <h:outputText id="numero"
+                                  styleClass="negrito"
+                                  value="#{alteracaoFornecedorLicitacaoControlador.selecionado.numero == null ? 'Gerado automaticamente ao salvar' : alteracaoFornecedorLicitacaoControlador.selecionado.numero }"/>
+
+                    <h:outputText value="Data de Lançamento: "/>
+                    <h:outputText value="#{alteracaoFornecedorLicitacaoControlador.selecionado.dataLancamento}"
+                                  styleClass="negrito">
+                        <f:convertDateTime type="date"/>
+                    </h:outputText>
+
+                    <h:outputText value="Usuário: "/>
+                    <h:outputText value="#{alteracaoFornecedorLicitacaoControlador.selecionado.usuarioSistema}"
+                                  styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Tipo de Alteração: "/>
+                    <h:selectOneMenu value="#{alteracaoFornecedorLicitacaoControlador.selecionado.tipoAlteracao}"
+                                     id="tipo-alteracao"
+                                     layout="pageDirection">
+                        <f:selectItems value="#{alteracaoFornecedorLicitacaoControlador.tiposAlteracao}"/>
+                        <p:ajax event="change"
+                                process="@this :Formulario:grid-geral"
+                                listener="#{alteracaoFornecedorLicitacaoControlador.limparCamposAoTrocarTipoAlteracao()}"
+                                update=":Formulario:grid-geral :Formulario:panel-geral"
+                                onstart="aguarde.show();"
+                                oncomplete="aguarde.hide();"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Licitação: "
+                                               rendered="#{alteracaoFornecedorLicitacaoControlador.selecionado.tipoAlteracao ne null
+                                                           and !alteracaoFornecedorLicitacaoControlador.substituirFornecedorDispensa}"/>
+                    <h:panelGroup rendered="#{alteracaoFornecedorLicitacaoControlador.selecionado.tipoAlteracao ne null
+                                              and !alteracaoFornecedorLicitacaoControlador.substituirFornecedorDispensa}">
+                        <p:autoComplete queryDelay="1000" id="licitacao"
+                                        title="Digite o resumo da licitação."
+                                        value="#{alteracaoFornecedorLicitacaoControlador.licitacao}"
+                                        completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarLicitacao}"
+                                        converter="#{licitacaoControlador.converterLicitacao}"
+                                        var="lic"
+                                        itemLabel="#{lic.toStringAutoComplete()}"
+                                        itemValue="#{lic.id}"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparCamposFornecedor();}"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-width: 800px; max-height: 250px"
+                                        size="70">
+                            <p:ajax event="itemSelect"
+                                    process="@this"
+                                    update=":Formulario:panel-geral :Formulario:bt-ver-licitacao"
+                                    listener="#{alteracaoFornecedorLicitacaoControlador.listenerLicitacaoOuDispensa()}"
+                                    onstart="aguarde.show();"
+                                    oncomplete="aguarde.hide();"/>
+                        </p:autoComplete>
+
+                        <co:botao_informacao descricao="
+                                  &lt;b>Pesquisa de licitação&lt;/b>
+                                   &lt;br/&gt;&lt;br/&gt;
+                                  Filtros:
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano da modalidade.
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano da licitação.
+                                  &lt;br/&gt; &bull;
+                                  Resumo do objeto." styleClass="mlef05"/>
+
+                        <p:outputPanel id="bt-ver-licitacao">
+                            <p:commandButton process="@none"
+                                             icon="ui-icon-search"
+                                             styleClass="mlef05"
+                                             update="@none"
+                                             disabled="#{alteracaoFornecedorLicitacaoControlador.licitacao eq null}"
+                                             onclick="window.open('#{request.contextPath}/licitacao/ver/#{alteracaoFornecedorLicitacaoControlador.licitacao.id}/','_blank');"/>
+                        </p:outputPanel>
+                    </h:panelGroup>
+
+                    <fc:outputLabelObrigatorio value="Dispensa de Licitação/Inexigibilidade: "
+                                               rendered="#{alteracaoFornecedorLicitacaoControlador.substituirFornecedorDispensa}"/>
+                    <h:panelGroup rendered="#{alteracaoFornecedorLicitacaoControlador.substituirFornecedorDispensa}">
+                        <p:autoComplete queryDelay="1000" id="dispensaLic"
+                                        title="Digite o resumo da Dispensa de Licitação/Inexigibilidade."
+                                        value="#{alteracaoFornecedorLicitacaoControlador.dispensaLicitacao}"
+                                        completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarDispensaLicitacao}"
+                                        converter="#{dispensaDeLicitacaoControlador.converterGenerico}"
+                                        var="disp"
+                                        itemLabel="#{disp.toStringAutoComplete()}"
+                                        itemValue="#{disp.id}"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparCamposFornecedor();}"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-width: 800px; max-height: 250px"
+                                        size="70">
+                            <p:ajax event="itemSelect"
+                                    process="@this"
+                                    update=":Formulario:panel-geral :Formulario:btn-ver-dispensa"
+                                    listener="#{alteracaoFornecedorLicitacaoControlador.listenerLicitacaoOuDispensa()}"
+                                    onstart="aguarde.show();"
+                                    oncomplete="aguarde.hide();"/>
+                        </p:autoComplete>
+
+                        <co:botao_informacao descricao="
+                                  &lt;b>Pesquisa de Dispensa de Licitação/Inexigibilidade&lt;/b>
+                                   &lt;br/&gt;&lt;br/&gt;
+                                  Filtros:
+                                  &lt;br/&gt; &bull;
+                                  Número/Ano da dispensa.
+                                  &lt;br/&gt; &bull;
+                                  Resumo do objeto." styleClass="mlef05"/>
+
+                        <p:outputPanel id="btn-ver-dispensa">
+                            <p:commandButton process="@none"
+                                             icon="ui-icon-search"
+                                             styleClass="mlef05"
+                                             update="@none"
+                                             disabled="#{alteracaoFornecedorLicitacaoControlador.dispensaLicitacao eq null}"
+                                             onclick="window.open('#{request.contextPath}/dispensa-licitacao/ver/#{alteracaoFornecedorLicitacaoControlador.dispensaLicitacao.id}/','_blank');"/>
+                        </p:outputPanel>
+                    </h:panelGroup>
+
+                    <h:outputLabel value="Histórico:"/>
+                    <h:panelGrid columns="3" cellpadding="0" cellspacing="0">
+                        <p:inputTextarea title="Digite o histórico."
+                                         value="#{alteracaoFornecedorLicitacaoControlador.selecionado.historico}"
+                                         cols="70"
+                                         maxlength="3000"
+                                         autoResize="true"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter-historico">
+                        </p:inputTextarea>
+                        <h:outputText id="counter-historico"
+                                      style="color: #497692"
+                                      styleClass="mlef05"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:outputPanel id="panel-geral">
+
+                    <p:panel header="#{alteracaoFornecedorLicitacaoControlador.selecionado.tipoAlteracao.descricao}"
+                             rendered="#{alteracaoFornecedorLicitacaoControlador.isTipoAlteracaoProposta()}">
+
+                        <table>
+                            <tr style="vertical-align: top">
+                                <td style="width: 60%">
+                                    <h:panelGrid columns="2" id="grid-proposta">
+                                        <fc:outputLabelObrigatorio value="Proposta Fornecedor: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isAlterarProposta()}"/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        title="Digite a proposta."
+                                                        rendered="#{alteracaoFornecedorLicitacaoControlador.isAlterarProposta()}"
+                                                        value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor}"
+                                                        completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarPropostaFornecedor}"
+                                                        converter="#{propostaFornecedorControlador.converterGenerico}"
+                                                        var="prop"
+                                                        itemValue="#{prop.id}"
+                                                        itemLabel="#{prop.fornecedor}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 800px"
+                                                        size="60">
+                                            <p:ajax event="itemSelect"
+                                                    listener="#{alteracaoFornecedorLicitacaoControlador.listenerPropostaFornecedor()}"
+                                                    update=":Formulario:grid-proposta :Formulario:panel-proposta"
+                                                    process="@this"
+                                                    onstart="aguarde.show();"
+                                                    oncomplete="aguarde.hide();"/>
+                                        </p:autoComplete>
+
+                                        <fc:outputLabelObrigatorio value="Fornecedor: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isNovaProposta()}"/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        title="Digite o fornecedor que deseja pesquisar."
+                                                        rendered="#{alteracaoFornecedorLicitacaoControlador.isNovaProposta()}"
+                                                        value="#{alteracaoFornecedorLicitacaoControlador.participanteLicitacao}"
+                                                        completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarParticipantesLicitacao}"
+                                                        converter="#{participanteLicitacaoControlador.converterGenerico}"
+                                                        var="lf"
+                                                        itemValue="#{lf.id}"
+                                                        itemLabel="#{lf}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 800px"
+                                                        size="60"
+                                                        styleClass="mrig05">
+                                            <p:ajax event="itemSelect"
+                                                    listener="#{alteracaoFornecedorLicitacaoControlador.listenerNovaPropostaFornecedor()}"
+                                                    update=":Formulario:grid-proposta :Formulario:panel-proposta"
+                                                    process="@this"
+                                                    onstart="aguarde.show();"
+                                                    oncomplete="aguarde.hide();"/>
+                                        </p:autoComplete>
+
+                                        <fc:outputLabelObrigatorio value="Representante: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"/>
+                                        <p:autoComplete queryDelay="1000" id="representante"
+                                                        title="Digite o representante do fornecedor caso queira alterar."
+                                                        rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"
+                                                        value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.representante}"
+                                                        completeMethod="#{propostaTecnicaControlador.completarRepresentante}"
+                                                        converter="#{propostaFornecedorControlador.converterRepresentante}"
+                                                        disabled="#{alteracaoFornecedorLicitacaoControlador.isPropostaFornecedorPessoaFisica()}"
+                                                        var="representante"
+                                                        itemLabel="#{representante}"
+                                                        itemValue="#{representante.id}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 800px"
+                                                        size="60"/>
+
+                                        <fc:outputLabelObrigatorio value="Instrumento Repres.:"
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"/>
+                                        <h:panelGrid columns="1"
+                                                     cellpadding="0"
+                                                     cellspacing="0">
+                                            <p:inputTextarea
+                                                rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"
+                                                value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.instrumentoRepresentacao}"
+                                                disabled="#{alteracaoFornecedorLicitacaoControlador.isPropostaFornecedorPessoaFisica()}"
+                                                cols="60"
+                                                maxlength="255"
+                                                autoResize="true"
+                                                counterTemplate="{0} Caracteres Restantes."
+                                                counter="counter-inst-rep-proposta"/>
+                                            <h:outputText id="counter-inst-rep-proposta"
+                                                          style="color: #497692"
+                                                          styleClass="mlef05"/>
+                                        </h:panelGrid>
+
+                                        <fc:outputLabelObrigatorio value="Tipo de Empresa:"
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"/>
+                                        <p:inputText id="tipo-empresa"
+                                                     rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"
+                                                     value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.fornecedor.tipoEmpresa.descricao}"
+                                                     disabled="#{alteracaoFornecedorLicitacaoControlador.isPropostaFornecedorPessoaFisica()}"
+                                                     size="10"
+                                                     readonly="true"/>
+
+                                        <fc:outputLabelObrigatorio value="Prazo de Validade: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"/>
+                                        <h:panelGrid columns="3"
+                                                     rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"
+                                                     cellspacing="0"
+                                                     cellpadding="0">
+                                            <p:inputText id="prazo-validade"
+                                                         title="Digite o prazo de validade da proposta."
+                                                         value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.validadeDaProposta}"
+                                                         size="10"
+                                                         styleClass="mrig02">
+                                                <p:ajax event="blur" process="@this"/>
+                                            </p:inputText>
+
+                                            <fc:outputLabelObrigatorio/>
+                                            <h:selectOneMenu id="tipo-prazo-validade"
+                                                             title="Informe o tipo do prazo de validade."
+                                                             value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.tipoPrazoValidade}">
+                                                <f:selectItems value="#{solicitacaoMaterialControlador.tipoPrazo}"/>
+                                                <p:ajax event="change" process="@this"/>
+                                            </h:selectOneMenu>
+                                        </h:panelGrid>
+
+                                        <fc:outputLabelObrigatorio value="Prazo de Execução:"
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"/>
+                                        <h:panelGrid columns="3"
+                                                     rendered="#{alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"
+                                                     cellpadding="0"
+                                                     cellspacing="0">
+                                            <p:inputText id="prazo-execucao"
+                                                         title="Digite o prazo de execução da proposta."
+                                                         value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.prazoDeExecucao}"
+                                                         size="10"
+                                                         styleClass="mrig02">
+                                                <p:ajax event="blur" process="@this"/>
+                                            </p:inputText>
+
+                                            <fc:outputLabelObrigatorio/>
+                                            <h:selectOneMenu id="tipo-prazo-execucao"
+                                                             title="Informe o tipo do prazo de execução."
+                                                             value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.tipoPrazoExecucao}">
+                                                <f:selectItems value="#{solicitacaoMaterialControlador.tipoPrazo}"/>
+                                                <p:ajax event="change" process="@this"/>
+                                            </h:selectOneMenu>
+                                        </h:panelGrid>
+
+                                        <h:outputText value="Valor Total: "
+                                                      rendered="#{!alteracaoFornecedorLicitacaoControlador.isMaiorDesconto()
+                                                       and alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"/>
+                                        <h:outputText id="vl-total-proposta"
+                                                      styleClass="negrito"
+                                                      rendered="#{!alteracaoFornecedorLicitacaoControlador.isMaiorDesconto()
+                                                       and alteracaoFornecedorLicitacaoControlador.hasPropostaFornecedor()}"
+                                                      value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.valorTotalProposta}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </h:panelGrid>
+                                </td>
+
+                                <td style="width: 40%">
+                                    <div style="overflow: scroll; max-height: 300px;
+                                    display: #{alteracaoFornecedorLicitacaoControlador.hasPropostas() ? 'block' : 'none'}">
+                                        <table>
+                                            <tr>
+                                                <td colspan="2">
+                                                    <div class="alert alert-info" align="center">
+                                                        Propostas Cadastradas na Licitação
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="negrito">
+                                                <td>Fornecedor</td>
+                                                <td>Representante</td>
+                                            </tr>
+
+                                            <ui:repeat value="#{alteracaoFornecedorLicitacaoControlador.propostas}"
+                                                       var="propLic">
+                                                <tr>
+                                                    <td>
+                                                        <h:outputText value="#{propLic.fornecedor}"/>
+                                                    </td>
+                                                    <td>
+                                                        <h:outputText value="#{propLic.representante.nome}"/>
+                                                    </td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p:outputPanel id="panel-proposta">
+                            <p:dataTable paginator="true"
+                                         id="tabela-lote"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{alteracaoFornecedorLicitacaoControlador.lotesProposta}"
+                                         rendered="#{alteracaoFornecedorLicitacaoControlador.hasLotes()}"
+                                         rows="10"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>LOTES - PROPOSTA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="10,25,50,100"
+                                         var="lote">
+
+                                <p:column headerText="Proposta" styleClass="alinhamentoCentralizado"
+                                          style="width: 80px;">
+                                    <p:commandButton icon="ui-icon-note"
+                                                     title="Clique para lançar os valores dos itens deste lote."
+                                                     process="@this"
+                                                     update=":form-proposta"
+                                                     actionListener="#{alteracaoFornecedorLicitacaoControlador.selecionarLote(lote)}"
+                                                     onclick="aguarde.show()"
+                                                     oncomplete="aguarde.hide();"/>
+
+                                </p:column>
+                                <p:column headerText="Número" styleClass="alinhamentoDireita" style="width: 30px">
+                                    <h:outputText value="#{lote.loteProcessoDeCompra.numero}"/>
+                                </p:column>
+                                <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                                    <h:outputText value="#{lote.loteProcessoDeCompra.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita" style="width: 100px"
+                                          rendered="#{!alteracaoFornecedorLicitacaoControlador.isMaiorDesconto()}">
+                                    <h:outputText value="#{lote.valor}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+                    </p:panel>
+
+                    <p:panel header="#{alteracaoFornecedorLicitacaoControlador.selecionado.tipoAlteracao.descricao}"
+                             rendered="#{alteracaoFornecedorLicitacaoControlador.isTipoAlteracaoParticipante()}"
+                             id="panel-participante">
+
+                        <table>
+                            <tr style="vertical-align: top">
+                                <td style="width: 60%">
+                                    <h:panelGrid columns="2" id="grid-participante">
+                                        <h:outputText value="Código: "/>
+                                        <h:outputLabel
+                                            value="#{alteracaoFornecedorLicitacaoControlador.participanteLicitacao.codigo}"
+                                            styleClass="negrito"/>
+
+                                        <fc:outputLabelObrigatorio value="Participante: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isAlterarParticipante()}"/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        title="Digite o fornecedor que deseja pesquisar."
+                                                        rendered="#{alteracaoFornecedorLicitacaoControlador.isAlterarParticipante()}"
+                                                        value="#{alteracaoFornecedorLicitacaoControlador.participanteLicitacao}"
+                                                        completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarParticipantesLicitacao}"
+                                                        converter="#{participanteLicitacaoControlador.converterGenerico}"
+                                                        var="lf"
+                                                        itemValue="#{lf.id}"
+                                                        itemLabel="#{lf}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 800px"
+                                                        size="60"
+                                                        styleClass="mrig05">
+                                            <p:ajax event="itemSelect"
+                                                    listener="#{alteracaoFornecedorLicitacaoControlador.listenerParticipanteLicitacao()}"
+                                                    update=":Formulario:grid-participante"
+                                                    process="@this"
+                                                    onstart="aguarde.show();"
+                                                    oncomplete="aguarde.hide();"/>
+                                        </p:autoComplete>
+
+                                        <fc:outputLabelObrigatorio value="Participante: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isNovoParticipante()}"/>
+                                        <fc:novoAutocompletePessoa id="ac-fornecedor"
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isNovoParticipante()}"
+                                                                   value="#{alteracaoFornecedorLicitacaoControlador.participanteLicitacao.empresa}"
+                                                                   caminhoAtual="#{alteracaoFornecedorLicitacaoControlador.caminhoOrigem}"
+                                                                   mostraBotaoEdita="false"
+                                                                   mostraBotaoNovo="false"
+                                                                   mostraSituacoes="false"
+                                                                   mostraBotaoInfo="false"
+                                                                   size="60"
+                                                                   permiteAlterarSituacoes="false"
+                                                                   update=":Formulario:grid-participante"
+                                                                   listenerItemSelect="#{alteracaoFornecedorLicitacaoControlador.listenerNovaParticipanteLicitacao()}"
+                                                                   situacoesPossiveis="#{novoComponentePesquisaPessoaControlador.situacaoPorDescricao('ATIVO')}"/>
+
+                                        <fc:outputLabelObrigatorio value="CPF do Repres.: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isParticipantePessoaJuridica()}"/>
+                                        <p:inputMask mask="999.999.999-99" title="Informe o CPF do Representante."
+                                                     value="#{alteracaoFornecedorLicitacaoControlador.representanteLicitacao.cpf}"
+                                                     rendered="#{alteracaoFornecedorLicitacaoControlador.isParticipantePessoaJuridica()}"
+                                                     maxlength="20" size="20">
+                                            <p:ajax event="blur"
+                                                    process="@this"
+                                                    update=":Formulario:nome-representante"
+                                                    listener="#{alteracaoFornecedorLicitacaoControlador.validarAndVerificarCpfRepresentante()}"/>
+                                        </p:inputMask>
+
+                                        <fc:outputLabelObrigatorio value="Nome do Repres.: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isParticipantePessoaJuridica()}"/>
+                                        <p:inputText
+                                            id="nome-representante"
+                                            value="#{alteracaoFornecedorLicitacaoControlador.representanteLicitacao.nome}"
+                                            size="60"
+                                            maxlength="70"
+                                            rendered="#{alteracaoFornecedorLicitacaoControlador.isParticipantePessoaJuridica()}">
+                                            <p:ajax event="change" process="@this"/>
+                                        </p:inputText>
+
+                                        <fc:outputLabelObrigatorio value="Instrumento Repres.: "
+                                                                   rendered="#{alteracaoFornecedorLicitacaoControlador.isParticipantePessoaJuridica()}"/>
+                                        <h:panelGrid
+                                            columns="1"
+                                            rendered="#{alteracaoFornecedorLicitacaoControlador.isParticipantePessoaJuridica()}">
+                                            <p:inputTextarea id="instrumento-representacao"
+                                                             title="Digite os documentos que dão legalidade ao representante do fornecedor."
+                                                             value="#{alteracaoFornecedorLicitacaoControlador.participanteLicitacao.instrumentoRepresentacao}"
+                                                             cols="60"
+                                                             maxlength="255"
+                                                             autoResize="true"
+                                                             counterTemplate="{0} Caracteres Restantes."
+                                                             counter="counter-instrumento-representacao">
+                                                <p:ajax event="change" process="@this"/>
+                                            </p:inputTextarea>
+                                            <h:outputText id="counter-instrumento-representacao"
+                                                          style="color: #497692"
+                                                          styleClass="mlef05"/>
+                                        </h:panelGrid>
+                                    </h:panelGrid>
+                                </td>
+
+                                <td style="width: 40%">
+                                    <div style="overflow: scroll; max-height: 250px;
+                                    display: #{alteracaoFornecedorLicitacaoControlador.hasParticipante() ? 'block' : 'none'}">
+                                        <table>
+                                            <tr>
+                                                <td colspan="4">
+                                                    <div class="alert alert-info" align="center">
+                                                        Participantes Cadastrado na Licitação
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="negrito">
+                                                <td>Cód</td>
+                                                <td>Fornecedor</td>
+                                                <td>Representante</td>
+                                                <td>Classif.</td>
+                                            </tr>
+                                            <ui:repeat value="#{alteracaoFornecedorLicitacaoControlador.participantes}"
+                                                       var="part">
+                                                <tr>
+                                                    <td>
+                                                        <h:outputText value="#{part.codigo}"/>
+                                                    </td>
+                                                    <td>
+                                                        <h:outputText value="#{part.empresa}"/>
+                                                    </td>
+                                                    <td>
+                                                        <h:outputText value="#{part.representante.nome}"/>
+                                                    </td>
+                                                    <td>
+                                                        <h:outputText title="#{part.justificativaClassificacao}"
+                                                                      value="#{part.tipoClassificacaoFornecedor.descricao}"
+                                                                      styleClass="negrito"
+                                                                      style="color : #{habilitacaoPregaoControlador.getCorDaDescricao(part.tipoClassificacaoFornecedor.descricao)}"/>
+                                                    </td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </p:panel>
+
+                    <p:panel header="#{alteracaoFornecedorLicitacaoControlador.selecionado.tipoAlteracao.descricao}"
+                             rendered="#{alteracaoFornecedorLicitacaoControlador.isSubstituirParticipante()}"
+                             id="panel-substituirPart">
+
+                        <h:panelGrid columns="2" id="grid-substituirPart">
+                            <fc:outputLabelObrigatorio value="Participante De: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            title="Digite o participante que deseja pesquisar."
+                                            value="#{alteracaoFornecedorLicitacaoControlador.participanteLicitacao}"
+                                            completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarParticipantesLicitacao}"
+                                            converter="#{participanteLicitacaoControlador.converterGenerico}"
+                                            var="pla"
+                                            itemValue="#{pla.id}"
+                                            itemLabel="#{pla}"
+                                            maxResults="50"
+                                            dropdown="true"
+                                            panelStyle="max-height: 250px;max-width: 800px"
+                                            size="70"/>
+
+                            <fc:outputLabelObrigatorio value="Participante Para: "/>
+                            <fc:novoAutocompletePessoa id="ac-part-subst"
+                                                       value="#{alteracaoFornecedorLicitacaoControlador.participanteSubstituicao}"
+                                                       caminhoAtual="#{alteracaoFornecedorLicitacaoControlador.caminhoOrigem}"
+                                                       mostraBotaoEdita="false"
+                                                       mostraBotaoNovo="false"
+                                                       mostraSituacoes="false"
+                                                       mostraBotaoInfo="false"
+                                                       size="70"
+                                                       permiteAlterarSituacoes="false"
+                                                       situacoesPossiveis="#{novoComponentePesquisaPessoaControlador.situacaoPorDescricao('ATIVO')}"/>
+                        </h:panelGrid>
+                    </p:panel>
+
+                    <p:panel header="#{alteracaoFornecedorLicitacaoControlador.selecionado.tipoAlteracao.descricao}"
+                             rendered="#{alteracaoFornecedorLicitacaoControlador.substituirFornecedorDispensa}"
+                             id="panel-substituirFornDispensa">
+
+                        <table>
+                            <tr style="vertical-align: top">
+                                <td style="width: 60%">
+                                    <h:panelGrid columns="2">
+                                        <fc:outputLabelObrigatorio value="Fornecedor De: "/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        title="Escolha o fornecedor que será substituído."
+                                                        value="#{alteracaoFornecedorLicitacaoControlador.selecionado.fornecedorDispensaLicitacao}"
+                                                        completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarFornecedoresDispensa}"
+                                                        converter="#{alteracaoFornecedorLicitacaoControlador.converterFornecedorDispensaLicitacao}"
+                                                        var="fornOrig"
+                                                        itemValue="#{fornOrig.id}"
+                                                        itemLabel="#{fornOrig}"
+                                                        maxResults="50"
+                                                        dropdown="true"
+                                                        panelStyle="max-height: 250px;max-width: 800px"
+                                                        size="60"
+                                                        styleClass="mrig05">
+                                            <p:ajax event="itemSelect"
+                                                    update=":Formulario:grid-proposta :Formulario:panel-substituirFornDispensa"
+                                                    process="@this"
+                                                    onstart="aguarde.show();"
+                                                    oncomplete="aguarde.hide();"/>
+                                        </p:autoComplete>
+
+                                        <fc:outputLabelObrigatorio value="Fornecedor Para:"/>
+                                        <p:autoComplete queryDelay="1000"
+                                                        title="Escolha o novo fonecedor."
+                                                        value="#{alteracaoFornecedorLicitacaoControlador.participanteSubstituicao}"
+                                                        completeMethod="#{alteracaoFornecedorLicitacaoControlador.completarPessoasFornecedorasDispensa}"
+                                                        converter="#{pessoaContabilControlador.converterGenerico}"
+                                                        var="fornSub"
+                                                        dropdown="true"
+                                                        forceSelection="true"
+                                                        itemValue="#{fornSub.id}"
+                                                        itemLabel="#{fornSub}"
+                                                        maxResults="10"
+                                                        size="60"
+                                                        styleClass="mrig05">
+                                        </p:autoComplete>
+                                    </h:panelGrid>
+                                </td>
+
+                                <td style="width: 40%">
+                                    <div style="overflow: scroll; max-height: 300px;
+                                    display: #{alteracaoFornecedorLicitacaoControlador.hasContratos() ? 'block' : 'none'}">
+                                        <table>
+                                            <tr>
+                                                <td colspan="2">
+                                                    <div class="alert alert-info" align="center">
+                                                        Contratos da Dispensa de Licitação/Inexigibilidade
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="negrito">
+                                                <td>Contrato</td>
+                                            </tr>
+
+                                            <ui:repeat value="#{alteracaoFornecedorLicitacaoControlador.contratosDispensa}"
+                                                       var="contrato">
+                                                <tr>
+                                                    <td>
+                                                        <h:commandLink
+                                                            styleClass="link-redirecionar"
+                                                            target="_blank"
+                                                            actionListener="#{alteracaoFornecedorLicitacaoControlador.redirecionarContrato(contrato)}"
+                                                            title="Clique para visualizar esse registro em nova aba.">
+                                                            <h:outputLabel
+                                                                value="#{contrato}"
+                                                                styleClass="negrito"/>
+                                                        </h:commandLink>
+                                                    </td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </p:panel>
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{alteracaoFornecedorLicitacaoControlador}"/>
+        </h:form>
+
+        <p:dialog header="Proposta do Fornecedor"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  closable="false"
+                  height="400"
+                  width="1100"
+                  widgetVar="dlgProposta">
+            <h:form id="form-proposta">
+                <h:outputText value="Fornecedor Selecionado:"
+                              styleClass="mtop05"/>
+                <h:outputText value="#{alteracaoFornecedorLicitacaoControlador.propostaFornecedor.fornecedor.nome}"
+                              styleClass="negrito"/>
+
+                <p:dataTable paginator="true"
+                             id="tabela-item"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{alteracaoFornecedorLicitacaoControlador.lotePropostaFornecedor.itens}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ITENS DA PROPOSTA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="item">
+
+                    <p:column headerText="Nº" styleClass="alinhamentoDireita" style="width: 3%">
+                        <h:outputText value="#{item.numeroItem}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{item.itemProcessoDeCompra.itemSolicitacaoMaterial.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Unid. Med." styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{item.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.sigla}"/>
+                    </p:column>
+                    <p:column headerText="Marca" styleClass="alinhamentoCentralizado">
+                        <p:inputText id="marca"
+                                     title="Digite a marca deste item."
+                                     value="#{item.marca}"
+                                     disabled="#{item.isItemServico() or  item.itemPregao ne null}"
+                                     maxlength="70" size="10">
+                            <p:ajax event="change"
+                                    listener="#{alteracaoFornecedorLicitacaoControlador.selecionarItem(item)}"
+                                    process=":form-proposta:tabela-item @this"/>
+                        </p:inputText>
+                    </p:column>
+                    <p:column headerText="Modelo/Descrição" styleClass="alinhamentoCentralizado">
+                        <p:commandButton onclick="aguarde.show();"
+                                         oncomplete="aguarde.hide(); dlgInfoProduto.show();"
+                                         update=":form-info-produto"
+                                         process="@this"
+                                         disabled="#{item.itemPregao ne null}"
+                                         actionListener="#{alteracaoFornecedorLicitacaoControlador.carregarInformacaoProduto(item)}"
+                                         icon="ui-icon-note"/>
+                    </p:column>
+                    <p:column headerText="Desconto (%)" style="width: 150px;"
+                              styleClass="alinhamentoDireita"
+                              rendered="#{alteracaoFornecedorLicitacaoControlador.isMaiorDesconto() and alteracaoFornecedorLicitacaoControlador.isApuracaoPorItem()}">
+                        <p:inputText styleClass="alinhamentoDireita"
+                                     disabled="#{item.itemPregao ne null}"
+                                     value="#{item.percentualDesconto}"
+                                     onkeypress="mascaraMonetariaDinamica(this, 3, 3)"
+                                     maxlength="8">
+                            <f:convertNumber pattern="#,##0.000"/>
+                            <p:ajax event="change"
+                                    listener="#{alteracaoFornecedorLicitacaoControlador.selecionarItem(item)}"
+                                    process=":form-proposta:tabela-item @this"/>
+                        </p:inputText>
+                    </p:column>
+                    <p:column headerText="Quantidade" styleClass="alinhamentoDireita"
+                              rendered="#{!alteracaoFornecedorLicitacaoControlador.isMaiorDesconto()}">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{item.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraQuantidade}"
+                            value="#{item.itemProcessoDeCompra.quantidade}"/>
+                    </p:column>
+                    <p:column headerText="Valor Unitário (R$)" styleClass="alinhamentoCentralizado"
+                              rendered="#{!alteracaoFornecedorLicitacaoControlador.isMaiorDesconto()}">
+
+                        <fc:input-mascara-unidade-medida value="#{item.preco}"
+                                                         update=":form-proposta:tabela-item:valor-total-item"
+                                                         process=":form-proposta:tabela-item @this"
+                                                         listener="#{alteracaoFornecedorLicitacaoControlador.selecionarItem(item)}"
+                                                         disabled="#{item.itemPregao ne null}"
+                                                         tipoMascara="#{item.itemProcessoDeCompra.itemSolicitacaoMaterial.unidadeMedida.mascaraValorUnitario}"/>
+                    </p:column>
+                    <p:column headerText="Valor Total (R$)" styleClass="alinhamentoDireita"
+                              rendered="#{!alteracaoFornecedorLicitacaoControlador.isMaiorDesconto()}">
+                        <p:outputPanel id="valor-total-item">
+                            <h:outputText value="#{item.precoTotal}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </p:outputPanel>
+                    </p:column>
+                </p:dataTable>
+
+                <div class="alinhamentoCentralizado mtop10">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"
+                                     title="Clique para confirmar os valores."
+                                     actionListener="#{alteracaoFornecedorLicitacaoControlador.confirmarProposta()}"
+                                     update=":Formulario:vl-total-proposta :Formulario:panel-proposta"
+                                     process=":form-proposta @this"
+                                     styleClass="prioritario mtop05"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-cancel"
+                                     title="Clique para cancelar todos os lançamentos."
+                                     actionListener="#{alteracaoFornecedorLicitacaoControlador.cancelarProposta()}"
+                                     onclick="if (!confirm('Tem certeza que deseja cancelar os lançamentos destes itens?')) {return false; } else {aguarde.show();}"
+                                     oncomplete="aguarde.hide();"
+                                     update=":Formulario:vl-total-proposta :Formulario:panel-proposta"
+                                     process="@this"
+                                     styleClass="padrao mtop05 mlef05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Informações do Produto"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  widgetVar="dlgInfoProduto"
+                  styleClass="alinhamentoEsquerda">
+
+            <h:form id="form-info-produto">
+                <p:outputPanel id="opn-info-produto">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Modelo: " styleClass="negrito"/>
+                        <p:inputText value="#{alteracaoFornecedorLicitacaoControlador.itemPropostaFornecedor.modelo}"
+                                     id="modelo-produto"
+                                     size="100" maxlength="255"/>
+
+                        <h:outputText value="Descrição: " styleClass="negrito"/>
+                        <h:panelGrid>
+                            <p:inputTextarea rows="10" cols="100" counter="descProduto"
+                                             value="#{alteracaoFornecedorLicitacaoControlador.itemPropostaFornecedor.descricaoProduto}"
+                                             maxlength="3000" counterTemplate="{0} caracteres restantes."
+                                             autoResize="false">
+                            </p:inputTextarea>
+                            <h:outputText id="descProduto"/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+                </p:outputPanel>
+
+                <div style="text-align: center; ">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     styleClass="operacao prioritario mrig05"
+                                     title="Clique para Confirmar."
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process=":form-info-produto"
+                                     update=":form-proposta"
+                                     actionListener="#{alteracaoFornecedorLicitacaoControlador.confirmaInformacaoProduto()}"/>
+
+                    <p:commandButton value="Cancelar"
+                                     styleClass="operacao"
+                                     actionListener="#{alteracaoFornecedorLicitacaoControlador.cancelarInformacaoProduto()}"
+                                     icon="ui-icon-cancel"
+                                     onclick="dlgInfoProduto.hide()"
+                                     process=":form-info-produto"
+                                     update=":form-proposta"
+                                     title="Clique para fechar as informações."/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

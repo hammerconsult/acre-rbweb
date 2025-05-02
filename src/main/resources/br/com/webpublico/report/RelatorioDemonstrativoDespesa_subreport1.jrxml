@@ -1,0 +1,712 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelatorioDemonstrativoDespesa_subreport1" pageWidth="802" pageHeight="555" orientation="Landscape" columnWidth="802" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.zoom" value="1.7715610000000022"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="EXERCICIO_ID" class="java.lang.Long"/>
+	<parameter name="DATAINICIAL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DATAFINAL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="SQL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" AND 1 = 1 "]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DATAINICIALMES" class="java.lang.String"/>
+	<parameter name="CONTA_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select CODIGOFONTE,
+       DESCFONTE,
+       sum(ORCADA_INICIAL) as ORCADA_INICIAL,
+       sum(VALORSUPLEMENTAR) as VALORSUPLEMENTAR,
+       sum(CREDITOESPECIAL) as CREDITOESPECIAL,
+       sum(EMPENHADO_ANO) as EMPENHADO_ANO,
+       sum(liquidado_ano) as liquidado_ano,
+       sum(pago_ano) as pago_ano,
+       sum(empenhado_mes) as empenhado_mes,
+       sum(liquidado_mes) as liquidado_mes,
+       sum(pago_mes) as pago_mes,
+       sum(TOTAL) as TOTAL,
+       sum(saldo_a_empenhar) as saldo_a_empenhar,
+       sum(saldo_a_liquidar) as saldo_a_liquidar,
+       sum(saldo_a_pagar) as saldo_a_pagar
+from (
+select CODORGAO,
+       DESCORGAO,
+       CODUNIDADE,
+       DESCUNIDADE,
+       CODIGOFONTE,
+       DESCFONTE,
+       coalesce(sum(ORCADA_INICIAL), 0) as ORCADA_INICIAL,
+       coalesce(sum(VALORSUPLEMENTAR), 0) as VALORSUPLEMENTAR,
+       coalesce(sum(CREDITOESPECIAL), 0) as CREDITOESPECIAL,
+       coalesce(sum(EMPENHADO_ANO), 0) as EMPENHADO_ANO,
+       coalesce(sum(liquidado_ano), 0) as liquidado_ano,
+       coalesce(sum(pago_ano), 0) as pago_ano,
+       coalesce(sum(empenhado_mes), 0) as empenhado_mes,
+       coalesce(sum(liquidado_mes), 0) as liquidado_mes,
+       coalesce(sum(pago_mes), 0) as pago_mes,
+       coalesce(sum(ORCADA_INICIAL), 0) + coalesce(sum(VALORSUPLEMENTAR), 0) + coalesce(sum(CREDITOESPECIAL), 0) as TOTAL,
+       (coalesce(sum(ORCADA_INICIAL), 0) + coalesce(sum(VALORSUPLEMENTAR), 0) + coalesce(sum(CREDITOESPECIAL), 0)) - coalesce(sum(EMPENHADO_ANO), 0) as saldo_a_empenhar,
+       coalesce(sum(EMPENHADO_ANO), 0) - coalesce(sum(liquidado_ano), 0) as saldo_a_liquidar,
+       coalesce(sum(EMPENHADO_ANO), 0) - coalesce(sum(pago_ano), 0) as saldo_a_pagar
+from (
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       CASE SUP.TIPODESPESAORC
+          WHEN 'ORCAMENTARIA'
+          THEN COALESCE(sum(SUP.VALOR), 0)
+          ELSE 0
+       END AS VALORSUPLEMENTAR,
+       CASE SUP.TIPODESPESAORC
+          WHEN 'ESPECIAL' THEN COALESCE(sum(SUP.VALOR), 0)
+          WHEN 'EXTRAORDINARIA' THEN COALESCE(sum(SUP.VALOR), 0)
+          ELSE 0
+       END AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       0 as empenhado_mes,
+       0 as liquidado_mes,
+       0 as pago_mes
+FROM SUPLEMENTACAOORC SUP
+INNER JOIN ALTERACAOORC ALT ON ALT.ID = SUP.ALTERACAOORC_ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = SUP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN DESPESAORC DESP ON FONT.DESPESAORC_ID = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROV ON PROV.ID = DESP.PROVISAOPPADESPESA_ID
+INNER JOIN CONTA C ON PROV.CONTADEDESPESA_ID = C.ID
+INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = PROV.UNIDADEORGANIZACIONAL_ID AND ALT.DATAALTERACAO BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, ALT.DATAALTERACAO)
+INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND ALT.DATAALTERACAO BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, ALT.DATAALTERACAO)
+WHERE ALT.DATAALTERACAO BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+group by VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       SUP.TIPODESPESAORC,
+       FR.CODIGO,
+       FR.DESCRICAO
+UNION ALL
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+     COALESCE(SUM(pff.VALOR), 0) AS ORCADA_INICIAL,
+     0 AS VALORSUPLEMENTAR,
+     0 AS CREDITOESPECIAL,
+     0 AS EMPENHADO_ANO,
+     0 as liquidado_ano,
+     0 as pago_ano,
+     0 as empenhado_mes,
+     0 as liquidado_mes,
+     0 as pago_mes
+FROM PROVISAOPPAFONTE PFF
+INNER JOIN provisaoppadespesa provdesp ON PFF.PROVISAOPPADESPESA_ID = PROVDESP.ID
+inner join contadedestinacao cd on pff.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = PROVDESP.UNIDADEORGANIZACIONAL_ID AND to_date($P{DATAFINAL}, 'dd/mm/yyyy') BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, to_date($P{DATAFINAL}, 'dd/mm/yyyy'))
+INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND to_date($P{DATAFINAL}, 'dd/mm/yyyy') BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, to_date($P{DATAFINAL}, 'dd/mm/yyyy'))
+INNER JOIN CONTA C ON provdesp.CONTADEDESPESA_ID = C.ID
+INNER JOIN PLANODECONTASEXERCICIO PCE ON pce.planodedespesas_id = C.PLANODECONTAS_ID AND PCE.EXERCICIO_ID = $P{EXERCICIO_ID}
+WHERE c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+UNION ALL
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       COALESCE(SUM(EMP.VALOR), 0) AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       0 as empenhado_mes,
+       0 as liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND emp.dataempenho BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, EMP.DATAEMPENHO)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND emp.dataempenho BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, emp.dataempenho)
+WHERE emp.dataempenho BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       COALESCE(SUM(est.VALOR), 0) * - 1 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       0 AS EMPENHADO_MES,
+       0 as liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join empenhoestorno est on emp.id = est.empenho_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND est.dataestorno BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, est.dataestorno)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND est.dataestorno BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, est.dataestorno)
+WHERE est.dataestorno BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       COALESCE(sum(liq.valor), 0) as liquidado_ano,
+       0 as pago_ano,
+       0 as empenhado_mes,
+       0 as liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND liq.dataliquidacao BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, liq.dataliquidacao)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND liq.dataliquidacao BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, liq.dataliquidacao)
+WHERE liq.dataliquidacao BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       COALESCE(SUM(est.VALOR), 0) * - 1 as liquidado_ano,
+       0 as pago_ano,
+       0 as EMPENHADO_MES,
+       0 AS liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+inner join liquidacaoestorno est on liq.id = est.liquidacao_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND est.dataestorno BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, est.dataestorno)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND est.dataestorno BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, est.dataestorno)
+WHERE est.dataestorno BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       COALESCE(sum(pag.valor), 0) as pago_ano,
+       0 as empenhado_mes,
+       0 as liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+inner join pagamento pag on liq.id = pag.liquidacao_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND pag.datapagamento BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, pag.datapagamento)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND pag.datapagamento BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, pag.datapagamento)
+WHERE pag.datapagamento BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       COALESCE(SUM(est.VALOR), 0) * - 1 as pago_ano,
+       0 as EMPENHADO_MES,
+       0 AS liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+inner join pagamento pag on liq.id = pag.liquidacao_id
+inner join pagamentoestorno est on pag.id = est.pagamento_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND est.dataestorno BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, est.dataestorno)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND est.dataestorno BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, est.dataestorno)
+WHERE est.dataestorno BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       COALESCE(SUM(EMP.VALOR), 0) AS EMPENHADO_MES,
+       0 as liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND emp.dataempenho BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, EMP.DATAEMPENHO)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND emp.dataempenho BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, emp.dataempenho)
+WHERE emp.dataempenho BETWEEN TO_DATE($P{DATAINICIALMES}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       COALESCE(SUM(est.VALOR), 0) * - 1 AS EMPENHADO_MES,
+       0 as liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join empenhoestorno est on emp.id = est.empenho_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND est.dataestorno BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, est.dataestorno)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND est.dataestorno BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, est.dataestorno)
+WHERE est.dataestorno BETWEEN TO_DATE($P{DATAINICIALMES}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       0 as empenhado_mes,
+       COALESCE(sum(liq.valor), 0) as liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND liq.dataliquidacao BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, liq.dataliquidacao)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND liq.dataliquidacao BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, liq.dataliquidacao)
+WHERE liq.dataliquidacao BETWEEN TO_DATE($P{DATAINICIALMES}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       0 as EMPENHADO_MES,
+       COALESCE(SUM(est.VALOR), 0) * - 1 AS liquidado_mes,
+       0 as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+inner join liquidacaoestorno est on liq.id = est.liquidacao_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND est.dataestorno BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, est.dataestorno)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND est.dataestorno BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, est.dataestorno)
+WHERE est.dataestorno BETWEEN TO_DATE($P{DATAINICIALMES}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       0 as empenhado_mes,
+       0 as liquidado_mes,
+       COALESCE(sum(pag.valor), 0) as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+inner join pagamento pag on liq.id = pag.liquidacao_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND pag.datapagamento BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, pag.datapagamento)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND pag.datapagamento BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, pag.datapagamento)
+WHERE pag.datapagamento BETWEEN TO_DATE($P{DATAINICIALMES}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+union all
+SELECT VWORG.CODIGO  AS CODORGAO,
+       VWORG.DESCRICAO AS DESCORGAO,
+       VW.CODIGO AS CODUNIDADE,
+       VW.DESCRICAO AS DESCUNIDADE,
+       FR.CODIGO AS CODIGOFONTE,
+       FR.DESCRICAO AS DESCFONTE,
+       0 AS ORCADA_INICIAL,
+       0 AS VALORSUPLEMENTAR,
+       0 AS CREDITOESPECIAL,
+       0 AS EMPENHADO_ANO,
+       0 as liquidado_ano,
+       0 as pago_ano,
+       0 as EMPENHADO_MES,
+       0 AS liquidado_mes,
+       COALESCE(SUM(est.VALOR), 0) * - 1 as pago_mes
+FROM EMPENHO EMP
+inner join liquidacao liq on liq.empenho_id = emp.id
+inner join pagamento pag on liq.id = pag.liquidacao_id
+inner join pagamentoestorno est on pag.id = est.pagamento_id
+INNER JOIN DESPESAORC DESP ON emp.despesaorc_id = DESP.ID
+INNER JOIN PROVISAOPPADESPESA PROVDESP ON desp.provisaoppadespesa_id = PROVDESP.ID
+INNER JOIN FONTEDESPESAORC FONT ON FONT.ID = EMP.FONTEDESPESAORC_ID
+INNER JOIN PROVISAOPPAFONTE PPF ON PPF.ID = FONT.PROVISAOPPAFONTE_ID
+inner join contadedestinacao cd on ppf.destinacaoderecursos_id = cd.id
+inner join fontederecursos fr on cd.fontederecursos_id = fr.id
+INNER JOIN CONTA C ON PROVDESP.CONTADEDESPESA_ID = C.ID
+INNER JOIN vwhierarquiaorcamentaria VW ON emp.unidadeorganizacional_id = vw.subordinada_id AND est.dataestorno BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, est.dataestorno)
+INNER JOIN vwhierarquiaorcamentaria VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND est.dataestorno BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, est.dataestorno)
+WHERE est.dataestorno BETWEEN TO_DATE($P{DATAINICIALMES}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+AND DESP.EXERCICIO_ID = $P{EXERCICIO_ID}
+and c.id = $P{CONTA_ID} $P!{SQL}
+GROUP BY VWORG.CODIGO,
+       VWORG.DESCRICAO,
+       VW.CODIGO,
+       VW.DESCRICAO,
+       FR.CODIGO,
+       FR.DESCRICAO
+) dados
+group by CODORGAO,
+       DESCORGAO,
+       CODUNIDADE,
+       DESCUNIDADE,
+       CODIGOFONTE,
+       DESCFONTE
+) reg
+group by
+       CODIGOFONTE,
+       DESCFONTE]]>
+	</queryString>
+	<field name="CODIGOFONTE" class="java.lang.String"/>
+	<field name="DESCFONTE" class="java.lang.String"/>
+	<field name="ORCADA_INICIAL" class="java.math.BigDecimal"/>
+	<field name="VALORSUPLEMENTAR" class="java.math.BigDecimal"/>
+	<field name="CREDITOESPECIAL" class="java.math.BigDecimal"/>
+	<field name="EMPENHADO_ANO" class="java.math.BigDecimal"/>
+	<field name="LIQUIDADO_ANO" class="java.math.BigDecimal"/>
+	<field name="PAGO_ANO" class="java.math.BigDecimal"/>
+	<field name="EMPENHADO_MES" class="java.math.BigDecimal"/>
+	<field name="LIQUIDADO_MES" class="java.math.BigDecimal"/>
+	<field name="PAGO_MES" class="java.math.BigDecimal"/>
+	<field name="TOTAL" class="java.math.BigDecimal"/>
+	<field name="SALDO_A_EMPENHAR" class="java.math.BigDecimal"/>
+	<field name="SALDO_A_LIQUIDAR" class="java.math.BigDecimal"/>
+	<field name="SALDO_A_PAGAR" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="31" splitType="Stretch">
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="600" y="1" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EMPENHADO_ANO}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="81" y="1" width="215" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESCFONTE}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="701" y="21" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SALDO_A_PAGAR}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="398" y="1" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="297" y="1" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ORCADA_INICIAL}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="1" y="1" width="76" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CODIGOFONTE}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="600" y="11" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LIQUIDADO_ANO}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="499" y="21" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PAGO_MES}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="499" y="1" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EMPENHADO_MES}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="297" y="21" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CREDITOESPECIAL}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="701" y="11" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SALDO_A_LIQUIDAR}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="297" y="11" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALORSUPLEMENTAR}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="499" y="11" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LIQUIDADO_MES}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="600" y="21" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PAGO_ANO}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="701" y="1" width="99" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SALDO_A_EMPENHAR}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement positionType="Float" x="0" y="0" width="802" height="1"/>
+			</line>
+		</band>
+	</detail>
+</jasperReport>

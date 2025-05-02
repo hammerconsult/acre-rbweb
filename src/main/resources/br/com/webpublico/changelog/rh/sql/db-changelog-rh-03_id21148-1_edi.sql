@@ -1,0 +1,1 @@
+UPDATE PENSAOALIMENTICIA set vinculofp_id = CONTRATOFP_id

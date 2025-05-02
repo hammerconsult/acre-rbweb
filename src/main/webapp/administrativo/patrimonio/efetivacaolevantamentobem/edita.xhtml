@@ -1,0 +1,689 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function getElement(id) {
+                return document.getElementById(id);
+            }
+
+            function openDialog(id) {
+                $(id).modal({backdrop: 'static', keyboard: false});
+                $(id).modal('show');
+            }
+
+            function closeDialog(id) {
+                $(id).modal('hide');
+            }
+
+            function acompanharEfetivacao() {
+                var timer;
+                timer = setInterval(function () {
+                    console.log('acompanhando efetivações');
+                    rcAtualizaCompFutures();
+                    var future = getElement('Formulario:future-efetivacao');
+                    if (future.value == 'true') {
+                        console.log('parou o timer')
+                        clearInterval(timer);
+                    }
+                }, 1000);
+            }
+
+            var timerPesquisa;
+            function comecarPesquisa() {
+                timerPesquisa = setInterval(function () {
+                    acompanhaPesquisa();
+                }, 1000);
+            }
+
+            function terminarPesquisa() {
+                clearInterval(timerPesquisa);
+                validarLevantamentos();
+            }
+
+            var timerPesquisaEstorno;
+            function comecarPesquisaEstorno() {
+                console.log('começa a function');
+                timerPesquisaEstorno = setInterval(function () {
+                    rcAtualizaCompFuturesEstorno();
+                    var future = getElement('Formulario:future-estorno-efetivacao');
+                    if (future.value == 'true') {
+                        console.log('para a function');
+                        clearInterval(timerPesquisaEstorno);
+                    }
+                }, 1000);
+            }
+
+            function terminarPesquisaEstorno() {
+                clearInterval(timerPesquisaEstorno);
+                efetivarEstorno();
+            }
+
+            var timerEfetivacaoEstorno;
+            function acompanharEfetivacaoEstorno() {
+                timerEfetivacaoEstorno = setInterval(function () {
+                    rcAtualizaCompFuturesEstorno();
+                    var future = getElement('Formulario:future-estorno-efetivacao');
+                    if (future.value == 'true') {
+                        console.log('veio parar o timer')
+                        clearInterval(timerEfetivacaoEstorno);
+                    }
+                }, 1000);
+            }
+
+            function terminarEstorno(){
+                clearInterval(timerEfetivacaoEstorno);
+                clearInterval(timerPesquisaEstorno);
+            }
+
+
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand actionListener="#{loteEfetivacaoLevantamentoBemControlador.concluirPesquisa()}"
+                             name="acompanhaPesquisa"/>
+            <p:remoteCommand actionListener="#{loteEfetivacaoLevantamentoBemControlador.validarLevantamentos()}"
+                             name="validarLevantamentos" onsuccess="aguarde.hide()"/>
+            <p:remoteCommand
+                process=":Formulario:futures :FormularioEfetivacao"
+                update=":Formulario:futures :FormularioEfetivacao"
+                name="rcAtualizaCompFutures"/>
+
+            <p:remoteCommand actionListener="#{loteEfetivacaoLevantamentoBemControlador.estornarEfetivacoes()}"
+                             name="efetivarEstorno" />
+            <p:remoteCommand
+                process=":Formulario:futuresEstorno :FormularioEfetivacaoEstorno"
+                update=":Formulario:futuresEstorno :FormularioEfetivacaoEstorno"
+                name="rcAtualizaCompFuturesEstorno"/>
+
+            <p:outputPanel id="futures">
+                <h:inputHidden id="future-efetivacao"
+                               value="#{loteEfetivacaoLevantamentoBemControlador.futureEfetivacaoConcluida}"/>
+            </p:outputPanel>
+
+
+            <p:outputPanel id="futuresEstorno">
+                <h:inputHidden id="future-estorno-efetivacao"
+                               value="#{loteEfetivacaoLevantamentoBemControlador.futureEstornoConcluida}"/>
+            </p:outputPanel>
+
+            <fc:cabecalhoPretty controlador="#{loteEfetivacaoLevantamentoBemControlador}"
+                                origem="#{loteEfetivacaoLevantamentoBemControlador.caminhoPadrao}listar/"/>
+            <p:panel header="Efetivação de Levantamento de Bens Móveis" id="panelPrincipal">
+                <h:panelGrid columns="2" id="dadosPesquisa">
+                    <h:outputLabel value="Código:"/>
+                    <h:outputLabel
+                        value="#{loteEfetivacaoLevantamentoBemControlador.selecionado.codigo == null ? 'Gerado automaticamente ao salvar.' : loteEfetivacaoLevantamentoBemControlador.selecionado.codigo}"
+                        styleClass="negrito"/>
+
+                    <h:outputLabel value="Data da Efetivação:"/>
+                    <h:outputText converter="javax.faces.DateTime" styleClass="negrito"
+                                  value="#{loteEfetivacaoLevantamentoBemControlador.selecionado.dataEfetivacao}"/>
+
+                    <h:outputLabel value="Usuário da Efetivação:"/>
+                    <h:outputText
+                        value="#{loteEfetivacaoLevantamentoBemControlador.selecionado.usuarioSistema.pessoaFisica}"
+                        styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Unidade Orçamentária:" rendered="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoNovo()}"/>
+                    <p:autoComplete queryDelay="1000"
+                                    title="Selecione uma hierarquia orçamentária."
+                                    id="hierarquia"
+                                    value="#{loteEfetivacaoLevantamentoBemControlador.hierarquiaOrcamentaria}"
+                                    completeMethod="#{loteEfetivacaoLevantamentoBemControlador.completarHierarquiaOrganizacional}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    panelStyle="max-height: 250px;"
+                                    dropdown="true"
+                                    var="ho"
+                                    rendered="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoNovo()}"
+                                    size="70"
+                                    maxResults="50"
+                                    itemValue="#{ho.id}"
+                                    itemLabel="#{ho}">
+                        <p:ajax event="itemSelect"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                update=":Formulario:panelResultado"
+                                listener="#{loteEfetivacaoLevantamentoBemControlador.inicializarAtributos()}"/>
+                    </p:autoComplete>
+
+                    <h:outputLabel value="Unidade Orçamentária:" rendered="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoEditar()}"/>
+                    <h:outputText rendered="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoEditar()}"
+                        value="#{loteEfetivacaoLevantamentoBemControlador.hierarquiaOrcamentaria}"
+                        styleClass="negrito"/>
+
+                </h:panelGrid>
+
+                <p:commandButton
+                    value="Pesquisar (P)"
+                    title="Clique para pesquisar"
+                    accesskey="P"
+                    rendered="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoNovo()}"
+                    icon="ui-icon-search"
+                    onstart="aguarde.show()"
+                    styleClass="prioritario mrig05 pesquisar mtop10"
+                    style="width: 150px"
+                    onsuccess="comecarPesquisa()"
+                    actionListener="#{loteEfetivacaoLevantamentoBemControlador.pesquisar()}"
+                    process="@this dadosPesquisa"
+                    update=":Formulario:panelResultado"/>
+
+                <p:outputPanel id="panelResultado">
+                    <p:tabView id="tabView" styleClass="mtop05">
+                        <p:tab title="Levantamentos Efetivados" rendered="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoEditar()}">
+                            <p:dataTable paginator="true"
+                                         id="tableefetivados"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{loteEfetivacaoLevantamentoBemControlador.model}"
+                                         rows="20"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Efetivações Realizadas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="20, 50,100,150,200"
+                                         lazy="true"
+                                         var="ef">
+                                <p:column headerText="Reg. Patrimonial"
+                                          style="width: 10%;">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{ef.bem.identificacao}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Reg. Anterior"
+                                          style="width: 10%;">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{ef.levantamento.codigoPatrimonio}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Descrição do Bem"
+                                          style="width: 10%;">
+                                    <div style="text-align: left;">
+                                        <h:outputText value="#{ef.levantamento.descricaoBem}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Objeto de Compra"
+                                          style="width: 10%;">
+                                    <div style="text-align: left;">
+                                        <h:outputText value="#{ef.levantamento.item}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Est. de Conservação"
+                                          style="width: 5%;">
+                                    <div style="text-align: center;">
+                                        <h:outputText value="#{ef.levantamento.estadoConservacaoBem.descricao}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Sit. de Conservação"
+                                          style="width: 5%;">
+                                    <div style="text-align: center;">
+                                        <h:outputText value="#{ef.levantamento.situacaoConservacaoBem.descricao}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Tipo de Aquisição"
+                                          style="width: 5%;">
+                                    <div style="text-align: center;">
+                                        <h:outputText value="#{ef.levantamento.tipoAquisicaoBem.descricao}"/>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Data de Aquisição"
+                                          style="text-align: center; width: 5%;">
+                                    <h:outputText value="#{ef.levantamento.dataAquisicao}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Situação"
+                                          style="width: 10%;">
+                                    <div style="text-align: left;">
+                                        <h:outputText value="#{ef.situacaoEventoBem.descricao}"/>
+                                    </div>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+                        <p:tab title="Levantamentos Encontrados" id="levamentos" rendered="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoNovo()}">
+                            <p:dataTable paginator="true"
+                                         id="tableencontrados"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{loteEfetivacaoLevantamentoBemControlador.levantamentosEncontrados}"
+                                         rows="50"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Levantamentos Encontrados #{loteEfetivacaoLevantamentoBemControlador.levantamentosEncontrados.size()} &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="50,100,150,200"
+                                         var="lev">
+
+                                <p:column headerText="Registro Patrimonial" filterBy="#{lev.codigoPatrimonio}"
+                                          footerText="Registro Patrimonial"
+                                          filterMatchMode="contains"
+                                          style="width: 5%; text-align: center;">
+                                    <h:outputText value="#{lev.codigoPatrimonio}"/>
+                                </p:column>
+
+                                <p:column headerText="Objeto de Compra" filterBy="#{lev.item}"
+                                          footerText="Objeto de Compra"
+                                          filterMatchMode="contains"
+                                          style="width: 10%; text-align: left;">
+                                    <h:outputText value="#{lev.item}"/>
+                                </p:column>
+
+                                <p:column headerText="Grupo Objeto de Compra" filterBy="#{lev.item.grupoObjetoCompra}"
+                                          footerText="Grupo Objeto de Compra"
+                                          filterMatchMode="contains"
+                                          style="width: 10%; text-align: left;">
+                                    <h:outputText value="#{lev.item.grupoObjetoCompra}"/>
+                                </p:column>
+
+                                <p:column headerText="Grupo Patrimonial" filterBy="#{lev.grupoBem}"
+                                          footerText="Grupo Objeto de Compra"
+                                          filterMatchMode="contains"
+                                          style="width: 10%; text-align: left;">
+                                    <h:outputText value="#{lev.grupoBem}"/>
+                                </p:column>
+
+                                <p:column headerText="Estado de Conservação" style="width: 10%; text-align: center;">
+                                    <h:outputText value="#{lev.estadoConservacaoBem.descricao}"/>
+                                </p:column>
+
+                                <p:column headerText="Tipo de Aquisição" style="width: 10%; text-align: center;">
+                                    <h:outputText value="#{lev.tipoAquisicaoBem.descricao}"/>
+                                </p:column>
+
+                                <p:column headerText="Tipo de Grupo" style="width: 10%; text-align: center;">
+                                    <h:outputText value="#{lev.tipoGrupo.descricao}"/>
+                                </p:column>
+
+                                <p:column headerText="Data de Aquisição" style="text-align: center; width: 5%;">
+                                    <h:outputText value="#{lev.dataAquisicao}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+
+                                <p:column headerText="Valor do Bem (R$)" style="width: 10%; text-align: right;">
+                                    <h:outputText value="#{lev.valorBem}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                            <br/>
+                            <h:outputText
+                                value="*Esta operação pode demorar caso exista um grande número de levantamentos para efetivar."
+                                style="font-weight: bold; font-size: xx-small;"/>
+                        </p:tab>
+                        <p:tab title="Levantamentos Inconsistentes">
+                            <p:dataTable paginator="true"
+                                         id="tableInconsistencia"
+                                         rowStyleClass="vermelho"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{loteEfetivacaoLevantamentoBemControlador.levantamentosInconsistentes}"
+                                         rows="50"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Levantamentos Inconsistentes #{loteEfetivacaoLevantamentoBemControlador.levantamentosInconsistentes.size()} &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="50,100,150,200"
+                                         var="levInc">
+
+                                <p:column headerText="Registro Patrimonial" style="text-align: center; width: 5%;">
+                                    <h:outputText value="#{levInc.codigoPatrimonio}"/>
+                                </p:column>
+
+                                <p:column headerText="Objeto de Compra" style="text-align: left; width: 15%;">
+                                    <h:outputText value="#{levInc.item}"/>
+                                </p:column>
+                                <p:column headerText="Grupo Bem" style="text-align: left; width: 10%;">
+                                    <h:outputText value="#{levInc.grupoBem}"/>
+                                </p:column>
+                                <p:column headerText="Estado de Conservação"
+                                          style="width: 5%; text-align: center;">
+                                    <h:outputText value="#{levInc.estadoConservacaoBem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Tipo de Aquisição"
+                                          style="width: 5%; text-align: center;">
+                                    <h:outputText value="#{levInc.tipoAquisicaoBem.descricao}"/>
+                                </p:column>
+                                <p:column headerText="Data de Aquisição" style="text-align: center; width: 5%;">
+                                    <h:outputText value="#{levInc.dataAquisicao}">
+                                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Valor do Bem (R$)"
+                                          style="width: 10%;">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{levInc.valorBem}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </p:column>
+                                <p:column headerText="Msg. Erro" style="width: 45%; text-align: left;">
+                                    <h:outputText value="#{levInc.erro}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+                        <p:tab title="Cálculo da Depreciação">
+                            <p:dataTable paginator="true"
+                                         id="tableDepreciacao"
+                                         rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{loteEfetivacaoLevantamentoBemControlador.levantamentosEncontrados}"
+                                         rows="50"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Levantamentos Selecionados #{loteEfetivacaoLevantamentoBemControlador.levantamentosEncontrados.size()} &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="50,100,150,200"
+                                         var="levDep">
+
+                                <p:column headerText="Registro Patrimonial">
+                                    <div style="text-align: right;">
+                                        <h:outputText value="#{levDep.codigoPatrimonio}"/>
+                                    </div>
+                                </p:column>
+
+                                <p:column headerText="Objeto de Compra">
+                                    <div style="text-align: left;">
+                                        <h:outputText value="#{levDep.item}"/>
+                                    </div>
+                                </p:column>
+
+                                <p:column headerText="Grupo Objeto de Compra">
+                                    <div style="text-align: left;">
+                                        <h:outputText value="#{levDep.item.grupoObjetoCompra}"/>
+                                    </div>
+                                </p:column>
+
+                                <p:column headerText="Grupo Patrimonial" style="text-align: left;">
+                                    <h:outputText value="#{levDep.grupoBem}"/>
+                                </p:column>
+
+                                <p:column headerText="Valor do Bem (R$)" style="width: 10%; text-align: right;">
+                                    <h:outputText value="#{levDep.valorBem}">
+                                        <f:convertNumber pattern="###,##0.00"/>
+                                    </h:outputText>
+                                    <f:facet name="footer">
+                                        <h:outputText value="#{loteEfetivacaoLevantamentoBemControlador.somaValorBem}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </f:facet>
+                                </p:column>
+                                <p:column headerText="Valor da Depreciação (R$)" style="width: 10%; text-align: right;">
+                                    <h:outputText value="#{levDep.depreciacao}"
+                                                  converter="javax.faces.Double">
+                                        <f:convertNumber pattern="#,## 0.00"/>
+                                    </h:outputText>
+                                    <f:facet name="footer">
+                                        <h:outputText
+                                            value="#{loteEfetivacaoLevantamentoBemControlador.totalGeralRateio}">
+                                            <f:convertNumber pattern="###,##0.00"/>
+                                        </h:outputText>
+                                    </f:facet>
+
+                                </p:column>
+                            </p:dataTable>
+                        </p:tab>
+                        <p:tab title="Informações Gerais">
+                            <p:dataTable paginator="true"
+                                         id="tableInforGerEfetivacoesRealizadas"
+                                         rowIndexVar="rowIx"
+                                         styleClass="mtop05"
+                                         emptyMessage="Não foram localizados registros para serem apresentados"
+                                         value="#{loteEfetivacaoLevantamentoBemControlador.selecionado.informacoes}"
+                                         rows="50"
+                                         paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'> &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                         rowsPerPageTemplate="50,100,150,200"
+                                         var="info">
+                                <p:column headerText="Grupo Patrimonial" style="text-align: left;">
+                                    <h:outputText value="#{info.grupoBem}"
+                                                  styleClass="#{info.styleClassInconsistente()}"/>
+                                </p:column>
+                                <p:column headerText="Val. Contábil (a)"
+                                          style="text-align: right;">
+                                    <h:outputText
+                                        converter="moedaConverter"
+                                        value="#{info.valorContabil}">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Val. Bens (b)"
+                                          style="text-align: right;">
+                                    <h:outputText
+                                        value="#{info.valorBens}"
+                                        converter="moedaConverter">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Val. Levant. (c)"
+                                          style="text-align: right;">
+                                    <h:outputText
+                                        value="#{info.valorLevantamentos}"
+                                        converter="moedaConverter">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="(d) = (b + c)"
+                                          style="text-align: right;">
+                                    <h:outputText
+                                        value="#{info.bensMaisLevantamentos}"
+                                        converter="moedaConverter">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="(e) = (a - (b + c))"
+                                          style="text-align: right;">
+                                    <h:outputText
+                                        styleClass="#{info.styleClassInconsistenteBemPrincipal()}"
+                                        value="#{info.valorContabil - info.bensMaisLevantamentos }"
+                                        converter="moedaConverter">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Val. Depr. Contábil (f)"
+                                          style="text-align: right;">
+                                    <h:outputText
+                                        value="#{info.valorDepreciacaoContabil}"
+                                        converter="moedaConverter">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Val. Depr. Bens (g)" style="text-align: right;">
+                                    <h:outputText
+                                        value="#{info.valorDepreciacaoBens}"
+                                        converter="moedaConverter">
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="Val. Depr. Levant. (h)" style="text-align: right;">
+                                    <h:outputText
+                                        value="#{info.valorDepreciacaoLevant}"
+                                        converter="moedaConverter">
+                                        <f:convertNumber pattern="#,## 0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                                <p:column headerText="(i) = (f - (g + h))" style="text-align: right;">
+                                    <h:outputText
+                                        styleClass="#{info.styleClassDepreciacaoInconsistente()}"
+                                        value="#{info.valorDepreciacaoContabil - info.depreciacaoBensMaisDepreciacaoLevantamentos}"
+                                        converter="moedaConverter">
+                                    </h:outputText>
+                                </p:column>
+                                <p:columnGroup type="footer">
+                                    <p:row>
+                                        <p:column colspan="1" style="text-align:right" footerText="Total Geral:"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralContabil}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralBensPrincipal}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralLevantamento}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalLevantamentosMaisBensPrincipal}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralDiferenca}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralDepreciacaoContabil}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralDepreciacaoBens}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralDepreciacaoLevantamento}"/>
+                                        <p:column style="text-align:right"
+                                                  footerText="#{loteEfetivacaoLevantamentoBemControlador.totalGeralDepreciacaoDiferenca}"/>
+
+                                    </p:row>
+                                </p:columnGroup>
+                            </p:dataTable>
+
+                            <p:outputPanel id="panelInformacao">
+                                <div class="mtop05"/>
+                                <div class="azulnegrito alinhamentoEsquerda"
+                                     style="padding: 4px; font-size: 13px; margin: 0px!important;">
+                                    <h:outputText styleClass="negrito"
+                                                  value="* Grupo Patrimonial externos à efetivação."/>
+                                </div>
+                                <div class="mtop05"/>
+                                <div class="vermelhonegrito alinhamentoEsquerda"
+                                     style="padding: 4px; font-size: 13px; margin: 0px!important;">
+                                    <h:outputText styleClass="negrito"
+                                                  value="* Grupo Patrimonial com inconsistência de valores."/>
+                                </div>
+                                <div class="mtop05"/>
+                                <div class="verdenegrito alinhamentoEsquerda"
+                                     style="padding: 4px; font-size: 13px; margin: 0px!important;">
+                                    <h:outputText styleClass="negrito"
+                                                  value="* Grupo Patrimonial válido."/>
+                                </div>
+                            </p:outputPanel>
+                        </p:tab>
+                    </p:tabView>
+                </p:outputPanel>
+            </p:panel>
+
+            <p:commandButton icon="ui-icon-arrowrefresh-1-w"
+                             value="Estornar Todos"
+                             title="Clique aqui para estornar todas as efetivações."
+                             styleClass="mtop10"
+                             rendered="#{!loteEfetivacaoLevantamentoBemControlador.selecionado.estornado and loteEfetivacaoLevantamentoBemControlador.isOperacaoEditar()}"
+                             style=" height: 30px; margin-right: 5px;"
+                             actionListener="#{loteEfetivacaoLevantamentoBemControlador.buscarEfetivacoesParaEstorno()}"
+                             onclick="if (!confirm('Tem certeza que deseja estornar todas as efetivações? Este procedimento pode demorar.'))return false;"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             update=":Formulario"/>
+
+            <fc:rodapePretty controlador="#{loteEfetivacaoLevantamentoBemControlador}"
+                ocultarSalvar="#{loteEfetivacaoLevantamentoBemControlador.isOperacaoEditar()}"/>
+        </h:form>
+
+        <div id="dlgEfetivacao" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Efetivação de Levantamento de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioEfetivacao">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.total eq null ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/>
+                    </div>
+                    <div
+                        style="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="#{!loteEfetivacaoLevantamentoBemControlador.futureEfetivacaoConcluida? 'display: block' : 'display: none'}">
+                            <div class="bar"
+                                 style="width: #{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+                    <br/>
+                    <div align="center"
+                         style="#{!loteEfetivacaoLevantamentoBemControlador.futureEfetivacaoConcluida? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="Tempo Decorrido #{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                    </div>
+                    <div align="center"
+                         style="#{loteEfetivacaoLevantamentoBemControlador.futureEfetivacaoConcluida? 'display: block' : 'display: none'}">
+                        <div class="alert alert-success">
+                            Efetivação de Levantamento de Bens Móveis concluída com sucesso!!!
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="text-align: center">
+                    <div class="centralizado ">
+                        <p:commandButton value="Continuar"
+                                         icon="ui-icon-eye"
+                                         styleClass="operacao"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         disabled="#{!loteEfetivacaoLevantamentoBemControlador.futureEfetivacaoConcluida}"
+                                         actionListener="#{loteEfetivacaoLevantamentoBemControlador.navegarParaVisualizacao()}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+        <div id="dlgEfetivacaoEstorno" class="modal hide fade">
+            <div class="modal-header alert-info" style="text-align: center">
+                <div class="centralizado ">
+                    <strong>Estorno de Efetivação de Levantamento de Bens Móveis</strong>
+                </div>
+            </div>
+            <h:form id="FormularioEfetivacaoEstorno">
+                <div class="modal-body" style="text-align: center">
+                    <h:outputText
+                        value="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.descricaoProcesso}"/>
+                    <br/>
+                    <div
+                        style="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.total eq null ? 'display: block' : 'display: none'}">
+                        <h:graphicImage
+                            value="#{facesContext.externalContext.requestContextPath}/img/ajaxloading.gif"
+                            styleClass="mtop05"/>
+                    </div>
+                    <div
+                        style="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.total > 0 ? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="#{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                            <f:convertNumber type="number"
+                                             maxIntegerDigits="5"
+                                             maxFractionDigits="0"/>
+                        </h:outputText>%
+
+                        <div class="progress progress-striped active"
+                             style="#{!loteEfetivacaoLevantamentoBemControlador.futureEstornoConcluida? 'display: block' : 'display: none'}">
+                            <div class="bar"
+                                 style="width: #{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </div>
+                    <br/>
+                    <div align="center"
+                         style="#{!loteEfetivacaoLevantamentoBemControlador.futureEstornoConcluida? 'display: block' : 'display: none'}">
+                        <h:outputText
+                            value="Tempo Decorrido #{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                        <br/>
+                        <h:outputText
+                            value="Tempo Estimado #{loteEfetivacaoLevantamentoBemControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

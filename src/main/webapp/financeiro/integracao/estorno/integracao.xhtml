@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+    >
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <script type="text/javascript">
+                function iniciaImportacao() {
+                    dialogImportacao.show();
+                    timer = setInterval(function () {
+                        posImportacao();
+                    }, 1000);
+                }
+
+                function terminaImportacao() {
+                    clearInterval(timer);
+                    dialogImportacao.hide();
+                }
+            </script>
+
+            <p:remoteCommand name="posImportacao" actionListener="#{integracaoArrecadacaoTributariaControlador.finalizarImportacaoReceitaTributariaEstorno()}"
+                             update=":formImportacao:barra"/>
+
+            <p:panel id="panelImportar" header="Importar Estornos de Arrecadações Tributárias">
+                <h:panelGrid columns="2" id="gridFiltros">
+                    <fc:outputLabelObrigatorio value="Unidade Organizacional: "/>
+                    <h:panelGrid columns="3">
+                        <p:autoComplete queryDelay="1000" id="unidade"
+                                        value="#{integracaoArrecadacaoTributariaControlador.hierarquiaOrganizacional}"
+                                        completeMethod="#{integracaoArrecadacaoTributariaControlador.completaUnidadeOrganizacional}"
+                                        converter="#{integracaoArrecadacaoTributariaControlador.converterUnidadeOrganizacional}"
+                                        var="unid" forceSelection="true" size="70"
+                                        maxResults="10"
+                                        dropdown="true"
+                                        style="margin-left: -3px"
+                                        itemLabel="#{unid}"
+                                        itemValue="#{unid.id}"
+                                        disabled="#{!empty integracaoArrecadacaoTributariaControlador.lancamentoIntegracaoEstorno}"
+                                        title="Selecione uma Unidade Organizacional">
+                            <p:ajax event="itemSelect"
+                                    listener="#{integracaoArrecadacaoTributariaControlador.adicionaUnidadeHierarquiaSelecionada}"/>
+                        </p:autoComplete>
+
+                        <co:botao_informacao
+                            descricao="Lista todas as unidades organizacionais vinculadas ao usuário logado."/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Data Inicial: "/>
+                    <p:calendar id="dataInicial"
+                                value="#{integracaoArrecadacaoTributariaControlador.dataInicial}"
+                                pattern="dd/MM/yyyy"
+                                navigator="true"
+                                size="20"
+                                disabled="#{!empty integracaoArrecadacaoTributariaControlador.lancamentoIntegracaoEstorno}"
+                                onkeypress="mascara(this, mdata)"
+                                title="Selecione a data inicial">
+                        <p:ajax event="dateSelect" process="@this"/>
+                        <p:ajax event="valueChange" process="@this"/>
+                    </p:calendar>
+
+                    <fc:outputLabelObrigatorio value="Data Final: "/>
+                    <p:calendar id="dataFinal"
+                                value="#{integracaoArrecadacaoTributariaControlador.dataFinal}"
+                                pattern="dd/MM/yyyy"
+                                navigator="true"
+                                size="20"
+                                disabled="#{!empty integracaoArrecadacaoTributariaControlador.lancamentoIntegracaoEstorno}"
+                                onkeypress="mascara(this, mdata)"
+                                title="Selecione a data final">
+                        <p:ajax event="dateSelect" process="@this"/>
+                        <p:ajax event="valueChange" process="@this"/>
+                    </p:calendar>
+
+                    <h:outputText value="Lote de Baixa: "/>
+                    <h:panelGroup id="lotesSelecionados">
+                        <table class="table">
+                            <tr>
+                                <td>
+                                    <p:autoComplete queryDelay="1000" id="lote"
+                                                    value="#{integracaoArrecadacaoTributariaControlador.loteBaixa}"
+                                                    completeMethod="#{integracaoArrecadacaoTributariaControlador.completaLotePorNumeroSituacaoDataEstornado}"
+                                                    converter="#{loteBaixaControlador.loteBaixaConverte}"
+                                                    var="lote"
+                                                    size="70"
+                                                    dropdown="true"
+                                                    maxResults="10"
+                                                    style="margin-left: -3px"
+                                                    itemLabel="#{lote.toStringAutoComplete()}"
+                                                    itemValue="#{lote.id}"
+                                                    disabled="#{!empty integracaoArrecadacaoTributariaControlador.lancamentoIntegracaoEstorno}"
+                                                    title="Selecione um LOTE">
+                                        <p:ajax event="itemSelect"
+                                                update="lotesSelecionados"
+                                                process="@this :Formulario"
+                                                listener="#{integracaoArrecadacaoTributariaControlador.adicionarLoteBaixa()}"/>
+                                    </p:autoComplete>
+                                </td>
+                                <td>
+                                    <co:botao_informacao
+                                        descricao="Lista todos os lotes com situação BAIXADO ou BAIXADO COM INCONSISTÊNCIA."/>
+                                </td>
+                            </tr>
+
+                            <ui:repeat value="#{integracaoArrecadacaoTributariaControlador.lotesBaixa}"
+                                       var="lote">
+                                <tr>
+                                    <td>
+                                        <h:outputText value="#{lote.toStringAutoComplete()}" styleClass="negrito"/>
+                                    </td>
+                                    <td>
+                                        <p:commandButton icon="ui-icon-trash"
+                                                         onstart="aguarde.show()"
+                                                         oncomplete="aguarde.hide()"
+                                                         actionListener="#{integracaoArrecadacaoTributariaControlador.removerLoteBaixa(lote)}"
+                                                         process="@this :Formulario"
+                                                         update=":Formulario"/>
+                                    </td>
+                                    <td>
+                                        <fc:visualizarCampos objeto="#{lote}"/>
+                                    </td>
+                                    <td>
+                                        <fc:novoParente selecionado="#{lote}"
+                                                        icon="ui-icon-document"
+                                                        label="Inconsistência"
+                                                        destino="/integracao-tributario-contabil/#{lote.id}/"
+                                                        origem="/tributario-contabil/integracao-arrecadacao/"/>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                        </table>
+                    </h:panelGroup>
+                    <p:spacer/>
+                    <h:panelGrid columns="2">
+                        <p:selectBooleanCheckbox value="#{integracaoArrecadacaoTributariaControlador.somenteNaoIntegrados}">
+                            <p:ajax update="lote" process="@this"/>
+                        </p:selectBooleanCheckbox>
+                        <h:outputText value="Listar somente lotes não integrados."/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:commandButton value="Filtrar"
+                                 icon="ui-icon-search"
+                                 title="Clique para filtrar os estornos de arrecadações tributárias."
+                                 styleClass="padrao mtop10 mrig05"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide();"
+                                 actionListener="#{integracaoArrecadacaoTributariaControlador.buscarReceitaTributariasEstorno()}"
+                                 update=":Formulario:gridFiltros :Formulario:panelLancamentos :Formulario:panelCreditosReceber :Formulario:panelDividaAtiva :Formulario:panelResumoPorLote btImportar"/>
+
+                <p:commandButton value="Limpar Filtros"
+                                 icon="ui-icon-clear"
+                                 title="Clique para limpar os filtros selecionados."
+                                 styleClass="padrao mtop10"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide();"
+                                 actionListener="#{integracaoArrecadacaoTributariaControlador.limparCampos()}"
+                                 update=":Formulario"/>
+
+                <p:outputPanel id="panelLancamentos">
+                    <co:titulo-panel titulo="Receita Realizada" styleClass="mtop10"/>
+                    <p:dataTable value="#{integracaoArrecadacaoTributariaControlador.lancamentoIntegracaoEstorno}"
+                                 var="lanc"
+                                 widgetVar="tabela"
+                                 rowStyleClass="#{integracaoArrecadacaoTributariaControlador.marcarReceitaBloqueadaEstorno(lanc) ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>ESTORNOS DE ARRECADAÇÕES TRIBUTÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Lote" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{lanc.lote}"/>
+                        </p:column>
+                        <p:column headerText="Data"
+                                  sortBy="#{lanc.dataEstorno}"
+                                  styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{lanc.dataEstorno}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Conta de Receita" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{lanc.receitaLOA.contaDeReceita.codigo}"/>
+                        </p:column>
+                        <p:column headerText="Operação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{lanc.receitaLOA.operacaoReceita.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{lanc.pessoa}"/>
+                        </p:column>
+                        <p:column headerText="Classe" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{lanc.classeCredor}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{lanc.contaFinanceira}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{lanc.valor}" converter="moneyConverter"/>
+                            <f:facet name="footer">
+                                <h:outputText value="#{integracaoArrecadacaoTributariaControlador.valorTotalLancamentoIntegracaoEstorno}"
+                                              styleClass="negrito"
+                                              converter="converterBigDecimal2Casas"/>
+                            </f:facet>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+
+                <p:outputPanel id="panelCreditosReceber">
+                    <co:titulo-panel titulo="Crédito à Receber" styleClass="mtop10"/>
+                    <p:dataTable value="#{integracaoArrecadacaoTributariaControlador.creditosReceberIntegracaoEstorno}"
+                                 var="cr"
+                                 widgetVar="tabelaCR"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Lote" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{cr.loteBaixa.codigoLote}"/>
+                        </p:column>
+                        <p:column headerText="Data"
+                                  sortBy="#{cr.dataCredito}"
+                                  styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{cr.dataCredito}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Conta de Receita" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{cr.receitaLOA.contaDeReceita}"/>
+                        </p:column>
+                        <p:column headerText="Operação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{cr.operacaoCreditoReceber.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{cr.pessoa}"/>
+                        </p:column>
+                        <p:column headerText="Classe" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{cr.classeCredor}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{cr.valor}" converter="converterBigDecimal2Casas"/>
+                            <f:facet name="footer">
+                                <h:outputText value="#{integracaoArrecadacaoTributariaControlador.valorTotalCreditoReceberEstorno}"
+                                              styleClass="negrito"
+                                              converter="converterBigDecimal2Casas"/>
+                            </f:facet>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+
+                <p:outputPanel id="panelDividaAtiva">
+                    <co:titulo-panel titulo="Dívida Ativa" styleClass="mtop10"/>
+                    <p:dataTable value="#{integracaoArrecadacaoTributariaControlador.dividasAtivaIntegracaoEstorno}"
+                                 var="da"
+                                 widgetVar="tabelaDA"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Lote" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{da.loteBaixa.codigoLote}"/>
+                        </p:column>
+                        <p:column headerText="Data"
+                                  sortBy="#{da.dataDivida}"
+                                  styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{da.dataDivida}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Conta de Receita" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{da.receitaLOA.contaDeReceita}"/>
+                        </p:column>
+                        <p:column headerText="Operação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{da.operacaoDividaAtiva.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{da.pessoa}"/>
+                        </p:column>
+                        <p:column headerText="Classe" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{da.classeCredorPessoa}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{da.valor}" converter="converterBigDecimal2Casas"/>
+                            <f:facet name="footer">
+                                <h:outputText value="#{integracaoArrecadacaoTributariaControlador.valorTotalDividaAtivaEstorno}"
+                                              styleClass="negrito"
+                                              converter="converterBigDecimal2Casas"/>
+                            </f:facet>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+
+                <p:outputPanel id="panelResumoPorLote">
+                    <co:titulo-panel titulo="Resumo por Lote" styleClass="mtop10"/>
+                    <p:dataTable value="#{integracaoArrecadacaoTributariaControlador.resumo.lotes}"
+                                 var="resumoLote"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column headerText="Lote" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{resumoLote.codigoLote}"/>
+                        </p:column>
+                        <p:column headerText="Data" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{resumoLote.dataLote}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Valor no Lote de Baixa (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{resumoLote.valorLote}"
+                                          converter="converterBigDecimal2Casas"/>
+                        </p:column>
+                        <p:column headerText="Valor Receita (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{resumoLote.valorReceita}"
+                                          converter="converterBigDecimal2Casas"/>
+                        </p:column>
+                        <p:column headerText="Valor Crédito à Receber (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{resumoLote.valorCreditoReceber}"
+                                          converter="converterBigDecimal2Casas"/>
+                        </p:column>
+                        <p:column headerText="Valor Dívida Ativa (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{resumoLote.valorDividaAtiva}"
+                                          converter="converterBigDecimal2Casas"/>
+                        </p:column>
+                    </p:dataTable>
+
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="span4">
+                                <ul class="thumbnails">
+                                    <li class="span4">
+                                        <div class="thumbnail link-contrato">
+                                            <center>
+                                                <co:titulo-panel titulo="Total de Receita Realizada"/>
+                                                <h:outputText
+                                                    value="#{integracaoArrecadacaoTributariaControlador.resumo.valorReceita}"
+                                                    converter="moneyConverter"/>
+                                            </center>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="span4">
+                                <ul class="thumbnails">
+                                    <li class="span4">
+                                        <div class="thumbnail link-contrato">
+                                            <center>
+                                                <co:titulo-panel titulo="Total de Créditos à Receber"/>
+                                                <h:outputText
+                                                    value="#{integracaoArrecadacaoTributariaControlador.resumo.valorCreditoReceber}"
+                                                    converter="moneyConverter"/>
+                                            </center>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="span4">
+                                <ul class="thumbnails">
+                                    <li class="span4">
+                                        <div class="thumbnail link-contrato">
+                                            <center>
+                                                <co:titulo-panel titulo="Total de Dívida Ativa"/>
+                                                <h:outputText
+                                                    value="#{integracaoArrecadacaoTributariaControlador.resumo.valorDividaAtiva}"
+                                                    converter="moneyConverter"/>
+                                            </center>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </p:outputPanel>
+            </p:panel>
+
+            <p:commandButton value="Importar"
+                             id="btImportar"
+                             update="panelLancamentos"
+                             icon="ui-icon-blue-document-copy"
+                             title="Clique para integrar Contábil/Tributário para os estornos de arrecadações tributárias."
+                             style="height: 30px;"
+                             disabled="#{empty integracaoArrecadacaoTributariaControlador.lancamentoIntegracaoEstorno or !integracaoArrecadacaoTributariaControlador.podeImportarLote}"
+                             styleClass="mtop10"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide();"
+                             actionListener="#{integracaoArrecadacaoTributariaControlador.importarReceitasTributariasEstorno()}"/>
+        </h:form>
+
+        <p:dialog modal="true" width="800" id="dlgImportacao" widgetVar="dialogImportacao" closable="false">
+            <div class="alert alert-info centralizado" id="mensagemFim">
+                <strong>Importando Receitas...</strong><br/>
+                <span id="mgsAguarde">Aguarde!</span><br/><br/>
+                <h:form id="formImportacao">
+                    <p:outputPanel id="barra">
+                        <div class="alinhamentoCentralizado">
+                            <h:outputText value="#{integracaoArrecadacaoTributariaControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>%
+                        </div>
+                        <div class="progress progress-striped active" id="barraProgresso">
+                            <div class="bar"
+                                 style="width: #{integracaoArrecadacaoTributariaControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </p:outputPanel>
+                </h:form>
+            </div>
+        </p:dialog>
+
+        <p:dialog
+            widgetVar="mudaData"
+            id="dlgMudaData"
+            dynamic="true"
+            modal="true"
+            resizable="false"
+            closable="false"
+            width="650"
+            position="center">
+            <div class="alert alert-danger centralizado">
+                <strong>Atenção!</strong> Há um bloqueio de fase para o período em que os lotes de arrecadação filtrados
+                serão contabilizados, informe uma nova data para a contabilização e uma justificativa.
+            </div>
+            <h:form id="formMudaData">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Justificativa: "/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea cols="50"
+                                         rows="10"
+                                         maxlength="255"
+                                         autoResize="true"
+                                         style="margin-left: -4px"
+                                         counterTemplate="{0} Caracteres Restantes."
+                                         counter="counter"/>
+                        <h:outputText id="counter"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Data: "/>
+                    <p:calendar value="#{integracaoArrecadacaoTributariaControlador.novaDataContabilizacao}"
+                                pattern="dd/MM/yyyy"
+                                onkeypress="mascara(this, mdata)"
+                                navigator="true"/>
+                </h:panelGrid>
+                <hr/>
+                <div class="centralizado">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     styleClass="padrao mrig05"
+                                     update=":Formulario:panelLancamentos :Formulario:panelCreditosReceber :Formulario:panelDividaAtiva :Formulario:btImportar"
+                                     title="Clique para confirmar a nova data para contabilização."
+                                     actionListener="#{integracaoArrecadacaoTributariaControlador.mudarDatasIntegracoesEstorno()}"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                        />
+                    <p:commandButton value="Cancelar"
+                                     styleClass="padrao"
+                                     onclick="aguarde.show()"
+                                     oncomplete="mudaData.hide();aguarde.hide();"
+                                     title="Clique para cancelar a operação."
+                                     process="@this"
+                                     icon="ui-icon-cancel"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

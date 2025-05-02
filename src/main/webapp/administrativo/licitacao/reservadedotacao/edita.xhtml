@@ -1,0 +1,618 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+            <p:remoteCommand name="limparDadosSolicitacao"
+                             process="@this"
+                             update="panel-itens panel-solicitacao"
+                             actionListener="#{dotacaoSolicitacaoMaterialControlador.atribuirNullParaDadosSolicitacao()}"/>
+
+
+            <fc:cabecalhoPretty controlador="#{dotacaoSolicitacaoMaterialControlador}"
+                                origem="#{dotacaoSolicitacaoMaterialControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Dotação da Solicitação de Compra">
+                <h:panelGrid columns="2" id="grid-geral">
+                    <h:outputLabel value="Realizada Em: "/>
+                    <h:outputText value="#{dotacaoSolicitacaoMaterialControlador.selecionado.realizadaEm}"
+                                  styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+
+                    <h:outputLabel value="Código: "/>
+                    <h:outputText
+                        value="#{dotacaoSolicitacaoMaterialControlador.selecionado.codigoOrDescricaoParaGeracaoAutomatica}"
+                        styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Solicitação de Compra: "/>
+                    <h:panelGroup>
+                        <p:autoComplete value="#{dotacaoSolicitacaoMaterialControlador.selecionado.solicitacaoMaterial}"
+                                        completeMethod="#{dotacaoSolicitacaoMaterialControlador.completarSolicitacaoCompra}"
+                                        converter="#{solicitacaoMaterialControlador.converterGenerico}"
+                                        disabled="#{dotacaoSolicitacaoMaterialControlador.isOperacaoEditar()}"
+                                        var="sol"
+                                        itemLabel="#{sol}"
+                                        itemValue="#{sol.id}"
+                                        maxResults="50"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparDadosSolicitacao()}"
+                                        dropdown="true"
+                                        panelStyle="max-width: 50%;max-height: 250px"
+                                        forceSelection="true"
+                                        queryDelay="1000"
+                                        size="75">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    listener="#{dotacaoSolicitacaoMaterialControlador.processarSolicitacaoCompra()}"
+                                    process="@this"
+                                    update="panel-itens panel-solicitacao grid-geral"/>
+                        </p:autoComplete>
+
+                        <p:outputPanel id="panel-solicitacao">
+                            <fc:visualizarCampos
+                                objeto="#{dotacaoSolicitacaoMaterialControlador.selecionado.solicitacaoMaterial}"
+                                styleClass="mlef05"/>
+                        </p:outputPanel>
+
+                        <co:botao_informacao styleClass="mlef02"
+                                             descricao="Solicitação de compra para unidade administrativa logada, onde o usuário seja gestor de licitação."/>
+                    </h:panelGroup>
+
+                    <h:outputLabel value="Convênio de Receita: " for="convenio"
+                                   rendered="#{dotacaoSolicitacaoMaterialControlador.selecionado.solicitacaoMaterial.tipoSolicitacao.isObraServicoEngenharia()}"/>
+                    <h:panelGroup
+                        rendered="#{dotacaoSolicitacaoMaterialControlador.selecionado.solicitacaoMaterial.tipoSolicitacao.isObraServicoEngenharia()}">
+                        <p:autoComplete id="convenio"
+                                        value="#{dotacaoSolicitacaoMaterialControlador.selecionado.convenioReceita}"
+                                        completeMethod="#{convenioReceitaControlador.completarConvenioReceita}"
+                                        converter="#{convenioReceitaControlador.converterGenerico}"
+                                        var="con"
+                                        itemLabel="#{con}"
+                                        itemValue="#{con.id}"
+                                        dropdown="true"
+                                        panelStyle="max-width: 50%;max-height: 250px"
+                                        forceSelection="true"
+                                        maxResults="50"
+                                        queryDelay="1000"
+                                        size="70">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide()"
+                                    process="@this"
+                                    update="panel-convenio"/>
+                        </p:autoComplete>
+
+                        <p:outputPanel id="panel-convenio">
+                            <fc:visualizarCampos
+                                objeto="#{dotacaoSolicitacaoMaterialControlador.selecionado.convenioReceita}"
+                                styleClass="mlef05"/>
+                        </p:outputPanel>
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <p:outputPanel id="panel-itens">
+                    <p:dataGrid
+                        styleClass="mtop10"
+                        columns="1"
+                        style="overflow: scroll; width: auto"
+                        rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                        rowIndexVar="rowIx"
+                        emptyMessage="Não foram localizados registros para serem apresentados"
+                        value="#{dotacaoSolicitacaoMaterialControlador.dotacoesTipo}"
+                        var="dotTipo"
+                        rowKey="#{dotTipo.criadoEm}">
+                        <f:facet name="header">
+                            DOTAÇÕES POR TIPO DE OBJETO DE COMPRA
+                        </f:facet>
+
+                        <div class="thumbnail mbot30">
+                            <table class="table table-condensed mtop10" style="width: 100%">
+                                <tr>
+                                    <td>
+                                        <div class="thumbnail"
+                                             style="width: 250px; height: #{dotacaoSolicitacaoMaterialControlador.hasValorOutrasReservas() ?'80px' : '50px'}"
+                                             align="center">
+                                            <div>
+                                                Tipo Objeto de Compra
+                                            </div>
+                                            <h:panelGrid columns="1">
+                                                <h:outputText value="#{dotTipo.toStringTipoObjetoCompra()}"
+                                                              styleClass="negrito mtop05"/>
+
+                                            </h:panelGrid>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="thumbnail" style="width: 250px" align="center">
+                                            <div>
+                                                Valor do Processo (R$)
+                                            </div>
+                                            <h:panelGrid columns="2">
+                                                <h:outputText value="Original" style="font-size: 14px"/>
+                                                <h:outputText value="#{dotTipo.valorProcessoOriginal}"
+                                                              style="font-size: 14px"
+                                                              styleClass="negrito mtop05">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Outros" style="color: grey"
+                                                              rendered="#{dotacaoSolicitacaoMaterialControlador.hasValorOutrasReservas()}"/>
+                                                <h:outputText value="#{dotTipo.valorProcessoOutro}"
+                                                              rendered="#{dotacaoSolicitacaoMaterialControlador.hasValorOutrasReservas()}"
+                                                              style="color: grey"
+                                                              styleClass="negrito mtop05">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </h:panelGrid>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="thumbnail" style="width: 250px" align="center">
+                                            <div>
+                                                Valor Reservado (R$)
+                                            </div>
+                                            <h:panelGrid columns="2">
+                                                <h:outputText value="Original" style="font-size: 14px"/>
+                                                <h:outputText value="#{dotTipo.valorReservadoOriginal}"
+                                                              style="font-size: 14px"
+                                                              styleClass="negrito mtop05">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Outros" style="color: grey"
+                                                              rendered="#{dotacaoSolicitacaoMaterialControlador.hasValorOutrasReservas()}"/>
+                                                <h:outputText value="#{dotTipo.valorProcessoOutro}"
+                                                              rendered="#{dotacaoSolicitacaoMaterialControlador.hasValorOutrasReservas()}"
+                                                              style="color: grey"
+                                                              styleClass="negrito mtop05">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </h:panelGrid>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="thumbnail" style="width: 250px" align="center">
+                                            <div>
+                                                Valor Restante à Reserva (R$)
+                                            </div>
+                                            <h:panelGrid columns="2">
+                                                <h:outputText value="Original" style="font-size: 14px"/>
+                                                <h:outputText value="#{dotTipo.valorAReservarOriginal}"
+                                                              style="font-size: 14px"
+                                                              styleClass="negrito mtop05">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Outros" style="color: grey"
+                                                              rendered="#{dotacaoSolicitacaoMaterialControlador.hasValorOutrasReservas()}"/>
+                                                <h:outputText value="#{dotTipo.valorOutroAReservar}"
+                                                              rendered="#{dotacaoSolicitacaoMaterialControlador.hasValorOutrasReservas()}"
+                                                              style="color: grey"
+                                                              styleClass="negrito mtop05">
+                                                    <f:convertNumber pattern="#,##0.00"/>
+                                                </h:outputText>
+                                            </h:panelGrid>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div class="alert alert-info mtop10" align="center">
+                                <p:commandButton value="Inserir Reserva de Dotação"
+                                                 styleClass="padrao"
+                                                 rendered="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte eq null}"
+                                                 actionListener="#{dotacaoSolicitacaoMaterialControlador.inserirFonte(dotTipo)}"
+                                                 process="@this"
+                                                 onclick="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 icon="ui-icon-plus"/>
+                            </div>
+
+                            <table class="table table-condensed">
+                                <tr class="alert alert-info negrito">
+                                    <th class="alinhamentoEsquerda">Exercício</th>
+                                    <th class="alinhamentoDireita">Valor Reservado (R$)</th>
+                                    <th class="alinhamentoDireita">Valor Estornado (R$)</th>
+                                    <th class="alinhamentoDireita">Valor Executado (R$)</th>
+                                    <th class="alinhamentoDireita">Saldo (R$)</th>
+                                </tr>
+
+                                <ui:repeat value="#{dotTipo.agrupadorFontes}" var="agrup">
+                                    <tr style="background: lightgrey">
+                                        <td class="alinhamentoEsquerda">
+                                            <h:outputText value="#{agrup.exercicio}"
+                                                          style="font-size: 14px"
+                                                          styleClass="negrito"/>
+                                        </td>
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{agrup.valorReservado}"
+                                                          styleClass="negrito">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{agrup.valorEstornoReservado}"
+                                                          styleClass="negrito">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{agrup.valorExecutado}"
+                                                          styleClass="negrito">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td class="alinhamentoDireita">
+                                            <h:outputText value="#{agrup.saldoDoExercicio}"
+                                                          styleClass="negrito">
+                                                <f:convertNumber pattern="#,##0.00"/>
+                                            </h:outputText>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td colspan="5">
+                                            <p:dataTable
+                                                rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                                rowIndexVar="rowIx"
+                                                styleClass="mlef20 mbot20"
+                                                emptyMessage="Não foram localizados registros para serem apresentados"
+                                                value="#{agrup.dotacoesFonte}"
+                                                var="fonte"
+                                                rowKey="#{fonte.criadoEm}">
+                                                <p:column styleClass="alinhamentoCentralizado" style="width: 2%"
+                                                          headerText="Detalhar">
+                                                    <ad:detalhes-movimentacao-orc-processo
+                                                        dotacaoSolMatFonteVO="#{fonte}"/>
+                                                </p:column>
+                                                <p:column styleClass="alinhamentoCentralizado" style="width: 9%"
+                                                          headerText="Ações">
+                                                    <p:commandButton
+                                                        title="Clique para editar esse registro."
+                                                        process="@this"
+                                                        styleClass="icone-25 mlef05"
+                                                        disabled="#{fonte.fonteJaExecutada}"
+                                                        actionListener="#{dotacaoSolicitacaoMaterialControlador.editarFonte(dotTipo, fonte)}"
+                                                        onstart="aguarde.show()"
+                                                        oncomplete="aguarde.hide()"
+                                                        icon="ui-icon-pencil"/>
+
+                                                    <p:commandButton
+                                                        title="Clique para remover esse registro."
+                                                        process="@this"
+                                                        update=":Formulario:panel-itens"
+                                                        styleClass="icone-25 mlef05"
+                                                        disabled="#{fonte.fonteJaExecutada}"
+                                                        actionListener="#{dotacaoSolicitacaoMaterialControlador.removerFonte(dotTipo, fonte)}"
+                                                        onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                        oncomplete="aguarde.hide();"
+                                                        icon="ui-icon-trash"/>
+
+                                                    <p:commandButton
+                                                        title="Clique para estornar o valor restante da reserva."
+                                                        process="@this"
+                                                        styleClass="icone-25 mlef05 botaoCinza"
+                                                        rendered="#{fonte.fonteJaExecutada}"
+                                                        disabled="#{dotacaoSolicitacaoMaterialControlador.isProcessoExercicioAnterior()
+                                                                    or !fonte.tipoReserva.isSolicitacaoCompra()
+                                                                    or fonte.tipoOperacao.isEstorno()}"
+                                                        actionListener="#{dotacaoSolicitacaoMaterialControlador.estornarReserva(dotTipo,fonte)}"
+                                                        onclick="aguarde.show()"
+                                                        oncomplete="aguarde.hide();"
+                                                        icon="ui-icon-voltar"/>
+                                                </p:column>
+                                                <p:column headerText="Data de Lançamento"
+                                                          style="color: #{fonte.tipoReserva.isOutrasReservas() ? 'grey' : ''}"
+                                                          styleClass="alinhamentoEsquerda">
+                                                    <h:outputText value="#{fonte.dataLancamento}">
+                                                        <f:convertDateTime type="date"/>
+                                                    </h:outputText>
+                                                </p:column>
+                                                <p:column headerText="Despesa Orçamentária"
+                                                          style="color: #{fonte.tipoReserva.isOutrasReservas() ? 'grey' : ''}"
+                                                          styleClass="alinhamentoEsquerda">
+                                                    <h:outputText value="#{fonte.fonteDespesaORC.despesaORC}"/>
+                                                </p:column>
+                                                <p:column headerText="Fonte Despesa Orçamentária"
+                                                          style="color: #{fonte.tipoReserva.isOutrasReservas() ? 'grey' : ''}"
+                                                          styleClass="alinhamentoEsquerda">
+                                                    <h:outputText
+                                                        value="#{fonte.fonteDespesaORC.provisaoPPAFonte.destinacaoDeRecursos}"/>
+                                                </p:column>
+                                                <p:column headerText="Tipo de Reserva"
+                                                          style="color: #{fonte.tipoReserva.isOutrasReservas() ? 'grey' : ''}"
+                                                          styleClass="alinhamentoEsquerda">
+                                                    <h:outputText value="#{fonte.tipoReserva.descricao}"/>
+                                                </p:column>
+                                                <p:column headerText="Operação"
+                                                          style="color: #{fonte.tipoReserva.isOutrasReservas() ? 'grey' : ''}"
+                                                          styleClass="alinhamentoEsquerda">
+                                                    <h:outputText value="#{fonte.tipoOperacao.descricao}"/>
+                                                </p:column>
+                                                <p:column headerText="Valor da Reserva (R$)"
+                                                          style="color: #{fonte.tipoReserva.isOutrasReservas() ? 'grey' : ''}"
+                                                          styleClass="alinhamentoDireita">
+                                                    <h:outputText value="#{fonte.valorReservado}">
+                                                        <f:convertNumber pattern="#,##0.00"/>
+                                                    </h:outputText>
+                                                </p:column>
+                                            </p:dataTable>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </table>
+                        </div>
+                    </p:dataGrid>
+
+                </p:outputPanel>
+            </p:panel>
+
+            <fc:rodapePretty controlador="#{dotacaoSolicitacaoMaterialControlador}"/>
+        </h:form>
+
+
+        <p:dialog widgetVar="dlgInserirFonte"
+                  modal="true"
+                  draggable="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true"
+                  width="900"
+                  height="430"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formInserirFonte">
+
+                <div class="thumbnail">
+                    <h:panelGrid columns="2" id="grid-exercicio">
+                        <fc:outputLabelObrigatorio value="Exercício (Cronograma): "/>
+                        <co:inputExercicio
+                            disabilitar="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isEstorno()
+                                           or dotacaoSolicitacaoMaterialControlador.isProcessoExercicioAnterior()
+                                           or (dotacaoSolicitacaoMaterialControlador.dotacaoFonte.id ne null and dotacaoSolicitacaoMaterialControlador.dotacaoFonte.fonteDespesaORC eq null)}"
+                            exercicio="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.exercicio}"
+                            process="@this"
+                            update=":formInserirFonte:consulta-despesa :formInserirFonte:label-vl-reserva :formInserirFonte:input-vl-reserva"
+                            listener="#{dotacaoSolicitacaoMaterialControlador.limparDotacaoFonte()}"/>
+
+                        <h:outputText value="Tipo de Operação: "/>
+                        <h:outputText
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.descricao}"/>
+
+                        <h:outputText value="Despesa Orçamentária: "
+                                      rendered="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isEstorno()}"/>
+                        <h:outputText
+                            styleClass="negrito"
+                            rendered="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isEstorno()}"
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.fonteDespesaORC.despesaORC}"/>
+
+                        <h:outputText value="Fonte Orçamentária: "
+                                      rendered="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isEstorno()}"/>
+                        <h:outputText
+                            styleClass="negrito"
+                            rendered="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isEstorno()}"
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.fonteDespesaORC.provisaoPPAFonte.destinacaoDeRecursos}"/>
+
+                        <p:outputPanel id="label-vl-reserva">
+                            <fc:outputLabelObrigatorio value="Valor da Reserva (R$): "
+                                                       rendered="#{!dotacaoSolicitacaoMaterialControlador.isExercicioFonteIgualExercicioLogado()
+                                                   or dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isEstorno()}"/>
+                        </p:outputPanel>
+
+                        <p:outputPanel id="input-vl-reserva">
+                            <p:inputText
+                                value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.valorReservado}"
+                                rendered="#{!dotacaoSolicitacaoMaterialControlador.isExercicioFonteIgualExercicioLogado()
+                                        or dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isEstorno()}"
+                                title="Digite o valor da reserva"
+                                onkeydown="mascaraPonto(this);">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </p:inputText>
+                        </p:outputPanel>
+                    </h:panelGrid>
+
+
+                    <p:outputPanel id="consulta-despesa">
+                        <co:consultar-despesa-orcamentaria-na-tela
+                            rendered="#{dotacaoSolicitacaoMaterialControlador.isExercicioFonteIgualExercicioLogado()
+                                    and dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isNormal()}"
+                            styleElementoDespesa="margin-right:75px"
+                            value="#{dotacaoSolicitacaoMaterialControlador.despesaORC}"
+                            unidadeOrcamentaria="#{dotacaoSolicitacaoMaterialControlador.unidadeOrcamentaria}"
+                            mostrarArvoreExpandida="true"
+                            recuperarSomenteUnidadeLogada="true"
+                            showInfo="false"
+                            update=":formInserirFonte:conta-dest"
+                            actionListener="#{dotacaoSolicitacaoMaterialControlador.buscarFontesDespesaOrc()}"
+                            unidadeAdministrativa="#{dotacaoSolicitacaoMaterialControlador.selecionado.solicitacaoMaterial.unidadeOrganizacional}"
+                            subTipoObjetoCompra="#{dotacaoSolicitacaoMaterialControlador.dotacaoTipo.subTipoObjetoCompra}"
+                            tiposObjetoCompra="#{consultarDespesaOrcamentariaNaTelaControlador.tipoObjetoCompraPorDescricao(dotacaoSolicitacaoMaterialControlador.dotacaoTipo.tipoObjetoCompra.name())}"/>
+
+                        <h:panelGrid columns="2"
+                                     rendered="#{dotacaoSolicitacaoMaterialControlador.isExercicioFonteIgualExercicioLogado()
+                                            and dotacaoSolicitacaoMaterialControlador.dotacaoFonte.tipoOperacao.isNormal()}">
+
+                            <fc:outputLabelObrigatorio
+                                value="Conta de Destinação de Recurso: "/>
+                            <h:selectOneMenu
+                                id="conta-dest"
+                                style="max-width: 500px"
+                                value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.fonteDespesaORC}"
+                                title="Informe a conta de destinação de recurso."
+                                converter="#{empenhoControlador.converterFonteDespesaORC}">
+                                <f:selectItems
+                                    value="#{dotacaoSolicitacaoMaterialControlador.fontesDespesaOrcamentaria}"/>
+                                <p:ajax event="change"
+                                        process="@this"
+                                        update=":formInserirFonte:saldo-fonte"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"
+                                        listener="#{dotacaoSolicitacaoMaterialControlador.buscarSaldoFonteDespesaORC()}"/>
+                            </h:selectOneMenu>
+
+                            <h:outputLabel value="Saldo Fonte Despesa (R$): "/>
+                            <h:outputText
+                                id="saldo-fonte"
+                                value="#{dotacaoSolicitacaoMaterialControlador.saldoFonteDespesaORC}"
+                                styleClass="negrito">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+
+                            <fc:outputLabelObrigatorio value="Valor da Reserva (R$): "/>
+                            <p:inputText
+                                id="input-valor-reserva"
+                                value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.valorReservado}"
+                                title="Digite o valor da reserva"
+                                onkeydown="mascaraPonto(this);">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </p:inputText>
+                        </h:panelGrid>
+                    </p:outputPanel>
+                </div>
+
+                <div class="centralizado mtop10">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     styleClass="prioritario"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     title="Clique para confirmar a reserva selecionada."
+                                     process=":formInserirFonte @this"
+                                     actionListener="#{dotacaoSolicitacaoMaterialControlador.adicionarFonte()}"/>
+
+                    <p:commandButton value="Cancelar"
+                                     process="@this"
+                                     styleClass="padrao mlef05"
+                                     icon="ui-icon-cancel"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     title="Clique para cancelar a reserva de dotação."
+                                     actionListener="#{dotacaoSolicitacaoMaterialControlador.cancelarFonte()}"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogVisualizarReserva"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  showHeader="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formVisualizarReserva">
+                <center>
+                    <p:panel style="margin: 0px" id="panelVisualizarReserva"
+                             header="Visualizar Reserva de Dotação">
+                        <br/>
+                        <h:outputText
+                            value="Deseja Visualizar a Reserva de Dotação #{dotacaoSolicitacaoMaterialControlador.selecionado.codigo}?"/>
+                        <br/><br/><br/>
+                        <h:panelGrid columns="2">
+                            <p:commandButton id="visualizar"
+                                             value="Sim"
+                                             onclick="aguarde.show();"
+                                             actionListener="#{dotacaoSolicitacaoMaterialControlador.redirecionarVisualizar()}"
+                                             icon="ui-icon-check"
+                                             styleClass="padrao mrig05"
+                                             title="Clique para visualizar a reserva de dotação #{dotacaoSolicitacaoMaterialControlador.selecionado.codigo}"
+                                             ajax="false">
+                            </p:commandButton>
+
+                            <p:commandButton value="Não"
+                                             onclick="aguarde.show()"
+                                             icon="ui-icon-cancel"
+                                             styleClass="padrao"
+                                             title="Clique para cancelar a visualização."
+                                             actionListener="#{dotacaoSolicitacaoMaterialControlador.redireciona()}"/>
+                        </h:panelGrid>
+                    </p:panel>
+                </center>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogMovimentos"
+                  modal="true"
+                  draggable="true"
+                  resizable="false"
+                  width="1000"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formMovimentos">
+                <p:panel style="margin: 0px" header="Movimentos">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Exercício: "/>
+                        <h:outputText
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.exercicio}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Despesa: "/>
+                        <h:outputText
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.fonteDespesaORC.despesaORC}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Fonte: "/>
+                        <h:outputText
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.fonteDespesaORC.descricaoContaDeDestinacao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Valor Atual: "/>
+                        <h:outputText
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.valorReservado}"
+                            styleClass="negrito">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+                    </h:panelGrid>
+
+                    <co:titulo-panel titulo="Movimentos Atuais" styleClass="mtop10"/>
+                    <p:scrollPanel mode="native" styleClass="mbot10 mrig05 mlef05"
+                                   style="max-height: 250px; border: 0px">
+                        <p:dataTable
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rowIndexVar="rowIx"
+                            emptyMessage="Não foram localizados registros para serem apresentados"
+                            value="#{dotacaoSolicitacaoMaterialControlador.dotacaoFonte.movimentosDespesarOrc}"
+                            var="movimento">
+                            <p:column headerText="Histórico" styleClass="alinhamentoCentralizado" style="width: 3%">
+                                <p:rowToggler/>
+                            </p:column>
+                            <p:column headerText="Tipo" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{movimento.tipoOperacaoORC}"/>
+                            </p:column>
+                            <p:column headerText="Origem" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{movimento.descricaoClasseOrigem}"/>
+                            </p:column>
+                            <p:column headerText="Data Movimento" styleClass="alinhamentoCentralizado">
+                                <h:outputText value="#{movimento.dataMovimento}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Valor da Reserva (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{movimento.valor}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:rowExpansion>
+                                <h:outputText value="#{movimento.historico}"/>
+                            </p:rowExpansion>
+                        </p:dataTable>
+                    </p:scrollPanel>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

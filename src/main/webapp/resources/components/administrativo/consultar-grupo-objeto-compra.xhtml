@@ -1,0 +1,218 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:f="http://java.sun.com/jsf/core"
+>
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="value" required="true"/>
+    <cc:attribute name="readonly" type="java.lang.Boolean" default="#{false}"/>
+    <cc:attribute name="update" default="@none"/>
+    <cc:attribute name="process" default="@this"/>
+    <cc:attribute name="disabled" default="false"/>
+    <cc:attribute name="actionListener" method-signature="void selecionar(javax.faces.event.ActionEvent)"/>
+    <cc:attribute name="mostrarArvoreExpandida" default="#{true}" type="java.lang.Boolean"/>
+    <cc:attribute name="tipoGrupoObjetoCompra" type="java.lang.String"/>
+    <cc:attribute name="completeMethod"
+                  default="#{consultarGrupoObjetoCompraControlador.buscarGrupoObjetoCompraPermanenteMovelPorCodigoOrDescricao}"
+                  method-signature="java.util.List autoCompletar(java.lang.String)"/>
+    <cc:attribute name="buscarGrupoObjetoCompraNaoAgrupado" type="java.lang.Boolean" default="#{false}"/>
+</cc:interface>
+
+<!-- IMPLEMENTATION -->
+<cc:implementation>
+    <script type="text/javascript">
+        function posicionarDivInformacaoGrupoObjetoCompra(id) {
+            var divInfo = document.getElementById(id);
+            var left = parseInt(divInfo.offsetLeft);
+            left += 300;
+            divInfo.style.left = ''.concat(left, 'px');
+        }
+    </script>
+
+    <f:event type="preRenderComponent"
+             listener="#{consultarGrupoObjetoCompraControlador.setIdComponente(cc.clientId)}"/>
+    <f:event type="preRenderComponent"
+             listener="#{consultarGrupoObjetoCompraControlador.setMostrarArvoreExpandida(cc.attrs.mostrarArvoreExpandida)}"/>
+    <f:event type="preRenderComponent"
+             listener="#{consultarGrupoObjetoCompraControlador.atualizarTipoObjetoCompra(cc.attrs.tipoGrupoObjetoCompra)}"/>
+    <f:event type="preRenderComponent"
+             listener="#{consultarGrupoObjetoCompraControlador.setBuscarGrupoObjetoCompraNaoAgrupado(cc.attrs.buscarGrupoObjetoCompraNaoAgrupado)}"/>
+
+    <h:outputText value="#{consultarGrupoObjetoCompraControlador.atribuirVariaveisEditando(cc.attrs.value)}" />
+
+    <p:remoteCommand process="#{cc.attrs.process}"
+                     oncomplete="aguarde.hide(); painelInformacoesGrupoObjetoCompra.show();"
+                     actionListener="#{cc.attrs.actionListener}"
+                     rendered="#{cc.attrs.actionListener ne null}"
+                     update="#{cc.attrs.update}"
+                     name="executarMetodo">
+    </p:remoteCommand>
+
+    <p:remoteCommand process="@this"
+                     onstart="aguarde.show()"
+                     oncomplete="#{cc.attrs.actionListener eq null ? 'painelInformacoesGrupoObjetoCompra.show(); aguarde.hide();' : 'executarMetodo();'}"
+                     name="setar">
+        <f:setPropertyActionListener value="#{consultarGrupoObjetoCompraControlador.grupoObjetoCompraSelecionado}"
+                                     target="#{cc.attrs.value}"/>
+    </p:remoteCommand>
+
+    <h:panelGroup id="container">
+        <h:outputText value="#{consultarGrupoObjetoCompraControlador.grupoObjetoCompraSelecionado}"
+                      style="margin-right: 20px;"
+                      styleClass="negrito"
+                      rendered="#{cc.attrs.readonly}"/>
+
+        <p:autoComplete queryDelay="1000"
+                        title="Digite a descrição do grupo de objeto de compra."
+                        value="#{consultarGrupoObjetoCompraControlador.grupoObjetoCompraSelecionado}"
+                        completeMethod="#{cc.attrs.completeMethod}"
+                        converter="#{grupoObjetoCompraControlador.converterGenerico}"
+                        var="grupoObj"
+                        disabled="#{cc.attrs.disabled}"
+                        rendered="#{!cc.attrs.readonly}"
+                        itemLabel="#{grupoObj}"
+                        itemValue="#{grupoObj}"
+                        maxResults="50"
+                        dropdown="true"
+                        panelStyle="max-width: 800px; max-height: 250px"
+                        id="codigo-descricao-grupo-objeto"
+                        size="70">
+            <p:ajax event="itemSelect"
+                    onstart="aguarde.show()"
+                    oncomplete="aguarde.hide(); setar(); painelInformacoesGrupoObjetoCompra.show();"
+                    actionListener="#{cc.attrs.actionListener}"
+                    process="#{cc.attrs.process}"
+                    update="#{cc.attrs.update} :#{cc.clientId}:grid-info-descricao-grupo-objeto :#{cc.clientId}:bt-info-descricao-grupo-objeto"/>
+        </p:autoComplete>
+
+
+        <p:commandButton onclick="aguarde.show()"
+                         oncomplete="aguarde.hide(); dialogGrupoObjetoCompra.show()"
+                         process="@this"
+                         disabled="#{cc.attrs.disabled}"
+                         rendered="#{!cc.attrs.readonly}"
+                         styleClass="mlef05"
+                         update=":#{cc.clientId}:form-grupo-objeto-compra"
+                         actionListener="#{consultarGrupoObjetoCompraControlador.carregarArvore()}"
+                         icon="ui-icon-search"/>
+
+        <p:commandButton process="@this"
+                         title="Clique para limpar o grupo de objeto de compra."
+                         styleClass="mlef05"
+                         rendered="#{!cc.attrs.readonly}"
+                         disabled="#{cc.attrs.disabled}"
+                         update="codigo-descricao-grupo-objeto :#{cc.clientId}:bt-info-descricao-grupo-objeto"
+                         actionListener="#{consultarGrupoObjetoCompraControlador.limparSelecaoGrupoObjetoCompra()}"
+                         icon="ui-icon-clear">
+            <f:setPropertyActionListener value="#{null}"
+                                         target="#{cc.attrs.value}"/>
+        </p:commandButton>
+
+        <p:commandButton process="@this"
+                         update="@none"
+                         styleClass="mlef05"
+                         id="bt-info-descricao-grupo-objeto"
+                         disabled="#{consultarGrupoObjetoCompraControlador.grupoObjetoCompraSelecionado eq null}"
+                         title="Clique para mostrar/ocultar os detalhes do grupo de objeto de compra selecionado."
+                         icon="ui-icon-eye"/>
+
+        <p:overlayPanel for="bt-info-descricao-grupo-objeto"
+                        at="left top"
+                        my="right top"
+                        onShow="posicionarDivInformacaoGrupoObjetoCompra(this.id)"
+                        widgetVar="painelInformacoesGrupoObjetoCompra"
+                        style="border : solid #497692 2px;"
+                        styleClass="semSombra">
+            <h:panelGrid id="grid-info-descricao-grupo-objeto" columns="2">
+
+                <h:outputText value="Código:" style="font-weight: bold"/>
+                <ui:repeat value="#{consultarGrupoObjetoCompraControlador.listaSuperioresGrupoObjetoCompra}" var="superior">
+                    <h:outputText value="#{superior.codigo} - #{superior.descricao}" /><br/>
+                </ui:repeat>
+                <h:outputText value="Tipo de Cotação: " style="font-weight: bold"/>
+                <h:outputText value="#{consultarGrupoObjetoCompraControlador.grupoObjetoCompraSelecionado.tipoCotacao.descricao}"/>
+            </h:panelGrid>
+        </p:overlayPanel>
+    </h:panelGroup>
+
+    <p:dialog header="Grupo Objeto de Compra"
+              modal="true"
+              dynamic="true"
+              position="center"
+              style="position: fixed !important; z-index: 9999999999999; min-width: 1100px; min-height: 400px;"
+              draggable="false"
+              resizable="false"
+              widgetVar="dialogGrupoObjetoCompra"
+              closable="false">
+        <h:form id="form-grupo-objeto-compra">
+            <h:panelGrid columns="2" styleClass="mtop05">
+                <h:outputLabel value="Filtro: "/>
+                <h:panelGrid columns="2">
+                    <p:inputText value="#{consultarGrupoObjetoCompraControlador.filtro}"
+                                 id="conteudoFiltro"
+                                 autocomplete="off"
+                                 size="50"
+                                 style="border : solid #497692 1px;">
+                    </p:inputText>
+                    <p:commandButton icon="ui-icon-search"
+                                     process="@this conteudoFiltro"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     styleClass="operacao mlef05"
+                                     update="idArvore"
+                                     actionListener="#{consultarGrupoObjetoCompraControlador.filtrar}"
+                                     value="Filtrar"/>
+                </h:panelGrid>
+            </h:panelGrid>
+
+            <div style="height: 400px; overflow-y: auto!important; overflow-x: hidden!important; border : solid #497692 1px;"
+                 class="mtop05">
+                <div style="float: right;">
+                    <fc:ajaxLoader16x16/>
+                </div>
+
+                <p:tree id="idArvore"
+                        expanded="true"
+                        value="#{consultarGrupoObjetoCompraControlador.raizGrupoObjetoCompra}"
+                        var="n"
+                        style="width: 100%; border: 0px"
+                        selection="#{consultarGrupoObjetoCompraControlador.nodeSelecionado}"
+                        selectionMode="single"
+                        cache="false">
+
+                    <p:treeNode expandedIcon="ui-icon ui-icon-folder-open"
+                                collapsedIcon="ui-icon ui-icon-folder-collapsed">
+                        <h:outputText value="#{n}" style="width: 600px"/>
+                    </p:treeNode>
+                </p:tree>
+            </div>
+
+            <div style="text-align: center" class="mtop05">
+                <p:commandButton icon="ui-icon-check"
+                                 value="Confirmar"
+                                 actionListener="#{consultarGrupoObjetoCompraControlador.confirmarSelecaoGrupoObjetoCompra}"
+                                 process="form-grupo-objeto-compra"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="mrig05 operacao prioritario"/>
+
+                <p:commandButton icon="ui-icon-close"
+                                 styleClass="operacao"
+                                 process="@none"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 onclick="dialogGrupoObjetoCompra.hide()"
+                                 value="Cancelar"/>
+            </div>
+        </h:form>
+    </p:dialog>
+</cc:implementation>
+</html>

@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:f="http://java.sun.com/jsf/core"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+
+            <fc:cabecalhoPretty controlador="#{reformaAdministrativaControlador}"
+                                origem="#{reformaAdministrativaControlador.caminhoPadrao}listar/"/>
+            <p:panel header="Cadastro de Reforma Administrativa" id="panel-geral">
+                <h:panelGrid columns="2" id="gridDadosGerais">
+                    <h:outputLabel value="Número: "/>
+                    <h:outputLabel
+                        value="#{reformaAdministrativaControlador.selecionado.numero ne null ? reformaAdministrativaControlador.selecionado.numero : 'Gerado automaticamente ao salvar.'}"
+                        styleClass="negrito"/>
+
+                    <h:outputLabel value="Data: "/>
+                    <h:outputLabel
+                        value="#{reformaAdministrativaControlador.selecionado.data}"
+                        styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputLabel>
+
+                    <h:outputLabel value="Deferida em : "/>
+                    <h:outputLabel
+                        value="#{reformaAdministrativaControlador.selecionado.deferidaEm}"
+                        styleClass="negrito">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputLabel>
+
+                    <h:outputLabel value="Usuário: "/>
+                    <h:outputLabel
+                        value="#{reformaAdministrativaControlador.selecionado.usuarioSistema}"
+                        styleClass="negrito"/>
+
+                    <fc:outputLabelObrigatorio value="Tipo: "/>
+                    <h:selectOneMenu value="#{reformaAdministrativaControlador.selecionado.tipo}">
+                        <p:ajax event="change" update=":Formulario:gridDadosGerais"
+                                listener="#{reformaAdministrativaControlador.selecionarTipoHierarquia()}"/>
+                        <f:selectItems value="#{reformaAdministrativaControlador.tiposHierarquia}"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Secretaria: "/>
+                    <p:autoComplete queryDelay="1000"
+                                    id="orgao-secretaria"
+                                    title="Digite unidade secretaria que deseja pesquisar."
+                                    value="#{reformaAdministrativaControlador.selecionado.secretaria}"
+                                    disabled="#{reformaAdministrativaControlador.selecionado.id ne null}"
+                                    completeMethod="#{reformaAdministrativaControlador.completarHierarquia}"
+                                    converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                    var="hoAdm"
+                                    dropdown="true"
+                                    panelStyle="max-height: 230px;max-width: 800px"
+                                    itemValue="#{hoAdm.id}"
+                                    itemLabel="#{hoAdm}"
+                                    maxResults="50"
+                                    size="70">
+                        <p:ajax event="itemSelect"
+                                process="@this"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"
+                                listener="#{reformaAdministrativaControlador.selecionarHierarquia(reformaAdministrativaControlador.selecionado.secretaria, true)}"
+                                update="@this :Formulario:gridDadosGerais :Formulario:tabelaUnidade"/>
+                    </p:autoComplete>
+
+                    <h:outputText value="Observação: "/>
+                    <fc:inputTextarea value="#{reformaAdministrativaControlador.selecionado.observacao}"
+                                      title="Informe a observação"/>
+                </h:panelGrid>
+
+                <table
+                    style="border: 1px solid; border-color: #92b8d3; font-size: 11px; color: #000000; width: 100%; height: 30px;">
+                    <caption class="ui-widget-header"> Legenda</caption>
+                    <tr>
+                        <td style="width: 15px; text-align: center">
+                            <div style="width: 10px; height: 10px; background-color: #b8d7e9;"/>
+                        </td>
+                        <td> Método Azul: o usuário informaria na frente de cada hierarquia vigente como será o novo nome e código da hierarquia nova</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 15px; text-align: center">
+                            <div style="background-color: #e4b8e9; width: 10px; height: 10px;"/>
+                        </td>
+                        <td> Método rosa: seria informado as novas hierarquias que não existem de/para, neste caso o sistema criaria nova hierarquia e nova unidade.</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 15px; text-align: center">
+                            <div style="background-color: #e16969; width: 10px; height: 10px;"/>
+                        </td>
+                        <td> Método vermelho: encerrar as hierarquias conforme a data informada.</td>
+                    </tr>
+                </table>
+
+                <p:dataTable paginator="true"
+                             id="tabelaUnidade"
+                             rowStyleClass="#{unidade.tipo.isAlterarExistente() ? 'linhaFundoAzul' : unidade.tipo.isCriarNovo() ? 'linhaFundoRosa' : unidade.tipo.isEncerrar() ? 'linhaFundoVermelho4' : 'linha-selecionada trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{reformaAdministrativaControlador.selecionado.unidades}"
+                             rows="100"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>UNIDADES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="unidade">
+                    <p:column headerText="Criar Novo"
+                              style="text-align: center; width: 3%;">
+                        <p:commandButton icon="ui-icon-plusthick"
+                                         styleClass="mrig05"
+                                         actionListener="#{reformaAdministrativaControlador.selecionarTipoUnidade(unidade,'CRIAR_NOVO')}"
+                                         update=":Formulario:tabelaUnidade"
+                                         process="@this :Formulario:tabelaUnidade"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para adicionar uma nova hierarquia organizacional e unidade organizacional">
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Alterar"
+                              style="text-align: center; width: 3%;">
+                        <p:commandButton icon="ui-icon-pencil"
+                                         styleClass="mrig05"
+                                         actionListener="#{reformaAdministrativaControlador.selecionarTipoUnidade(unidade, 'ALTERAR_EXISTENTE')}"
+                                         update=":Formulario:tabelaUnidade"
+                                         process="@this :Formulario:tabelaUnidade"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para alterar o código e descrição da hierarquia">
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Encerrar"
+                              style="text-align: center; width: 3%;">
+                        <p:commandButton icon="ui-icon-calendar-minus"
+                                         styleClass="mrig05"
+                                         actionListener="#{reformaAdministrativaControlador.selecionarTipoUnidade(unidade, 'ENCERRAR')}"
+                                         update=":Formulario:tabelaUnidade"
+                                         process="@this :Formulario:tabelaUnidade"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para encerrar a vigência da hierarquia">
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Filhas"
+                              style="text-align: center; width: 3%;">
+                        <p:commandButton icon="ui-icon-plusthick"
+                                         id="cbAdicionar"
+                                         styleClass="icone_verde mrig05"
+                                         actionListener="#{reformaAdministrativaControlador.adicionarFilha(unidade)}"
+                                         update=":Formulario:tabelaUnidade"
+                                         process="@this :Formulario:tabelaUnidade"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para adicionar uma nova Hierarquia filha"/>
+                    </p:column>
+                    <p:column headerText="Não alterar"
+                              style="text-align: center; width: 3%;">
+                        <p:commandButton icon="ui-icon-cancel"
+                                         styleClass="mrig05"
+                                         actionListener="#{reformaAdministrativaControlador.selecionarTipoUnidade(unidade, 'NAO_ALTERAR')}"
+                                         update=":Formulario:tabelaUnidade"
+                                         process="@this :Formulario:tabelaUnidade"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para não alterar nada na hierarquia">
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Excluir"
+                              style="text-align: center; width: 3%;">
+                        <p:commandButton icon="ui-icon-trash"
+                                         styleClass="mrig05"
+                                         actionListener="#{reformaAdministrativaControlador.removerUnidade(unidade)}"
+                                         update=":Formulario:tabelaUnidade"
+                                         process="@this :Formulario:tabelaUnidade"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para remover hierarquia">
+                        </p:commandButton>
+                    </p:column>
+                    <p:column headerText="Usuários"
+                              style="text-align: center; width: 3%;">
+                        <p:commandButton process="@form"
+                                         update="@form"
+                                         title="Clique para alterar o superior."
+                                         icon="ui-icon-users"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mlef05"
+                                         style="height: 30px"
+                                         actionListener="#{reformaAdministrativaControlador.alterarUsuarios(unidade)}"/>
+                    </p:column>
+                    <p:column headerText="Unidade" style="text-align: left; width: 33%">
+                        <h:panelGrid columns="1">
+                            <h:outputText value="#{unidade.unidade}"/>
+                            <h:outputText value="#{unidade.tipo.descricao}" styleClass="negrito"/>
+                        </h:panelGrid>
+                    </p:column>
+                    <p:column headerText="Novo/Alterar" style="text-align: left; width: 40%">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Superior"
+                                          rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}"/>
+                            <h:panelGroup rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}">
+                                <h:outputText value="#{unidade.unidadeSuperior}"
+                                              styleClass="negrito"
+                                />
+
+                                <p:commandButton process="@form"
+                                                 update="@form"
+                                                 title="Clique para alterar o superior."
+                                                 icon="ui-icon-pencil"
+                                                 oncomplete="aguarde.hide()"
+                                                 styleClass="mtop10 mlef05"
+                                                 style="height: 30px"
+                                                 actionListener="#{reformaAdministrativaControlador.alterarSuperior(unidade)}"/>
+                            </h:panelGroup>
+                            <h:outputText value="Código"
+                                          rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}"/>
+                            <p:inputText value="#{unidade.codigoNovo}" size="40"
+                                         rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}">
+                                <p:ajax event="blur" process="@this" update="@this"/>
+                            </p:inputText>
+                            <h:outputText value="Descrição"
+                                          rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}"/>
+                            <p:inputText value="#{unidade.descricaoNovo}" size="40"
+                                         rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}">
+                                <p:ajax event="blur" process="@this" update="@this"/>
+                            </p:inputText>
+                        </h:panelGrid>
+                    </p:column>
+                    <p:column headerText="Vigência" style="text-align: left;">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Inicio de Vigência:"
+                                          rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}"/>
+                            <p:calendar title="Selecione a data inicio de vigência"
+                                        rendered="#{unidade.tipo.isCriarNovo() or unidade.tipo.isAlterarExistente()}"
+                                        id="dataInicioVigencia"
+                                        size="12"
+                                        navigator="true"
+                                        value="#{unidade.inicioVigencia}"
+                                        pattern="dd/MM/yyyy"
+                                        onkeypress="mascara(this, mdata)">
+                                <p:ajax event="dateSelect" process="@this"/>
+                                <p:ajax event="valueChange" process="@this"/>
+                            </p:calendar>
+
+                            <h:outputText value="Fim de Vigência:" rendered="#{unidade.tipo.isEncerrar()}"/>
+                            <p:calendar title="Selecione a data fim de vigência" rendered="#{unidade.tipo.isEncerrar()}"
+                                        id="dataFimVigencia"
+                                        size="12"
+                                        navigator="true"
+                                        value="#{unidade.fimVigencia}"
+                                        pattern="dd/MM/yyyy"
+                                        onkeypress="mascara(this, mdata)">
+                                <p:ajax event="dateSelect" process="@this"/>
+                                <p:ajax event="valueChange" process="@this"/>
+                            </p:calendar>
+                        </h:panelGrid>
+                    </p:column>
+                </p:dataTable>
+
+            </p:panel>
+            <fc:rodapePretty controlador="#{reformaAdministrativaControlador}"
+                             desabilitaSalvar="#{reformaAdministrativaControlador.deferida}"/>
+
+            <p:commandButton value="Imprimir"
+                             icon="ui-icon-export-pdf"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             style="width: 100px; height: 30px"
+                             styleClass="mtop10 mlef05"
+                             rendered="#{reformaAdministrativaControlador.selecionado.id ne null}"
+                             actionListener="#{reformaAdministrativaControlador.gerarPDF()}"/>
+
+            <p:commandButton value="Visualizar estrutura"
+                             id="btnVisualizarEstrutura"
+                             process="@this"
+                             update="@this"
+                             title="Clique para visualizar a estrutura da reforma administrativa."
+                             icon="ui-icon-folders-explorer"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="mtop10 mlef05"
+                             style="height: 30px"
+                             actionListener="#{reformaAdministrativaControlador.montarEstrutura()}"
+                             rendered="#{reformaAdministrativaControlador.selecionado.id ne null}"/>
+
+            <p:commandButton value="Verificar Erros"
+                             id="btnVerificarErros"
+                             update=":Formulario:tabelaUnidade"
+                             process="@this :Formulario:tabelaUnidade"
+                             title="Clique para validar os dados desta reforma administrativa."
+                             icon="ui-icon-check"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             styleClass="mtop10 mlef05"
+                             style="height: 30px"
+                             actionListener="#{reformaAdministrativaControlador.validarEstruturaUnidades()}"
+                             rendered="#{reformaAdministrativaControlador.selecionado.id ne null and !reformaAdministrativaControlador.deferida}"/>
+
+            <p:commandButton value="Deferir"
+                             id="btAprovar"
+                             update=":Formulario:tabelaUnidade"
+                             process="@this :Formulario:tabelaUnidade"
+                             title="Clique para deferir esta reforma administrativa."
+                             icon="ui-icon-deferir"
+                             oncomplete="aguarde.hide()"
+                             onclick="if (!confirm('Tem certeza que deseja deferir esta reforma administrativa? Ao confirmar, não será possível desfazer.')) {return false; } else {aguarde.show();}"
+                             styleClass="mtop10 mlef05"
+                             style="height: 30px"
+                             actionListener="#{reformaAdministrativaControlador.deferirReforma()}"
+                             rendered="#{reformaAdministrativaControlador.selecionado.id ne null and !reformaAdministrativaControlador.deferida}"/>
+        </h:form>
+
+        <p:dialog header="Visualizar Validação da Estrutura"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  resizable="true"
+                  widgetVar="dlgValidacaoEstrutura"
+                  closable="true">
+            <h:form id="form-validacao-estrutura">
+                <div class="mtop10">
+                    <p:dataTable id="tabela-validacao-estrutura"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{reformaAdministrativaControlador.selecionado.erros}"
+                                 var="erroLog">
+                        <f:facet name="header">ERROS</f:facet>
+                        <p:column headerText="Erro" styleClass="alinhamentoEsquerda">
+                            <h:outputLabel value="#{erroLog}" escape="false"/>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+                <div style="text-align: center; margin: 10px; ">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-circle-close"
+                                     styleClass="padrao mrig05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@this"
+                                     update="@none"
+                                     onclick="dlgValidacaoEstrutura.hide(); "/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Visualizar Estrutura Organizacional"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  resizable="true"
+                  widgetVar="dlgEstruturaOrganizacional"
+                  closable="true">
+            <h:form id="form-estrutura-organizacional">
+                <div class="mtop10">
+                    <p:tree id="admTree" value="#{reformaAdministrativaControlador.root}" var="treeAdm"
+                            style="width: 100%;border: 0px ">
+                        <p:treeNode expandedIcon="ui-icon-folder-open"
+                                    collapsedIcon="ui-icon-folder-collapsed">
+                            <h:outputText value="#{treeAdm}"/>
+                        </p:treeNode>
+                    </p:tree>
+                </div>
+                <div style="text-align: center; margin: 10px; ">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-circle-close"
+                                     styleClass="padrao mrig05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@this"
+                                     update="@none"
+                                     onclick="dlgEstruturaOrganizacional.hide(); "/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog header="Alterar Superior"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  resizable="true"
+                  widgetVar="dlgAlterarSuperior"
+                  closable="true">
+            <h:form id="form-alterar-superior">
+                <div class="mtop10">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Unidade" styleClass="negrito"/>
+                        <h:outputText value="#{reformaAdministrativaControlador.unidade.unidade}"/>
+                    </h:panelGrid>
+                    <p:dataTable
+                        var="item"
+                        styleClass="mtop05"
+                        value="#{reformaAdministrativaControlador.selecionado.unidades}"
+                        paginator="true" rows="10"
+                        paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                        rowsPerPageTemplate="10,50,100"
+                        widgetVar="tabela"
+                    >
+                        <p:column headerText="Unidade"
+                                  sortBy="#{item.toString()}"
+                                  filterMatchMode="contains"
+                                  filterBy="#{item.toString()}">
+                            <h:outputText value="#{item.toString()}"/>
+                        </p:column>
+                        <p:column headerText="Selecionar"
+                                  style="text-align: center;">
+                            <p:commandButton icon="ui-icon-check"
+                                             styleClass="icone_verde mrig05"
+                                             actionListener="#{reformaAdministrativaControlador.confirmarSuperior()}"
+                                             update=":Formulario:tabelaUnidade"
+                                             process="@this :Formulario:tabelaUnidade"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para adicionar uma nova Hierarquia filha">
+                                <f:setPropertyActionListener
+                                    target="#{reformaAdministrativaControlador.unidade.unidadeSuperior}"
+                                    value="#{item}"/>
+                            </p:commandButton>
+                        </p:column>
+                    </p:dataTable>
+
+                </div>
+                <div style="text-align: center; margin: 10px; ">
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-circle-close"
+                                     styleClass="padrao mrig05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@form"
+                                     update="@this :Formulario:gridDadosGerais :Formulario:tabelaUnidade"
+                                     onclick="dlgAlterarSuperior.hide(); "/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dlgUsuarios"
+                  modal="true"
+                  resizable="true"
+                  closable="false"
+                  draggable="true"
+                  showHeader="false"
+                  onShow="redimensionarLadosDialog(this.id);"
+                  width="1000"
+                  height="450"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="form-usuarios">
+                <p:panel header="Transferir Usuários"
+                         rendered="#{reformaAdministrativaControlador.unidade.tipo.isEncerrar()}">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Unidade Origem: "/>
+                        <h:outputText value="#{reformaAdministrativaControlador.unidade.unidade}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Unidade Destino: "/>
+                        <p:autoComplete queryDelay="1000"
+                                        id="unidadeDestino"
+                                        title="Digite unidade que deseja pesquisar."
+                                        value="#{reformaAdministrativaControlador.hierarquiaOrganizacional}"
+                                        completeMethod="#{reformaAdministrativaControlador.completarTodasHierarquias}"
+                                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                        var="ho"
+                                        dropdown="true"
+                                        panelStyle="max-height: 230px;max-width: 800px"
+                                        itemValue="#{ho.id}"
+                                        itemLabel="#{ho}"
+                                        maxResults="50"
+                                        size="70"/>
+                    </h:panelGrid>
+                    <p:commandButton value="Atualizar"
+                                     icon="ui-icon-refresh"
+                                     process="@this :form-usuarios:unidadeDestino"
+                                     update=":form-usuarios:tabelaUsuarios"
+                                     styleClass="mtop10"
+                                     actionListener="#{reformaAdministrativaControlador.atualizarUsuariosMarcados()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"/>
+                </p:panel>
+                <h:panelGroup rendered="#{reformaAdministrativaControlador.unidade.tipo.isEncerrar()}">
+                    <div class="alert alert-warning alinhamentoCentralizado" style="font-size: 13px; margin-top: 10px">
+                        <h:outputText value="ATENÇÃO!" styleClass="negrito"/><br/>
+                        <h:outputText
+                            value="Todos os privilégios dos usuários serão transferídos para a unidade de destino ao deferir."/>
+                    </div>
+                </h:panelGroup>
+                <p:dataTable id="tabelaUsuarios" paginator="true"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05 mtop10"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{reformaAdministrativaControlador.unidade.usuarios}"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>USUÁRIOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100"
+                             var="reformaUsuario">
+                    <p:column style="text-align: center"
+                              rendered="#{reformaAdministrativaControlador.unidade.tipo.isEncerrar()}">
+                        <f:facet name="header">
+                            <p:selectBooleanCheckbox
+                                value="#{reformaAdministrativaControlador.marcarTodos}">
+                                <p:ajax event="change" oncomplete="aguarde.hide();" onstart="aguarde.show();"
+                                        process="@this" update="tabelaUsuarios"
+                                        listener="#{reformaAdministrativaControlador.marcarDesmarcarTodos()}"/>
+                            </p:selectBooleanCheckbox>
+                        </f:facet>
+                        <p:selectBooleanCheckbox value="#{reformaUsuario.marcado}">
+                            <p:ajax process="@this"/>
+                        </p:selectBooleanCheckbox>
+                    </p:column>
+                    <p:column headerText="Usuário" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{reformaUsuario.usuarioSistema}"/>
+                    </p:column>
+                    <p:column headerText="Unidade Destino" styleClass="alinhamentoEsquerda"
+                              rendered="#{reformaAdministrativaControlador.unidade.tipo.isEncerrar()}">
+                        <h:outputText value="#{reformaUsuario.hierarquiaOrganizacional}"/>
+                    </p:column>
+                </p:dataTable>
+                <div style="text-align: center; margin: 10px; ">
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     process="@this :form-usuarios :Formulario:tabelaUnidade"
+                                     update=":Formulario:tabelaUnidade"
+                                     styleClass="padrao mrig05"
+                                     rendered="#{reformaAdministrativaControlador.unidade.tipo.isEncerrar()}"
+                                     actionListener="#{reformaAdministrativaControlador.confirmarAtualizacaoUsuarios()}"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();"/>
+
+                    <p:commandButton value="Fechar"
+                                     icon="ui-icon-circle-close"
+                                     styleClass="padrao mrig05"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     process="@this"
+                                     update="@none"
+                                     onclick="dlgUsuarios.hide(); "/>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,691 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+    <ui:composition template="/corpo.xhtml">
+        <ui:define name="body">
+            <script type="text/javascript">
+                function limpaCamposContaBancaria(arg){
+                    var componente = document.getElementById(arg);
+                    if(componente.value.toString().trim().length == 0 || componente.value == '' || componente.value == 'undefined'){
+                        fazSubmitContaBancaria();               
+                    }
+                }      
+                function limpaCampos(arg){
+                    var componente = document.getElementById(arg);
+                    if(componente.value.toString().trim().length == 0 || componente.value == '' || componente.value == 'undefined'){
+                        var idPanel = arg.replace(':subconta_input',':panelInformacoesConta');
+                        var panel = document.getElementById(idPanel);                   
+                        panel.style.display = 'none';   
+                    }
+                }
+                window.onload = function(){
+                    limpaCampos('Formulario:subconta_input');
+                }
+            </script> 
+
+            <h:form id="Formulario">
+                <p:remoteCommand name="fazSubmitContaBancaria" update="@form" actionListener="#{origemOCCControlador.setaIdNullContaBancaria()}"/>
+                <p:outputPanel id="gridEntidadeOcc">
+                    <div align="right">
+                        <h:outputText value="Entidade OCC: " />
+                        <h:selectOneMenu title="Selecione uma Entidade OCC" value="#{origemOCCControlador.entidadeOCC}" id="entidadeOCC" >
+                            <f:selectItems value="#{origemOCCControlador.entidadesOCC}" />
+                            <p:ajax event="change" update="@this" listener="#{origemOCCControlador.limpaTagOccLista()}"/>
+                        </h:selectOneMenu>
+                        <p:message for="entidadeOCC" showDetail="true" />
+                        <br/>
+                        <p:button id="botaoNovo" title="Clique para inserir um novo registro"
+                                  value="Novo" disabled="#{origemOCCControlador.entidadeOCC eq null}" 
+                                  href="#{origemOCCControlador.caminhoPadrao}novo/" styleClass="button"
+                                  onmouseover="entidadeOCCSessao();" icon="ui-icon-circle-plus" style="width: 07%">
+                        </p:button><p:spacer width="5"/>
+
+                        <p:remoteCommand name="entidadeOCCSessao" immediate="true" actionListener="#{web.poeNaSessao(origemOCCControlador.entidadeOCC)}"/>
+                    </div>
+                </p:outputPanel>
+
+                <p:panel header="Cadastro de Origem Conta Contábil" >
+                    <p:outputPanel rendered="#{origemOCCControlador.renderizaPainelContaFinanceira()}">
+                        <h:panelGrid columns="2" id="panel">
+                            <h:outputText value="Entidade OCC: "/>
+                            <h:outputText value="#{origemOCCControlador.entidadeOCC.descricao}" styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="TAG: " for="tagOCC"/>
+                            <h:panelGrid columns="2">
+                                <p:autoComplete queryDelay="1000" id="tagOCC" forceSelection="true" size="70" var="tag"
+                                                completeMethod="#{origemOCCControlador.completaTagsOCC}"
+                                                converter="#{origemOCCControlador.converterTagOCC}"
+                                                value="#{origemOCCControlador.origemcc.tagOCC}"
+                                                disabled="#{origemOCCControlador.origemcc.id ne null}"
+                                                itemValue="#{tag.id}" itemLabel="#{tag.codigo} #{tag.descricao}" title="Informe uma tag">
+                                </p:autoComplete>
+                                <fc:novoParenteDoParente destino="#{tagOCCControlador.caminhoPadrao}novo/"
+                                                         origem="#{origemOCCControlador.caminhoPadrao}novo/"
+                                                         parente="#{origemOCCControlador.origemcc}"
+                                                         selecionado="#{origemOCCControlador.selecionado}"/>
+                            </h:panelGrid>
+
+                            <fc:outputLabelObrigatorio value="Conta Financeira: " rendered="#{!origemOCCControlador.renderizaPainelContaEditar()}"/>
+                            <p:autoComplete queryDelay="1000" id="subconta" forceSelection="true" size="70" title="Informe uma Subconta Financeira"
+                                            rendered="#{!origemOCCControlador.renderizaPainelContaEditar()}"
+                                            value="#{origemOCCControlador.origemcc.subConta}"
+                                            completeMethod="#{origemOCCControlador.completaSubContas}"
+                                            converter="#{origemOCCControlador.converterSubconta}"
+                                            var="sub" itemValue="#{sub.id}" itemLabel="#{sub}" maxResults="10"
+                                            onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'panelInformacoesConta', false, true, false); keyUpLimparEsconderDesabilidarCampo(this, 'cbentidade_input', true, false, false)">
+                                <p:ajax event="itemSelect"  update=":Formulario" process=":Formulario"
+                                        listener="#{origemOCCControlador.recuperaContaBancariaApartirDaContaFinanceira()}"/>
+                            </p:autoComplete>
+
+                            <p:spacer rendered="#{origemOCCControlador.origemcc.subConta.id ne null}"/>
+                            <h:panelGrid columns="9" id="panelInformacoesConta" rendered="#{origemOCCControlador.origemcc.subConta.id ne null}">
+                                <h:outputText value="Banco: "/>
+                                <h:outputText id="banco" value="#{origemOCCControlador.origemcc.subConta.contaBancariaEntidade.agencia.banco.numeroBanco}" style="font-weight: bold" />
+                                <p:spacer />
+                                <h:outputText value="Agência: " />
+                                <h:outputText id="agencia" value="#{origemOCCControlador.origemcc.subConta.contaBancariaEntidade.agencia.numeroAgencia} - #{origemOCCControlador.origemcc.subConta.contaBancariaEntidade.agencia.digitoVerificador}" style="font-weight: bold"/>
+                                <p:spacer/>
+                                <h:outputText value="Conta: " />
+                                <h:outputText id="infoConta" value="#{origemOCCControlador.origemcc.subConta.contaBancariaEntidade.numeroConta} - #{origemOCCControlador.origemcc.subConta.contaBancariaEntidade.digitoVerificador}" style="font-weight: bold"/>
+                                <p:spacer />
+                            </h:panelGrid>
+
+                            <h:outputText value="Conta Bancária:" rendered="#{!origemOCCControlador.renderizaPainelContaEditar()}"/>
+                            <p:autoComplete queryDelay="1000" id="cbentidade" forceSelection="true" size="70" title="Informe uma Conta Bancária Entidade"
+                                            value="#{origemOCCControlador.cbe}"
+                                            rendered="#{!origemOCCControlador.renderizaPainelContaEditar()}"
+                                            completeMethod="#{origemOCCControlador.completaContaBancariaEntidade}"
+                                            converter="#{origemOCCControlador.converterContabancariaEntidade}"
+                                            var="cbe" itemValue="#{cbe.id}" itemLabel="#{cbe.toStringAutoComplete()}"
+                                            maxResults="10"
+                                            onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'subconta_input', true, false, false);
+                                                keyUpLimparEsconderDesabilidarCampo(this, 'panelInformacoesConta', false, true, false)">
+                                <p:ajax event="itemSelect" 
+                                        update=":Formulario" 
+                                        listener="#{origemOCCControlador.setaNullContaFinanceira()}"/>                                
+                            </p:autoComplete>
+
+
+
+                            <h:outputText value="Conta: " rendered="#{origemOCCControlador.renderizaPainelContaEditar()}" />
+                            <p:autoComplete queryDelay="1000" id="conta" forceSelection="true" size="70" title="Informe uma Conta"
+                                            value="#{origemOCCControlador.origemcc.contaOrigem}"
+                                            rendered="#{origemOCCControlador.renderizaPainelContaEditar()}"
+                                            completeMethod="#{origemOCCControlador.completaContas}"
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            var="c" itemValue="#{c.id}" itemLabel="#{c}" maxResults="10" validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+
+                            <h:outputText value="Conta Extra OFSS: " />
+                            <p:autoComplete queryDelay="1000" id="ccont" forceSelection="true" size="70" var="cco"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}"
+                                            converter="#{origemOCCControlador.converterConta}" maxResults="10"
+                                            value="#{origemOCCControlador.origemcc.contaContabil}"
+                                            itemValue="#{cco.id}" itemLabel="#{cco.codigo} #{cco.descricao}" title="Informe uma Conta Extraorçamentária"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Intra OFSS : " id="lIn" />
+                            <p:autoComplete queryDelay="1000" id="cIn" title="Informe uma Conta Intra"
+                                            var="cIntra" itemLabel="#{cIntra}" itemValue="#{cIntra.id}"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaIntra}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Inter OFSS União: " id="liun" />
+                            <p:autoComplete queryDelay="1000" id="ciun" title="Informe uma Conta Inter da União"
+                                            var="cIU" itemLabel="#{cIU}" itemValue="#{cIU.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterUniao}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Inter OFSS Estado: " />
+                            <p:autoComplete queryDelay="1000" id="cInterEstadoSelecionado" title="Informe uma Conta Inter do Estado"
+                                            var="cIE" itemLabel="#{cIE}" itemValue="#{cIE.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterEstado}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Inter OFSS Município: "/>
+                            <p:autoComplete queryDelay="1000" id="cInterMunicipioSelecionado" title="Informe uma Conta Inter do Município"
+                                            var="cIM" itemLabel="#{cIM}" itemValue="#{cIM.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterMunicipal}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Data Início da Vigência: "/>
+                            <p:calendar title="Data de Inicio da Vigência" navigator="true" locale="pt_BR" pattern="dd/MM/yyyy" onkeyup="mascara(this,mdata)"
+                                        value="#{origemOCCControlador.origemcc.inicioVigencia}" id="dataIniVigencia"/>
+                        </h:panelGrid>
+                    </p:outputPanel>
+
+
+
+                    <!--PAINEL NATUREZA DA DIVIDA PUBLICA-->
+                    <p:outputPanel rendered="#{origemOCCControlador.renderizaPainelNaturezaDaDivida()}">
+                        <h:panelGrid columns="2" id="panel3">
+                            <h:outputText value="Entidade OCC: "/>
+                            <h:outputText value="#{origemOCCControlador.entidadeOCC.descricao}" styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="Data Início da Vigência: "/>
+                            <p:calendar title="Data Inicio da Vigência" navigator="true" locale="pt_BR" pattern="dd/MM/yyyy"
+                                        value="#{origemOCCControlador.origemcc.inicioVigencia}" id="dataIniVigencia3" onkeyup="mascara(this,mdata)"/>
+                        </h:panelGrid>
+                        <br/>
+                        <p:commandButton value="Selecionar #{origemOCCControlador.retornaLabel()}" styleClass="botao_azul icone_branco"
+                                         update=":Formulario_dialog_natureza:panelDialogNatureza" oncomplete="dialogNatureza.show()" 
+                                         actionListener="#{origemOCCControlador.setListConta(null)}"
+                                         icon="ui-icon-circle-plus" rendered="#{origemOCCControlador.origemcc.id eq null}"/>
+
+                        <p:dataTable id="tableNatDivida" emptyMessage="Nenhum registro encontrado." 
+                                     value="#{origemOCCControlador.origenscc}" var="occ" 
+                                     rowKey="#{occ.id}">
+                            <f:facet name="header">
+                                <h:outputText value="Origens de Configuração Contábil" />
+                            </f:facet>
+                            <p:column headerText="Alterar" style="text-align: center; width: 5%" rendered="#{origemOCCControlador.origemcc.id ne null}">
+                                <p:commandButton image="ui-icon-pencil" id="Alterarr" update=":Formulario:tableNatDivida"
+                                                 actionListener="#{origemOCCControlador.alterarConta}"
+                                                 oncomplete="dialogNatureza.show()"
+                                                 title="Clique para alterar">   
+                                    <f:attribute  name="occ" id="objeto" value="#{occ}"/>
+                                </p:commandButton>
+                            </p:column>
+                            <p:column style="width:4%">  
+                                <p:rowToggler />  
+                            </p:column>  
+
+                            <p:column style="width: 30%" headerText="TAG" >
+                                <h:outputText value="#{occ.tagOCC.descricao}" />
+                            </p:column>
+
+                            <p:column style="width: 30%" headerText="#{origemOCCControlador.retornaLabel()}" >
+                                <h:outputText value="#{occ.categoriaDividaPublica}" />
+                            </p:column>
+                            <p:column headerText="Categoria" style="text-align: center; width: 15%">
+                                <h:outputText value="#{occ.categoriaDividaPublica.superior}"/>
+                            </p:column>
+                            <p:column style="width: 50%" headerText="Tipo da Natureza da Dívida"  filterMatchMode="exact" filterOptions="#{categoriaDividaPublicaControlador.naturezaDivida}" filterBy="#{occ.naturezaDividaPublica}" filterStyle="width: 50px!important;" >
+                                <h:outputText value="#{occ.categoriaDividaPublica.naturezaDividaPublica.descricao}" />
+                            </p:column>
+                            <p:column headerText="Remover" style="text-align: center; width: 10%" rendered="#{origemOCCControlador.origemcc.id eq null}">
+                                <p:commandButton image="ui-icon-trash" id="Removerr" update=":Formulario:tableNatDivida" 
+                                                 actionListener="#{origemOCCControlador.removeConta}">
+                                    <f:attribute  name="occ" id="objeto" value="#{occ}"/>
+                                </p:commandButton>
+                            </p:column>
+
+
+                            <p:rowExpansion>
+                                <p:panel id="contasContabeis" header="Contas Contábeis" >
+                                    <h:panelGrid columns="2">
+
+                                        <h:outputText value="Conta Extra OFSS: "/>
+                                        <h:outputText value="#{occ.contaContabil}"/>
+
+                                        <h:outputText value="Conta Intra OFSS: "/>
+                                        <h:outputText value="#{occ.contaIntra}"/>
+
+                                        <h:outputText value="Conta Inter OFSS União: "/>
+                                        <h:outputText value="#{occ.contaInterUniao}"/>
+
+                                        <h:outputText value="Conta Inter OFSS Estado: "/>
+                                        <h:outputText value="#{occ.contaInterEstado}"/>
+
+                                        <h:outputText value="Conta Inter OFSS Município: "/>
+                                        <h:outputText value="#{occ.contaInterMunicipal}"/>
+                                    </h:panelGrid>
+                                </p:panel>
+                            </p:rowExpansion>   
+
+                        </p:dataTable>
+                    </p:outputPanel>        
+
+
+                    <!--PAINEL CONTAS-->
+                    <p:outputPanel  rendered="#{origemOCCControlador.renderizaPainelConta()}">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Entidade OCC: "/>
+                            <h:outputText value="#{origemOCCControlador.entidadeOCC.descricao}" styleClass="negrito"/>
+                            <fc:outputLabelObrigatorio value="Data Início da Vigência: "/>
+                            <p:calendar title="Data Inicio da Vigência" navigator="true" locale="pt_BR" pattern="dd/MM/yyyy" onkeyup="mascara(this,mdata)"
+                                        value="#{origemOCCControlador.origemcc.inicioVigencia}" id="dataIniVigencia2"/>
+                        </h:panelGrid>
+                        <br/>
+                        <br/>
+                        <p:commandButton value="Selecionar #{origemOCCControlador.retornaLabel()}" styleClass="botao_azul icone_branco"
+                                         update=":Formulario_dialog:panelDialog" oncomplete="dialog.show()" 
+                                         actionListener="#{origemOCCControlador.setListConta(null)}"
+                                         icon="ui-icon-circle-plus" rendered="#{origemOCCControlador.origemcc.id eq null}"/>
+
+                        <p:dataTable id="tableOrigens" emptyMessage="Nenhum registro encontrado." 
+                                     value="#{origemOCCControlador.origenscc}" var="occ"
+                                     rowKey="#{occ.id}">
+                            <f:facet name="header">
+                                <h:outputText value="Origens de Configuração Contábil" />
+                            </f:facet>
+                            <p:column headerText="Alterar" style="text-align: center; width: 5%" rendered="#{origemOCCControlador.origemcc.id ne null}">
+                                <p:commandButton image="ui-icon-pencil" id="Alterar" update=":Formulario:tableOrigens"
+                                                 actionListener="#{origemOCCControlador.alterarConta}"
+                                                 oncomplete="dialog.show()"
+                                                 title="Clique para alterar">
+                                    <f:attribute  name="occ" id="objeto" value="#{occ}"/>
+                                </p:commandButton>
+                            </p:column>
+                            <p:column style="width:5%">  
+                                <p:rowToggler />  
+                            </p:column>  
+
+                            <p:column style="width: 30%" headerText="TAG" >
+                                <h:outputText value="#{occ.tagOCC.descricao}" />
+                            </p:column>
+
+                            <p:column style="width: 30%" headerText="#{origemOCCControlador.retornaLabel()}" >
+                                <h:outputText value="#{occ.contaOrigem}" />
+                            </p:column>
+                            <p:column style="width: 70px; text-align: center" headerText="Tipo de Conta" filterMatchMode="exact" filterOptions="#{planoDeContasControlador.tiposCATEGORIA()}" filterBy="#{occ.contaOrigem.categoria}" filterStyle="width: 50px!important;">
+                                <h:outputText value="#{occ.contaOrigem.categoria}" />
+                            </p:column>
+
+
+                            <c:if test="#{origemOCCControlador.isTipoContaReceita()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta de Receita" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaReceitasView()}" 
+                                          filterBy="#{occ.contaOrigem.tiposCredito.descricao}" >
+                                    <h:outputText value="#{occ.contaOrigem.tiposCredito.descricao}" />
+                                </p:column>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaDespesa()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta de Despesa" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaDespesaView()}" 
+                                          filterBy="#{occ.contaOrigem.tipoContaDespesa.descricao}" >
+                                    <h:outputText value="#{occ.contaOrigem.tipoContaDespesa.descricao}" />
+                                </p:column>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaEXTRAORCAMENTARIA()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta Extra" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaExtraView()}" 
+                                          filterBy="#{occ.contaOrigem.tipoContaExtraorcamentaria.descricao}" >
+                                    <h:outputText value="#{occ.contaOrigem.tipoContaExtraorcamentaria.descricao}" />
+                                </p:column>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaDestinacao()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta de Destinação" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaDestinacaoView()}" 
+                                          filterBy="#{occ.contaOrigem.tipoDestinacaoRecurso.descricao}" >
+                                    <h:outputText value="#{occ.contaOrigem.tipoDestinacaoRecurso.descricao}" />
+                                </p:column>
+                            </c:if>
+                            <p:column headerText="Remover" style="text-align: center; width: 10%" rendered="#{origemOCCControlador.origemcc.id eq null}">
+                                <p:commandButton image="ui-icon-trash" id="Remover" update=":Formulario:tableOrigens"
+                                                 actionListener="#{origemOCCControlador.removeConta}">
+                                    <f:attribute  name="occ" id="objeto" value="#{occ}"/>
+                                </p:commandButton>
+                            </p:column>
+
+                            <p:rowExpansion>
+                                <p:panel id="cContabeis" header="Contas Contábeis" >
+                                    <h:panelGrid columns="2">
+
+                                        <h:outputText value="Conta Extra OFSS: "/>
+                                        <h:outputText value="#{occ.contaContabil}"/>
+
+                                        <h:outputText value="Conta Intra OFSS: "/>
+                                        <h:outputText value="#{occ.contaIntra}"/>
+
+                                        <h:outputText value="Conta Inter OFSS União: "/>
+                                        <h:outputText value="#{occ.contaInterUniao}"/>
+
+                                        <h:outputText value="Conta Inter OFSS Estado: "/>
+                                        <h:outputText value="#{occ.contaInterEstado}"/>
+
+                                        <h:outputText value="Conta Inter OFSS Município: "/>
+                                        <h:outputText value="#{occ.contaInterMunicipal}"/>
+                                    </h:panelGrid>
+                                </p:panel>
+                            </p:rowExpansion>   
+
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:panel>
+                <fc:rodapePretty controlador="#{origemOCCControlador}"/>
+            </h:form>
+
+            <p:dialog widgetVar="dialog" modal="true" width="1000" position="center" height="600">
+                <h:form id="Formulario_dialog">
+                    <p:panel id="panelDialog" header="#{origemOCCControlador.retornaLabel()}" rendered="#{origemOCCControlador.renderizaPainelConta()}">
+
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Entidade OCC: "/>
+                            <h:outputText value="#{origemOCCControlador.entidadeOCC.descricao}" styleClass="negrito"/>
+
+                            <h:outputText value="Conta: " rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                            <h:outputText value="#{origemOCCControlador.origemcc.contaOrigem}" styleClass="negrito" rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+
+
+                            <c:if test="#{origemOCCControlador.isTipoContaReceita() and origemOCCControlador.origemcc.id ne null}">
+                                <h:outputText value="Tipo de Conta de Receita: " />
+                                <h:outputText value="#{origemOCCControlador.origemcc.contaOrigem.tiposCredito.descricao}" styleClass="negrito"/>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaDespesa() and origemOCCControlador.origemcc.id ne null}">
+                                <h:outputText value="Tipo de Conta de Despesa: " />
+                                <h:outputText value="#{origemOCCControlador.origemcc.contaOrigem.tipoContaDespesa.descricao}" styleClass="negrito"/>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaEXTRAORCAMENTARIA() and origemOCCControlador.origemcc.id ne null}">
+                                <h:outputText value="Tipo de Conta Extra Orçamentária: " />
+                                <h:outputText value="#{origemOCCControlador.origemcc.contaOrigem.tipoContaExtraorcamentaria.descricao}" styleClass="negrito" />
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaDestinacao() and origemOCCControlador.origemcc.id ne null}">
+                                <h:outputText value="Tipo de Conta de Destiniação de Recurso: " />
+                                <h:outputText value="#{origemOCCControlador.origemcc.contaOrigem.tipoDestinacaoRecurso.descricao}" styleClass="negrito" />
+                            </c:if>
+
+                            <fc:outputLabelObrigatorio value="TAG: " for="tagOCC"/>
+                            <h:panelGroup>
+                                <p:autoComplete queryDelay="1000" id="tagOCCc" forceSelection="true" size="70" var="tag"
+                                                completeMethod="#{origemOCCControlador.completaTagsOCC}"
+                                                converter="#{origemOCCControlador.converterTagOCC}"
+                                                value="#{origemOCCControlador.origemcc.tagOCC}"
+                                                itemValue="#{tag.id}" itemLabel="#{tag.codigo} #{tag.descricao}" title="Informe uma tag"/>
+
+                                <fc:novoParenteDoParente destino="#{tagOCCControlador.caminhoPadrao}novo/"
+                                                         origem="#{origemOCCControlador.caminhoPadrao}novo/"
+                                                         parente="#{origemOCCControlador.origemcc}"
+                                                         selecionado="#{origemOCCControlador.selecionado}"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Conta Extra OFSS: " />
+                            <p:autoComplete queryDelay="1000" id="ccontt" forceSelection="true" size="70" var="cco"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}"
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaContabil}"
+                                            itemValue="#{cco.id}" itemLabel="#{cco.codigo} #{cco.descricao}" 
+                                            title="Informe uma Conta Extra"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Intra OFSS: " />
+                            <p:autoComplete queryDelay="1000" id="lInn2" title="Informe uma Conta Intra"
+                                            var="cIntra" itemLabel="#{cIntra}" itemValue="#{cIntra.id}"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaIntra}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Inter OFSS União: " />
+                            <p:autoComplete queryDelay="1000" id="liunn" title="Informe uma Conta Inter da União"
+                                            var="cIU" itemLabel="#{cIU}" itemValue="#{cIU.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterUniao}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Inter OFSS Estado: "/>
+                            <p:autoComplete queryDelay="1000" id="cInterEstadoSelecionadoo" title="Informe uma Conta Inter do Estado"
+                                            var="cIEe" itemLabel="#{cIEe}" itemValue="#{cIEe.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterEstado}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+
+                            <h:outputText value="Conta Inter OFSS Município: "/>
+                            <p:autoComplete queryDelay="1000" id="cInterMunicipioSelecionadoo" title="Informe uma Conta Inter do Município"
+                                            var="cIMm" itemLabel="#{cIMm}" itemValue="#{cIMm.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterMunicipal}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+                        </h:panelGrid>
+
+
+                        <p:commandButton value="Confirmar" styleClass="botao_azul icone_branco" icon="ui-icon-check" actionListener="#{origemOCCControlador.addAllContas}" rendered="#{origemOCCControlador.origemcc.id eq null}" />
+                        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialog.hide()" styleClass="botao_azul icone_branco" rendered="#{origemOCCControlador.origemcc.id eq null}"/>
+                        <p:dataTable id="listaContas" style="text-align: center;"
+                                     emptyMessage="Nenhum registro encontrado" 
+                                     value="#{origemOCCControlador.listConta}"
+                                     rendered="#{origemOCCControlador.origemcc.id eq null}"
+                                     var="c" selection="#{origemOCCControlador.arrayConta}"
+                                     rowKey="#{c.id}" > 
+
+                            <f:facet name="header">
+                                <h:outputText value="Buscar: " />
+                                <p:inputText value="#{origemOCCControlador.palavra}" size="70"/>
+                                <p:commandButton value="Filtrar" actionListener="#{origemOCCControlador.filtrarContas}" update=":Formulario_dialog:listaContas" icon="ui-icon-search"  styleClass="icone_azul"
+                                                 title="Clique para filtrar uma conta" />
+                                <br/>
+                                <h:outputText value="#{origemOCCControlador.retornaLabel()}"/>
+                            </f:facet>
+
+                            <p:column selectionMode="multiple" style="width: 5%; text-align: center;" disabledSelection="#{c.categoria eq 'SINTETICA'}"/>
+
+                            <p:column headerText="#{origemOCCControlador.retornaLabel()}">
+                                <h:outputText value="#{c.codigo}"/>
+                            </p:column>
+                            <p:column headerText="Descrição" style="text-align: left">
+                                <h:outputText value="#{c.descricao}"/>
+                            </p:column>
+                            <p:column style="width: 70px; text-align: center" headerText="Tipo de Conta" filterMatchMode="exact" filterOptions="#{planoDeContasControlador.tiposCATEGORIA()}" filterBy="#{c.categoria}" filterStyle="width: 50px!important;">
+                                <h:outputText value="#{c.categoria}" />
+                            </p:column>
+                            <c:if test="#{origemOCCControlador.isTipoContaReceita()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta de Receita" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaReceitasView()}" 
+                                          filterBy="#{c.tiposCredito.descricao}" >
+                                    <h:outputText value="#{c.tiposCredito.descricao}" />
+                                </p:column>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaDespesa()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta de Despesa" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaDespesaView()}" 
+                                          filterBy="#{c.tipoContaDespesa.descricao}" >
+                                    <h:outputText value="#{c.tipoContaDespesa.descricao}" />
+                                </p:column>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaEXTRAORCAMENTARIA()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta Extra" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaExtraView()}" 
+                                          filterBy="#{c.tipoContaExtraorcamentaria.descricao}" >
+                                    <h:outputText value="#{c.tipoContaExtraorcamentaria.descricao}" />
+                                </p:column>
+                            </c:if>
+                            <c:if test="#{origemOCCControlador.isTipoContaDestinacao()}">
+                                <p:column style="width: 70px;text-align: center" 
+                                          headerText="Tipo de Conta de Destinação" filterMatchMode="exact" 
+                                          filterOptions="#{planoDeContasControlador.tiposContaDestinacaoView()}" 
+                                          filterBy="#{c.tipoDestinacaoRecurso.descricao}" >
+                                    <h:outputText value="#{c.tipoDestinacaoRecurso.descricao}" />
+                                </p:column>
+                            </c:if>
+                        </p:dataTable>
+
+                        <p:commandButton value="Confirmar" styleClass="botao_azul icone_branco" icon="ui-icon-check" actionListener="#{origemOCCControlador.addAllContas()}" rendered="#{origemOCCControlador.origemcc.id eq null}"/>
+                        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialog.hide()" styleClass="botao_azul icone_branco" rendered="#{origemOCCControlador.origemcc.id eq null}"/>
+
+                        <p:commandButton value="Confirmar" styleClass="botao_azul icone_branco" icon="ui-icon-check" actionListener="#{origemOCCControlador.adicionarContaAlterada()}" rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialog.hide()" styleClass="botao_azul icone_branco" rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                    </p:panel>
+                </h:form>
+            </p:dialog>
+
+
+            <!--DIALOG NATUREZA DA DIVIDA PUBLICA-->
+            <p:dialog widgetVar="dialogNatureza" modal="true" width="1000" position="center" height="600">
+                <h:form id="Formulario_dialog_natureza">
+                    <p:panel id="panelDialogNatureza" header="#{origemOCCControlador.retornaLabel()}" rendered="#{origemOCCControlador.renderizaPainelNaturezaDaDivida()}" >
+
+                        <h:panelGrid columns="3">
+
+                            <h:outputText value="Entidade OCC: "/>
+                            <h:outputText value="#{origemOCCControlador.entidadeOCC.descricao}" styleClass="negrito"/>
+                            <p:spacer/>
+
+                            <h:outputText value="Natureza: " rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                            <h:outputText value="#{origemOCCControlador.origemcc.categoriaDividaPublica}" styleClass="negrito" rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                            <p:spacer rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+
+                            <h:outputText value="Tipo Natureza: " rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                            <h:outputText value="#{origemOCCControlador.origemcc.categoriaDividaPublica.naturezaDividaPublica.descricao}" styleClass="negrito" rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                            <p:spacer rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+
+                            <fc:outputLabelObrigatorio value="TAG: " for="tagOCCNatureza"/>
+                            <p:autoComplete queryDelay="1000" id="tagOCCNatureza" forceSelection="true" size="70" var="tag"
+                                            completeMethod="#{origemOCCControlador.completaTagsOCC}"
+                                            converter="#{origemOCCControlador.converterTagOCC}"
+                                            value="#{origemOCCControlador.origemcc.tagOCC}"
+                                            itemValue="#{tag.id}" itemLabel="#{tag.codigo} #{tag.descricao}" title="Informe uma tag"/>
+
+                            <fc:novoParenteDoParente destino="#{tagOCCControlador.caminhoPadrao}novo/"
+                                                     origem="#{origemOCCControlador.caminhoPadrao}novo/"
+                                                     parente="#{origemOCCControlador.origemcc}"
+                                                     selecionado="#{origemOCCControlador.selecionado}"/>
+
+                            <h:outputText value="Conta Extra OFSS: " />
+                            <p:autoComplete queryDelay="1000" id="ccontNatureza" forceSelection="true" size="70" var="cco"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}"
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaContabil}"
+                                            itemValue="#{cco.id}" itemLabel="#{cco.codigo} #{cco.descricao}" title="Informe uma Conta Extra"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+                            <p:message for="ccontNatureza" showDetail="true"/>
+
+                            <h:outputText value="Conta Intra OFSS: " />
+                            <p:autoComplete queryDelay="1000" id="lInNatureza" title="Informe uma Conta Intra"
+                                            var="cIntra" itemLabel="#{cIntra}" itemValue="#{cIntra.id}"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaIntra}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+                            <p:message for="lInNatureza" showDetail="true"/>
+
+                            <h:outputText value="Conta Inter OFSS União: " />
+                            <p:autoComplete queryDelay="1000" id="ciunNatureza" title="Informe uma Conta Inter da União"
+                                            var="cIU" itemLabel="#{cIU}" itemValue="#{cIU.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterUniao}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+                            <p:message for="ciunNatureza" showDetail="true"/>
+
+                            <h:outputText value="Conta Inter OFSS Estado: "/>
+                            <p:autoComplete queryDelay="1000" id="cInterEstadoSelecionadoo" title="Informe uma Conta Inter do Estado"
+                                            var="cIEe" itemLabel="#{cIEe}" itemValue="#{cIEe.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterEstado}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+                            <p:message for="cInterEstadoSelecionadoo" showDetail="true" />
+
+                            <h:outputText value="Conta Inter OFSS Município: "/>
+                            <p:autoComplete queryDelay="1000" id="cInterMunicipioNatureza" title="Informe uma Conta Inter do Município"
+                                            var="cIMm" itemLabel="#{cIMm}" itemValue="#{cIMm.id}" maxResults="10"
+                                            completeMethod="#{origemOCCControlador.completaContaContabil}" 
+                                            converter="#{origemOCCControlador.converterConta}"
+                                            value="#{origemOCCControlador.origemcc.contaInterMunicipal}" size="70"
+                                            validator="#{origemOCCControlador.validaCategoriaConta}">
+                                <p:ajax event="itemSelect" update="@this" />
+                            </p:autoComplete>
+                            <p:message for="cInterMunicipioNatureza" showDetail="true" />
+                        </h:panelGrid>
+
+                        <p:commandButton value="Confirmar" styleClass="botao_azul icone_branco" icon="ui-icon-check" 
+                                         actionListener="#{origemOCCControlador.addAllCategorias()}"  
+                                         rendered="#{origemOCCControlador.origemcc.id eq null}"
+                                         onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'Formulario_dialog_natureza_input', true, false, false) 
+                                                  keyUpLimparEsconderDesabilidarCampo(this, 'listaCategorias', false, true, false)"/>
+                        
+                        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialogNatureza.hide()" styleClass="botao_azul icone_branco"  
+                                         rendered="#{origemOCCControlador.origemcc.id eq null}"/>
+
+                        <p:dataTable id="listaCategorias" style="text-align: center;"
+                                     emptyMessage="Nenhum registro encontrado" 
+                                     value="#{origemOCCControlador.listCategorias}"
+                                     var="c" selection="#{origemOCCControlador.arrayCategoria}"
+                                     rowKey="#{c.id}" 
+                                     rendered="#{origemOCCControlador.origemcc.id eq null}"> 
+
+                            <f:facet name="header">
+                                <h:outputText value="Buscar: " />
+                                <p:inputText value="#{origemOCCControlador.palavra}" size="70"/>
+                                <p:commandButton value="Filtrar" actionListener="#{origemOCCControlador.filtrarContas()}" update=":Formulario_dialog_natureza:listaCategorias" icon="ui-icon-search"  styleClass="icone_azul"/>
+                                <br/>
+                                <h:outputText value="#{origemOCCControlador.retornaLabel()}"/>
+                            </f:facet>
+
+                            <p:column selectionMode="multiple" style="width: 5%; text-align: center;"  />
+
+                            <p:column headerText="Natureza da Dívida Pública">
+                                <h:outputText value="#{c.descricao} " style="width: 40%" />
+                            </p:column>
+                            <p:column style="width: 30%; text-align: center" headerText="Tipo de Natureza da Dívida" 
+                                      filterMatchMode="exact" filterOptions="#{categoriaDividaPublicaControlador.naturezaDivida}" 
+                                      filterBy="#{c.naturezaDividaPublica.descricao}" 
+                                      filterStyle="width: 50px!important;">
+                                <h:outputText value="#{c.naturezaDividaPublica.descricao}" />
+                            </p:column> 
+                        </p:dataTable>
+                        <br/>
+                        <p:commandButton value="Confirmar" styleClass="botao_azul icone_branco" icon="ui-icon-check" 
+                                         actionListener="#{origemOCCControlador.addAllCategorias()}"  
+                                         rendered="#{origemOCCControlador.origemcc.id eq null}"
+                                         onkeyup="keyUpLimparEsconderDesabilidarCampo(this, 'tagOCCNatureza', true, false, false) 
+                                             keyUpLimparEsconderDesabilidarCampo(this, 'listaCategorias', false, true, false)"/>
+                        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialogNatureza.hide()" styleClass="botao_azul icone_branco"  
+                                         rendered="#{origemOCCControlador.origemcc.id eq null}"/>
+
+                        <p:commandButton value="Confirmar" styleClass="botao_azul icone_branco" icon="ui-icon-check" 
+                                         actionListener="#{origemOCCControlador.adicionarContaAlterada()}" 
+                                         rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                        <p:commandButton value="Fechar" icon="ui-icon-close" onclick="dialogNatureza.hide()" 
+                                         styleClass="botao_azul icone_branco" rendered="#{origemOCCControlador.origemcc.id ne null}"/>
+                    </p:panel>
+                </h:form>
+            </p:dialog>
+
+        </ui:define>
+    </ui:composition>
+</html>

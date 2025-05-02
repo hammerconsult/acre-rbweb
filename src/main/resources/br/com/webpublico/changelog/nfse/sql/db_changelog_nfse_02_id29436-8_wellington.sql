@@ -1,0 +1,20 @@
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'TRIBUTÁRIO > SIMPLES NACIONAL > ARQUIVO PGDAS > LISTA',
+     '/tributario/simples-nacional/arquivo-pgdas/lista.xhtml', 0, 'TRIBUTARIO');
+
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'TRIBUTÁRIO > SIMPLES NACIONAL > ARQUIVO PGDAS > EDITA',
+     '/tributario/simples-nacional/arquivo-pgdas/edita.xhtml', 0, 'TRIBUTARIO');
+
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'TRIBUTÁRIO > SIMPLES NACIONAL > ARQUIVO PGDAS > VISUALIZAR',
+     '/tributario/simples-nacional/arquivo-pgdas/visualizar.xhtml', 0, 'TRIBUTARIO');
+
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'ARQUIVO PGDAS',
+                         '/tributario/simples-nacional/arquivo-pgdas/lista.xhtml', (select ID from menu where LABEL = 'SIMPLES NACIONAL'), 20);

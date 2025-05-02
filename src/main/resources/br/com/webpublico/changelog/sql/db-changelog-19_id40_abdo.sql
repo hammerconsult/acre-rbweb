@@ -1,0 +1,1 @@
+ update transferenciamovpessoa set transferebces = 1, transferebcis = 1, transferebcrs = 1, transferedebitosdapessoa = 1

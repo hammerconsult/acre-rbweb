@@ -1,0 +1,820 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:fa="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <fc:cabecalhoPretty auditavel="#{true}" controlador="#{pregaoPorItemControlador}"
+                                origem="#{pregaoPorItemControlador.caminhoPadrao}ver/#{pregaoPorItemControlador.id}"/>
+
+            <p:panel header="Detalhes da Fase de Lances por Material e Serviço">
+                <p:tabView>
+                    <p:ajax event="tabChange"
+                            process="@this"
+                            listener="#{pregaoPorItemControlador.onTabChange}"
+                            onstart="aguarde.show()"
+                            oncomplete="aguarde.hide()"/>
+
+                    <p:tab title="Dados Gerais ">
+
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Data de Realização:"/>
+                            <h:outputText value="#{pregaoPorItemControlador.selecionado.realizadoEm}"
+                                          styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputLabel value="Licitação: "/>
+                            <p:commandLink process="@none"
+                                           id="bt-ver-licitacao"
+                                           update="@none"
+                                           title="Clique para ver este registro em nova aba."
+                                           onclick="window.open('#{request.contextPath}/licitacao/ver/#{pregaoPorItemControlador.selecionado.licitacao.id}/','_blank');">
+                                <div>
+                                    <strong>#{pregaoPorItemControlador.selecionado.licitacao}</strong>
+                                </div>
+                            </p:commandLink>
+                        </h:panelGrid>
+
+                        <p:dataTable id="tabelaSimplesDeItens"
+                                     value="#{pregaoPorItemControlador.selecionado.listaDeItemPregao}"
+                                     var="item"
+                                     styleClass="mtop10"
+                                     rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     rowKey="#{item.criadoEm}"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Itens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+                            <p:column headerText="Lances" style="width: 30px;" styleClass="alinhamentoCentralizado">
+                                <p:commandButton icon="ui-icon-note"
+                                                 title="Clique visualizar os lances."
+                                                 update=":formulario-rodadas"
+                                                 process="@this tabelaSimplesDeItens"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 actionListener="#{pregaoPorItemControlador.visualizarRodadasAndLances(item)}">
+                                </p:commandButton>
+                            </p:column>
+                            <p:column headerText="Fornecedores" style="width: 30px;"
+                                      styleClass="alinhamentoCentralizado">
+                                <p:commandButton icon="ui-icon-search"
+                                                 title="Clique visualizar os fornecedores."
+                                                 update=":form-fornecedores"
+                                                 process="@this"
+                                                 onclick="aguarde.show();"
+                                                 oncomplete="aguarde.hide();dialogIniciarRodada.show()"
+                                                 actionListener="#{pregaoPorItemControlador.visualizarFornecedores(item)}">
+                                </p:commandButton>
+                            </p:column>
+                            <p:column filterBy="#{item.numeroLote}"
+                                      filterMatchMode="contains" headerText="Lote Nº"
+                                      filterStyle="width: 15%"
+                                      style="width: 8%; text-align: center">
+                                <h:outputText value="#{item.numeroLote}"/>
+                            </p:column>
+                            <p:column filterBy="#{item.numeroItem}"
+                                      filterMatchMode="contains" headerText="Item Nº"
+                                      filterStyle="width: 15%"
+                                      style="width: 8%; text-align: center">
+                                <h:outputText value="#{item.numeroItem}"/>
+                            </p:column>
+                            <p:column filterBy="#{item.descricao}"
+                                      style="width: 25%"
+                                      filterMatchMode="contains" headerText="Descrição do Item">
+                                <h:outputText value="#{item.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Especif." styleClass="alinhamentoCentralizado" style="width: 8%">
+                                <fa:especificacao-objeto-compra
+                                    especificacao="#{item.itemPregaoItemProcesso.itemProcessoDeCompra.descricaoComplementar}"/>
+                            </p:column>
+                            <p:column filterBy="#{item.tipoStatusItemPregao.descricao}"
+                                      filterMatchMode="contains"
+                                      headerText="Status Item"
+                                      filterStyle="width: 50%"
+                                      style="width: 10%; text-align: center">
+                                <h:outputText value="#{item.tipoStatusItemPregao.descricao}"/>
+                            </p:column>
+                            <p:column filterBy="#{item.itemPregaoLanceVencedor.lancePregao.fornecedorDoLanceVencedor}"
+                                      filterMatchMode="contains" headerText="Vencedor">
+                                <div class="pull-left">
+                                    <p:commandButton process="@this"
+                                                     onstart="aguarde.show()"
+                                                     oncomplete="aguarde.hide();dlgHistLance.show()"
+                                                     update=":formHistLance"
+                                                     rendered="#{item.hasMaisDeUmLanceVencedor()}"
+                                                     actionListener="#{pregaoPorItemControlador.selecionarItemLancesVencedores(item)}"
+                                                     styleClass="icone-20 prioritario"
+                                                     title="Clique para visualizar o histórico de lances vencedores"
+                                                     icon="ui-icon-lista"/>
+
+                                    <h:outputText
+                                        value="#{item.itemPregaoLanceVencedor.lancePregao.fornecedorDoLanceVencedor}"/>
+                                </div>
+                            </p:column>
+                            <p:column filterBy="#{item.statusFornecedorVencedor}"
+                                      filterMatchMode="contains" headerText="Status do Vencedor"
+                                      filterStyle="width: 50%"
+                                      style="width: 8%; text-align: center">
+                                <h:outputText
+                                    value="#{item.statusFornecedorVencedor eq null ? 'Indefinido' : item.statusFornecedorVencedor.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Referência (R$)" style="width: 10%;"
+                                      rendered="#{!pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                      styleClass="alinhamentoDireita">
+                                <fc:output-mascara-unidade-medida
+                                    tipoMascara="#{item.mascaraValorUnitario}"
+                                    value="#{item.precoItemSolicitacaoMaterial}"/>
+                            </p:column>
+                            <p:column filterBy="#{item.itemPregaoLanceVencedor.valor}"
+                                      rendered="#{pregaoPorItemControlador.selecionado.licitacao ne null and
+                              !pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                      styleClass="alinhamentoDireita"
+                                      filterMatchMode="contains" headerText="Valor do Lance (R$)">
+                                <fc:output-mascara-unidade-medida
+                                    tipoMascara="#{item.mascaraValorUnitario}"
+                                    value="#{item.itemPregaoLanceVencedor.valor}"/>
+
+                            </p:column>
+                            <p:column headerText="Economia (%)" styleClass="alinhamentoDireita"
+                                      style="width: 150px;"
+                                      rendered="#{pregaoPorItemControlador.selecionado.licitacao ne null and !pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                                <h:outputText
+                                    value="#{pregaoPorItemControlador.diferencaEmPorcentagem(item.getPrecoItemSolicitacaoMaterial(), item.itemPregaoLanceVencedor.valor)}">
+                                    <f:convertNumber pattern="#,##0.000"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column filterBy="#{item.itemPregaoLanceVencedor.percentualDesconto}"
+                                      rendered="#{pregaoPorItemControlador.selecionado.licitacao ne null and
+                              pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                      filterMatchMode="contains" headerText="Desconto (%)">
+                                <h:outputText value="#{item.itemPregaoLanceVencedor.percentualDesconto}">
+                                    <f:convertNumber pattern="#,##0.000"/>
+                                </h:outputText>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Histórico do Processo"
+                           titleStyle="background: #d9edf7" id="tab-historico">
+                        <fa:historico-processo-licitatorio
+                            filtroProcesso="#{pregaoPorItemControlador.filtroHistoricoProcesso}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+            <h:panelGrid columns="6">
+                <fc:rodapeVisualizarPretty controlador="#{pregaoPorItemControlador}"/>
+
+                <p:commandButton value="Gerar Relatório"
+                                 icon="ui-icon-print"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="mtop10"
+                                 style="height: 30px"
+                                 update=":formulario-itens-relatorio"
+                                 actionListener="#{relatorioLancePregao.exibirDialogGerarRelatorio(pregaoPorItemControlador.selecionado)}"/>
+
+                <p:commandButton value="Intenção de Recurso"
+                                 icon="ui-icon-document"
+                                 title="Clique para abrir a intanção de recurso"
+                                 actionListener="#{pregaoPorItemControlador.novaItencaoRecurso()}"
+                                 update=":formItencaoRecurso"
+                                 process="@this"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide();dlgIntensaoRecurso.show()"
+                                 styleClass="operacao mtop10"/>
+
+                <p:commandButton value="Verificar Itens não Cotados"
+                                 icon="ui-icon-search"
+                                 actionListener="#{pregaoPorItemControlador.verificarItensNaoCotados()}"
+                                 process="@this"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 styleClass="operacao mtop10"/>
+            </h:panelGrid>
+        </h:form>
+
+        <p:dialog header="Itens a serem incluidos no relatório"
+                  modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="false"
+                  resizable="false"
+                  closable="false"
+                  width="1024"
+                  widgetVar="dialogItensRelatorio">
+            <h:form id="formulario-itens-relatorio">
+                <p:dataTable id="tabela-itens-relatorio"
+                             value="#{relatorioLancePregao.itensRelatorio}"
+                             var="item"
+                             styleClass="mtop10"
+                             style="width: auto!important;overflow: scroll;max-height: 450px"
+                             paginator="true"
+                             rows="7"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Itens para o relatório&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados itens para serem incluidos no relatório.">
+                    <p:column styleClass="alinhamentoCentralizado">
+                        <f:facet name="header">
+                            <p:commandButton icon="ui-icon-none"
+                                             styleClass="icone-20"
+                                             rendered="#{!relatorioLancePregao.todosItensMarcados}"
+                                             actionListener="#{relatorioLancePregao.setTodosItensMarcados(true)}"
+                                             process="@this"
+                                             update="tabela-itens-relatorio"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                            />
+
+                            <p:commandButton icon="ui-icon-check"
+                                             styleClass="icone-20"
+                                             rendered="#{relatorioLancePregao.todosItensMarcados}"
+                                             actionListener="#{relatorioLancePregao.setTodosItensMarcados(false)}"
+                                             process="@this"
+                                             update="tabela-itens-relatorio"
+                                             onclick="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                            />
+                        </f:facet>
+                        <p:commandButton icon="ui-icon-none"
+                                         styleClass="icone-20"
+                                         rendered="#{!item.selecionado}"
+                                         actionListener="#{relatorioLancePregao.setItemSelecionado(item,true)}"
+                                         process="@this"
+                                         update="tabela-itens-relatorio"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                        />
+
+                        <p:commandButton icon="ui-icon-check"
+                                         styleClass="icone-20"
+                                         rendered="#{item.selecionado}"
+                                         actionListener="#{relatorioLancePregao.setItemSelecionado(item,false)}"
+                                         process="@this"
+                                         update="tabela-itens-relatorio"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                        />
+                    </p:column>
+                    <p:column headerText="Lote Nº"
+                              style="text-align: center">
+                        <h:outputText value="#{item.numeroLote}"/>
+                    </p:column>
+                    <p:column headerText="Item Nº"
+                              style="text-align: center">
+                        <h:outputText value="#{item.numeroItem}"/>
+                    </p:column>
+                    <p:column headerText="Descrição do Item" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{item.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Status do Item"
+                              style="text-align: center">
+                        <h:outputText value="#{item.tipoStatusItemPregao.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Vencedor" styleClass="alinhamentoEsquerda">
+                        <h:outputText
+                            value="#{item.itemPregaoLanceVencedor.lancePregao.propostaFornecedor.fornecedor.nome}"/>
+                    </p:column>
+                    <p:column headerText="Status do Vencedor"
+                              style="text-align: center">
+                        <h:outputText
+                            value="#{item.statusFornecedorVencedor eq null ? 'Indefinido' : item.statusFornecedorVencedor.descricao}"/>
+                    </p:column>
+                    <p:column
+                        styleClass="alinhamentoDireita"
+                        rendered="#{!pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                        headerText="Valor (R$)">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{item.mascaraValorUnitario}"
+                            value="#{item.itemPregaoLanceVencedor.valor}"/>
+                    </p:column>
+                    <p:column
+                        styleClass="alinhamentoDireita"
+                        rendered="#{pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                        headerText="Desconto (%)">
+                        <h:outputText value="#{item.itemPregaoLanceVencedor.percentualDesconto}">
+                            <f:convertNumber pattern="#,##0.000"/>
+                        </h:outputText>
+
+                    </p:column>
+                </p:dataTable>
+
+                <div class="alinhamentoCentralizado mtop05">
+                    <fc:rodapeRelatorio actionListenerBotaoGerar="#{relatorioLancePregao.gerarRelatorio('PDF')}"
+                                        controller="#{relatorioLancePregao}"
+                                        mostrarLimparCampos="false"
+                                        mostrarBotoesExportar="true"/>
+
+                    <p:commandButton value="Cancelar"
+                                     icon="ui-icon-closethick"
+                                     title="Clique para Cancelar."
+                                     onclick="dialogItensRelatorio.hide()"
+                                     update="@none"
+                                     process="@this"
+                                     style="width: 100px"
+                                     styleClass="padrao mtop05"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  resizable="false"
+                  widgetVar="dialogRodadas">
+            <h:form id="formulario-rodadas">
+                <legend class="legenda">Rodadas do Pregão</legend>
+
+                <p:outputPanel id="panelRodadas">
+                    <h:panelGrid columns="2" id="gridGeral">
+                        <h:outputText value="Item: "/>
+                        <h:outputText
+                            value="#{pregaoPorItemControlador.itemPregaoSelecionado.itemPregaoItemProcesso.itemProcessoDeCompra.numero} - #{pregaoPorItemControlador.itemPregaoSelecionado.itemPregaoItemProcesso.itemProcessoDeCompra.descricao}"
+                            style="font-size: 13px;" styleClass="negrito"/>
+
+                        <h:outputText value="Valor de Referência: "
+                                      rendered="#{!pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"/>
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{pregaoPorItemControlador.itemPregaoSelecionado.mascaraValorUnitario}"
+                            value="#{pregaoPorItemControlador.itemPregaoSelecionado.precoItemSolicitacaoMaterial}"
+                            styleClass="negrito"
+                            rendered="#{!pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"/>
+
+
+                        <h:outputLabel value="Rodada: "/>
+                        <h:panelGroup>
+                            <p:commandButton id="botaoPrimeiro"
+                                             icon="ui-icon-arrowthickstop-1-w"
+                                             styleClass="icone-20"
+                                             update=":formulario-rodadas:panelRodadas"
+                                             process="@this"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique para mostrar a primeira rodada."
+                                             actionListener="#{pregaoPorItemControlador.navegarPrimeraRodada()}"/>
+
+                            <p:commandButton id="botaoAnterior"
+                                             icon="ui-icon-arrowthick-1-w"
+                                             title="Clique para mostrar a rodada anterior."
+                                             styleClass="icone-20 mlef03"
+                                             update=":formulario-rodadas:panelRodadas"
+                                             process="@this"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{pregaoPorItemControlador.navegarRodadaAnterior()}"/>
+
+
+                            <h:outputText styleClass="negrito mlef05 mrig05" style="font-size: 13px"
+                                          id="textRodada"
+                                          value="#{pregaoPorItemControlador.rodadaPregaoSelecionada.numero}"/>
+
+                            <h:outputText styleClass="cinzaEscuro" style="font-size: 13px"
+                                          id="textDe"
+                                          value="de"/>
+
+                            <h:outputText styleClass="negrito mlef05  mrig05" style="font-size: 13px"
+                                          id="todasRodadas"
+                                          value="#{pregaoPorItemControlador.itemPregaoSelecionado.listaDeRodadaPregao.size()}"/>
+
+                            <p:commandButton id="botaoProximo"
+                                             icon="ui-icon-arrowthick-1-e"
+                                             title="Clique para mostrar a próxima rodada."
+                                             styleClass="icone-20 mlef03"
+                                             update=":formulario-rodadas:panelRodadas"
+                                             process="@this"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{pregaoPorItemControlador.navegarProximaRodada()}"/>
+
+                            <p:commandButton id="botaoUltimo"
+                                             title="Clique para mostrar a última rodada."
+                                             icon="ui-icon-arrowthickstop-1-e"
+                                             styleClass="icone-20 mlef03"
+                                             update=":formulario-rodadas:panelRodadas"
+                                             process="@this"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{pregaoPorItemControlador.navegarUltimaRodada()}"/>
+                        </h:panelGroup>
+
+                        <h:outputText value="Observação: "/>
+                        <h:panelGrid columns="2" cellpadding="0" cellspacing="0">
+                            <p:inputTextarea
+                                value="#{pregaoPorItemControlador.rodadaPregaoSelecionada.observacao}"
+                                maxlength="3000"
+                                counter="conta"
+                                readonly="true"
+                                counterTemplate="{0} Caracteres Restantes."
+                                rows="4"
+                                cols="90"/>
+                            <h:outputText id="conta" styleClass="mlef05"/>
+                        </h:panelGrid>
+                    </h:panelGrid>
+
+                    <p:dataTable paginator="true"
+                                 id="tabela-lance"
+                                 rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                 rowIndexVar="rowIx"
+                                 styleClass="mtop05"
+                                 emptyMessage="Não foram localizados registros para serem apresentados"
+                                 value="#{pregaoPorItemControlador.rodadaPregaoSelecionada.listaDeLancePregao}"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>LANCES&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                 rowsPerPageTemplate="10,25,50,100"
+                                 var="lance">
+
+                        <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{lance.propostaFornecedor.fornecedor.nome}"/>
+                        </p:column>
+                        <p:column headerText="Tipo Empresa" styleClass="alinhamentoCentralizado">
+                            <h:outputText value="#{lance.propostaFornecedor.fornecedor.tipoEmpresa.descricao}"/>
+                        </p:column>
+                        <p:column
+                            rendered="#{pregaoPorItemControlador.rodadaPregaoSelecionada.numero == 1 and !pregaoPorItemControlador.selecionado.licitacao.processoDeCompra.solicitacaoMaterial.tipoAvaliacao.maiorDesconto}"
+                            headerText="Proposta Inicial (R$)" styleClass="alinhamentoDireita" style="width: 150px;">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{pregaoPorItemControlador.itemPregaoSelecionado.mascaraValorUnitario}"
+                                value="#{lance.valorPropostaInicial}"/>
+                        </p:column>
+                        <p:column
+                            rendered="#{pregaoPorItemControlador.rodadaPregaoSelecionada.numero == 1 and pregaoPorItemControlador.selecionado.licitacao.processoDeCompra.solicitacaoMaterial.tipoAvaliacao.maiorDesconto}"
+                            headerText="Desconto Inicial (%)" styleClass="alinhamentoDireita" style="width: 150px;">
+                            <h:outputText value="#{lance.valorPropostaInicial}">
+                                <f:convertNumber pattern="#,##0.000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column
+                            rendered="#{pregaoPorItemControlador.rodadaPregaoSelecionada.numero > 1 and !pregaoPorItemControlador.selecionado.licitacao.processoDeCompra.solicitacaoMaterial.tipoAvaliacao.maiorDesconto}"
+                            headerText="Lance Anterior (R$)" style="text-align: right; width: 150px;">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{pregaoPorItemControlador.itemPregaoSelecionado.mascaraValorUnitario}"
+                                value="#{lance.valorNaRodadaAnterior}"/>
+                        </p:column>
+                        <p:column
+                            rendered="#{pregaoPorItemControlador.rodadaPregaoSelecionada.numero > 1 and pregaoPorItemControlador.selecionado.licitacao.processoDeCompra.solicitacaoMaterial.tipoAvaliacao.maiorDesconto}"
+                            headerText="Desconto Anterior (%)" style="text-align: right; width: 150px;">
+                            <h:outputText value="#{lance.valorNaRodadaAnterior}">
+                                <f:convertNumber pattern="#,##0.000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Lance Atual (R$)" styleClass="alinhamentoDireita" style="width: 150px;"
+                                  rendered="#{!pregaoPorItemControlador.selecionado.licitacao.processoDeCompra.solicitacaoMaterial.tipoAvaliacao.maiorDesconto}">
+                            <fc:output-mascara-unidade-medida
+                                tipoMascara="#{pregaoPorItemControlador.itemPregaoSelecionado.mascaraValorUnitario}"
+                                value="#{lance.valor}"/>
+                        </p:column>
+                        <p:column headerText="Economia (%)" styleClass="alinhamentoDireita"
+                                  style="width: 150px;"
+                                  rendered="#{!pregaoPorItemControlador.selecionado.licitacao.processoDeCompra.solicitacaoMaterial.tipoAvaliacao.maiorDesconto}">
+                            <h:outputText
+                                value="#{pregaoPorItemControlador.diferencaEmPorcentagem(lance.rodadaPregao.itemPregao.getPrecoItemSolicitacaoMaterial(), lance.valor)}">
+                                <f:convertNumber pattern="#,##0.000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Desconto Atual (%)" styleClass="alinhamentoDireita" style="width: 150px;"
+                                  rendered="#{pregaoPorItemControlador.selecionado.licitacao.processoDeCompra.solicitacaoMaterial.tipoAvaliacao.maiorDesconto}">
+                            <h:outputText value="#{lance.percentualDesconto}">
+                                <f:convertNumber pattern="#,##0.000"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Status" styleClass="alinhamentoEsquerda" style="width: 150px;">
+                            <h:outputText value="#{lance.statusLancePregao.descricao}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogIniciarRodada"
+                  modal="true"
+                  resizable="false"
+                  position="center"
+                  closable="true"
+                  draggable="true"
+                  style="position: fixed !important;"
+                  width="700">
+
+            <h:form id="form-fornecedores">
+                <legend class="legenda mbot10">Fornecedores Participantes da Rodada</legend>
+
+                <p:dataTable id="tabelaDetalhadaDeItens"
+                             value="#{pregaoPorItemControlador.listaDeItemPropostaFornecedorParaLances}"
+                             var="forn"
+                             styleClass="mtop10"
+                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginator="true"
+                             rows="10"
+                             rowKey="#{item.id}"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Fornecedores&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+                    <p:column headerText="%" style="width: 30px;">
+                        <h:outputText value="#{pregaoPorItemControlador.porcentagem(forn)}"/>
+                    </p:column>
+                    <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{forn.propostaFornecedor.fornecedor.nome}"/>
+                    </p:column>
+                    <p:column headerText="Marca" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{forn.marca}"/>
+                    </p:column>
+                    <p:column headerText="Tipo de Empresa" style="width: 100px;"
+                              styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{forn.propostaFornecedor.fornecedor.tipoEmpresa}"
+                                      rendered="#{pregaoPorItemControlador.itemPropostaFornecedorPessoaJuridica(forn.propostaFornecedor)}"/>
+                    </p:column>
+                    <p:column headerText="Proposta Inicial"
+                              styleClass="alinhamentoDireita"
+                              rendered="#{!pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                        <fc:output-mascara-unidade-medida
+                            tipoMascara="#{pregaoPorItemControlador.itemPregaoSelecionado.mascaraValorUnitario}"
+                            value="#{forn.preco}"/>
+                    </p:column>
+                    <p:column headerText="Desconto Inicial (%)"
+                              styleClass="alinhamentoDireita"
+                              rendered="#{pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}">
+                        <h:outputText value="#{forn.percentualDesconto}">
+                            <f:convertNumber pattern="#,##0.000"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog id="dialogIntencao"
+                  widgetVar="dlgIntensaoRecurso"
+                  modal="true"
+                  width="800"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  resizable="false"
+                  closable="false">
+
+            <h:form id="formItencaoRecurso">
+                <legend class="legenda mbot10">Intenção de Recurso</legend>
+
+                <p:outputPanel id="outPanelIntencao">
+                    <h:panelGrid columns="2" id="grdDadosInten">
+                        <h:outputLabel for="fornecedor" value="Fornecedor:"/>
+                        <h:selectOneMenu id="fornecedor"
+                                         value="#{pregaoPorItemControlador.intencaoDeRecurso.fornecedor}"
+                                         converter="#{propostaFornecedorControlador.converterPessoa}">
+                            <f:selectItems
+                                value="#{pregaoPorItemControlador.listSelectItemFornecedoresParticipantes}"/>
+                        </h:selectOneMenu>
+
+                        <h:outputLabel value="Representante:"
+                                       rendered="#{!pregaoPorItemControlador.fornecedorPessoaFisica}"/>
+                        <p:autoComplete queryDelay="1000" id="autoCompleteRepresentante"
+                                        value="#{pregaoPorItemControlador.intencaoDeRecurso.representante}"
+                                        completeMethod="#{licitacaoControlador.completaPessoaFisica}"
+                                        var="rep" size="70"
+                                        itemLabel="#{rep.nome}"
+                                        itemValue="#{rep.id}"
+                                        converter="#{propostaFornecedorControlador.converterPessoa}"
+                                        rendered="#{!pregaoPorItemControlador.fornecedorPessoaFisica}"/>
+
+                        <h:outputText value="Data:"/>
+                        <p:calendar onkeypress="mascara(this, mdata)"
+                                    maxlength="10"
+                                    style="text-align: right"
+                                    autocomplete="off"
+                                    title="Digite a data."
+                                    value="#{pregaoPorItemControlador.intencaoDeRecurso.dataIntencao}"
+                                    locale="pt_BR" navigator="true" pattern="dd/MM/yyyy"
+                                    showOn="button"
+                                    size="12"/>
+
+                        <fc:outputLabelObrigatorio for="motivo" value="Motivo:"/>
+                        <h:panelGrid columns="2"
+                                     cellpadding="0"
+                                     cellspacing="0">
+                            <p:inputTextarea id="descricao"
+                                             title="Digite o motivo da intenção de recurso."
+                                             value="#{pregaoPorItemControlador.intencaoDeRecurso.motivo}"
+                                             maxlength="255"
+                                             cols="70"
+                                             rows="3"
+                                             autoResize="false"
+                                             scrollHeight="50"
+                                             counterTemplate="{0} Caracteres Restantes."
+                                             counter="counter-descricao"/>
+                            <h:outputText id="counter-descricao"
+                                          styleClass="mlef05 azul"/>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Adicionar"
+                                         icon="ui-icon-plus"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mtop10 padrao"
+                                         actionListener="#{pregaoPorItemControlador.addIntencaoRecurso()}"
+                                         update=":formItencaoRecurso:outPanelIntencao"
+                                         process=":formItencaoRecurso:outPanelIntencao @this"
+                        />
+                    </h:panelGrid>
+
+                    <p:dataTable id="intencaodatabela"
+                                 value="#{pregaoPorItemControlador.selecionado.listaDeIntencaoDeRecursos}"
+                                 var="intencao"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 style="overflow: scroll; max-height: 350px; width: auto"
+                                 paginator="true"
+                                 rows="5"
+                                 rowKey="#{item.criadoEm}"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Itenções&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column style="text-align: center;" headerText="Remover">
+                            <p:commandButton icon="ui-icon-trash"
+                                             process="@this"
+                                             onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                             oncomplete="aguarde.hide()"
+                                             actionListener="#{pregaoPorItemControlador.removerIntencaoRecurso(intencao)}"
+                                             title="Clique para remover este registro."
+                                             update="intencaodatabela"/>
+                        </p:column>
+                        <p:column headerText="Fornecedor" style="text-align: left;">
+                            <h:outputText value="#{intencao.fornecedor}"/>
+                        </p:column>
+                        <p:column headerText="Data" style="text-align: center;">
+                            <h:outputText value="#{intencao.dataIntencao}">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Motivo" style="text-align: left;">
+                            <h:outputText value="#{intencao.motivo}"/>
+                        </p:column>
+                    </p:dataTable>
+
+                    <hr/>
+                    <div style="text-align: center;">
+                        <p:commandButton value="Concluir"
+                                         icon="ui-icon-check"
+                                         styleClass="padrao prioritario"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide();dlgIntensaoRecurso.show()"
+                                         actionListener="#{pregaoPorItemControlador.concluirIntencaoRecurso()}"
+                                         process=":formItencaoRecurso"
+                                         update="@this"/>
+
+                        <p:commandButton value="Cancelar"
+                                         styleClass="mlef05 padrao"
+                                         icon="ui-icon-cancel"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide();dlgIntensaoRecurso.hide()"
+                                         process="@none"
+                                         update="@none"
+                        />
+                    </div>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  resizable="false"
+                  showHeader="false"
+                  width="1000"
+                  widgetVar="dlgItensNaoCotados"
+                  closable="false">
+            <h:form id="formItensNaoCotados">
+                <legend
+                    class="legenda">Itens não Cotados no Pregão
+                    <p:commandButton icon="ui-icon-close"
+                                     title="Clique para fechar."
+                                     process="@this"
+                                     style="float: right !important;"
+                                     styleClass="mtop10 icone-20"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgItensNaoCotados.hide();"/>
+                </legend>
+
+                <p:dataTable id="tabela-reserva"
+                             style="overflow: scroll; max-height: 400px; width: auto"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             value="#{pregaoPorItemControlador.itensPregaoNaoCotados}"
+                             var="itemP">
+                    <p:column headerText="Lote Nº" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{itemP.numeroLote}"/>
+                    </p:column>
+                    <p:column headerText="Item Nº" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{itemP.itemPregaoItemProcesso.itemProcessoDeCompra.numero}"/>
+                    </p:column>
+                    <p:column headerText="Descrição" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{itemP.descricao}"/>
+                    </p:column>
+                </p:dataTable>
+
+                <div class="alert alert-info" style="font-size: 13px">
+                    <h:outputText value="#{pregaoPorItemControlador.linkCancelarItensPregao()}" escape="false"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;"
+                  draggable="true"
+                  resizable="false"
+                  showHeader="false"
+                  widgetVar="dlgHistLance"
+                  closable="false">
+            <h:form id="formHistLance">
+                <legend
+                    class="legenda">Histórico de Lances Vencedores
+                    <p:commandButton icon="ui-icon-close"
+                                     title="Clique para fechar."
+                                     process="@this"
+                                     style="float: right !important;"
+                                     styleClass="mtop10 mlef10 icone-20"
+                                     onclick="aguarde.show();"
+                                     oncomplete="aguarde.hide();dlgHistLance.hide();"/>
+                </legend>
+
+                <p:dataTable id="table-lances"
+                             var="itemLancVenc"
+                             value="#{pregaoPorItemControlador.itemPregaoSelecionado.lancesVencedores}"
+                             styleClass="mtop03 mbot03 semBorda">
+                    <p:columnGroup type="header">
+                        <p:row>
+                            <p:column style="text-align: left" headerText="Fornecedor" rowspan="2"
+                                      styleClass="negrito"/>
+                            <p:column style="text-align: left" headerText="Origem" rowspan="2"
+                                      styleClass="negrito"/>
+                            <p:column style="text-align: left" headerText="Status Fornecedor" rowspan="2"
+                                      styleClass="negrito"/>
+                            <p:column style="text-align: center" headerText="Status do Lance" colspan="2"
+                                      styleClass="negrito centralizado"/>
+                            <p:column style="text-align: center"
+                                      headerText="#{pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto ? 'Desconto (%)' : 'Lance (R$)'}"
+                                      rowspan="2"
+                                      styleClass="negrito centralizado"/>
+                        </p:row>
+                        <p:row>
+                            <p:column style="text-align: center" headerText="Anterior" colspan="1"/>
+                            <p:column style="text-align: center" headerText="Atual" colspan="1"/>
+                        </p:row>
+                    </p:columnGroup>
+
+                    <p:column style="text-align: left" headerText="Fornecedor">
+                        <h:outputText value="#{itemLancVenc.lancePregao.fornecedorDoLanceVencedor}"
+                                      styleClass="#{itemLancVenc.status.isVencedor() ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                    </p:column>
+                    <p:column style="text-align: left" headerText="Fornecedor">
+                        <h:outputText value="#{itemLancVenc.origem.descricao}"
+                                      styleClass="#{itemLancVenc.status.isVencedor() ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                    </p:column>
+                    <p:column style="text-align: left" headerText="Fornecedor">
+                        <h:outputText value="#{itemLancVenc.itemPregao.statusFornecedorVencedor.descricao}"
+                                      styleClass="#{itemLancVenc.status.isVencedor() ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                    </p:column>
+                    <p:column style="text-align: center" headerText="Status">
+                        <h:outputText value="#{itemLancVenc.lancePregao.statusLancePregao.descricao}"
+                                      styleClass="#{itemLancVenc.status.isVencedor() ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                    </p:column>
+                    <p:column style="text-align: center" headerText="Status">
+                        <h:outputText value="#{itemLancVenc.status.descricao}"
+                                      styleClass="#{itemLancVenc.status.isVencedor() ? 'verdenegrito' : 'vermelhonegrito'}"/>
+                    </p:column>
+                    <p:column style="text-align: right" headerText="Lance">
+                        <fc:output-mascara-unidade-medida
+                            rendered="#{!pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                            styleClass="#{itemLancVenc.status.isVencedor() ? 'verdenegrito' : 'vermelhonegrito'}"
+                            tipoMascara="#{itemLancVenc.itemPregao.mascaraValorUnitario}"
+                            value="#{itemLancVenc.valor}"/>
+
+                        <h:outputText value="#{itemLancVenc.percentualDesconto}"
+                                      rendered="#{pregaoPorItemControlador.selecionado.licitacao.tipoAvaliacao.maiorDesconto}"
+                                      styleClass="#{itemLancVenc.status.isVencedor() ? 'verdenegrito' : 'vermelhonegrito'}">
+                            <f:convertNumber pattern="#,##0.000"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>
+

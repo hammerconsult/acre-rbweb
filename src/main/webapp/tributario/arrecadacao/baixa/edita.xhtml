@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <script type="text/javascript">
+                function paraOndeVou(indice, tamanhoLista) {
+                    if (indice == tamanhoLista) {
+                        setaFoco('Formulario:salvar');
+                    } else {
+                        setaFoco('Formulario:tabelaParcelas:' + indice + ':valorPago');
+                    }
+                }
+
+                var timer;
+
+                function iniciaPagamento() {
+                    dialogPagamento.show();
+                    $('.botaoFimProcesso').css('display', 'none');
+                    $('#mensagemInconsistenciaTributo').css('display', 'none');
+                    timer = setInterval(function () {
+                        posPagamento();
+                    }, 1000);
+                }
+
+                function terminaPagamento() {
+                    clearInterval(timer);
+                    $('.botaoFimProcesso').css('display', 'block');
+                    $('#barraProgresso').css('display', 'none');
+                    $('#mgsAguarde').css('display', 'none');
+                    $('#mensagemFim').removeClass('alert-info');
+                    $('#mensagemFim').addClass('alert-success');
+                    finalPagamento();
+                }
+
+                $(document).ready(function () {
+                    $('.valor').blur(function () {
+                        if (!$(this).val()) {
+                            $(this).val('0,00');
+                        }
+                    });
+                    $('.valor').keyup(function () {
+                        $(this).val($(this).val().replace('.', ','));
+                    });
+                });
+            </script>
+            <p:remoteCommand name="acompanharCadastros"
+                             actionListener="#{loteBaixaControlador.conferirAndamentoDosCadastros}"/>
+
+            <p:remoteCommand name="gerarDebitos"
+                             actionListener="#{loteBaixaControlador.gerarDebitos}"/>
+
+            <p:remoteCommand name="acompanharCalculos"
+                             actionListener="#{loteBaixaControlador.conferirAndamentoDosDebitos}"/>
+
+
+            <p:remoteCommand name="posPagamento" actionListener="#{loteBaixaControlador.posPagamento}"
+                             update=":formPagamento:barra"/>
+
+            <p:remoteCommand name="finalPagamento" update=":formPagamento:botao"/>
+            <p:dialog modal="true" widgetVar="statusDialog" header="Carregando..."
+                      draggable="false" closable="false" resizable="false">
+                <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+            </p:dialog>
+            <p:dialog modal="true" widgetVar="relacionandoParcelas" width="600" header="Processando..."
+                      draggable="false" closable="false" resizable="false">
+                <h:outputText
+                    value="Relacionando a(s) parcela(s) ao lote e calculando acréscimos. Aguarde um instante..."/>
+                <br/>
+                <center>
+                    <p:graphicImage value="/img/ajaxloadingbar.gif"/>
+                </center>
+            </p:dialog>
+            <p:messages showDetail="true"/>
+            <p:panel header="Arrecadação">
+                <p:panel style="border: 0; text-align: right;">
+                    <h:outputText value="Situação do Lote -> "/>
+                    <h:outputText value="#{loteBaixaControlador.selecionado.situacaoLoteBaixa.descricao}"
+                                  style="text-transform: uppercase" styleClass="azulnegrito"/>
+                </p:panel>
+                <h:panelGrid columns="2">
+                    <h:outputText value="Número do Lote: "/>
+                    <h:outputText styleClass="azulnegrito" value="#{loteBaixaControlador.selecionado.codigoLote}"
+                                  rendered="#{loteBaixaControlador.selecionado.id ne null}"/>
+                    <h:outputText value="Arquivo:" rendered="#{loteBaixaControlador.numeroArquivo ne null}"/>
+                    <h:outputText value="#{loteBaixaControlador.numeroArquivo}"
+                                  rendered="#{loteBaixaControlador.numeroArquivo ne null}"
+                                  styleClass="azulnegrito"
+                    />
+                    <h:outputText styleClass="azulnegrito" value="Gerado automaticamente ao salvar"
+                                  rendered="#{loteBaixaControlador.selecionado.id eq null}"/>
+                    <h:outputText value="Tipo de Arrecadação: "/>
+                    <h:outputText styleClass="azulnegrito"
+                                  value="#{loteBaixaControlador.selecionado.tipoDePagamentoBaixa.descricao}"/>
+                    <h:outputText value="Banco e Conta Bancária: "/>
+                    <p:selectOneMenu value="#{loteBaixaControlador.arquivoLoteBaixa.conta}"
+                                     disabled="#{!loteBaixaControlador.loteNormal}"
+                                     converter="#{loteBaixaControlador.converterConta}">
+                        <f:selectItems value="#{loteBaixaControlador.contas}"/>
+                        <p:ajax event="change" listener="#{loteBaixaControlador.selecionaConta()}" process="@this"/>
+                    </p:selectOneMenu>
+                    <h:outputText value="Forma de Pagamento: "/>
+                    <p:selectOneMenu value="#{loteBaixaControlador.selecionado.formaPagamento}"
+                                     id="formaPagamento"
+                                     disabled="#{loteBaixaControlador.selecionado.formaPagamento ne null}">
+                        <p:ajax event="change" update="@this" onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+                        <f:selectItems value="#{loteBaixaControlador.formasPagamento}"/>
+                    </p:selectOneMenu>
+                    <h:outputText value="Data de Pagamento: "/>
+                    <p:calendar value="#{loteBaixaControlador.selecionado.dataPagamento}"
+                                disabled="#{!loteBaixaControlador.loteNormal}"
+                                pattern="dd/MM/yyyy"
+                                showOn="button" onkeyup="mascara(this, mdata)"
+                                title="Informe uma data">
+                    </p:calendar>
+                    <h:outputText value="Data de Movimento: "/>
+                    <p:calendar value="#{loteBaixaControlador.selecionado.dataFinanciamento}"
+                                disabled="#{!loteBaixaControlador.loteNormal}"
+                                pattern="dd/MM/yyyy"
+                                showOn="button" onkeyup="mascara(this, mdata)"
+                                title="Informe a data de movimento"/>
+                    <h:outputText value="Total do Lote (R$): "/>
+                    <p:inputText value="#{loteBaixaControlador.selecionado.valorTotal}"
+                                 disabled="#{!loteBaixaControlador.loteNormal}"
+                                 styleClass="valor">
+                        <f:convertNumber pattern="#,##0.00"/>
+                        <p:ajax event="keyup" update="diferencaLote"/>
+                    </p:inputText>
+                    <h:outputText value="Diferença do Lote (R$): "
+                                  title="Diferença entre total o calculado e o total informado"/>
+                    <p:inputText id="diferencaLote" styleClass="azulNegrito"
+                                 disabled="#{!loteBaixaControlador.loteNormal}"
+                                 value="#{loteBaixaControlador.selecionado.valorTotal - loteBaixaControlador.totalLancado}"
+                                 readonly="true" title="Diferença entre total o calculado e o total informado">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </p:inputText>
+                    <h:outputText value="Quantidade de DAM's do Lote: "/>
+                    <p:inputText value="#{loteBaixaControlador.selecionado.quantidadeParcelas}" maxlength="4"
+                                 disabled="#{!loteBaixaControlador.loteNormal}">
+                        <f:convertNumber pattern="#####0" minIntegerDigits="4"/>
+                    </p:inputText>
+                </h:panelGrid>
+                <br/>
+                <p:panel style="text-align: center">
+                    <p:commandButton style="height: 32px;" icon="ui-icon-copy"
+                                     styleClass="botao"
+                                     disabled="#{!loteBaixaControlador.loteNormal}"
+                                     actionListener="#{loteBaixaControlador.navegarParaConsulta()}"
+                                     value="Pesquisa de Débitos"/>
+                </p:panel>
+                <br/>
+                <p:outputPanel rendered="#{loteBaixaControlador.selecionado.tipoDePagamentoBaixa eq 'BAIXA_MANUAL'}">
+                    <ui:include src="datatableedita.xhtml"/>
+                </p:outputPanel>
+                <p:outputPanel rendered="#{loteBaixaControlador.selecionado.tipoDePagamentoBaixa ne 'BAIXA_MANUAL'}">
+                    <ui:include src="datatablevisualiza.xhtml"/>
+                </p:outputPanel>
+            </p:panel>
+            <br/>
+            <p:panel rendered="#{loteBaixaControlador.mensagens ne null and !loteBaixaControlador.mensagens.isEmpty()}">
+                <div class="alert alert-danger">
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 80%">
+                                <ui:repeat value="#{loteBaixaControlador.mensagens}" var="mensagem">
+                                    <h:outputText value="#{mensagem}"/> <br/>
+                                </ui:repeat>
+                            </td>
+                            <td style="text-align: right">
+                                <p:commandButton value="Buscar DAMs novamente"
+                                                 icon="ui-icon-search"
+                                                 styleClass="operacao"
+                                                 onclick="aguarde.show()"
+                                                 actionListener="#{loteBaixaControlador.procurarDamNaoEncontradosInicialmente()}"/>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </p:panel>
+            <br/>
+            <p:panel>
+                <h:panelGrid columns="7">
+                    <p:commandButton icon="ui-icon-disk" id="salvar" value="Salvar"
+                                     actionListener="#{loteBaixaControlador.salvar}"
+                                     ajax="false"
+                                     disabled="#{loteBaixaControlador.selecionado.situacaoLoteBaixa eq 'BAIXADO'}"
+                                     styleClass="operacao botao prioritario"/>
+                    <p:commandButton icon="ui-icon-check" value="Consistir"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     disabled="#{loteBaixaControlador.selecionado.situacaoLoteBaixa eq 'BAIXADO' or
+                                                     loteBaixaControlador.selecionado.situacaoLoteBaixa eq 'ESTORNADO'}"
+                                     actionListener="#{loteBaixaControlador.consisteSelecionado()}"
+                                     styleClass="operacao" update="@form"/>
+                    <fc:botaoTargetBlank actionListener="#{loteBaixaControlador.montaRelatorioInconsistencias()}"
+                                         icon="ui-icon-print"
+                                         styleClass="operacao"
+                                         disabled="#{loteBaixaControlador.selecionado.situacaoLoteBaixa ne 'INCONSISTENTE'}"
+                                         label="Inconsistencias"/>
+
+                    <p:commandButton value="Relação de Conferência"
+                                     icon="ui-icon-print"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     disabled="#{loteBaixaControlador.selecionado.id eq null}"
+                                     styleClass="operacao"
+                                     actionListener="#{loteBaixaControlador.imprimeRelatorioPagamentoPorLote()}"
+                                     title="Relação de Conferência"/>
+
+                    <fc:botaoTargetBlank actionListener="#{loteBaixaControlador.imprimeMapaArrecadacao()}"
+                                         icon="ui-icon-print"
+                                         styleClass="operacao"
+                                         disabled="#{loteBaixaControlador.selecionado.situacaoLoteBaixa ne 'BAIXADO'}"
+                                         label="Mapa de Arrecadação"/>
+
+
+                    <p:commandButton icon="ui-icon-tag" value="Baixar"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide(); iniciaPagamento();"
+                                     actionListener="#{loteBaixaControlador.encerrarLoteManual}"
+                                     rendered="#{loteBaixaControlador.loteProntoParaBaixar}"
+                                     styleClass="operacao"/>
+
+                    <p:commandButton icon="ui-icon-cancel" value="Cancelar"
+                                     actionListener="#{loteBaixaControlador.cancelar}"
+                                     immediate="true"
+                                     styleClass="operacao botao"/>
+                </h:panelGrid>
+            </p:panel>
+        </h:form>
+        <br/>
+        <p:dialog modal="true" width="800" id="dlgPagando" widgetVar="dialogPagamento" closable="false">
+
+            <div class="alert alert-info centralizado" id="mensagemFim">
+                <strong>Efetuando pagamento!</strong><br/>
+                <span id="mgsAguarde">Aguarde!</span><br/><br/>
+                <h:form id="formPagamento">
+                    <p:outputPanel id="barra">
+                        <div class="alinhamentoCentralizado">
+                            <h:outputText value="#{loteBaixaControlador.assistenteArrecadacao.porcentagemDoCalculo}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>%
+                        </div>
+                        <div class="progress progress-striped active" id="barraProgresso">
+                            <div class="bar"
+                                 style="width: #{loteBaixaControlador.assistenteArrecadacao.porcentagemDoCalculo}%;"></div>
+                        </div>
+                        <br/>
+                        <div id="mensagemInconsistenciaTributo" class="alinhamentoCentralizado alert alert-warning"
+                             style="#{loteBaixaControlador.mostrarMensagemValorValorOriginalTributoMenorQueDesconto() ? '' :'display: none'}">
+                            <h:outputText value="#{loteBaixaControlador.mensagemValoresInconsistentesTributos()}"/>
+                        </div>
+                        <br/>
+                    </p:outputPanel>
+                    <p:outputPanel id="botao">
+                        <div class="botaoFimProcesso">
+                            <p:commandButton
+                                actionListener="#{loteBaixaControlador.redirecionarParaVisualizar}"
+                                value="Continuar"
+                                styleClass="operacao"
+                                icon="ui-icon-check"/>
+                        </div>
+                    </p:outputPanel>
+                </h:form>
+            </div>
+
+
+        </p:dialog>
+
+        <p:dialog modal="true" width="800" id="dlgDaf" widgetVar="dialogDaf" closable="false">
+
+            <div class="alert alert-info centralizado" id="mensagemDaf">
+                <strong>Ajustando os cadastros e débitos do DAF607 para a baixa!</strong><br/>
+                <span class="negrito" id="msgDaf">Aguarde!</span><br/><br/>
+                <h:graphicImage value="/img/ajaxloading.gif" styleClass="mtop05"/>
+            </div>
+        </p:dialog>
+
+        <p:dialog modal="true" width="1100" id="dlgAlteraDam" widgetVar="dialogAlteraDam" closable="false"
+                  resizable="false"
+                  header="Alteração do DAM da arrecadação">
+
+            <h:form id="formAlteraDam">
+                <h:panelGrid columns="3">
+                    <h:outputText value="Número do DAM: "/>
+                    <h:outputText
+                        value="#{loteBaixaControlador.itemLoteBaixa.dam != null ? loteBaixaControlador.itemLoteBaixa.dam.numeroDAM : 'DAM não encontrado'}"
+                        styleClass="negrito"/>
+                    <p:spacer/>
+
+                    <h:outputText value="Valor do DAM: "/>
+                    <h:outputText
+                        value="#{loteBaixaControlador.itemLoteBaixa.dam != null ? loteBaixaControlador.itemLoteBaixa.dam.valorTotal : 0}"
+                        styleClass="negrito">
+                        <f:convertNumber type="currency"/>
+                    </h:outputText>
+                    <p:spacer/>
+
+                    <h:outputText value="Valor Pago: "/>
+                    <h:outputText value="#{loteBaixaControlador.itemLoteBaixa.valorPago}" styleClass="negrito">
+                        <f:convertNumber type="currency"/>
+                    </h:outputText>
+                    <p:spacer/>
+
+                    <h:outputText value="Número do DAM: "/>
+                    <p:inputText value="#{loteBaixaControlador.filtroConsultaDAM.numeroDAM}" size="24"
+                                 onkeypress="mascara(this, soNumeros)"/>
+                    <p:spacer/>
+
+                    <h:outputText value="Ano do DAM: "/>
+                    <p:inputMask mask="9999" maxlength="4" value="#{loteBaixaControlador.filtroConsultaDAM.anoDAM}"
+                                 size="4"
+                                 converter="#{exercicioControlador.converterExercicio}"/>
+                    <p:commandButton value="Pesquisar" styleClass="operacao prioritario"
+                                     icon="ui-icon-search" update="formAlteraDam"
+                                     onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                     actionListener="#{loteBaixaControlador.pesquisaDam}"/>
+                </h:panelGrid>
+                <p:dataTable id="tabelaDAMs" value="#{loteBaixaControlador.dams}" var="dam" styleClass="mtop05"
+                             emptyMessage="Nenhum DAM encontrado.">
+                    <f:facet name="header">
+                        <h:outputText value="DAM's"/>
+                    </f:facet>
+                    <p:column headerText="#">
+                        <p:commandLink oncomplete="dialogAlteraDam.hide()" update=":Formulario"
+                                       actionListener="#{loteBaixaControlador.setaDamAoItemLoteBaixa(dam)}">
+                            <h:graphicImage id="selecionaDam" url="/img/check-icon.png"
+                                            title="Selecionar DAM" height="16" width="16">
+                            </h:graphicImage>
+                        </p:commandLink>
+                    </p:column>
+                    <p:column headerText="Número do DAM">
+                        <h:outputText value="#{dam.numeroDAM}"/>
+                    </p:column>
+                    <p:column headerText="Número">
+                        <h:outputText value="#{dam.numero}"/>
+                    </p:column>
+                    <p:column headerText="Exercício">
+                        <h:outputText value="#{dam.exercicio.ano}"/>
+                    </p:column>
+                    <p:column headerText="Data de Emissão">
+                        <h:outputText value="#{dam.emissao}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Data de Vencimento">
+                        <h:outputText value="#{dam.vencimento}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Tipo do DAM">
+                        <h:outputText value="#{dam.tipo.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Valor Original">
+                        <h:outputText value="#{dam.valorOriginal}" style="float: right">
+                            <f:converter converterId="moedaConverter"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Desconto">
+                        <h:outputText value="#{dam.desconto}" style="float: right">
+                            <f:converter converterId="moedaConverter"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Multa">
+                        <h:outputText value="#{dam.multa}" style="float: right">
+                            <f:converter converterId="moedaConverter"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Juros">
+                        <h:outputText value="#{dam.juros}" style="float: right">
+                            <f:convertNumber pattern="#,###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Correção">
+                        <h:outputText value="#{dam.correcaoMonetaria}" style="float: right">
+                            <f:converter converterId="moedaConverter"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Honorários">
+                        <h:outputText value="#{dam.honorarios ne null ? dam.honorarios : 0}" style="float: right">
+                            <f:converter converterId="moedaConverter"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Total">
+                        <h:outputText value="#{dam.valorTotal}" style="float: right">
+                            <f:converter converterId="moedaConverter"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Situação">
+                        <h:outputText value="#{dam.situacao.descricao}"/>
+                    </p:column>
+                </p:dataTable>
+                <p:separator style="width: 100%"/>
+
+                <div style="width: 100%; text-align: center">
+                    <p:commandButton onclick="dialogAlteraDam.hide()" value="Fechar"
+                                     icon="ui-icon-close" styleClass="operacao"/>
+                </div>
+            </h:form>
+
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

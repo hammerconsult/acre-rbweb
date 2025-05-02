@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+    <ui:composition template="/corpo.xhtml">
+        <ui:define name="body">
+            <script type="text/javascript">
+                function setaFoco(arg)  {
+                    document.getElementById(arg).focus()
+                }
+                window.onload = function(){
+                    setaFoco("Formulario:exercicio_input");
+                }
+            </script>
+            <p:dialog modal="true" widgetVar="statusDialog" header="Carregando ...."   
+                      draggable="false" closable="false" resizable="true">  
+                <p:graphicImage value="/img/ajaxloadingbar.gif" />  
+            </p:dialog> 
+
+            <h:form id="Formulario">
+                <fc:cabecarioEditar controlador="#{livroDividaAtivaControlador}"/>
+                <p:panel header="Cadastro do Livro de Dívida Ativa">
+                    <h:panelGrid columns="3">
+                        <fc:outputLabelObrigatorio value="Exercício:" for="exercicio"/>
+                        <p:autoComplete queryDelay="1000"
+                            id="exercicio"
+                            completeMethod="#{livroDividaAtivaControlador.completaExercicio}"
+                            converter="#{livroDividaAtivaControlador.converteExercicio()}"
+                            var="exercicio"
+                            itemLabel="#{exercicio.ano}"
+                            itemValue="#{exercicio.id}"
+                            value="#{livroDividaAtivaControlador.selecionado.exercicio}"
+                            size="50"
+                            disabled="#{livroDividaAtivaControlador.bloqueiaCampos}"
+                            >
+                            <p:ajax event="itemSelect" update="Formulario"/>
+                        </p:autoComplete>
+                        <p:message for="exercicio" showDetail="true" showSummary="true"/>
+                        <fc:outputLabelObrigatorio value="Número:" for="numero"/>
+                        <h:panelGrid columns="3">
+                            <p:inputText value="#{livroDividaAtivaControlador.selecionado.numero}" id="numero">
+                                <p:ajax event="blur" update="Formulario"  onstart="statusDialog.show()" oncomplete="statusDialog.hide()" listener="#{livroDividaAtivaControlador.recuperaLivroComNumero()}"/>
+                            </p:inputText>&nbsp;
+                            <fc:botaoInformacao id="informacoesDoNumero" resumo="Informações:" detalhes="Quando informado um número e um exercício para um livro que já foi cadastrado, é recuperado todos os cadastro que já foram inscritos no livro. Isso é permitido, para que haja continuidade na inscrição das parcelas no livro."/>
+                        </h:panelGrid>
+                        <p:message for="numero" showDetail="true" />
+                        <fc:outputLabelObrigatorio value="Tipo de Cadastro:" for="tipoCadastro"/>
+                        <h:selectOneMenu id="tipoCadastro" value="#{livroDividaAtivaControlador.selecionado.tipoCadastroTributario}" disabled="#{livroDividaAtivaControlador.bloqueiaCampos}">
+                            <f:selectItems value="#{livroDividaAtivaControlador.tiposDeCadastroTributario}"/>
+                            <p:ajax update="@form" event="change"/>
+                        </h:selectOneMenu>
+                        <p:message for="tipoCadastro" showDetail="true" />
+                        <fc:outputLabelObrigatorio value="Processo:" for="inscricao"/>
+                        <p:autoComplete queryDelay="1000"
+                            id="inscricao"
+                            completeMethod="#{livroDividaAtivaControlador.completaInscricaoDividaAtiva}"
+                            converter="#{livroDividaAtivaControlador.converteInscricaoDividaAtiva()}"
+                            var="inscricao"
+                            itemLabel="#{inscricao.numero} - #{inscricao.exercicio.ano}"
+                            itemValue="#{inscricao.id}"
+                            value="#{livroDividaAtivaControlador.inscricaoDividaAtiva}"
+                            size="50"
+                            >
+                            <p:ajax event="itemSelect" update="Formulario"/>
+                        </p:autoComplete>
+                        <p:commandButton value="Adicionar Processo"
+                                         icon="ui-icon-plusthick"
+                                         styleClass="botao_verde icone_branco"
+                                         onstart="statusDialog.show()"
+                                         oncomplete="statusDialog.hide()"
+                                         update="Formulario"
+                                         disabled="#{livroDividaAtivaControlador.inscricaoDividaAtiva == null}"
+                                         actionListener="#{livroDividaAtivaControlador.adicionarItem()}"/>
+                        <p:message for="inscricao" showDetail="true" />
+                    </h:panelGrid>
+                    <br/>
+                    <p:messages  showDetail="true" showSummary="true"/>
+                    <br/>
+                    <p:separator/>
+                    <br/>
+                    <p:dataTable value="#{livroDividaAtivaControlador.selecionado.itensLivros}" 
+                                 var="itemLivro" 
+                                 emptyMessage="Nenhum processo adicionado"
+                                 paginator="true" rows="10"
+                                 paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 rowsPerPageTemplate="10,50,100">
+                        <p:column headerText="Número">
+                            <h:outputText value="#{itemLivro.inscricaoDividaAtiva.numero}"/>
+                        </p:column>
+                        <p:column headerText="Exercício">
+                            <h:outputText value="#{itemLivro.inscricaoDividaAtiva.exercicio.ano}"/>
+                        </p:column>
+                        <p:column headerText="Tipo de Cadastro">
+                            <h:outputText value="#{itemLivro.inscricaoDividaAtiva.tipoCadastroTributario.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Remover" style="text-align: center; width: 150px">
+                            <p:commandButton icon="ui-icon-trash"
+                                             title="Remover Cadastro"
+                                             disabled="#{itemLivro.processado}"
+                                             onstart="statusDialog.show()"
+                                             oncomplete="statusDialog.hide()"
+                                             onclick="if(!confirm('Você tem Certeza que deseja remover o cadastro?')) return false;"
+                                             styleClass="vinteLarguraVinteAltura icone_vermelho"
+                                             update="Formulario"
+                                             actionListener="#{livroDividaAtivaControlador.remover(itemLivro)}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+                <h:panelGrid columns="14">
+                    <p:commandButton icon="ui-icon-circle-check" 
+                                     styleClass="icone_branco"
+                                     value="Salvar" 
+                                     action="#{livroDividaAtivaControlador.salvar()}"
+                                     title="Clique para salvar o livro."
+                                     ajax="false"/>&nbsp;
+                    <p:commandButton icon="ui-icon-check" 
+                                     styleClass="icone_branco"
+                                     value="Processar"
+                                     onstart="statusDialog.show()"
+                                     oncomplete="statusDialog.hide()"
+                                     disabled="#{livroDividaAtivaControlador.selecionado.id == null or !livroDividaAtivaControlador.visibilidadeDoProcessar}"
+                                     title="Clique para processar as informçãoes do livro de dívida ativa."
+                                     actionListener="#{livroDividaAtivaControlador.processar()}"
+                                     update="Formulario"/>&nbsp;
+                    <p:commandButton icon="ui-icon-document" 
+                                     styleClass="icone_branco"
+                                     value="Emitir" 
+                                     title="Clique emitir o Livro."
+                                     disabled="#{livroDividaAtivaControlador.selecionado.id == null}"
+                                     action="#{livroDividaAtivaControlador.emitir()}" 
+                                     ajax="false"/>&nbsp;
+                    <p:commandButton icon="ui-icon-cancel" 
+                                     styleClass="icone_branco"
+                                     value="Cancelar" 
+                                     title="Clique para voltar a página anterior."
+                                     action="#{livroDividaAtivaControlador.voltar()}" 
+                                     ajax="false"/>&nbsp;
+                </h:panelGrid>
+            </h:form>
+        </ui:define>
+    </ui:composition>
+</html>

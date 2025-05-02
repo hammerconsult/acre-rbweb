@@ -1,0 +1,1036 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="limparContaFinanceira"
+                             process="@this"
+                             update=":Formulario:viewPrincipal:panelSubConta">
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{borderoControlador.selecionado.subConta}"/>
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{borderoControlador.selecionado.banco}"/>
+            </p:remoteCommand>
+
+            <p:remoteCommand name="limparAgencia"
+                             process="@this"
+                             update=":Formulario:viewPrincipal:panelSubConta">
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{borderoControlador.selecionado.subConta}"/>
+            </p:remoteCommand>
+
+            <fc:cabecalhoPretty controlador="#{borderoControlador}"
+                                origem="#{borderoControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Ordem Bancária" id="panelGeral">
+                <p:tabView id="viewPrincipal" styleClass="mtop05">
+                    <p:tab title="Ordem Bancária" id="bordero">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Número: "/>
+                            <p:inputText value="#{borderoControlador.selecionado.sequenciaArquivo}"
+                                         readonly="true" disabled="true"
+                                         id="numero" size="21">
+                                <p:watermark value="Gerado Automaticamente" for="numero"/>
+                            </p:inputText>
+
+                            <h:outputText value="Data de Geração: "/>
+                            <p:calendar title="Informe a Data para Débito" id="dataGeracao"
+                                        value="#{borderoControlador.selecionado.dataGeracao}"
+                                        pattern="dd/MM/yyyy" locale="pt_BR" navigator="true"
+                                        disabled="true" size="21">
+                            </p:calendar>
+
+                            <h:outputText value="Data para Débitos: "
+                                          rendered="#{borderoControlador.selecionado.dataDebito ne null}"/>
+                            <h:outputText value="#{borderoControlador.selecionado.dataDebito}"
+                                          styleClass="negrito"
+                                          rendered="#{borderoControlador.selecionado.dataDebito ne null}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+
+                            <h:outputText value="Situação: "/>
+                            <h:outputText value="#{borderoControlador.selecionado.situacao.descricao}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Unidade Organizacional: "/>
+                            <h:outputText value="#{borderoControlador.selecionado.unidadeOrganizacional}"
+                                          styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="Banco: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="banco"
+                                            size="70"
+                                            title="Informe o Banco"
+                                            completeMethod="#{borderoControlador.completaBanco}"
+                                            converter="#{bancoControlador.converterGenerico}"
+                                            value="#{borderoControlador.selecionado.banco}"
+                                            maxResults="10"
+                                            var="b"
+                                            itemLabel="#{b}"
+                                            itemValue="#{b.id}"
+                                            disabled="#{borderoControlador.desabilitaCampoBancoEContaFinanceira()}"
+                                            onkeyup="if(keyUpCampoVazio(this)){limparContaFinanceira();}">
+                                <p:ajax event="itemSelect"
+                                        listener="#{borderoControlador.limparLista()}"
+                                        update=":Formulario:viewPrincipal:panelSubConta"/>
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Conta Financeira: "/>
+                            <h:panelGrid id="panelSubConta">
+                                <p:autoComplete queryDelay="1000"
+                                                id="subconta"
+                                                size="70"
+                                                title="Informe uma Conta Financeira"
+                                                value="#{borderoControlador.selecionado.subConta}"
+                                                completeMethod="#{borderoControlador.completarSubContas}"
+                                                converter="#{componenteSubContaControlador.converterSubConta}"
+                                                var="sub"
+                                                style="margin-left: -4px"
+                                                itemValue="#{sub.id}"
+                                                itemLabel="#{sub}"
+                                                maxResults="10"
+                                                onkeyup="if(keyUpCampoVazio(this)){limparAgencia();}"
+                                                disabled="#{borderoControlador.desabilitaCampoBancoEContaFinanceira()}">
+                                    <p:ajax event="itemSelect"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            update="banco operacao btAdd panelAgencia"
+                                            process="@this"
+                                            listener="#{borderoControlador.recuperaBancoApartirDaContaFinanceira()}"/>
+                                </p:autoComplete>
+
+                                <p:panel id="panelAgencia"
+                                         style="border: 0px; margin-left: -13px"
+                                         visible="#{borderoControlador.selecionado.subConta ne null}">
+
+                                    <h:outputText value="Agência: "/>
+                                    <h:outputText
+                                        value="#{borderoControlador.selecionado.subConta.contaBancariaEntidade.agencia}"
+                                        styleClass="negrito"/>
+                                </p:panel>
+                            </h:panelGrid>
+
+                            <fc:outputLabelObrigatorio value="Operação: "/>
+                            <h:panelGrid columns="3" id="operacao">
+                                <h:selectOneMenu id="operacaoOB"
+                                                 disabled="#{borderoControlador.selecionado.situacao ne 'ABERTO'}"
+                                                 value="#{borderoControlador.tipoOperacaoBordero}" style="margin-left: -4px">
+                                    <f:selectItems value="#{borderoControlador.operacoes}"/>
+                                    <p:ajax event="change" update=":Formulario:viewPrincipal:btAdd"/>
+                                </h:selectOneMenu>
+
+                                <p:commandButton value="Adicionar"
+                                                 icon="ui-icon-circle-plus"
+                                                 title="Clique para adicionar a ordem bancária."
+                                                 styleClass="padrao"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="dialogo.show();aguarde.hide()"
+                                                 actionListener="#{borderoControlador.pesquisarMovimentosContabeis()}"
+                                                 disabled="#{borderoControlador.tipoOperacaoBordero eq null}"
+                                                 id="btAdd"
+                                                 update=":Formulario2:painelDialog"/>
+                                <co:botao_informacao
+                                    descricao="Busca todos os movimentos que utilizaram a Conta Financeira Selecionada como Conta Concedida."/>
+                            </h:panelGrid>
+
+                            <h:outputText value="Geração do Arquivo: "
+                                          rendered="#{borderoControlador.selecionado.dataGeracaoArquivo ne null}"/>
+                            <h:outputText value="#{borderoControlador.selecionado.dataGeracaoArquivo}"
+                                          rendered="#{borderoControlador.selecionado.dataGeracaoArquivo ne null}"
+                                          styleClass="negrito">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+
+                            <h:outputText value="Número do Arquivo: "
+                                          rendered="#{borderoControlador.numeroArquivoBancario ne null}"/>
+                            <h:outputText value="#{borderoControlador.numeroArquivoBancario}"
+                                          rendered="#{borderoControlador.numeroArquivoBancario ne null}"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Qtde de Pagamentos: "/>
+                            <h:outputText value="#{borderoControlador.selecionado.qntdPagamentos}"
+                                          id="qtdeDocumentos"
+                                          styleClass="negrito"/>
+
+                            <h:outputText value="Valor: "/>
+                            <p:outputPanel id="valor">
+                                <h:outputText value="#{borderoControlador.selecionado.valor}"
+                                              styleClass="negrito">
+                                    <f:convertNumber type="currency"/>
+                                </h:outputText>
+                            </p:outputPanel>
+
+                            <h:outputText value="Observação: "/>
+                            <h:panelGrid columns="2">
+                                <p:inputTextarea id="obs" cols="70" rows="3"
+                                                 value="#{borderoControlador.selecionado.observacao}"
+                                                 maxlength="250"
+                                                 style="margin-left: -4px"
+                                                 autoResize="true" counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter"/>
+                                <h:outputText id="counter"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </p:tab>
+
+                    <p:tab title="Pagamento" id="pag">
+                        <p:dataTable id="listaPagamentoSelecionados"
+                                     value="#{borderoControlador.selecionado.listaPagamentos}"
+                                     var="pag"
+                                     styleClass="mtop10"
+                                     rowStyleClass="#{pag.situacaoItemBordero eq 'INDEFIRIDO' ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>PAGAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+
+                            <p:column headerText="Ações" style="text-align: center; width: 13%">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{borderoControlador.visualizarPagamento(pag.pagamento)}"
+                                    icon="ui-icon-search"
+                                    style="width: 25px!important;min-width: 25px!important;height: 25px!important;min-height: 25px!important;"
+                                    title="Clique para visualizar o Pagamento."/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 title="Clique para remover este registro."
+                                                 update=":Formulario:viewPrincipal:listaPagamentoSelecionados :Formulario:viewPrincipal:banco
+                                     :Formulario:viewPrincipal:subconta :Formulario:viewPrincipal:valor :Formulario:viewPrincipal:qtdeDocumentos"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 disabled="#{borderoControlador.podeRevomerMovimento()}"
+                                                 styleClass="mlef05"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 actionListener="#{borderoControlador.removePagamento(pag)}"/>
+
+                                <p:commandButton icon="ui-icon-deferir"
+                                                 title="Clique para indeferir este registro."
+                                                 update=":Formulario:viewPrincipal:listaPagamentoSelecionados"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 rendered="#{borderoControlador.podeIndeferirItemPagamentoOB(pag)}"
+                                                 styleClass="mlef05"
+                                                 onclick="if (!confirm('Tem certeza que deseja indeferir este registro?')) {return false; } else {aguarde.show();}"
+                                                 actionListener="#{borderoControlador.indeferirItemPagamentoOB(pag)}"/>
+
+
+                            </p:column>
+                            <p:column headerText="Deferido em" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pag.pagamento.dataPagamento}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Número RE" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pag.pagamento.numeroRE}"
+                                              rendered="#{pag.pagamento.numeroRE ne null}"/>
+                                <h:outputText value="Gerado ao Deferir" rendered="#{pag.pagamento.numeroRE eq null}"
+                                              title="Número gerado após salvar a ordem bancária. Utilizado na geração do arquivo obn600."/>
+                            </p:column>
+                            <p:column headerText="Pagamento" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pag.pagamento.numeroPagamento}"/>
+                            </p:column>
+                            <p:column headerText="Liquidação" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pag.pagamento.liquidacao.numero}"/>
+                            </p:column>
+                            <p:column headerText="Empenho" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pag.pagamento.liquidacao.empenho.numero}"/>
+                            </p:column>
+                            <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pag.pagamento.liquidacao.empenho.fornecedor}"/>
+                            </p:column>
+                            <p:column headerText="Conta Bancária" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pag.pagamento.contaPgto}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{pag.pagamento.liquidacao.empenho.fonteDespesaORC.descricaoFonteDeRecurso}"/>
+                            </p:column>
+                            <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pag.situacaoItemBordero.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pag.pagamento.valorFinal}"
+                                              converter="moneyConverter"/>
+                                <f:facet name="footer">
+                                    <h:outputText value="TOTAL: " styleClass="negrito"/>
+                                    <h:outputText styleClass="negrito" converter="moneyConverter"
+                                                  value="#{borderoControlador.retornaValorTotalPagamento()}"/>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Despesa Extraorçamentária" id="despExtra">
+                        <p:dataTable id="tablePagtoExtraSelecionados"
+                                     value="#{borderoControlador.selecionado.listaPagamentosExtra}"
+                                     var="pagextra2"
+                                     styleClass="mtop10"
+                                     rowStyleClass="#{pagextra2.situacaoItemBordero eq 'INDEFIRIDO' ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DESPESAS EXTRAORÇAMENTÁRIA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+
+                            <p:column headerText="Ação" style="text-align: center; width: 13%">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{borderoControlador.visualizarPagamentoExtra(pagextra2.pagamentoExtra)}"
+                                    icon="ui-icon-search"
+                                    style="width: 25px!important;min-width: 25px!important;height: 25px!important;min-height: 25px!important;"
+                                    title="Clique para visualizar a Despesa Extraorçamentária."/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 title="Clique para remover este registro."
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 styleClass="mlef05"
+                                                 disabled="#{borderoControlador.podeRevomerMovimento()}"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 update=":Formulario:viewPrincipal:tablePagtoExtraSelecionados :Formulario:viewPrincipal:banco
+                             :Formulario:viewPrincipal:subconta :Formulario:viewPrincipal:valor :Formulario:viewPrincipal:qtdeDocumentos"
+                                                 actionListener="#{borderoControlador.removePagamentoExtra(pagextra2)}"/>
+
+                                <p:commandButton icon="ui-icon-deferir"
+                                                 title="Clique para indeferir este registro."
+                                                 update=":Formulario:viewPrincipal:tablePagtoExtraSelecionados"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 rendered="#{borderoControlador.podeIndeferirItemDespesaExtraOB(pagextra2)}"
+                                                 styleClass="mlef05"
+                                                 onclick="if (!confirm('Tem certeza que deseja indeferir este registro?')) {return false; } else {aguarde.show();}"
+                                                 actionListener="#{borderoControlador.indeferirItemPagamentoExtraOB(pagextra2)}"/>
+
+                            </p:column>
+                            <p:column headerText="Deferido em" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pagextra2.pagamentoExtra.dataPagto}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Número RE" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pagextra2.pagamentoExtra.numeroRE}"
+                                              rendered="#{pagextra2.pagamentoExtra.numeroRE ne null}"/>
+                                <h:outputText value="Gerado ao Deferir"
+                                              rendered="#{pagextra2.pagamentoExtra.numeroRE eq null}"
+                                              title="Número gerado após salvar a ordem bancária. Utilizado na geração do arquivo obn600."/>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pagextra2.pagamentoExtra.numero}"/>
+                            </p:column>
+                            <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pagextra2.pagamentoExtra.contaExtraorcamentaria}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pagextra2.pagamentoExtra.fonteDeRecursos}"/>
+                            </p:column>
+                            <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{pagextra2.pagamentoExtra.fornecedor.cpf_Cnpj} - #{pagextra2.pagamentoExtra.fornecedor.nome}"/>
+                            </p:column>
+                            <p:column headerText="Conta Bancária" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pagextra2.pagamentoExtra.contaCorrenteBancaria}"/>
+                            </p:column>
+                            <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{pagextra2.situacaoItemBordero.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{pagextra2.pagamentoExtra.valor}"
+                                              converter="moneyConverter"/>
+                                <f:facet name="footer">
+                                    <h:outputText value="TOTAL: " styleClass="negrito"/>
+                                    <h:outputText styleClass="negrito"
+                                                  converter="moneyConverter"
+                                                  value="#{borderoControlador.retornaValorTotalPagamentoExtra()}"/>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Transferência Financeira" id="transFin">
+                        <p:dataTable id="tableTransfFinanceirasSelecionados"
+                                     value="#{borderoControlador.selecionado.listaTransferenciaFinanceira}"
+                                     var="transfFinanceira"
+                                     styleClass="mtop10"
+                                     rowStyleClass="#{transfFinanceira.situacaoItemBordero eq 'INDEFIRIDO' ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>TRANSFERÊNCIAS FINANCEIRA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+
+                            <p:column headerText="Ação" style="text-align: center; width: 10%">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{borderoControlador.visualizarTransferencia(transfFinanceira.transferenciaContaFinanceira)}"
+                                    icon="ui-icon-search"
+                                    style="width: 25px!important;min-width: 25px!important;height: 25px!important;min-height: 25px!important;"
+                                    title="Clique para visualizar a Transferência Financeira."/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 title="Clique para remover este registro."
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 styleClass="mlef05"
+                                                 disabled="#{borderoControlador.podeRevomerMovimento()}"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 update=":Formulario:viewPrincipal:tableTransfFinanceirasSelecionados :Formulario:viewPrincipal:banco
+                             :Formulario:viewPrincipal:subconta :Formulario:viewPrincipal:valor :Formulario:viewPrincipal:qtdeDocumentos"
+                                                 actionListener="#{borderoControlador.removeTransferenciaFinanceira(transfFinanceira)}"/>
+                            </p:column>
+                            <p:column headerText="Transferido em" styleClass="alinhamentoDireita">
+                                <h:outputText
+                                    value="#{transfFinanceira.transferenciaContaFinanceira.dataTransferencia}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{transfFinanceira.transferenciaContaFinanceira.numero}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira Concedida" styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{transfFinanceira.transferenciaContaFinanceira.subContaRetirada}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso Concedida" styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{transfFinanceira.transferenciaContaFinanceira.fonteDeRecursosRetirada}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira Recebida" styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{transfFinanceira.transferenciaContaFinanceira.subContaDeposito}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso Recebida" styleClass="alinhamentoEsquerda">
+                                <h:outputText
+                                    value="#{transfFinanceira.transferenciaContaFinanceira.fonteDeRecursosDeposito}"/>
+                            </p:column>
+                            <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transfFinanceira.situacaoItemBordero.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{transfFinanceira.transferenciaContaFinanceira.valor}"
+                                              converter="moneyConverter"/>
+                                <f:facet name="footer">
+                                    <h:outputText value="TOTAL: " styleClass="negrito"/>
+                                    <h:outputText styleClass="negrito" converter="moneyConverter"
+                                                  value="#{borderoControlador.retornaValorTotalTransferenciaFinanceira()}"/>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                    <br/>
+                    <p:tab title="Transferência Financeira Mesma Unidade" id="transMes">
+                        <p:dataTable id="tableTransfMesmaSelecionados"
+                                     value="#{borderoControlador.selecionado.listaTransferenciaMesmaUnidade}"
+                                     var="transfMesma"
+                                     styleClass="mtop10"
+                                     rowStyleClass="#{transfMesma.situacaoItemBordero eq 'INDEFIRIDO' ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>TRANSFERÊNCIAS FINANCEIRA MESMA UNIDADE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+
+                            <p:column headerText="Ação" style="text-align: center; width: 10%">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{borderoControlador.visualizarTransferenciaMesmaUnidade(transfMesma.transferenciaMesmaUnidade)}"
+                                    icon="ui-icon-search"
+                                    style="width: 25px!important;min-width: 25px!important;height: 25px!important;min-height: 25px!important;"
+                                    title="Clique para visualizar a Transferência Financeira de Mesma Unidade."/>
+                                <p:commandButton icon="ui-icon-trash"
+                                                 title="Clique para remover este registro."
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 styleClass="mlef05"
+                                                 disabled="#{borderoControlador.podeRevomerMovimento()}"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 update=":Formulario:viewPrincipal:tableTransfMesmaSelecionados :Formulario:viewPrincipal:banco
+                             :Formulario:viewPrincipal:subconta :Formulario:viewPrincipal:valor :Formulario:viewPrincipal:qtdeDocumentos"
+                                                 actionListener="#{borderoControlador.removeTransferenciaMesmaUnidade(transfMesma)}"/>
+                            </p:column>
+                            <p:column headerText="Transferido em" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{transfMesma.transferenciaMesmaUnidade.dataTransferencia}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{transfMesma.transferenciaMesmaUnidade.numero}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira Concedida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transfMesma.transferenciaMesmaUnidade.subContaRetirada}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso Concedida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transfMesma.transferenciaMesmaUnidade.fonteDeRecursosRetirada}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira Recebida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transfMesma.transferenciaMesmaUnidade.subContaDeposito}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso Recebida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transfMesma.transferenciaMesmaUnidade.fonteDeRecursosDeposito}"/>
+                            </p:column>
+                            <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{transfMesma.situacaoItemBordero.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{transfMesma.transferenciaMesmaUnidade.valor}"
+                                              converter="moneyConverter"/>
+                                <f:facet name="footer">
+                                    <h:outputText value="TOTAL: " styleClass="negrito"/>
+                                    <h:outputText styleClass="negrito" converter="moneyConverter"
+                                                  value="#{borderoControlador.retornaValorTotalTransferenciaMesmaUnidade()}"/>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <p:tab title="Liberação Financeira" id="liberacao">
+                        <p:dataTable id="tableLiberacaoSelecionados"
+                                     value="#{borderoControlador.selecionado.listaLiberacaoCotaFinanceira}"
+                                     var="lib"
+                                     styleClass="mtop10"
+                                     rowStyleClass="#{lib.situacaoItemBordero eq 'INDEFIRIDO' ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>LIBERAÇÕES FINANCEIRA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+
+                            <p:column headerText="Ação" style="text-align: center; width: 10%">
+                                <fc:botaoTargetBlank
+                                    actionListener="#{borderoControlador.visualizarLiberacao(lib.liberacaoCotaFinanceira)}"
+                                    icon="ui-icon-search"
+                                    style="width: 25px!important;min-width: 25px!important;height: 25px!important;min-height: 25px!important;"
+                                    title="Clique para visualizar a Liberação Financeira."/>
+
+                                <p:commandButton icon="ui-icon-trash"
+                                                 title="Clique para remover este registro."
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 process="@this"
+                                                 styleClass="mlef05"
+                                                 disabled="#{borderoControlador.podeRevomerMovimento()}"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 update=":Formulario:viewPrincipal:tableLiberacaoSelecionados :Formulario:viewPrincipal:banco
+                             :Formulario:viewPrincipal:subconta :Formulario:viewPrincipal:valor :Formulario:viewPrincipal:qtdeDocumentos"
+                                                 actionListener="#{borderoControlador.removeLiberacaoCotaFinanceira(lib)}"/>
+                            </p:column>
+                            <p:column headerText="Liberado em" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{lib.liberacaoCotaFinanceira.dataLiberacao}">
+                                    <f:convertDateTime type="date"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Número" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{lib.liberacaoCotaFinanceira.numero}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira Concedida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{lib.liberacaoCotaFinanceira.contaFinanceiraRetirada}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso Concedida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{lib.liberacaoCotaFinanceira.fonteDeRecursoRetirada}"/>
+                            </p:column>
+                            <p:column headerText="Conta Financeira Recebida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{lib.liberacaoCotaFinanceira.contaFinanceiraRecebida}"/>
+                            </p:column>
+                            <p:column headerText="Fonte de Recurso Recebida" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{lib.liberacaoCotaFinanceira.fonteDeRecursoRecebida}"/>
+                            </p:column>
+                            <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{lib.situacaoItemBordero.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                                <h:outputText value="#{lib.liberacaoCotaFinanceira.valor}"
+                                              converter="moneyConverter"/>
+                                <f:facet name="footer">
+                                    <h:outputText value="TOTAL: " styleClass="negrito"/>
+                                    <h:outputText styleClass="negrito" converter="moneyConverter"
+                                                  value="#{borderoControlador.retornaValorTotalLiberacaoCotaFinanceira()}"/>
+                                </f:facet>
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+
+                <h:panelGrid columns="2" styleClass="mtop03"
+                             rendered="#{borderoControlador.renderizarMsgItensRemovidos()}">
+                    <p:commandButton style="width: 15px; height: 15px; background-color: #ff6354 !important"
+                                     icon="ui-icon-none"/>
+                    <h:outputText value="Movimentos indeferidos na ordem bancária."
+                                  style="color: #ff6354 !important"/>
+                </h:panelGrid>
+
+            </p:panel>
+
+
+            <h:panelGrid columns="5">
+                <p:commandButton value="Deferir"
+                                 icon="ui-icon-deferir"
+                                 title="Clique para deferir a ordem bancária."
+                                 styleClass="mtop10"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 style="height: 30px;"
+                                 actionListener="#{borderoControlador.deferirOrdemBancaria()}"
+                                 rendered="#{borderoControlador.renderizarBotaoDeferir()}"
+                                 onclick="if(!confirm('Deseja deferir esta ordem bancária?')) return false;"/>
+
+                <p:commandButton value="Indeferir"
+                                 id="btIndeferir"
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 title="Clique para indeferir a ordem bancária."
+                                 rendered="#{borderoControlador.canIndeferirOB()}"
+                                 styleClass="mlef05 mtop10"
+                                 icon="ui-icon-deferir"
+                                 onclick="if (!confirm('Tem certeza que deseja indeferir esta ordem bancária?')) {return false; } else {aguarde.show();}"
+                                 actionListener="#{borderoControlador.indeferirOrdemBancaria}"
+                                 style="height: 30px;width: 100px"
+                />
+
+                <p:commandButton value="Baixar"
+                                 icon="ui-icon-arrowthick-1-s"
+                                 title="Clique para baixar a ordem bancária."
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 style="height: 30px;"
+                                 styleClass="mtop10"
+                                 rendered="#{borderoControlador.podeBaixarOB()}"
+                                 actionListener="#{borderoControlador.baixarBordero()}"
+                                 onclick="if(!confirm('Deseja baixar esta ordem bancária?')) return false;"/>
+
+                <p:commandButton value="Estornar Baixa"
+                                 icon="ui-icon-estornar"
+                                 title="Clique para estornar a baixa a ordem bancária."
+                                 onstart="aguarde.show()"
+                                 oncomplete="aguarde.hide()"
+                                 style="height: 30px"
+                                 styleClass="mtop10"
+                                 rendered="#{borderoControlador.podeEstornarBaixa()}"
+                                 actionListener="#{borderoControlador.estornarBaixarBordero()}"
+                                 onclick="if(!confirm('Deseja estornar a baixar dessa ordem bancária?')) return false;"/>
+
+                <fc:botaoTargetBlank actionListener="#{borderoControlador.gerarRelatorio()}"
+                                     label="Imprimir Ordem Bancária"
+                                     icon="ui-icon-print"
+                                     styleClass="mtop10"
+                                     id="botaoRelatorio"
+                                     rendered="#{borderoControlador.renderizarBotaoImprimirOB()}"
+                                     style="height: 30px"
+                                     title="Clique para gerar a ordem bancária."/>
+
+                <fc:rodapePretty controlador="#{borderoControlador}"/>
+            </h:panelGrid>
+        </h:form>
+
+        <p:dialog position="center"
+                  id="dialogoId"
+                  modal="true"
+                  widgetVar="dialogo"
+                  onShow="redimensionarLadosDialog(this.id)"
+                  style="position: fixed !important;"
+                  dynamic="true"
+                  height="500"
+                  resizable="false"
+                  closable="false"
+        >
+            <h:form id="Formulario2">
+                <p:panel id="painelDialog" styleClass="mtop05">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Unidade Organizacional: "/>
+                        <h:outputText value="#{borderoControlador.selecionado.unidadeOrganizacional}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Banco: "/>
+                        <h:outputText value="#{borderoControlador.selecionado.banco}" styleClass="negrito"/>
+                    </h:panelGrid>
+
+                    <div class="ui-messages-info ui-corner-all" style="text-align: center">
+                        <div class="ui-messages-info-icon"/>
+                        <h:outputText
+                            value="Somente são listados os movimentos com a situação  &lt;b>Deferido&lt;/b> ou &lt;b>Indeferido&lt;/b>."
+                            escape="false"/>
+                    </div>
+
+                    <p:dataTable id="listaPagamento"
+                                 value="#{borderoControlador.listaPagamentos}"
+                                 var="pag"
+                                 rowKey="#{pag.id}"
+                                 selection="#{borderoControlador.arrayPgto}"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rendered="#{borderoControlador.tipoOperacaoBordero.pagamento}"
+                                 styleClass="mtop10"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>PAGAMENTOS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column selectionMode="multiple" style="width:8%; text-align: center"/>
+
+                        <p:column headerText="Visualizar" style="text-align: center; width: 5%">
+                            <fc:botaoTargetBlank
+                                actionListener="#{borderoControlador.visualizarPagamento(pag)}"
+                                icon="ui-icon-search"
+                                styleClass="mrig03 ui-button-icon-left ui-icon"
+                                style="width: 30px!important;min-width: 30px!important;height: 25px!important;min-height: 25px!important;"
+                                title="Clique para visualizar o Pagamento."/>
+                        </p:column>
+
+                        <p:column headerText="Deferido em" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{pag.dataPagamento}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="O.B." styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.numDocumento}"
+                                          rendered="#{pag.numDocumento ne null}"/>
+                            <h:outputText value="Não Inserido"
+                                          rendered="#{pag.numDocumento eq null}"/>
+                        </p:column>
+                        <p:column headerText="Pagamento" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.numeroPagamento}"/>
+                        </p:column>
+                        <p:column headerText="Liquidação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.liquidacao.numero}"/>
+                        </p:column>
+                        <p:column headerText="Empenho" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.liquidacao.empenho.numero}"/>
+                        </p:column>
+                        <p:column headerText="Pessoa" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.liquidacao.empenho.fornecedor.nome}"/>
+                        </p:column>
+                        <p:column headerText="Conta Bancária" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.contaPgto}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.liquidacao.empenho.fonteDespesaORC.descricaoFonteDeRecurso}"/>
+                        </p:column>
+                        <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pag.status.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{pag.valorFinal}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+
+
+                    <p:dataTable id="listaPagamentoExtra"
+                                 value="#{borderoControlador.listaPagamentoExtra}"
+                                 var="pagextra"
+                                 rowKey="#{pagextra.id}"
+                                 selection="#{borderoControlador.arrayPgtoExtra}"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 paginator="true"
+                                 rendered="#{borderoControlador.tipoOperacaoBordero.pagamentoExtra}"
+                                 styleClass="mtop10"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>DESPESAS EXTRAORÇAMENTÁRIA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column selectionMode="multiple" style="width:5%; text-align: center"/>
+
+                        <p:column headerText="Visualizar" style="text-align: center; width: 5%">
+                            <fc:botaoTargetBlank
+                                actionListener="#{borderoControlador.visualizarPagamentoExtra(pagextra)}"
+                                icon="ui-icon-search"
+                                styleClass="mrig03 ui-button-icon-left ui-icon"
+                                style="width: 30px!important;min-width: 30px!important;height: 25px!important;min-height: 25px!important;"
+                                title="Clique para visualizar a Despesa Extraorçamentária."/>
+                        </p:column>
+
+                        <p:column headerText="Deferido em" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{pagextra.dataPagto}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="O.B." styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pagextra.numeroPagamento}"
+                                          rendered="#{pagextra.numeroPagamento ne null}"/>
+                            <h:outputText value="Não Inserido"
+                                          rendered="#{pagextra.numeroPagamento eq null}"/>
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{pagextra.numero}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pagextra.subConta}"/>
+                        </p:column>
+                        <p:column headerText="Conta Extraorçamentária" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pagextra.contaExtraorcamentaria}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pagextra.fonteDeRecursos}"/>
+                        </p:column>
+                        <p:column headerText="Fornecedor" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pagextra.fornecedor.cpf_Cnpj} - #{pagextra.fornecedor.nome}"/>
+                        </p:column>
+                        <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{pagextra.status.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{pagextra.valor}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:dataTable id="listaTransferencia"
+                                 value="#{borderoControlador.listaTransferenciaFinanceira}"
+                                 var="transfFi"
+                                 rowKey="#{transfFi.id}"
+                                 selection="#{borderoControlador.arrayTransferenciaFinanceira}"
+                                 paginator="true"
+                                 rendered="#{borderoControlador.tipoOperacaoBordero.transferenciaFinanceira}"
+                                 styleClass="mtop10"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>TRANSFERÊNCIAS FINANCEIRA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+                        <p:column selectionMode="multiple" style="width:5%; text-align: center"/>
+
+                        <p:column headerText="Visualizar" style="text-align: center; width: 5%">
+                            <fc:botaoTargetBlank
+                                actionListener="#{borderoControlador.visualizarTransferencia(transfFi)}"
+                                icon="ui-icon-search"
+                                styleClass="mrig03 ui-button-icon-left ui-icon"
+                                style="width: 30px!important;min-width: 30px!important;height: 25px!important;min-height: 25px!important;"
+                                title="Clique para visualizar a Transferência Financeira."/>
+                        </p:column>
+                        <p:column headerText="Transferido em " styleClass="alinhamentoDireita">
+                            <h:outputText value="#{transfFi.dataTransferencia}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{transfFi.numero}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira Concedida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.subContaRetirada}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso Concedida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.fonteDeRecursosRetirada}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira Recebida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.subContaDeposito}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso Recebida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.fonteDeRecursosDeposito}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso Recebida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.statusPagamento.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{transfFi.valor}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:dataTable id="listaTransferenciaMesmaUnidade"
+                                 value="#{borderoControlador.listaTransferenciaMesmaUnidade}"
+                                 var="transfFi" rowKey="#{transfFi.id}"
+                                 selection="#{borderoControlador.arrayTransferenciaMesmaUnidade}"
+                                 paginator="true"
+                                 rendered="#{borderoControlador.tipoOperacaoBordero.transferenciaFinanceiraMesmaUnidade}"
+                                 styleClass="mtop10"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>TRANSFERÊNCIAS FINANCEIRA MESMA UNIDADE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column selectionMode="multiple" style="width: 5%; text-align: center"/>
+
+                        <p:column headerText="Visualizar" style="text-align: center; width: 5%">
+                            <fc:botaoTargetBlank
+                                actionListener="#{borderoControlador.visualizarTransferenciaMesmaUnidade(transfFi)}"
+                                icon="ui-icon-search"
+                                styleClass="mrig03 ui-button-icon-left ui-icon"
+                                style="width: 30px!important;min-width: 30px!important;height: 25px!important;min-height: 25px!important;"
+                                title="Clique para visualizar a Transferência Financeira de Mesma Unidade."/>
+                        </p:column>
+
+                        <p:column headerText="Transferido em " styleClass="alinhamentoDireita">
+                            <h:outputText value="#{transfFi.dataTransferencia}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{transfFi.numero}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira Concedida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.subContaRetirada}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso Concedida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.fonteDeRecursosRetirada}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira Recebida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.subContaDeposito}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso Recebida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.fonteDeRecursosDeposito}"/>
+                        </p:column>
+                        <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{transfFi.statusPagamento.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{transfFi.valor}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:dataTable id="listaLiberacao"
+                                 value="#{borderoControlador.listaLiberacaoCotaFinanceira}"
+                                 var="liberacao"
+                                 rowKey="#{liberacao.id}"
+                                 selection="#{borderoControlador.arrayLiberacaoCotaFinanceira}"
+                                 rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                 rendered="#{borderoControlador.tipoOperacaoBordero.liberacaoFinanceira}"
+                                 paginator="true"
+                                 styleClass="mtop05"
+                                 rows="10"
+                                 paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>LIBERAÇÕES FINANCEIRA&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                 emptyMessage="Não foram localizados registros para serem apresentados."
+                                 rowIndexVar="rowlx">
+
+                        <p:column selectionMode="multiple" style="width: 5%; text-align: center"/>
+
+                        <p:column headerText="Visualizar" style="text-align: center; width: 5%">
+                            <fc:botaoTargetBlank
+                                actionListener="#{borderoControlador.visualizarLiberacao(liberacao)}"
+                                icon="ui-icon-search"
+                                styleClass="mrig03 ui-button-icon-left ui-icon"
+                                style="width: 30px!important;min-width: 30px!important;height: 25px!important;min-height: 25px!important;"
+                                title="Clique para visualizar a Liberação Financeira."/>
+                        </p:column>
+
+                        <p:column headerText="Liberado em " styleClass="alinhamentoDireita">
+                            <h:outputText value="#{liberacao.dataLiberacao}">
+                                <f:convertDateTime type="date"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Número" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{liberacao.numero}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira Concedida" styleClass="alinhamentoEsquerda">
+                            <h:outputText
+                                value="#{liberacao.solicitacaoCotaFinanceira.contaFinanceira.contaVinculada}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso Concedida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{liberacao.solicitacaoCotaFinanceira.fonteDeRecursos}"/>
+                        </p:column>
+                        <p:column headerText="Conta Financeira Recebida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{liberacao.solicitacaoCotaFinanceira.contaFinanceira}"/>
+                        </p:column>
+                        <p:column headerText="Fonte de Recurso Recebida" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{liberacao.fonteDeRecursos}"/>
+                        </p:column>
+                        <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                            <h:outputText value="#{liberacao.statusPagamento.descricao}"/>
+                        </p:column>
+                        <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                            <h:outputText value="#{liberacao.valor}">
+                                <f:convertNumber pattern="###,##0.00"/>
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+
+                    <p:commandButton value="Confirmar"
+                                     icon="ui-icon-check"
+                                     onstart="aguarde.show()"
+                                     oncomplete="dialogo.hide();aguarde.hide()"
+                                     styleClass="padrao mtop20"
+                                     title="Clique para confirmar a(s) ordem(ns) bancária(s) selecionado(s)."
+                                     actionListener="#{borderoControlador.adicionarTodosPagamentos()}"
+                                     update=":Formulario:viewPrincipal"/>
+
+                    <p:commandButton value="Fechar"
+                                     onstart="aguarde.show()"
+                                     oncomplete="dialogo.hide(); aguarde.hide()"
+                                     process="@this"
+                                     styleClass="padrao mlef05 mtop20"
+                                     icon="ui-icon-circle-close"
+                                     title="Clique para fechar a janela."/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogDeferirBordero"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  showHeader="false"
+                  dynamic="true"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formDeferir">
+                <div align="center">
+                    <p:panel id="panelNotaEmp" header="Deferir Ordem Bancária" styleClass="mtop05 mbot05">
+
+                        <br/>
+                        <h:outputText value="Deseja Imprimir a Ordem Bancária?"/>
+
+                        <br/><br/>
+                        <fc:botaoTargetBlank actionListener="#{borderoControlador.gerarRelatorio()}"
+                                             label="Imprimir"
+                                             icon="ui-icon-print"
+                                             styleClass="padrao prioritario"
+                                             id="botaoRelatorio"
+                                             title="Clique para gerar a Ordem Bancária em uma nova aba do navegador."/>
+
+                        <br/><br/><br/>
+                        <h:outputText value="Deseja Deferir a Ordem Bancária?"/>
+                        <br/><br/>
+                        <h:panelGrid columns="2">
+                            <p:commandButton value="SIM"
+                                             icon="ui-icon-check"
+                                             title="Clique para deferir a Ordem Bancária."
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="padrao"
+                                             actionListener="#{borderoControlador.deferirOrdemBancaria()}"
+                                             disabled="#{borderoControlador.selecionado.situacao eq 'DEFERIDO' or borderoControlador.selecionado.situacao eq 'AGUARDANDO_ENVIO'}"
+                                             onclick="if(!confirm('Tem certeza que deseja deferir esta ordem bancária?')) return false;"/>
+
+                            <p:commandButton value="NÃO"
+                                             icon="ui-icon-cancel"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="padrao"
+                                             title="Clique para cancelar a operação e retornar a página anterior."
+                                             actionListener="#{borderoControlador.cancelar()}"/>
+                        </h:panelGrid>
+
+                    </p:panel>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

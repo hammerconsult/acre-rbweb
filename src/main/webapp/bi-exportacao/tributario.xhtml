@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+
+            <script type="text/javascript">
+
+                function deletaArquivo() {
+                    atribuirNullArquivo();
+                    stop();
+                }
+            </script>
+            <p:panel header="Exportação do Arquivo BI">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Exercício Inicial: "/>
+                    <p:inputMask id="exInicial"
+                                 mask="9999"
+                                 converter="#{exercicioControlador.converterExercicio}"
+                                 value="#{exportacaoArquivoBIControlador.selecionado.exercicioInicial}"
+                                 maxlength="4" size="10"
+                                 title="Informe o exercício.">
+                        <p:ajax event="blur" process="@this"/>
+                        <p:ajax event="change"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </p:inputMask>
+
+                    <fc:outputLabelObrigatorio value="Exercício Final: "/>
+                    <p:inputMask id="exFinal"
+                                 mask="9999"
+                                 converter="#{exercicioControlador.converterExercicio}"
+                                 value="#{exportacaoArquivoBIControlador.selecionado.exercicioFinal}"
+                                 maxlength="4" size="10"
+                                 title="Informe o exercício.">
+                        <p:ajax event="blur" process="@this"/>
+                        <p:ajax event="change"
+                                onstart="aguarde.show()"
+                                oncomplete="aguarde.hide()"/>
+                    </p:inputMask>
+                </h:panelGrid>
+
+                <p:panel header="Tipos de Arquivos Tributários" styleClass="mbot05 mtop05" id="panelTransferencias">
+                    <p:outputPanel id="processos">
+                        <h:panelGrid columns="3">
+                            <p:selectManyCheckbox id="grid"
+                                                  value="#{exportacaoArquivoBIControlador.tiposSelecionados}"
+                                                  layout="pageDirection"
+                                                  columns="2">
+                                <f:selectItems value="#{exportacaoArquivoBIControlador.tiposTributarios}"
+                                               var="tipo"
+                                               itemLabel="#{tipo.descricao}" itemValue="#{tipo}"/>
+                                <p:ajax onstart="aguarde.show()" oncomplete="aguarde.hide()" update="processos"/>
+                            </p:selectManyCheckbox>
+                        </h:panelGrid>
+                        <p:commandButton value="Marcar Todos" icon="ui-icon-check"
+                                         styleClass="padrao"
+                                         update=":Formulario"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         rendered="#{!exportacaoArquivoBIControlador.todosTributariosMarcados}"
+                                         actionListener="#{exportacaoArquivoBIControlador.marcarTodosTiposTributarios()}"/>
+                        <p:commandButton value="Desmarcar Todos" icon="ui-icon-check"
+                                         styleClass="padrao"
+                                         update=":Formulario"
+                                         rendered="#{exportacaoArquivoBIControlador.todosTributariosMarcados}"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         actionListener="#{exportacaoArquivoBIControlador.desmarcarTodosTipos()}"/>
+                    </p:outputPanel>
+                </p:panel>
+
+
+                <h:panelGrid columns="2">
+
+                    <p:commandButton value="Exportar"
+                                     actionListener="#{exportacaoArquivoBIControlador.exportarArquivo}"
+                                     onstart="aguarde.show()"
+                                     oncomplete="aguarde.hide();"
+                                     icon="ui-icon-disk"
+                                     title="Clique para iniciar a exportação do arquivo."
+                                     style="height: 30px;"
+                                     styleClass="mtop10 prioritario"
+
+                                     update=":Formulario"/>
+
+                    <p:commandButton ajax="false"
+                                     value="Download"
+                                     title="Clique para fazer o download do arquivo."
+                                     styleClass="padrao mtop10"
+                                     style="height: 30px;"
+                                     onclick="PrimeFaces.monitorDownload(start, deletaArquivo);"
+                                     disabled="#{exportacaoArquivoBIControlador.selecionado.streamedContent eq null}"
+                                     icon="ui-icon-download">
+                        <p:fileDownload value="#{exportacaoArquivoBIControlador.selecionado.streamedContent}"/>
+                    </p:commandButton>
+
+                    <p:remoteCommand name="atribuirNullArquivo"
+                                     actionListener="#{exportacaoArquivoBIControlador.selecionado.setStreamedContent(null)}"
+                                     update=":Formulario"
+                                     process="@this"/>
+                </h:panelGrid>
+
+
+                <p:poll interval="1"
+                        widgetVar="poll"
+                        listener="#{exportacaoArquivoBIControlador.finalizarBarraProgressao()}"
+                        update=":formDialogProgressBar:panelBarra"
+                        stop="#{!exportacaoArquivoBIControlador.selecionado.barraProgressoItens.calculando}"
+                        autoStart="false"/>
+
+            </p:panel>
+
+        </h:form>
+
+        <p:dialog widgetVar="dialogProgressBar"
+                  width="800"
+                  closable="false"
+                  showHeader="false"
+                  modal="true"
+                  hideEffect="clip"
+                  resizable="false"
+                  position="center"
+                  dynamic="true">
+            <h:form id="formDialogProgressBar">
+                <div class="alert alert-success centralizado mtop05">
+                    <strong>Aguarde, </strong> o processo de exportação de arquivo está sendo executado...
+                </div>
+
+                <p:panel style="text-align: center; width: 100%; border: 0px;"
+                         visible="#{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.calculando}"
+                         id="panelBarra">
+
+                    <h:outputText
+                        value="#{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.mensagens}"
+                        escape="false"/>
+
+                    <br/>
+                    <h:outputText
+                        value="Total: #{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.total}"
+                        styleClass="negrito"/>
+                    <br/>
+                    <h:outputText
+                        value="Processados: #{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.processados}"
+                        styleClass="negrito"/>
+
+
+                    <div class="progress progress-striped active" id="barraProgresso">
+                        <div class="bar"
+                             style="width: #{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.porcentagemDoCalculo}%;">
+                            <h:outputText
+                                value="#{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.porcentagemDoCalculo}"
+                                styleClass="negrito">
+                                <f:convertNumber type="number" maxFractionDigits="2"/>
+                            </h:outputText>
+                            <h:outputText value="%"/>
+                        </div>
+                    </div>
+
+
+                    <br/>
+                    <h:outputText
+                        value="Tempo Decorrido: #{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.tempoDecorrido}"
+                        styleClass="negrito"/>
+
+                    <br/>
+                    <h:outputText
+                        value="Tempo Estimado: #{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.tempoEstimado}"
+                        styleClass="negrito"/>
+
+                    <br/>
+                    <p:commandButton icon="ui-icon-cancel"
+                                     styleClass="operacao prioritario"
+                                     value="Abortar"
+                                     update="@this"
+                                     process="@this"
+                                     immediate="true"
+                                     rendered="#{exportacaoArquivoBIControlador.selecionado.barraProgressoItens.calculando}"
+                                     actionListener="#{exportacaoArquivoBIControlador.abortar()}"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

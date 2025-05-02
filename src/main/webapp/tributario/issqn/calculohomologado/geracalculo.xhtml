@@ -1,0 +1,472 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+>
+<ui:composition template="/corpo.xhtml">
+    <script type="text/javascript">
+        function setaFoco(arg) {
+            document.getElementById(arg).focus()
+        }
+
+    </script>
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:messages id="msgs" showDetail="true"/>
+            <p:panel header="Lançamento de ISS Mensal">
+                <h:panelGrid columns="3">
+                    <h:outputText value="C.M.C.:"/>
+                    <p:autoComplete queryDelay="1000" value="#{calculaISSControlador.cadastroEconomico}"
+                                    completeMethod="#{calculaISSControlador.completaCadastroEconomicoIssHomologado}"
+                                    converter="#{calculaISSControlador.converterCE}"
+                                    var="ce"
+                                    itemValue="#{ce.id}"
+                                    itemLabel="#{ce.inscricaoCadastral} &nbsp; - &nbsp; #{ce.pessoa.nome} #{ce.pessoa.cpf_Cnpj}"
+                                    forceSelection="true"
+                                    maxResults="15"
+                                    size="70">
+                        <p:ajax event="itemSelect" listener="#{calculaISSControlador.selecionarCadastroEconomicoMensal}"
+                                onstart="aguarde.show()" oncomplete="aguarde.hide()" update="@form"/>
+                    </p:autoComplete>
+                    <p:commandButton icon="ui-icon-search" oncomplete="consultaGenerica.show()"
+                                     update=":dlgConsultaGenerica"/>
+                </h:panelGrid>
+            </p:panel>
+            <br/>
+            <p:panel id="panelInfo">
+                <h:panelGrid columns="2" id="panelGridPrincipal"
+                             rendered="#{calculaISSControlador.cadastroEconomico ne null}">
+                    <h:outputText value="TSA (R$): "/>
+                    <p:inputText size="15" value="#{calculaISSControlador.taxaSobreIss}"
+                                 id="valorBase"
+                                 disabled="#{!calculaISSControlador.habilitaValorTaxaSobreISS}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                        <p:ajax event="blur" update="valorBase" process="valorBase"/>
+                    </p:inputText>
+
+                    <h:outputText value="Mês de Referência: "/>
+                    <h:selectOneMenu value="#{calculaISSControlador.mesReferencia}">
+                        <f:selectItems value="#{calculaISSControlador.meses}"/>
+                        <p:ajax event="change"
+                                listener="#{calculaISSControlador.recuperarSubDividaESequenciaLancamento()}"
+                                update="panelGridPrincipal"/>
+                    </h:selectOneMenu>
+                    <h:outputText value="Exercício: "/>
+                    <p:inputText value="#{calculaISSControlador.exercicio}" maxlength="4" size="10"
+                                 converter="#{calculaISSControlador.converterExercicio}">
+                        <p:ajax event="blur"
+                                listener="#{calculaISSControlador.recuperarSubDividaESequenciaLancamento()}"
+                                update="panelGridPrincipal"/>
+                    </p:inputText>
+                    <h:outputText value="Sequência: "/>
+                    <h:outputText value="#{calculaISSControlador.sequenciaLancamento}"/>
+                </h:panelGrid>
+                <br/>
+                <p:dataTable value="#{calculaISSControlador.servicos}"
+                             id="tabelaServicos" var="servico"
+                             rowIndexVar="index"
+                             emptyMessage="Selecione um C.M.C. para listar os Serviços disponíveis">
+                    <p:column headerText="Serviço" style="width:40%">
+                        <h:outputText value="#{servico.nome}"/>
+                        <f:facet name="footer">
+                            <p:outputPanel>
+                                <h:outputText value="TOTAL"/>
+                            </p:outputPanel>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Permite Dedução">
+                        <h:outputText value="#{servico.permiteDeducao ? 'Sim' : 'Não'}"/>
+                    </p:column>
+                    <p:column headerText="Percentual de Dedução">
+                        <h:outputText value="#{servico.percentualDeducao}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Faturamento Mensal (R$)" style="text-align: right">
+                        <f:facet name="footer">
+                            <p:outputPanel>
+                                <h:outputText value="#{calculaISSControlador.totalFaturamento()}" id="totalFaturamento">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:outputPanel>
+                        </f:facet>
+                        <p:inputText size="15" value="#{servico.faturamento}" id="valorfaturamento"
+                                     style="text-align: right">
+                            <f:convertNumber pattern="#,##0.00"/>
+                            <p:ajax event="blur" process="@this"
+                                    listener="#{calculaISSControlador.calcularValorBase(servico, index)}"/>
+                        </p:inputText>
+                    </p:column>
+                    <p:column headerText="Base de Cálculo (R$)" style="text-align: right">
+                        <p:inputText size="15" value="#{servico.valorBase}" id="valorBaseCalculo"
+                                     style="text-align: right"
+                                     disabled="#{!servico.permiteDeducao}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                            <p:ajax event="blur" process="@this"
+                                    listener="#{calculaISSControlador.atualizarCalculoValorBase(servico, index)}"/>
+                        </p:inputText>
+                        <f:facet name="footer">
+                            <p:outputPanel>
+                                <h:outputText value="#{calculaISSControlador.totalValorBase()}" id="totalBaseCalculo">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:outputPanel>
+                        </f:facet>
+                    </p:column>
+                    <p:column headerText="Alíquota do ISS (%)" style="text-align: right">
+                        <p:inputText size="15" value="#{servico.aliquotaISSHomologado}" id="aliquota"
+                                     style="text-align: right"
+                                     onkeypress="mascaraPonto(this)"
+                                     rendered="#{servico.exclusivoSimplesNacional}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                            <p:ajax event="blur" process="@this"
+                                    listener="#{calculaISSControlador.calcularValorBase(servico, index)}"/>
+                        </p:inputText>
+                        <h:outputText value="#{servico.aliquotaISSHomologado}" rendered="#{!servico.exclusivoSimplesNacional}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <h:outputText value="%"/>
+                    </p:column>
+                    <p:column headerText="Valor do ISS (R$)" style="text-align: right">
+                        <h:outputText value="#{servico.valorCalculado}" id="valorCalculado" style="text-align: right">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <f:facet name="footer">
+                            <p:outputPanel>
+                                <h:outputText value="#{calculaISSControlador.totalValorCalculado()}"
+                                              id="totalValorCalculado">
+                                    <f:convertNumber pattern="###,##0.00"/>
+                                </h:outputText>
+                            </p:outputPanel>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+                <br/>
+                <h:panelGrid columns="1">
+                    <h:outputText value="Observações:"/>
+                    <p:inputTextarea id="textAreaObservacoes"
+                                     maxlength="3000"
+                                     rows="8"
+                                     cols="140"
+                                     value="#{calculaISSControlador.observacoes}">
+                        <p:ajax event="blur" process="@this"/>
+                    </p:inputTextarea>
+
+                    <p:commandButton value="Adicionar e Continuar"
+                                     disabled="#{calculaISSControlador.processosCalculosISS ne null and !calculaISSControlador.processosCalculosISS.isEmpty()}"
+                                     update="@form"
+                                     onclick="aguarde.show()" onsuccess="aguarde.hide()"
+                                     styleClass="operacao"
+                                     actionListener="#{calculaISSControlador.adicionarIssMensal()}"
+                                     icon="ui-icon-arrowthick-1-s"/>
+                </h:panelGrid>
+                <p:dataTable value="#{calculaISSControlador.calculos}" var="calculo"
+                             id="calculos"
+                             rendered="#{calculaISSControlador.calculos ne null and calculaISSControlador.calculos.size() gt 0}"
+                             styleClass="mtop05">
+                    <f:facet name="header">
+                        <h:outputText value="Calculos para serem Efetivados"/>
+                    </f:facet>
+                    <p:column headerText="Ação" style="text-align: center; width: 5%">
+                        <p:commandButton icon="ui-icon-trash"
+                                         disabled="#{calculaISSControlador.processosCalculosISS ne null and !calculaISSControlador.processosCalculosISS.isEmpty()}"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para remover este registro."
+                                         onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                         actionListener="#{calculaISSControlador.removerCalculo(calculo)}"
+                                         update="@form"/>
+                    </p:column>
+                    <p:column headerText="Cadastro Econômico" style="text-align: left; width: 40%">
+                        <h:outputText value="#{calculo.cadastroEconomico.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Mês" style="text-align: center; width: 10%">
+                        <h:outputText
+                            value="#{calculaISSControlador.retornaMes(calculo.processoCalculoISS.mesReferencia).descricao}"/>
+                    </p:column>
+                    <p:column headerText="Ano" style="text-align: center; width: 10%">
+                        <h:outputText value="#{calculo.processoCalculoISS.exercicio.ano}"/>
+                    </p:column>
+                    <p:column headerText="Sequência" style="text-align: center; width: 10%">
+                        <h:outputText value="#{calculo.sequenciaLancamento}"/>
+                    </p:column>
+                    <p:column headerText="Base de Calculo" style="text-align: right; width: 15%">
+                        <h:outputText value="#{calculo.baseCalculo}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Total" style="text-align: right; width: 15%">
+                        <h:outputText value="#{calculo.valorEfetivo}">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+            <br/>
+            <p:commandButton value="Calcular"
+                             disabled="#{calculaISSControlador.processosCalculosISS ne null and !calculaISSControlador.processosCalculosISS.isEmpty()}"
+                             update="@form :FormularioLogin"
+                             onstart="aguarde.show()" onsuccess="aguarde.hide()"
+                             styleClass="operacao prioritario"
+                             actionListener="#{calculaISSControlador.prepararCalculoIssHomologado}"
+                             onclick="if (!confirm('Tem certeza que deseja calcular?')) return false;"
+                             icon="ui-icon-calculator"/>
+            <fc:botaoTargetBlank label="Imprimir DAM de ISS "
+                                 imprimeNoDialog="true"
+                                 disabled="#{!calculaISSControlador.imprimeDamCalculoISS}"
+                                 actionListener="#{calculaISSControlador.imprimirDAMHomologado()}"
+                                 icon="ui-icon-print"/>
+            <fc:botaoTargetBlank label="Imprimir DAM de Multa Acessória"
+                                 imprimeNoDialog="true"
+                                 disabled="#{!calculaISSControlador.imprimeMultaAcessoria}"
+                                 actionListener="#{calculaISSControlador.imprimirDamMultaAcessoria()}"
+                                 icon="ui-icon-print"/>
+            <fc:botaoTargetBlank label="Imprimir Declaração de Ausência de Movimento"
+                                 disabled="#{!calculaISSControlador.imprimeDeclaracao}"
+                                 actionListener="#{calculaISSControlador.imprimirDeclaracaoAusenciaMovimento()}"
+                                 icon="ui-icon-print"/>
+            <p:commandButton value="Limpar Dados"
+                             styleClass="operacao"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             actionListener="#{calculaISSControlador.limparCampos}"
+                             icon="ui-icon-clear"
+                             update="@form"/>
+            <p:commandButton value="Fechar"
+                             styleClass="operacao"
+                             action="lista"
+                             icon="ui-icon-circle-close"
+                             onclick="if (!confirm('Tem certeza que deseja sair do lançamento ?')) return false;"/>
+            <br/>
+            <br/>
+            <p:panel visible="#{calculaISSControlador.processosCalculosISS ne null}" id="processo">
+                <ui:repeat var="processo" value="#{calculaISSControlador.processosCalculosISS}">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Data: "/>
+                        <h:outputText value="#{processo.dataLancamento}"
+                                      styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                        <h:outputText value="Mês de Referência: "/>
+                        <h:outputText value="#{calculaISSControlador.retornaMes(processo.mesReferencia).descricao}"
+                                      styleClass="negrito"/>
+                        <h:outputText value="Exercício: "/>
+                        <h:outputText value="#{processo.exercicio}"
+                                      styleClass="negrito"/>
+                    </h:panelGrid>
+                    <br/>
+                    <br/>
+                    <ui:repeat var="calculo" value="#{processo.calculos}">
+                        <p:panel id="resultadoCalculo"
+                                 header="Valores Calculados">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Sequência: "/>
+                                <h:outputText value="#{calculo.subDivida}" styleClass="negrito"/>
+                                <h:outputText value="Tributo"/>
+                                <h:outputText value="ISS" styleClass="negrito"/>
+                                <h:outputText value="Faturamento Mensal (R$)"/>
+                                <h:outputText value="#{calculaISSControlador.recuperarFaturamentoDoCalculo(calculo)}"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="Base de Cálculo (R$)"/>
+                                <h:outputText value="#{calculaISSControlador.recuperarBaseCalculoDoCalculo(calculo)}"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="Valor Calculado (R$)"/>
+                                <h:outputText value="#{calculo.valorCalculado}"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </h:panelGrid>
+                            <p:dataTable value="#{calculaISSControlador.listaTributos(calculo)}" var="item">
+                                <p:column headerText="Tributo" style="width: 25%">
+                                    <h:outputText value="#{item}"/>
+                                </p:column>
+                                <p:column headerText="Valor" style="width: 25%; text-align: right">
+                                    <h:outputText value="#{calculo.itemValor[item]}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputText>
+                                </p:column>
+                            </p:dataTable>
+                        </p:panel>
+
+                        <div style="margin-left: 80%">
+                            <h:panelGrid columns="2">
+                                <h:outputText value="Valor Total da Base de Cálculo (R$): "/>
+                                <h:outputText value="#{calculo.baseCalculo}" styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                                <h:outputText value="Valor Total Calculado (UFM): "/>
+                                <h:outputText value="#{converterRealUfm.converterToUFMVigente(calculo.valorCalculado)}"
+                                              styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.0000"/>
+                                </h:outputText>
+                                <h:outputText value="Valor Total Calculado (R$): "/>
+                                <h:outputText value="#{calculo.valorCalculado}" styleClass="negrito">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputText>
+                            </h:panelGrid>
+                        </div>
+                    </ui:repeat>
+                </ui:repeat>
+            </p:panel>
+
+        </h:form>
+
+
+        <p:dialog widgetVar="dlgConfirmaMulta" id="dialogConfirmaMulta"
+                  width="800" modal="true" closable="false"
+                  resizable="false" showHeader="false">
+            <h:form id="FormularioConfimaMulta">
+                <div class="alert alert-warn centralizado">
+                    ATENÇÃO! <br/>
+                    Para esse processo de cálculo é passível o lançamento de Multa Acessória por não declaração de ISS no prazo legal.
+                    <br/>
+                    O que deseja fazer?
+
+                </div>
+                <p:panel style="border: 0; text-align: center;">
+                    <p:commandButton value="Gerar o Débito de ISS e Multa Acessória" onstart="aguarde.show()"
+                                     onsuccess="aguarde.hide()"
+                                     actionListener="#{calculaISSControlador.calcularIssHomologado(true)}"
+                                     update=":Formulario"
+                                     oncomplete="dlgConfirmaMulta.hide()" styleClass="operacao prioritario"
+                                     icon="ui-icon-check"/>
+
+                    <p:commandButton value="Gerar Apenas o Débito de ISS" onstart="aguarde.show()"
+                                     onsuccess="aguarde.hide()"
+                                     actionListener="#{calculaISSControlador.calcularIssHomologado(false)}"
+                                     update=":Formulario"
+                                     oncomplete="dlgConfirmaMulta.hide()" styleClass="operacao"
+                                     icon="ui-icon-check"/>
+
+                    <p:commandButton value="Abortar Lançamento" oncomplete="dlgConfirmaMulta.hide()"
+                                     styleClass="operacao"
+                                     update=":Formulario"
+                                     icon="ui-icon-close"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <h:form id="FormularioAusenciaMovimento">
+            <p:dialog widgetVar="ausenciaMovimento" id="ausenciaMovimento" width="500" modal="true" closable="false"
+                      resizable="false" showHeader="false">
+                <div class="alert alert-info">
+                    <h:outputText
+                        value="Você não informou valor(es) no(s) serviço(s) do C.M.C. Deseja declarar ausência de movimento?"
+                        styleClass="negrito"/>
+                </div>
+                <p:panel style="border: 0; text-align: center;">
+                    <p:commandButton value="Declarar Ausência de Movimento" onstart="aguarde.show()"
+                                     onsuccess="aguarde.hide()"
+                                     actionListener="#{calculaISSControlador.declararAusenciaMovimento()}"
+                                     update=":Formulario"
+                                     oncomplete="ausenciaMovimento.hide()" styleClass="operacao prioritario"
+                                     icon="ui-icon-check"/>
+                    <p:commandButton value="Abortar Lançamento" oncomplete="ausenciaMovimento.hide()"
+                                     styleClass="operacao"
+                                     icon="ui-icon-close"/>
+                </p:panel>
+            </p:dialog>
+        </h:form>
+
+        <h:form id="FormularioConfimaCalculo">
+            <p:dialog widgetVar="confirmaCalculo" id="confirmaCalculo" width="520" modal="true" closable="false"
+                      resizable="false" showHeader="false">
+                <div class="alert alert-warn">
+                    <h:outputText
+                        value="ATENÇÃO: Já existe um débito de ISS Mensal calculado para esta competência. O que deseja fazer?"
+                        styleClass="negrito"/>
+                </div>
+                <p:panel style="border: 0; text-align: center;">
+                    <p:commandButton value="Gerar Débito Complementar" onstart="aguarde.show()"
+                                     onsuccess="aguarde.hide()"
+                                     actionListener="#{calculaISSControlador.criarCalculoParaLancamentos()}"
+                                     update=":Formulario"
+                                     oncomplete="confirmaCalculo.hide()" styleClass="operacao prioritario"
+                                     icon="ui-icon-check"/>
+                    <p:commandButton value="Abortar Lançamento" oncomplete="confirmaCalculo.hide()"
+                                     styleClass="operacao"
+                                     update=":Formulario"
+                                     icon="ui-icon-close"/>
+                </p:panel>
+            </p:dialog>
+        </h:form>
+
+        <p:dialog widgetVar="login" position="center"
+                  header="Autorização"
+                  modal="true" closable="false" id="dialogLogin">
+            <h:form id="FormularioLogin" autocomplete="off">
+                <h:outputText value="Entre com o usuário e senha." styleClass="negrito"/>
+                <br/>
+                <br/>
+                <h:panelGrid columns="3">
+                    <fc:outputLabelObrigatorio value="Login: "/>
+                    <p:inputText value="#{calculaISSControlador.loginAutorizacao}" maxlength="20" size="25"
+                                 autocomplete="off"
+                                 id="loginAutorizacao"/>
+                    <p:spacer/>
+
+                    <fc:outputLabelObrigatorio value="Senha: "/>
+                    <p:password value="#{calculaISSControlador.senhaAutorizacao}" maxlength="20" size="25"
+                                autocomplete="off"
+                                id="senhaAutorizacao"/>
+                    <p:spacer/>
+
+                    <fc:outputLabelObrigatorio value="Motivo: "/>
+                    <p:inputTextarea value="#{calculaISSControlador.selecionado.motivoLancamentoValorMenor}" cols="50"
+                                     rows="7"
+                                     counterTemplate="{0} caracteres restantes." counter="counter"
+                                     maxlength="500"/>
+                    <!-- gambi para não completar automaticamente a senha quando salva no browser -->
+                    <h:inputSecret value="#{calculaISSControlador.senhaAutorizacao}"
+                                   id="password" label="password" maxlength="20"
+                                   style="height: 1px; width: 1px; border: 0"
+                                   readonly="true"/>
+
+                    <h:outputText id="counter" styleClass="azul"/>
+                    <p:spacer/>
+                </h:panelGrid>
+
+                <div style="text-align: center">
+                    <p:separator/>
+                    <p:commandButton value="OK"
+                                     actionListener="#{calculaISSControlador.logar()}"
+                                     styleClass="operacao prioritario"
+                                     onstart="aguarde.show()" oncomplete="aguarde.hide()"
+                                     icon="ui-icon-key" update=":Formulario"/>
+                    <p:commandButton id="btVoltarTramiteAceito" value="Cancelar" icon="ui-icon-cancel"
+                                     actionListener="#{calculaISSControlador.setaNuloLoginSenha()}"
+                                     onclick="login.hide()" styleClass="operacao"/>
+                </div>
+            </h:form>
+        </p:dialog>
+        <p:dialog header="Consulta do Cadastro" modal="true" widgetVar="consultaGenerica" width="900" height="500"
+                  id="dlgConsultaGenerica">
+            <h:form id="formularioConsultaDebito">
+                <fc:pesquisaGenerico id="lista"
+                                     caminhoAtual="edita"
+                                     nomeDaClasse="CadastroEconomico"
+                                     dialog="true"
+                                     pretty="true"
+                                     iconmSelecionar="check-icon.png"
+                                     novo="#{calculoTaxasDiversasControlador.novo()}"
+                                     selecionar="#{calculaISSControlador.selecionarCadastroEconomicoMENSAL}"
+                                     mostrarHistorico="false"
+                                     mostrarBotaoNovo="false"
+                                     meuControlador="#{calculaISSControlador.tipoISSMENSAL}"
+                                     guardarNaSessao="false"
+                                     pesquisaNoEnter="false"
+                                     updateSelecionarTabela=":Formulario"/>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

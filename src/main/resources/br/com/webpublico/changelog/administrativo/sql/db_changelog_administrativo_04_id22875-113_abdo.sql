@@ -1,0 +1,19 @@
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-lote/edita.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoLoteMaterialEServico/edita.xhtml';
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-lote/visualizar.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoLoteMaterialEServico/visualizar.xhtml';
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-lote/andamento.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoLoteMaterialEServico/andamentoPregaoLoteMaterialEServico.xhtml';
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-lote/lista.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoLoteMaterialEServico/lista.xhtml';
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-lote/definirValoresFinais.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoLoteMaterialEServico/definirValoresFinais.xhtml';
+
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-item/edita.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoMaterialEServico/edita.xhtml';
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-item/visualizar.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoMaterialEServico/visualizar.xhtml';
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-item/lista.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoMaterialEServico/lista.xhtml';
+update recursosistema set caminho = '/administrativo/licitacao/pregao/por-item/andamento.xhtml'
+where caminho = '/administrativo/licitacao/pregao/pregaoPorMaterialEServico/pregaoMaterialEServico/andamentoPregaoMaterialEServico.xhtml';

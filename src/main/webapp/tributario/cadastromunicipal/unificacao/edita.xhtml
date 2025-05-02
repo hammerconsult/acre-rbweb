@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+        >
+<ui:composition template="/corpo.xhtml">
+<ui:define name="body">
+
+<p:messages showDetail="true"/>
+<h:form id="Formulario">
+    <p:panel header="Unificação de Imóveis">
+        <h:panelGrid columns="2">
+            <h:outputText value="Setor:"/>
+            <p:autoComplete queryDelay="1000" value="#{unificacaoControle.setor}"
+                            completeMethod="#{unificacaoControle.completaSetor}"
+                            converter="#{unificacaoControle.converterSetor}"
+                            var="setor"
+                            id="setor"
+                            itemLabel="#{setor.nome}"
+                            itemValue="#{setor.id}"
+                            forceSelection="true"
+                            size="30"
+                            maxResults="10">
+                <p:ajax event="itemSelect" listener="#{unificacaoControle.setarSetor}"/>
+            </p:autoComplete>
+            <h:outputText value="Tipo de Quadra:"/>
+            <h:selectOneMenu value="#{unificacaoControle.tipoQuadra}"
+                             title="Selecione uma configuração de quadra"
+                             id="tipoQuadra">
+                <f:selectItems value="#{unificacaoControle.tiposDeQuadra}"/>
+                <p:ajax update="quadra" event="change"/>
+            </h:selectOneMenu>
+            <h:outputText value="Quadra:"/>
+            <p:autoComplete queryDelay="1000" value="#{unificacaoControle.quadra}"
+                            converter="#{unificacaoControle.converterQuadra}"
+                            completeMethod="#{unificacaoControle.completaQuadra}"
+                            title="selecione uma quadra"
+                            var="quadra"
+                            forceSelection="true"
+                            itemLabel="#{quadra.descricao}"
+                            itemValue="#{quadra.id}"
+                            id="quadra"
+                            size="30"
+                            maxResults="10">
+                <p:ajax update="pickList" event="itemSelect"
+                        listener="#{unificacaoControle.carregaOriginarios}"
+                        onstart="aguarde.show()" oncomplete="aguarde.hide()"/>
+            </p:autoComplete>
+        </h:panelGrid>
+        <br/>
+        <p:pickList value="#{unificacaoControle.originarios}"
+                    var="ci"
+                    id="pickList"
+                    iconOnly="true"
+                    itemLabel="#{ci.codigo}"
+                    itemValue="#{ci.id}"
+                    converter="#{unificacaoControle.converterCadastroImobiliario}">
+            <f:facet name="sourceCaption">Disponiveis</f:facet>
+            <f:facet name="targetCaption">Selecionados</f:facet>
+        </p:pickList>
+        <br/>
+        <p:commandButton value="Carregar"
+                         icon="ui-icon-refresh"
+                         styleClass="operacao"
+                         actionListener="#{unificacaoControle.carregaPropriedades}"
+                         update=":formPropriedades:panelUnificacao"
+                         onstart="aguarde.show()"
+                         oncomplete="aguarde.hide()"/>
+    </p:panel>
+</h:form>
+<br/>
+<h:form id="formPropriedades">
+    <p:panel>
+        <p:panel id="panelUnificacao" header="Novo Imóvel Unificado"
+                 visible="#{unificacaoControle.originarios.target.size() gt 0}">
+            <h:panelGrid columns="2">
+                <h:outputText value="Lote: "/>
+                <p:selectOneRadio value="#{unificacaoControle.lote}"
+                                  converter="#{unificacaoControle.converterLote}">
+                    <f:selectItems value="#{unificacaoControle.lotes}" var="lote" itemLabel="#{lote.codigoLote}"/>
+                    <p:ajax event="change" listener="#{unificacaoControle.defineInscricao}"
+                            update="novaInscricaoCadastral"/>
+                </p:selectOneRadio>
+
+                <h:outputText value="Inscrição Cadastral: "/>
+                <h:panelGroup id="grupoInscricao">
+                    <p:inputText value="#{unificacaoControle.novaInscricaoCadastral}"
+                                 size="25"
+                                 id="novaInscricaoCadastral">
+                        <p:ajax event="blur" update="grupoInscricao"/>
+                    </p:inputText>
+                    <p:spacer width="10"/>
+                    <h:outputText id="mantemInscricao" styleClass="amarelonegrito"
+                                  value="Atenção! A inscrição informada não faz parte dos cadastros selecionados para a unificação, será gerado um novo registro de Cadastro Imobiliário para esta inscrição."
+                                  rendered="#{!unificacaoControle.mantenInscricao(unificacaoControle.novaInscricaoCadastral)}"/>
+                </h:panelGroup>
+
+                <h:outputText value="Area Total Construida:"/>
+                <h:outputText value="#{unificacaoControle.areaTotalConstruida}" styleClass="azulnegrito">
+                    <f:convertNumber pattern="###,##0.00"/>
+                </h:outputText>
+                <h:outputText value="Area Total Territorial:"/>
+                <h:outputText value="#{unificacaoControle.areaTotalTerritorial}" styleClass="azulnegrito">
+                    <f:convertNumber pattern="###,##0.00"/>
+                </h:outputText>
+
+            </h:panelGrid>
+            <br/>
+            <p:dataTable id="proprietarioTabela"
+                         emptyMessage="Nenhum Proprietário foi encontrado"
+                         value="#{unificacaoControle.propriedades}" var="c">
+                <f:facet name="header">
+                    <h:outputText value="Proprietários"/>
+                </f:facet>
+                <f:facet name="footer">
+                    <h:outputText value="Percentual Total: "/>
+                    <h:outputText id="footer" value="${unificacaoControle.totalProporcao}"
+                            >
+                        <f:convertNumber pattern="#0.00" type="percent"/>
+                    </h:outputText>
+                </f:facet>
+                <p:column headerText="Proprietário">
+                    <h:outputText value="#{c.pessoa.nome} - #{c.pessoa.cpf_Cnpj}"/>
+                </p:column>
+                <p:column headerText="Proporção">
+                    <div style=" text-align: right">
+                        <p:inputText value="#{c.proporcao}"
+                                     onkeydown="mascaraPonto(this)">
+                            <f:convertNumber pattern="###,##0.00"/>
+                            <p:ajax event="change" process="@this"
+                                    update=":formPropriedades:proprietarioTabela:footer"/>
+                        </p:inputText>
+                    </div>
+                </p:column>
+                <p:column headerText="Tipo do Proprietario">
+                    <h:outputText value="#{c.tipoProprietario}"/>
+                </p:column>
+                <p:column headerText="Início da Vigência">
+                    <h:outputText value="#{c.inicioVigencia}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+                </p:column>
+            </p:dataTable>
+            <br/>
+            <p:dataTable value="#{unificacaoControle.construcoes}"
+                         var="construcao"
+                         emptyMessage="Nenhuma Construção foi encontrada">
+                <f:facet name="header">
+                    <h:outputText value="Construções"/>
+                </f:facet>
+                <f:facet name="footer">
+                    <h:outputText value="Construções"/>
+                </f:facet>
+                <p:column headerText="Construção">
+                    <p:inputText value="#{construcao.descricao}" style="width: 98% !important">
+                        <p:ajax event="blur" process="@this" update="@this"/>
+                    </p:inputText>
+                </p:column>
+                <p:column headerText="Área" style=" text-align: right">
+                    <h:outputText value="#{construcao.areaConstruida}" converter="converterBigDecimal">
+                        <f:convertNumber pattern="###,##0.00"/>
+                    </h:outputText>
+                    <f:facet name="footer">
+                        <h:outputText value="#{unificacaoControle.areaTotalConstruida}" styleClass="azulnegrito">
+                            <f:convertNumber pattern="###,##0.00"/>
+                        </h:outputText>
+                    </f:facet>
+                </p:column>
+                <p:column headerText="Englobado">
+                    <h:outputText value="#{construcao.englobado eq null? 'Não Englobado' : construcao.englobado}"/>
+                </p:column>
+            </p:dataTable>
+            <br/>
+            <p:dataTable value="#{unificacaoControle.testadas}"
+                         var="testada"
+                         emptyMessage="Nenhuma Testada foi encontrada">
+                <f:facet name="header">
+                    <h:outputText value="Testadas"/>
+                </f:facet>
+                <f:facet name="footer">
+                    <h:outputText value="Testadas"/>
+                </f:facet>
+                <p:column headerText="Face">
+                    <h:outputText value="#{testada.face.codigoFace}"/>
+                </p:column>
+                <p:column headerText="Testada (m²)" style="text-align: right">
+                    <h:outputText value="#{testada.tamanho}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Principal" style="width: 5%; text-align: center;">
+                    <h:selectBooleanCheckbox value="#{testada.principal}"/>
+                </p:column>
+
+            </p:dataTable>
+            <br/>
+            <p:panel>
+                <p:commandButton value="Unificar" icon="ui-icon-shuffle" styleClass="operacao prioritario"
+                                 actionListener="#{unificacaoControle.salvar}"
+                                 onclick="if(!confirm('Deseja efetivar a unificação?')) return false;"/>
+                <p:commandButton value="Novo" icon="ui-icon-document" styleClass="operacao"
+                                 actionListener="#{unificacaoControle.novo()}"
+                                 onclick="if(!confirm('Deseja limpar todos os campos e começar uma nova unificação?')) return false;"
+                                 update=":Formulario @form"/>
+            </p:panel>
+        </p:panel>
+    </p:panel>
+</h:form>
+
+<p:dialog widgetVar="dlgHistorico" modal="true" header="Histórico de modificações" width="1000" resizable="false">
+    <h:form id="formDlgHistorico">
+        <p:messages/>
+        <h:outputText value="Para salvar o registro é necessário que seja inserido algumas informações adicionais."
+                      style="font-size: small; color: orange"/>
+
+        <h:panelGrid columns="3">
+            <h:outputText value="Digitador: "/>
+            <p:inputText id="inputDigitador" value="#{unificacaoControle.historico.digitador.login}"
+                         readonly="true" styleClass="campo-bloqueado" size="50"/>
+            <p:message showDetail="true" for="inputDigitador"/>
+
+            <h:outputText value="Data de registro: "/>
+            <p:inputText value="#{unificacaoControle.historico.dataRegistro}"
+                         id="calDataRegistro"
+                         readonly="true" styleClass="campo-bloqueado">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </p:inputText>
+            <p:message showDetail="true" for="calDataRegistro"/>
+
+            <h:outputText value="Solicitante: "/>
+            <p:inputText id="inputSolicitante" value="#{unificacaoControle.historico.solicitante}"
+                         required="true" requiredMessage="É obrigatório o nome do(a) solicitante. " size="50"/>
+            <p:message showDetail="true" for="inputSolicitante"/>
+
+            <h:outputText value="Data de solicitação: "/>
+            <p:calendar value="#{unificacaoControle.historico.dataSolicitacao}" navigator="true"
+                        pattern="dd/MM/yyyy"
+                        id="calDataSolicitacao"
+                        required="true"
+                        requiredMessage="É obrigatório a data de solicitação"/>
+            <p:message showDetail="true" for="calDataSolicitacao"/>
+
+            <h:outputText value="Motivo: "/>
+            <p:inputTextarea id="inputMotivo" value="#{unificacaoControle.historico.motivo}"
+                             autoResize="false"
+                             required="true"
+                             requiredMessage="É obrigatório que seja informado o motivo pelo qual foi solicitado."
+                             rows="3" cols="50"/>
+            <p:message showDetail="true" for="inputMotivo"/>
+
+        </h:panelGrid>
+        <p:panel style="text-align: left">
+            <p:commandButton id="cbConfirmar"
+                             value="Confirmar"
+                             action="#{unificacaoControle.salvarHistorico}"
+                             icon="ui-icon-check"
+                             onclick="aguarde.show()"
+                             styleClass="operacao prioritario"
+                             update="formDlgHistorico"/>
+            <p:commandButton id="cbCancelar"
+                             value="Cancelar"
+                             styleClass="operacao"
+                             icon="ui-icon-cancel"
+                             onclick="aguarde.hide(); dlgHistorico.hide()"/>
+        </p:panel>
+    </h:form>
+</p:dialog>
+<p:dialog widgetVar="dlgHistoricoSucesso"
+          modal="true"
+          header="Sucesso"
+          resizable="false">
+    <h:form id="formSucesso">
+        <div class="alert alert-success">
+            <h:panelGrid columns="2">
+                <strong>Operação realizada!</strong> Os lotes foram unificados com sucesso.
+                <h:panelGrid columns="2">
+                    <p:commandButton id="cbOk" value="Sair" styleClass="operacao " icon="ui-icon-cancel"
+                                     onclick="dlgHistoricoSucesso.hide()"/>
+                    <p:commandButton id="cbVer" value="Visualizar o Cadastro"
+                              icon="ui-icon-search"
+                              styleClass="operacao sucess"
+                              actionListener="#{unificacaoControle.vaiParaCadastro()}"/>
+                </h:panelGrid>
+            </h:panelGrid>
+        </div>
+    </h:form>
+</p:dialog>
+<p:dialog widgetVar="dlgHistoricoFracasso" modal="true" header="Não é possível continuar" width="350" resizable="false">
+    <h:form id="formFracasso">
+        <h:outputText value="O lote não pode ser unificado!"/>
+        <br/>
+        <p:commandButton id="cbOk" value="Ok" styleClass="operacao prioritario" onclick="dlgHistoricoFracasso.hide()"/>
+    </h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>
+</html>

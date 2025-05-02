@@ -1,0 +1,516 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:ad="http://java.sun.com/jsf/composite/components/administrativo"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+>
+
+<!-- INTERFACE -->
+<cc:interface>
+    <cc:attribute name="controlador" required="true"
+                  type="br.com.webpublico.controle.SolicitacaoAjusteBemMovelSuperControlador"/>
+</cc:interface>
+
+<cc:implementation>
+    <script type="text/javascript">
+        window.onload = function () {
+            var inputUnidade = document.getElementById('#{cc.clientId}:Formulario:tabViewPrincipal:acUnidadeOrganizacional_input');
+            var inputOperacao = document.getElementById('#{cc.clientId}:Formulario:tabViewPrincipal:operacao_input');
+            var botao = document.getElementById('#{cc.clientId}:Formulario:tabViewPrincipal:botaoPesquisar');
+
+            if (
+                (inputUnidade != null &amp;&amp; inputUnidade.value != null &amp;&amp; inputUnidade.value.trim().length > 0)
+                || (inputOperacao != null &amp;&amp; inputOperacao.value != null &amp;&amp; inputOperacao.value.trim().length > 0)) {
+                botao.click();
+            }
+        }
+    </script>
+
+    <h:form id="Formulario">
+
+        <p:remoteCommand name="definirUnidadePesquisaBem"
+                         process="@this"
+                         actionListener="#{cc.attrs.controlador.definirUnidadeFilhaComoNull()}"
+                         update=":#{cc.clientId}:Formulario:tabViewPrincipal:panelBens"/>
+
+        <p:remoteCommand name="atualizaFormulario"
+                         process="@this :#{cc.clientId}:Formulario:tabViewPrincipal:panelAnexos"
+                         update=":#{cc.clientId}:Formulario:tabViewPrincipal:panelBens
+                                 :#{cc.clientId}:Formulario:tabViewPrincipal:inconsistencias
+                                 :#{cc.clientId}:Formulario:alerta-inconsistencias"/>
+
+        <fc:cabecalhoPretty controlador="#{cc.attrs.controlador}"
+                            origem="#{cc.attrs.controlador.caminhoPadrao}novo/"/>
+
+        <p:panel
+            header="Solicitação de Ajuste de Bens Móveis - #{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.descricao}"
+            id="panelPrincipal">
+
+            <p:tabView id="tabViewPrincipal"
+                       activeIndex="#{cc.attrs.controlador.indexAba}">
+                <p:tab title="Dados do Ajuste" id="tabDados">
+                    <p:outputPanel id="panelDadosGerais">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel value="Código: "/>
+                            <h:outputText
+                                value="#{cc.attrs.controlador.selecionado.codigo == null ? 'Gerado automaticamente ao concluir' : cc.attrs.controlador.selecionado.codigo}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Data: "/>
+                            <h:outputText
+                                value="#{cc.attrs.controlador.selecionado.dataSolicitacao}"
+                                styleClass="negrito">
+                                <f:convertDateTime pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+
+                            <h:outputLabel value="Situação: "/>
+                            <h:outputText
+                                value="#{cc.attrs.controlador.selecionado.situacao.descricao}"
+                                styleClass="negrito"/>
+
+                            <h:outputLabel value="Usuário: "/>
+                            <h:outputText
+                                value="#{cc.attrs.controlador.selecionado.usuarioSistema.pessoaFisica.nome}"
+                                styleClass="negrito"/>
+
+                            <fc:outputLabelObrigatorio value="Contabilizar: "/>
+                            <p:selectBooleanCheckbox value="#{cc.attrs.controlador.selecionado.contabilizar}"/>
+
+                            <fc:outputLabelObrigatorio value="Operação: "/>
+                            <h:selectOneMenu
+                                disabled="#{cc.attrs.controlador.hasBensSelecinado()}"
+                                value="#{cc.attrs.controlador.selecionado.operacaoAjusteBemMovel}"
+                                id="operacao">
+                                <f:selectItems
+                                    value="#{cc.attrs.controlador.operacoesAjuste}"/>
+                                <p:ajax event="change"
+                                        process="@this"
+                                        listener="#{cc.attrs.controlador.recuperarConfiguracaoMovimentacaoBem}"
+                                        update="@this"/>
+                            </h:selectOneMenu>
+
+                            <fc:outputLabelObrigatorio value="Unidade Administrativa: "
+                                                       for="acUnidadeOrganizacional"/>
+                            <h:panelGrid columns="1" cellspacing="0" cellpadding="0" id="gridUnidadeAdm">
+                                <p:autoComplete queryDelay="1000"
+                                                id="acUnidadeOrganizacional"
+                                                title="Informe a Unidade Administrativa."
+                                                value="#{cc.attrs.controlador.filtro.hierarquiaAdministrativa}"
+                                                completeMethod="#{hierarquiaOrganizacionalControlador.completaHierarquiaOrganizacionalNivelDoisPaiEFilhoOndeUsuarioLogadoEhGestorPatrimonio}"
+                                                disabled="#{cc.attrs.controlador.hasBensSelecinado()}"
+                                                var="unidade"
+                                                size="70"
+                                                dropdown="true"
+                                                panelStyle="max-height: 250px;max-width: 800px"
+                                                process="@this"
+                                                maxResults="50"
+                                                itemLabel="#{unidade}"
+                                                itemValue="#{unidade.id}"
+                                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            update=":#{cc.clientId}:Formulario:tabViewPrincipal:panelBens"
+                                            listener="#{cc.attrs.controlador.buscarUnidadePesquisaBem()}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                </p:autoComplete>
+
+                                <p:outputPanel
+                                    rendered="#{cc.attrs.controlador.hasBensSelecinado()}">
+                                    <h:outputText
+                                        value="Campo desabilitado, pois existem bens selecionados para essa unidade"
+                                        styleClass="cinzaEscuro mlef05"/>
+                                </p:outputPanel>
+                            </h:panelGrid>
+
+                            <fc:outputLabelObrigatorio for="descricao" value="Descrição:"/>
+                            <h:panelGrid columns="2"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea id="descricao"
+                                                 title="Digite a descrição."
+                                                 value="#{cc.attrs.controlador.selecionado.descricao}"
+                                                 maxlength="3000"
+                                                 cols="70"
+                                                 rows="4"
+                                                 scrollHeight="50"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-descricao"
+                                                 style="text-transform: uppercase"/>
+                                <h:outputText id="counter-descricao"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+
+                            <h:outputText value="Motivo da Recusa:"
+                                          rendered="#{cc.attrs.controlador.selecionado.isSolicitacaoRejeitada()}"/>
+                            <h:panelGrid columns="2"
+                                         rendered="#{cc.attrs.controlador.selecionado.isSolicitacaoRejeitada()}"
+                                         cellpadding="0"
+                                         cellspacing="0">
+                                <p:inputTextarea id="motivoRecusa"
+                                                 value="#{cc.attrs.controlador.selecionado.motivoRejeicao}"
+                                                 maxlength="3000"
+                                                 readonly="true"
+                                                 cols="70"
+                                                 rows="4"
+                                                 autoResize="false"
+                                                 scrollHeight="50"
+                                                 counterTemplate="{0} Caracteres Restantes."
+                                                 counter="counter-recusa"
+                                                 style="text-transform: uppercase"/>
+                                <h:outputText id="counter-recusa"
+                                              style="color: #497692"
+                                              styleClass="mlef05"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab title="Pesquisa Bem" id="tabBens">
+                    <p:outputPanel id="panelBens">
+
+                        <h:panelGrid columns="2" id="gridPesquisa">
+                            <h:outputText value="Unidade Administrativa:"/>
+                            <h:outputText id="ipUnidadeOrganizacionalOrigem"
+                                          styleClass="negrito"
+                                          value="#{cc.attrs.controlador.filtro.hierarquiaAdministrativa}"/>
+
+                            <h:outputText value="Unidade Administrativa Filha: "/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="acUnidadeOrganizacionalFilha"
+                                            title="Informe a Unidade Administrativa."
+                                            value="#{cc.attrs.controlador.filtro.hierarquiaAdministrativaFilha}"
+                                            completeMethod="#{cc.attrs.controlador.completarHierarquiaFilhasAdministrativa}"
+                                            var="AdmFilha"
+                                            size="70"
+                                            dropdown="true"
+                                            panelStyle="max-height: 250px;max-width: 800px"
+                                            onkeyup="if(keyUpCampoVazio(this)){definirUnidadePesquisaBem()}"
+                                            process="@this"
+                                            maxResults="50"
+                                            itemLabel="#{AdmFilha}"
+                                            itemValue="#{AdmFilha.id}"
+                                            converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                                <p:ajax event="itemSelect"
+                                        process="@this"
+                                        update=":#{cc.clientId}:Formulario:tabViewPrincipal:panelBens"
+                                        listener="#{cc.attrs.controlador.definirUnidadePesquisaBem()}"
+                                        onstart="aguarde.show()"
+                                        oncomplete="aguarde.hide()"/>
+                            </p:autoComplete>
+
+                            <h:outputLabel value="Unidade Orçamentária:" for="orcamentariaAll"/>
+                            <h:selectOneMenu
+                                value="#{cc.attrs.controlador.filtro.hierarquiaOrcamentaria}"
+                                converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}"
+                                id="orcamentariaAll">
+                                <f:selectItems
+                                    value="#{cc.attrs.controlador.hierarquiasOrcamentariaPorAdministrativa}"/>
+                            </h:selectOneMenu>
+
+                            <h:outputText value="Grupo Patrimonial:"/>
+                            <p:autoComplete queryDelay="1000" widgetVar="grupo"
+                                            id="grupoBem"
+                                            title="Digite a descrição"
+                                            value="#{cc.attrs.controlador.filtro.grupoBem}"
+                                            completeMethod="#{grupoBemControlador.completaGrupoBem}"
+                                            var="grupo"
+                                            size="70"
+                                            process="@this"
+                                            maxResults="50"
+                                            dropdown="true"
+                                            panelStyle="max-height: 230px;max-width: 800px"
+                                            itemLabel="#{grupo}"
+                                            itemValue="#{grupo.id}"
+                                            forceSelection="true"
+                                            converter="#{grupoBemControlador.converterGenerico}"/>
+
+                            <h:outputText value="Depreciação: "
+                                          rendered="#{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.isDepreciacao()}"/>
+                            <p:autoComplete queryDelay="1000"
+                                            id="reducao"
+                                            value="#{cc.attrs.controlador.loteReducaoValorBem}"
+                                            completeMethod="#{cc.attrs.controlador.completarReducaoValorBem}"
+                                            converter="#{depreciacaoPatrimonialControlador.converterGenerico}"
+                                            rendered="#{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.isDepreciacao()}"
+                                            dropdown="true"
+                                            panelStyle="max-width: 800px; max-height: 250px"
+                                            var="red"
+                                            size="70"
+                                            itemLabel="#{red}"
+                                            itemValue="#{red.id}"
+                                            maxResults="50">
+                                <p:ajax event="itemSelect" process="@this" update="@this"/>
+                            </p:autoComplete>
+
+                            <h:outputText value="Bem:"/>
+                            <ad:auto-complete-bens
+                                bem="#{cc.attrs.controlador.filtro.bem}"
+                                visualizarCampos="true"
+                                id="acBem"
+                                estadoDoBemDiferenteDe="BAIXADO"
+                                tipoBem="MOVEIS"
+                                unidadeOrganizacional="#{cc.attrs.controlador.filtro.unidadePesquisaBem}"/>
+                        </h:panelGrid>
+
+                        <p:commandButton value="Pesquisar"
+                                         title="Clique para pesquisar."
+                                         icon="ui-icon-search"
+                                         id="botaoPesquisar"
+                                         actionListener="#{cc.attrs.controlador.pesquisarBens()}"
+                                         process="@this :#{cc.clientId}:Formulario:tabViewPrincipal:panelBens
+                                                  :#{cc.clientId}:Formulario:tabViewPrincipal:panelDadosGerais"
+                                         styleClass="prioritario mtop10"
+                                         style="width: 150px"
+                                         onstart="aguarde.show();"/>
+
+                        <p:dataTable
+                            id="tabelaBens"
+                            value="#{cc.attrs.controlador.assistenteMovimentacao.bensDisponiveisVo}"
+                            var="bemVo"
+                            styleClass="mtop02"
+                            rowIndexVar="rowIx"
+                            rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                            rows="10"
+                            rowsPerPageTemplate="10,50,100,200,300"
+                            currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                            paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Bens&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                            paginator="true"
+                            emptyMessage="Não foram localizados registros para serem apresentados.">
+                            <f:facet name="header">
+                                <c:if test="#{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.isDepreciacao()}">
+
+                                    <h:outputText value="Qtde de Meses: "/>
+                                    <p:inputText
+                                        value="#{cc.attrs.controlador.quantidadeMeses}"
+                                        onkeypress="somenteNumeros(event, this, false, false, true)"
+                                        size="5"/>
+
+                                    <p:commandButton value="Aplicar Cálculo da Depreciação"
+                                                     title="Clique para aplicar o cálculo do valor depreciável para cada bem."
+                                                     icon="ui-icon-transferthick-e-w"
+                                                     styleClass="mlef05"
+                                                     actionListener="#{cc.attrs.controlador.aplicarCalculoDepreciacao()}"
+                                                     update=":#{cc.clientId}:Formulario:tabViewPrincipal:tabelaBens"
+                                                     process="@this :#{cc.clientId}:Formulario:tabViewPrincipal:panelBens"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"/>
+                                </c:if>
+                            </f:facet>
+
+                            <p:column style="width:8px" headerText="Valores">
+                                <p:rowToggler/>
+                            </p:column>
+                            <p:column style="width: 5%; text-align: center;">
+                                <f:facet name="header">
+                                    <p:commandButton icon="ui-icon-check"
+                                                     styleClass="vinteLarguraVinteAltura"
+                                                     onstart="aguarde.show();"
+                                                     oncomplete="aguarde.hide();"
+                                                     process="@this"
+                                                     update="tabelaBens :#{cc.clientId}:Formulario:tabViewPrincipal:panelDadosGerais"
+                                                     rendered="#{!cc.attrs.controlador.assistenteMovimentacao.mostrarBotaoSelecionarTodos()}"
+                                                     disabled="#{bemVo.residual}"
+                                                     actionListener="#{cc.attrs.controlador.desmarcarTodos()}"/>
+                                    <p:commandButton
+                                        styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                        value=""
+                                        process="@this"
+                                        update="tabelaBens :#{cc.clientId}:Formulario:tabViewPrincipal:panelDadosGerais"
+                                        onstart="aguarde.show();"
+                                        oncomplete="aguarde.hide();"
+                                        rendered="#{cc.attrs.controlador.mostrarBotaoSelecionarTodos()}"
+                                        disabled="#{bemVo.residual}"
+                                        actionListener="#{cc.attrs.controlador.selecionarTodos()}"/>
+                                </f:facet>
+
+                                <p:commandButton icon="ui-icon-check"
+                                                 styleClass="vinteLarguraVinteAltura"
+                                                 process="@this"
+                                                 id="btnDesmarcar"
+                                                 update="tabelaBens :#{cc.clientId}:Formulario:tabViewPrincipal:panelDadosGerais"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide();"
+                                                 rendered="#{cc.attrs.controlador.assistenteMovimentacao.bemSelecionado(bemVo)}"
+                                                 disabled="#{bemVo.residual}"
+                                                 actionListener="#{cc.attrs.controlador.desmarcarItem(bemVo)}"/>
+
+                                <p:commandButton styleClass="vinteLarguraVinteAltura botao-select-desmarcado"
+                                                 value=""
+                                                 id="btnSelecionar"
+                                                 process="@this"
+                                                 update="tabelaBens :#{cc.clientId}:Formulario:tabViewPrincipal:panelDadosGerais"
+                                                 onstart="aguarde.show();"
+                                                 oncomplete="aguarde.hide()"
+                                                 rendered="#{!cc.attrs.controlador.assistenteMovimentacao.bemSelecionado(bemVo)}"
+                                                 disabled="#{bemVo.residual}"
+                                                 actionListener="#{cc.attrs.controlador.selecionarItem(bemVo)}"/>
+                            </p:column>
+                            <p:column headerText="Regi. Patrimonial" style="text-align: right">
+                                <h:outputLabel value="#{bemVo.identificacao}"/>
+                            </p:column>
+                            <p:column headerText="Descrição" style="text-align: left">
+                                <h:outputLabel value="#{bemVo.descricao}"/>
+                            </p:column>
+                            <p:column headerText="Unidade Orçamentária"
+                                      style="width: 25%; text-align: left;">
+                                <h:outputLabel value="#{bemVo.unidadeOrcamentaria}"/>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        Totais Bens Selecionados
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column
+                                headerText="#{cc.attrs.controlador.selecionado.tituloValorInicial}"
+                                styleClass="alinhamentoDireita"
+                                style="width: 10%; text-align: left;">
+                                <p:outputPanel id="valor-acumulado">
+                                    <h:outputLabel value="#{bemVo.bem.valorOriginal}"
+                                                   rendered="#{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.isOriginal()}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputLabel>
+
+                                    <h:outputLabel value="#{bemVo.bem.valorAcumuladoDaDepreciacao}"
+                                                   rendered="#{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.isDepreciacao()}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputLabel>
+
+                                    <h:outputLabel value="#{bemVo.bem.valorAcumuladoDaAmortizacao}"
+                                                   rendered="#{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.isAmortizacao()}">
+                                        <f:convertNumber pattern="#,##0.00"/>
+                                    </h:outputLabel>
+                                </p:outputPanel>
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputLabel
+                                            styleClass="negrito"
+                                            value="#{cc.attrs.controlador.valorlTotalInicial}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputLabel>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column headerText="Valor do Ajuste (R$)" style="width: 10%"
+                                      styleClass="alinhamentoDireita">
+                                <p:inputText value="#{bemVo.valorAjuste}"
+                                             style="text-align: right"
+                                             onkeydown="mascara(this, mvalor);"
+                                             id="inputAjuste"
+                                             maxlength="70"
+                                             styleClass="alinhamentoDireita"
+                                             disabled="#{!cc.attrs.controlador.assistenteMovimentacao.bemSelecionado(bemVo)}">
+                                    <f:convertNumber type="currency" pattern="#,##0.00"/>
+                                    <p:ajax update="@this :#{cc.clientId}:Formulario:tabViewPrincipal:tabelaBens"
+                                            event="blur"
+                                            process="@this"
+                                            listener="#{cc.attrs.controlador.calcularValorFinal(bemVo)}"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"/>
+                                </p:inputText>
+
+                                <h:outputLabel rendered="#{bemVo.residual}"
+                                               styleClass="laber label-warning branconegrito"
+                                               value="Residual"/>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            styleClass="negrito"
+                                            value="#{cc.attrs.controlador.valorTotalAjuste}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+                            <p:column
+                                headerText="#{cc.attrs.controlador.selecionado.tituloValorFinal}"
+                                styleClass="alinhamentoDireita"
+                                style="width: 10%; text-align: left;">
+                                <h:outputLabel
+                                    id="vl-final-ajuste"
+                                    value="#{bemVo.valorAjusteFinal}">
+                                    <f:convertNumber pattern="#,##0.00"/>
+                                </h:outputLabel>
+
+                                <f:facet name="footer">
+                                    <div align="right">
+                                        <h:outputText
+                                            styleClass="negrito"
+                                            value="#{cc.attrs.controlador.valorTotalFinal}">
+                                            <f:convertNumber pattern="#,##0.00"/>
+                                        </h:outputText>
+                                    </div>
+                                </f:facet>
+                            </p:column>
+
+                            <p:rowExpansion>
+                                <ad:detalhes-estado-bem estadoBem="#{bemVo.estadoResultante}"
+                                                        mostrarValorOriginal="true"/>
+                            </p:rowExpansion>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab title="Inconsistências">
+                    <p:outputPanel id="inconsistencias">
+                        <ad:inconsistencias-pesquisa-bens
+                            inconsistencias="#{cc.attrs.controlador.assistenteMovimentacao.mensagens}"/>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab title="Anexos">
+                    <p:outputPanel id="panelAnexos">
+                        <fc:filesUploadWP
+                            selecionado="#{cc.attrs.controlador.selecionado}"/>
+                    </p:outputPanel>
+                </p:tab>
+            </p:tabView>
+
+            <p:outputPanel id="alerta-inconsistencias">
+                <ad:alerta-pesquisa-com-inconsistencias
+                    render="#{cc.attrs.controlador.assistenteMovimentacao.hasInconsistencias()}"/>
+            </p:outputPanel>
+        </p:panel>
+
+
+        <p:commandButton value="Salvar"
+                         id="cbSalvar"
+                         styleClass="mtop10 mrig05 prioritario"
+                         style="height: 30px;"
+                         icon="ui-icon-disk"
+                         title="Clique para salvar o registro"
+                         actionListener="#{cc.attrs.controlador.salvar()}"
+                         onclick="aguarde.show()"
+                         disabled="#{cc.attrs.controlador.assistenteMovimentacao.bloquearAcoesTela}"
+        />
+        <p:commandButton value="Cancelar"
+                         id="cbCancelar"
+                         style="height: 30px;"
+                         styleClass="mtop10"
+                         icon="ui-icon-cancel"
+                         onclick="aguarde.show()"
+                         oncomplete="aguarde.hide()"
+                         title="Clique para cancelar e retornar a página anterior"
+                         actionListener="#{cc.attrs.controlador.cancelar()}"/>
+    </h:form>
+
+    <ad:barra-progresso-salvar-processo
+        header="Salvando Solicitação de Ajuste de Bens Móveis - #{cc.attrs.controlador.selecionado.tipoAjusteBemMovel.descricao}"
+        assistenteMovimentacao="#{cc.attrs.controlador.assistenteMovimentacao}"
+        actionListenerAcompanhaFuture="#{cc.attrs.controlador.consultarFutureSalvar()}"
+        actionListenerFinalizaFuture="#{cc.attrs.controlador.finalizarFutureSalvar()}"/>
+
+    <ad:barra-progresso-pesquisa-bem
+        actionListenerAcompanhaPesquisa="#{cc.attrs.controlador.acompanharPesquisa()}"
+        actionListenerFinalizaPesquisa="#{cc.attrs.controlador.finalizarPesquisa()}"
+        assistenteMovimentacao="#{cc.attrs.controlador.assistenteMovimentacao}"/>
+</cc:implementation>
+</html>

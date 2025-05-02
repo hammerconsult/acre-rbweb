@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <p:panel header="Exportação da Matriz de Saldo Contábil" id="panel-geral">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Tipo: "/>
+                    <h:selectOneMenu id="tipoBalancete"
+                                     value="#{exportacaoMatrizSaldoContabilControlador.selecionado.tipoBalanceteExportacao}"
+                                     title="Selecione um Tipo de geração do arquivo">
+                        <f:selectItems value="#{exportacaoMatrizSaldoContabilControlador.tiposDeBalancete}"
+                                       itemValue="#{t}"
+                                       itemLabel="#{t.descricao}"
+                                       var="t"/>
+                        <p:ajax process="@this" update="bimestre"/>
+                    </h:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Mês: "/>
+                    <h:selectOneMenu id="bimestre"
+                                     disabled="#{exportacaoMatrizSaldoContabilControlador.selecionado.tipoBalanceteExportacao eq 'ENCERRAMENTO'}"
+                                     value="#{exportacaoMatrizSaldoContabilControlador.selecionado.mes}"
+                                     title="Selecione um Mês">
+                        <f:selectItems value="#{exportacaoMatrizSaldoContabilControlador.meses}"
+                                       itemValue="#{m}"
+                                       itemLabel="#{m.descricao}"
+                                       var="m"/>
+                    </h:selectOneMenu>
+
+                    <h:outputText value="Unidade Gestora: "/>
+                    <p:autoComplete queryDelay="1000" id="unidadeGestora"
+                                    title="Informe o código ou a descrição da unidade gestora."
+                                    completeMethod="#{exportacaoMatrizSaldoContabilControlador.completarUnidadesGestoras}"
+                                    value="#{exportacaoMatrizSaldoContabilControlador.unidadeGestora}"
+                                    scrollHeight="250"
+                                    dropdown="true"
+                                    var="uni"
+                                    size="70"
+                                    itemLabel="#{uni}"
+                                    itemValue="#{uni.id}"
+                                    converter="#{unidadeGestoraControlador.converterGenerico}"
+                                    maxResults="30"/>
+                </h:panelGrid>
+            </p:panel>
+
+            <p:commandButton value="Buscar"
+                             icon="ui-icon-search"
+                             update="@form"
+                             process="@form"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             style="height: 30px;"
+                             styleClass="mrig05 mtop10"
+                             actionListener="#{exportacaoMatrizSaldoContabilControlador.buscarRegistros()}"
+                             title="Clique para visualizar as informações da MSC.">
+            </p:commandButton>
+
+
+            <p:commandButton value="Exportar"
+                             ajax="false"
+                             icon="ui-icon-excel"
+                             id="bt-gerar-excel"
+                             onclick="PrimeFaces.monitorDownload(start, stop)"
+                             style="height: 30px;"
+                             styleClass="mrig05 mtop10"
+                             title="Clique para fazer o download do arquivo gerado.">
+                <p:fileDownload value="#{exportacaoMatrizSaldoContabilControlador.exportar()}"/>
+            </p:commandButton>
+
+            <p:commandButton value="Cancelar"
+                             id="cbCancelar"
+                             style="height: 30px; width: 110px"
+                             styleClass="mrig05 mtop10"
+                             icon="ui-icon-cancel"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             actionListener="#{exportacaoMatrizSaldoContabilControlador.redireciona}"
+                             immediate="true"/>
+
+            <p:panel styleClass="mtop20">
+                <co:titulo-panel titulo="MSC" styleClass="mtop10"/>
+                <p:dataTable id="contas"
+                             value="#{exportacaoMatrizSaldoContabilControlador.msc}"
+                             var="conta"
+                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             paginator="true"
+                             styleClass="mtop02"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>MSC  &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                             emptyMessage="Não foram localizados registros para serem apresentados."
+                             rowIndexVar="rowlx">
+                    <p:column headerText="Código" styleClass="alinhamentoEsquerda"
+                              filterMatchMode="contains"
+                              filterBy="#{conta.codigo}">
+                        <h:outputText value="#{conta.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Tipo valor" styleClass="alinhamentoEsquerda"
+                              filterMatchMode="contains"
+                              filterBy="#{conta.tipoValor.toString()}">
+                        <h:outputText value="#{conta.tipoValor.toString()}"/>
+                    </p:column>
+                    <p:column headerText="Valor Débito" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{conta.debito}" converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Valor Crédito" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{conta.credito}" converter="moneyConverter"/>
+                    </p:column>
+                </p:dataTable>
+
+                <table>
+                    <tr>
+                        <td>
+                            <co:titulo-panel titulo="MSC - Resumida" styleClass="mtop10"/>
+                            <p:dataTable
+                                value="#{exportacaoMatrizSaldoContabilControlador.blc}"
+                                var="bal"
+                                rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                paginator="true"
+                                styleClass="mtop02"
+                                rows="10"
+                                paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>MSC - Resumida &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                emptyMessage="Não foram localizados registros para serem apresentados."
+                                rowIndexVar="rowlx">
+                                <p:column headerText="Código">
+                                    <h:outputText value="#{bal.codigo}"/>
+                                </p:column>
+                                <p:column headerText="Saldo anterior" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{bal.saldoAnterior}" converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Valor Débito" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{bal.debito}" converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Valor Crédito" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{bal.credito}" converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{bal.atual}" converter="moneyConverter"/>
+                                </p:column>
+                            </p:dataTable>
+                        </td>
+                        <td><co:titulo-panel titulo="Balancete Contábil" styleClass="mtop10"/>
+                            <p:dataTable
+                                value="#{exportacaoMatrizSaldoContabilControlador.blcContabil}"
+                                var="blcContabil"
+                                rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                paginator="true"
+                                styleClass="mtop02"
+                                rows="10"
+                                paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>Balancete Contábil  &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                emptyMessage="Não foram localizados registros para serem apresentados."
+                                rowIndexVar="rowlx">
+                                <p:column headerText="Código">
+                                    <h:outputText value="#{blcContabil.codigo}"/>
+                                </p:column>
+                                <p:column headerText="Saldo anterior" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{blcContabil.saldoAnterior}" converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Valor Débito" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{blcContabil.debito}" converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Valor Crédito" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{blcContabil.credito}" converter="moneyConverter"/>
+                                </p:column>
+                                <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                                    <h:outputText value="#{blcContabil.atual}" converter="moneyConverter"/>
+                                </p:column>
+                            </p:dataTable>
+                        </td>
+                    </tr>
+                </table>
+
+
+                <co:titulo-panel titulo="Diferença" styleClass="mtop10"/>
+                <co:mensagem mensagem="Nenhuma diferença foi encontrada entre a MSC com o BALANCETE CONTABIL."
+                             rendered="#{exportacaoMatrizSaldoContabilControlador.blcDiferenca.isEmpty()}"/>
+
+                <p:dataTable
+                    value="#{exportacaoMatrizSaldoContabilControlador.blcDiferenca}"
+                    rendered="#{!exportacaoMatrizSaldoContabilControlador.blcDiferenca.isEmpty()}"
+                    var="blcDiferenca"
+                    rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                    paginator="true"
+                    styleClass="mtop02"
+                    rows="10"
+                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10' maiuscula>Diferença &lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                    emptyMessage="Não foram localizados registros para serem apresentados."
+                    rowIndexVar="rowlx">
+                    <p:column headerText="Código" styleClass="alinhamentoEsquerda"
+                              filterMatchMode="contains"
+                              filterBy="#{blcDiferenca.codigo}">
+                        <h:outputText value="#{blcDiferenca.codigo}"/>
+                    </p:column>
+                    <p:column headerText="Saldo anterior" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{blcDiferenca.saldoAnterior}" converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Valor Débito" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{blcDiferenca.debito}" converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Valor Crédito" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{blcDiferenca.credito}" converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Saldo Atual" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{blcDiferenca.atual}" converter="moneyConverter"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

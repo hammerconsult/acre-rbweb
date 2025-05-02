@@ -1,0 +1,1 @@
+update cadastroimobiliariohist set auditoria = 0 where auditoria is null;

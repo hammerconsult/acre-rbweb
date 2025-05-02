@@ -1,0 +1,631 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+    >
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function iniciaExportacao() {
+                dialog.show();
+                $('.botaoFimProcesso').css('display', 'none');
+                timer = setInterval(function () {
+                    posExportacao();
+                }, 1000);
+
+            }
+
+            function ocorreuErro() {
+                clearInterval(timer);
+                finalExportacao();
+                dialog.hide();
+            }
+
+            function terminaExportacao() {
+                clearInterval(timer);
+                $('.botaoFimProcesso').css('display', 'block');
+                finalExportacao();
+            }
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand name="posExportacao" actionListener="#{arquivoRemessaBancoControlador.posExportacao}"
+                             update=":formDialog:barra"/>
+            <p:remoteCommand name="finalExportacao" update=":formDialog:botao"/>
+
+            <fc:cabecalhoPretty auditavel="#{true}" controlador="#{arquivoRemessaBancoControlador}"
+                                origem="#{arquivoRemessaBancoControlador.caminhoPadrao}listar/"/>
+            <p:panel header="Detalhes do Arquivo OBN600">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Número: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.numero}"
+                                  id="numero"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Data de Geração: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.dataGeracao}"
+                                  styleClass="negrito">
+                        <f:convertDateTime type="date"/>
+                    </h:outputText>
+
+                    <h:outputText value="Transmitido: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.transmitido ? 'Sim' : 'Não'}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Banco: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.banco}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Qtde de Ordens Bancárias: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.qntdDocumento}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Valor: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.valorTotalBor}"
+                                  styleClass="negrito" converter="moneyConverter"/>
+
+                    <h:outputText value="Layout: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.layoutArquivoBordero}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Contrato: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.contratoObn.numeroContrato}"
+                                  styleClass="negrito"/>
+
+                    <h:outputText value="Número Header: "/>
+                    <h:outputText value="#{arquivoRemessaBancoControlador.selecionado.contratoObn.numeroHeaderObn600}"
+                                  styleClass="negrito"/>
+                </h:panelGrid>
+
+                <p:dataTable value="#{arquivoRemessaBancoControlador.selecionado.arquivoRemBancoBorderos}"
+                             id="tabelaBordero"
+                             var="b"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             paginator="true"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ORDENS BANCÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="5,10,25,50,100">
+
+                    <p:column headerText="Ações" style="text-align: center; width: 13%">
+                        <fc:botaoTargetBlank
+                            actionListener="#{arquivoRemessaBancoControlador.visualizarBordero(b.bordero)}"
+                            icon="ui-icon-search"
+                            styleClass="mrig03 ui-button-icon-left ui-icon"
+                            style="width: 30px!important;min-width: 30px!important;height: 25px!important;min-height: 25px!important;"
+                            title="Clique para visualizar a ordem bancária."/>
+
+                        <p:commandButton icon="ui-icon-deferir"
+                                         title="Clique para indeferir a ordem bancária."
+                                         update=":Formulario:tabelaBordero"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         process="@this"
+                                         rendered="#{arquivoRemessaBancoControlador.podeIndeferirOB(b)}"
+                                         styleClass="mlef10"
+                                         onclick="if (!confirm('Tem certeza que deseja indeferir este registro?')) {return false; } else {aguarde.show();}"
+                                         actionListener="#{arquivoRemessaBancoControlador.indeferirOrdemBancaria(b)}"/>
+
+                        <p:commandButton icon="ui-icon-arrowthick-1-s"
+                                         title="Clique para baixar a ordem bancária."
+                                         update=":Formulario:tabelaBordero"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         styleClass="mlef05"
+                                         process="@this"
+                                         rendered="#{arquivoRemessaBancoControlador.podeIndeferirOB(b)}"
+                                         actionListener="#{arquivoRemessaBancoControlador.baixarOrdemBancaria(b)}"
+                                         onclick="if(!confirm('Deseja baixar esta ordem bancária?')) return false;"/>
+                    </p:column>
+                    <p:column headerText="Número" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{b.bordero.sequenciaArquivo}"/>
+                    </p:column>
+                    <p:column headerText="Data de Geração" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{b.bordero.dataGeracao}">
+                            <f:convertDateTime type="date"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="Unidade Organizacional" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{b.bordero.unidadeOrganizacional}"/>
+                    </p:column>
+                    <p:column headerText="Conta Financeira" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{b.bordero.subConta.toStringAutoCompleteContaFinanceira()}"/>
+                    </p:column>
+                    <p:column headerText="Qtde" styleClass="alinhamentoCentralizado">
+                        <h:outputText value="#{b.bordero.qntdPagamentos}"/>
+                    </p:column>
+                    <p:column headerText="Situação" styleClass="alinhamentoEsquerda">
+                        <h:outputText value="#{b.bordero.situacao.descricao}"/>
+                    </p:column>
+                    <p:column headerText="Valor (R$)" styleClass="alinhamentoDireita">
+                        <h:outputText value="#{b.bordero.valor}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"/>
+                        <f:facet name="footer">
+                            <h:outputText value="Total: " styleClass="negrito"/>
+                            <h:outputText styleClass="negrito"
+                                          converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                          value="#{arquivoRemessaBancoControlador.valorTotalBorderosAdicionados}"/>
+                        </f:facet>
+                    </p:column>
+                </p:dataTable>
+
+
+                <p:panel styleClass="semBorda mtop10">
+                    <p:outputPanel rendered="#{arquivoRemessaBancoControlador.possuiDiferencaNoValidador()}">
+                        <div class="alert alert-error">
+                            <strong>Atenção!</strong>
+                            <h:outputText value=" Arquivo com inconsistência de valores."/>
+                        </div>
+                    </p:outputPanel>
+
+                    <p:outputPanel rendered="#{!arquivoRemessaBancoControlador.possuiDiferencaNoValidador()}">
+                        <div class="alert alert-success">
+                            <strong>Validado!</strong>
+                            <h:outputText value=" Arquivo sem inconsistência de valores."/>
+                        </div>
+                    </p:outputPanel>
+
+                    <h:panelGrid columns="4" cellspacing="2">
+                        <h:outputText value="Total Itens da OB: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalItensDaOrdemBancaria}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito mrig50"/>
+
+                        <h:outputText value="Total de Recurso Próprio: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalRecursoProprio}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Total dos Movimentos da OB: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalMovimentosDaOrdemBancaria}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Total de Outras Fontes: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalOutrasFontes}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Total de Guias de Pagamento: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalGuiasPagamento}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Total do Arquivo: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalArquivo}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Total de Guias de Despesa Extra: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalGuiasPagamentoExtra}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Total da OB: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalOrdemBancaria}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+
+                        <h:outputText value="Total Geral de Guias: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.valorTotalGuias}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText/>
+                        <h:outputText/>
+
+                        <h:outputText value="Diferença: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.diferencaTotalArquivo}"
+                                      converter="#{arquivoRemessaBancoControlador.moneyConverter}"
+                                      styleClass="#{arquivoRemessaBancoControlador.possuiDiferencaNoValidador() ? 'alinhamentoCentralizado vermelhonegrito' : 'alinhamentoCentralizado verdenegrito'}"/>
+
+                        <h:outputText value="Inconsistência na OB: "/>
+                        <h:outputText value="#{arquivoRemessaBancoControlador.ordemBancariaComDiferencaValor}"
+                                      rendered="#{arquivoRemessaBancoControlador.possuiDiferencaNoValidador()}"
+                                      styleClass="vermelhonegrito"/>
+
+                        <h:outputText value="Sem Inconsistência"
+                                      rendered="#{!arquivoRemessaBancoControlador.possuiDiferencaNoValidador()}"
+                                      styleClass="verdenegrito"/>
+                    </h:panelGrid>
+                    <hr class="mtop10  mbot10"/>
+                </p:panel>
+
+                <h:panelGrid columns="3">
+                    <h:outputText value="Gerar Arquivo de Teste: "/>
+                    <p:selectBooleanCheckbox value="#{arquivoRemessaBancoControlador.selecionado.gerarArquivoTeste}">
+                        <p:ajax event="change"
+                                oncomplete="aguarde.hide()"
+                                onstart="aguarde.show()"/>
+                    </p:selectBooleanCheckbox>
+
+                    <div class="alert alert-info">
+                        Ao marcar essa opção, o arquivo obn600 será gerado como 'TESTE', para validação junto ao banco.
+                    </div>
+                </h:panelGrid>
+            </p:panel>
+
+            <p:commandButton value="Gerar Arquivo"
+                             id="gerarArquivo"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide();dialogTransmitir.show()"
+                             title="Clique para fazer o download do arquivo OBN600."
+                             disabled="#{arquivoRemessaBancoControlador.selecionado.transmitido eq true or arquivoRemessaBancoControlador.possuiDiferencaNoValidador()}"
+                             styleClass="mtop10 prioritario mrig05"
+                             icon="ui-icon-download"
+                             style="height: 30px"
+                />
+
+            <p:commandButton value="Indeferir"
+                             id="btIndeferir"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             title="Clique para indeferir a ordem bancária."
+                             rendered="#{arquivoRemessaBancoControlador.selecionado.transmitido eq false}"
+                             styleClass="mtop10 mrig05"
+                             icon="ui-icon-deferir"
+                             onclick="if (!confirm('Tem certeza que deseja indeferir toda(s) ordem()ns bancária(s)?')) {return false; } else {aguarde.show();}"
+                             actionListener="#{arquivoRemessaBancoControlador.indeferirArquivo}"
+                             style="height: 30px;width: 100px"
+                />
+
+            <p:commandButton value="Verificar Valores"
+                             onstart="aguarde.show()"
+                             rendered="#{arquivoRemessaBancoControlador.possuiDiferencaNoValidador()}"
+                             oncomplete="aguarde.hide();validador.show();"
+                             title="Clique para verificar valores."
+                             styleClass="mtop10 prioritario mrig05"
+                             icon="ui-icon-gear"
+                             style="height: 30px"/>
+
+            <fc:rodapeVisualizarPretty controlador="#{arquivoRemessaBancoControlador}"
+                                       mostrarExcluir="#{arquivoRemessaBancoControlador.podeExcluir()}"/>
+
+            <fc:botaoTargetBlank label="Imprimir OB"
+                                 id="btImprimirOB"
+                                 styleClass="mtop10 mlef05"
+                                 style="height: 30px"
+                                 actionListener="#{arquivoRemessaBancoControlador.imprimirOBSelecionadas()}"/>
+
+        </h:form>
+
+        <p:dialog widgetVar="dialogTransmitir"
+                  position="center"
+                  id="dialogTrans"
+                  showHeader="false"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true">
+
+            <h:form id="formTransmitir">
+                <div align="center">
+                    <p:panel header="Download do Arquivo" styleClass="mtop05 mbot05">
+
+                        <br/>
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Incluir Linha 1? "/>
+                            <p:selectOneRadio value="#{arquivoRemessaBancoControlador.selecionado.gerarLinhaTipoUm}">
+                                <f:selectItem itemValue="#{true}" itemLabel="Sim"/>
+                                <f:selectItem itemValue="#{false}" itemLabel="Não"/>
+                            </p:selectOneRadio>
+
+                            <h:outputText value="Transmitir Arquivo: "/>
+                            <h:panelGrid columns="2" cellspacing="0" cellpadding="0">
+                                <p:selectOneRadio value="#{arquivoRemessaBancoControlador.selecionado.transmitido}">
+                                    <f:selectItem itemValue="#{true}" itemLabel="Sim"/>
+                                    <f:selectItem itemValue="#{false}" itemLabel="Não"/>
+                                    <p:ajax update=":Formulario:gerarArquivo"
+                                            event="change"
+                                            oncomplete="aguarde.hide()"
+                                            onstart="aguarde.show()"/>
+                                </p:selectOneRadio>
+
+                                <co:botao_informacao
+                                    descricao="&lt;b>Sim: &lt;/b>Não será permitido gerar o arquivo novamente.&lt;br/>&lt;br/>
+                                                &lt;b>Não: &lt;/b>Poderá gerar o arquivo novamente. "
+                                    style="heigth: 30px;width: 30px"
+                                    styleClass="botao-transparente"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+
+                        <p:commandButton value="Download"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide();"
+                                         styleClass="mtop20 prioritario padrao"
+                                         title="Clique para fazer o download do arquivo OBN600."
+                                         icon="ui-icon-download"
+                                         actionListener="#{arquivoRemessaBancoControlador.gerarArquivoOBN600()}"/>
+
+                        <p:commandButton value="Confirmar"
+                                         onstart="aguarde.show()"
+                                         oncomplete="aguarde.hide();dialogTransmitir.hide()"
+                                         actionListener="#{arquivoRemessaBancoControlador.confirmarDownload}"
+                                         process="@this"
+                                         title="Clique para confirmar e retornar a lista de arquivos."
+                                         styleClass="mtop20 padrao mlef05"
+                                         icon="ui-icon-check"
+                            />
+                    </p:panel>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog modal="true" width="800" id="dlgExportando" widgetVar="dialog" closable="false">
+
+            <div class="alert alert-info centralizado" id="mensagemFim">
+                <strong>Gerando arquivo!</strong><br/>
+                <span id="mgsAguarde">Aguarde!</span><br/><br/>
+                <h:form id="formDialog">
+                    <p:outputPanel id="barra">
+                        <div class="alinhamentoCentralizado">
+                            <h:outputText
+                                value="#{arquivoRemessaBancoControlador.assistenteBarraProgresso.porcentagemDoCalculo}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>%
+                        </div>
+                        <div class="progress progress-striped active" id="barraProgresso">
+                            <div class="bar"
+                                 style="width: #{arquivoRemessaBancoControlador.assistenteBarraProgresso.porcentagemDoCalculo}%;"></div>
+                        </div>
+                    </p:outputPanel>
+                    <p:outputPanel id="botao">
+                        <div class="botaoFimProcesso">
+                            <p:commandButton ajax="false" value="Baixar o Arquivo"
+                                             styleClass="operacao"
+                                             icon="ui-icon-download"
+                                             onclick="dialog.hide()"
+                                             actionListener="#{arquivoRemessaBancoControlador.downloadExportacao}"/>
+                        </div>
+                    </p:outputPanel>
+                </h:form>
+            </div>
+        </p:dialog>
+
+        <p:dialog widgetVar="validador"
+                  position="center"
+                  id="dialogoValidador"
+                  header="Validador de Valores"
+                  modal="true"
+                  dynamic="true">
+
+            <h:form id="Formulario-validador">
+                <p:dataTable value="#{arquivoRemessaBancoControlador.validadores}"
+                             id="tabelaValidador"
+                             var="b"
+                             rowKey="#{b.id}"
+                             rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                             rowIndexVar="rowIx"
+                             styleClass="mtop05"
+                             paginator="true"
+                             emptyMessage="Não foram localizados registros para serem apresentados"
+                             rows="10"
+                             paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>ORDENS BANCÁRIAS&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                             rowsPerPageTemplate="10,25,50,100">
+
+                    <p:column headerText="Número"
+                              filterBy="#{b.bordero}"
+                              sortBy="#{b.bordero}"
+                              filterMatchMode="contains">
+                        <h:outputText value="#{b.bordero}" styleClass="alinhamentoDireita"/>
+                    </p:column>
+                    <p:column headerText="Total de Pagamento"
+                              filterBy="#{b.pagamento}"
+                              sortBy="#{b.pagamento}"
+                              filterMatchMode="contains">
+                        <h:outputText value="#{b.pagamento}" styleClass="alinhamentoDireita"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Total de Despesa Extra"
+                              filterBy="#{b.despesaExtra}"
+                              sortBy="#{b.despesaExtra}"
+                              filterMatchMode="contains">
+                        <h:outputText value="#{b.despesaExtra}" styleClass="alinhamentoDireita"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Total dos Movimentos"
+                              filterBy="#{b.totalMovimentos}"
+                              sortBy="#{b.totalMovimentos}"
+                              filterMatchMode="contains">
+                        <h:outputText value="#{b.totalMovimentos}" styleClass="alinhamentoDireita"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Total do Item O.B."
+                              filterBy="#{b.valorItemBordero}"
+                              sortBy="#{b.valorItemBordero}"
+                              filterMatchMode="contains">
+                        <h:outputText value="#{b.valorItemBordero}" styleClass="alinhamentoDireita"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Total da O.B."
+                              filterBy="#{b.totalBordero}"
+                              sortBy="#{b.totalBordero}"
+                              filterMatchMode="contains">
+                        <h:outputText value="#{b.totalBordero}" styleClass="alinhamentoDireita"
+                                      converter="moneyConverter"/>
+                    </p:column>
+                    <p:column headerText="Possui Diferença"
+                              filterBy="#{utilBean.converterBooleanSimOuNao(b.possuiDiferenca)}"
+                              sortBy="#{utilBean.converterBooleanSimOuNao(b.possuiDiferenca)}"
+                              filterMatchMode="contains">
+                        <h:outputText value="#{utilBean.converterBooleanSimOuNao(b.possuiDiferenca)}"
+                                      styleClass="#{b.possuiDiferenca ? 'alinhamentoCentralizado vermelhonegrito' : 'alinhamentoCentralizado'}"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+        </p:dialog>
+
+
+        <p:dialog widgetVar="dialogMsgErro"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;">
+            <h:form id="formDialogErro">
+                <center>
+                    <p:panel id="panelDialogErro" styleClass="mtop05 mbot05">
+                        <div class="alert alert-error">
+                            <h:outputText
+                                value="A(s) guia(s) relacionada(s) abaixo, possuem data de pagamento(D+1) menor que a data do arquivo obn600."/>
+                        </div>
+
+                        <p:scrollPanel mode="native" style="height: 300px; border: 0px">
+
+                            <p:outputPanel rendered="#{!empty arquivoRemessaBancoControlador.listaGuiasPagamentos}">
+                                <div align="left" class="mtop05 negrito">
+                                    <h:outputText value="GUIA DE PAGAMENTO"/>
+                                </div>
+                                <table id="guiaPagamento" class="table table-hover table-condensed"
+                                       style="border-radius: 0px">
+                                    <tr>
+                                        <th>
+                                            <h:outputText value="Tipo de Guia"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="Data de Pagamento"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="Unidade"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="N° Pagamento"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="N° O.B."/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="Valor"/>
+                                        </th>
+                                    </tr>
+                                    <ui:repeat value="#{arquivoRemessaBancoControlador.listaGuiasPagamentos}"
+                                               var="guiaPag">
+                                        <tr class="#{arquivoRemessaBancoControlador.verificarGuiaEmergencial(guiaPag) ? 'fundo-verde' : ''}"
+                                            title="Esta guia pode ser paga como emergencial.">
+                                            <td>
+                                                <h:outputText value="#{guiaPag.getTipoDeGuia(guiaPag.pagamento)}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaPag.dataPagamento}">
+                                                    <f:convertDateTime type="date"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td>
+                                                <h:outputText
+                                                    value="#{arquivoRemessaBancoControlador.getCodigoHierarquia(guiaPag)}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaPag.pagamento.numeroPagamento}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaPag.pagamento.numDocumento}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaPag.valorTotalPorGuia}">
+                                                    <f:convertNumber type="currency"/>
+                                                </h:outputText>
+                                            </td>
+                                        </tr>
+                                    </ui:repeat>
+                                </table>
+                            </p:outputPanel>
+
+                            <p:outputPanel rendered="#{!empty arquivoRemessaBancoControlador.listaGuiasDespesaExtra}">
+                                <div align="left" class="mtop10 negrito">
+                                    <h:outputText value="GUIA DE DESPESA EXTRA"/>
+                                </div>
+                                <table id="guiaPagamentoExtra" class="table table-hover table-condensed"
+                                       style="border-radius: 0px">
+                                    <tr>
+                                        <th>
+                                            <h:outputText value="Tipo de Guia"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="Data de Pagamento"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="Unidade"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="N° Despesa"/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="N° O.B."/>
+                                        </th>
+                                        <th>
+                                            <h:outputText value="Valor"/>
+                                        </th>
+                                    </tr>
+                                    <ui:repeat value="#{arquivoRemessaBancoControlador.listaGuiasDespesaExtra}"
+                                               var="guiaDesp">
+                                        <tr class="#{arquivoRemessaBancoControlador.verificarGuiaEmergencialDespesaExtra(guiaDesp) ? 'fundo-verde' : ''}"
+                                            title="Esta guia pode ser paga como emergencial.">
+                                            <td>
+                                                <h:outputText
+                                                    value="#{guiaDesp.getTipoDeGuia(guiaDesp.pagamentoExtra)}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaDesp.dataPagamento}">
+                                                    <f:convertDateTime type="date"/>
+                                                </h:outputText>
+                                            </td>
+                                            <td>
+                                                <h:outputText
+                                                    value="#{arquivoRemessaBancoControlador.getCodigoHierarquia(guiaDesp)}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaDesp.pagamentoExtra.numero}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaDesp.pagamentoExtra.numeroPagamento}"/>
+                                            </td>
+                                            <td>
+                                                <h:outputText value="#{guiaDesp.valorTotalPorGuia}">
+                                                    <f:convertNumber type="currency"/>
+                                                </h:outputText>
+                                            </td>
+                                        </tr>
+                                    </ui:repeat>
+                                </table>
+                            </p:outputPanel>
+                        </p:scrollPanel>
+
+                        <h:panelGrid columns="2" styleClass="mtop10">
+
+                            <p:commandButton value="Confirmar"
+                                             icon="ui-icon-check"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             styleClass="padrao"
+                                             title="Clique voltar a lista de arquivos bancários."
+                                             actionListener="#{arquivoRemessaBancoControlador.redireciona()}"/>
+
+                            <fc:botaoTargetBlank id="btImprimir"
+                                                 label="Imprimir"
+                                                 styleClass="padrao mlef05"
+                                                 title="Clique para gerar pdf."
+                                                 actionListener="#{arquivoRemessaBancoControlador.gerarPDFGuia()}"/>
+                        </h:panelGrid>
+                    </p:panel>
+                </center>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

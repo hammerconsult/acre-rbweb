@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui" xmlns:H="http://java.sun.com/jsf/html"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <script type="text/javascript"
+                src="http://sit.riobranco.ac.gov.br/mapa.js?key=34KEzpj7iTKK654_qdZ0Bn7mHI807ljqgLoiKAA"
+                charset="utf-8">
+
+        </script>
+
+        <script type="text/javascript">
+            var mapa;
+
+            function verIncricao(inscricao) {
+                if (mapa === undefined) {
+                    mapa = SITGeo_criarMapa('mapa');
+                }
+                getLote(inscricao);
+                exibeCentraliza(inscricao);
+            }
+
+            function getLote(inscricao) {
+                setTimeout(function (inscricao) {
+                    if (mapa.lotes !== undefined) {
+                        mapa.lotes.SITGeo_getLote(inscricao);
+                    } else {
+                        getLote(inscricao);
+                    }
+                }, 500, inscricao);
+            }
+
+            function exibeCentraliza(iq) {
+                setTimeout(function (iq) {
+                    if (mapa.lotes[iq] !== undefined) {
+                        mapa.lotes.SITGeo_exibirLote(true, mapa.lotes[iq]);
+                        mapa.lotes.SITGeo_centralizarLote(iq);
+                    } else {
+                        exibeCentraliza(iq);
+                    }
+                }, 500, iq);
+            }
+        </script>
+
+        <h:form id="Formulario">
+            <p:remoteCommand process="@this"
+                             name="centralizarMapa"
+
+                             actionListener="#{localEstoqueControlador.verInscricaoMapa()}"/>
+
+            <fc:cabecalhoPretty id="cpCabecalhoPretty" origem="#{localEstoqueControlador.caminhoPadrao}listar/"
+                                controlador="#{localEstoqueControlador}"/>
+
+            <p:tabView id="tabGeral">
+                <p:tab title="Local de Estoque" id="tabPrincipal">
+                    <h:panelGrid columns="2" cellpadding="3" cellspacing="3">
+                        <fc:outputLabelObrigatorio value="Código:" for="codigo"/>
+                        <h:panelGroup>
+                            <p:inputMask title="Digite o codigo do Local Estoque"
+                                         value="#{localEstoqueControlador.selecionado.codigo}"
+                                         id="codigo" maxlength="20" size="20"
+                                         readonly="#{localEstoqueControlador.bloquearCodigo()}"
+                                         mask="#{localEstoqueControlador.mascaraDoCodigo}"
+                                         styleClass="mrig05">
+                                <p:ajax process="@this panelArvore" event="valueChange" update="panelArvore"/>
+                            </p:inputMask>
+
+                            <h:outputText value="#{localEstoqueControlador.getMensagemMotivoBloqueioCodigo()}"
+                                          rendered="#{localEstoqueControlador.bloquearCodigo()}"
+                                          styleClass="azulnegrito mrig05"/>
+                        </h:panelGroup>
+
+                        <fc:outputLabelObrigatorio value="Tipo de Estoque:" for="tipoestoque"/>
+                        <h:selectOneMenu id="tipoestoque"
+                                         disabled="#{localEstoqueControlador.alterarTipoEstoque}"
+                                         value="#{localEstoqueControlador.selecionado.tipoEstoque}">
+                            <f:selectItems value="#{localEstoqueControlador.itensTipoLocalEstoque}" var="tipo"
+                                           itemValue="#{tipo}" itemLabel="#{tipo.descricao}"/>
+                            <p:ajax event="valueChange" process="@this" update="@this"/>
+                        </h:selectOneMenu>
+
+                        <h:outputText value="Unidade Administrativa Superior: "
+                                      rendered="#{localEstoqueControlador.isLocalEstoqueFilho()}"/>
+                        <fc:codigo-descricao-hierarquia
+                            styleClass="negrito"
+                            unidadeOrganizacional="#{localEstoqueControlador.selecionado.unidadeOrganizacional}"
+                            tipoHierarquia="ADMINISTRATIVA"
+                            rendered="#{localEstoqueControlador.isLocalEstoqueFilho()}"
+                            dataMovimento="#{localEstoqueControlador.dataOperacao}"/>
+
+                        <fc:outputLabelObrigatorio value="Unidade Administrativa:"/>
+                        <p:autoComplete queryDelay="1000"
+                                        id="unidadeSelecionada"
+                                        value="#{localEstoqueControlador.hierarquiaSelecionada}"
+                                        completeMethod="#{localEstoqueControlador.completaUnidadeOrganizacional}"
+                                        var="ho" size="70"
+                                        maxResults="50"
+                                        dropdown="true"
+                                        panelStyle="max-height: 250px; max-width: 800px"
+                                        itemLabel="#{ho.toString()}"
+                                        itemValue="#{ho.id}"
+                                        converter="#{hierarquiaOrganizacionalControlador.converterHierarquiaOrganizacional}">
+                            <p:ajax event="itemSelect"
+                                    update="outputgestores descricao"
+                                    listener="#{localEstoqueControlador.limparListaDeGestor()}"
+                                    process="@this"
+                                    onstart="aguarde.show();"
+                                    oncomplete="aguarde.hide();"/>
+                        </p:autoComplete>
+
+                        <h:outputText value="Superior:"
+                                      rendered="#{localEstoqueControlador.isLocalEstoqueFilho()}"/>
+                        <h:outputText value="#{localEstoqueControlador.selecionado.superior}"
+                                      rendered="#{localEstoqueControlador.isLocalEstoqueFilho()}"
+                                      id="superior"
+                                      styleClass="negrito"/>
+
+                        <fc:outputLabelObrigatorio value="Descrição:" for="descricao"/>
+                        <p:inputText id="descricao" title="Digite a descrição do Local Estoque"
+                                     value="#{localEstoqueControlador.selecionado.descricao}"
+                                     maxlength="70"
+                                     size="70">
+                            <p:ajax process="@this panelArvore" event="valueChange" update="panelArvore"/>
+                        </p:inputText>
+
+                        <h:outputText value="Fechado em:"/>
+                        <p:calendar value="#{localEstoqueControlador.selecionado.fechadoEm}"
+                                    id="fechadoEm" title="Informe a data de Fechamento"
+                                    size="15"
+                                    pattern="dd/MM/yyyy" showOn="button" onkeyup="mascara(this, mdata)"/>
+
+                        <h:outputText value="Utilização de PIN:"
+                                      rendered="#{!localEstoqueControlador.isLocalEstoqueFilho()}"/>
+                        <h:selectOneMenu id="pin" rendered="#{!localEstoqueControlador.isLocalEstoqueFilho()}"
+                                         value="#{localEstoqueControlador.selecionado.utilizarPin}">
+                            <f:selectItem itemValue="#{null}" itemLabel=""/>
+                            <f:selectItem itemValue="#{true}" itemLabel="Sim"/>
+                            <f:selectItem itemValue="#{false}" itemLabel="Não"/>
+                            <p:ajax event="valueChange" process="@this" update="@this"/>
+                        </h:selectOneMenu>
+                    </h:panelGrid>
+
+                    <br/>
+
+                    <p:tabView>
+                        <p:tab title="Materiais" id="tabMaterialExistente">
+                            <p:outputPanel id="panelMaterialExistente">
+                                <p:dataTable
+                                    rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                    rowIndexVar="rowIx"
+                                    styleClass="mtop05"
+                                    emptyMessage="Não foram localizados registros para serem apresentados"
+                                    rows="10"
+                                    lazy="true"
+                                    paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                    rowsPerPageTemplate="10,25,50,100"
+                                    id="tableMaterial"
+                                    value="#{localEstoqueControlador.model}"
+                                    var="lem" paginator="true"
+                                    style="margin-top: 10px;">
+
+                                    <p:column headerText="Código" style="width: 5%;"
+                                              styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{lem.material.codigo}"/>
+                                    </p:column>
+                                    <p:column headerText="Descrição" style="width: 30%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{lem.material.descricao}"
+                                                      title="#{lem.material.descricaoComplementar}"/>
+                                    </p:column>
+                                    <p:column headerText="Objeto de Compra" style="width: 30%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{lem.material.objetoCompra}"
+                                                      title="#{lem.material.objetoCompra}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo Material" style="width: 25%;"
+                                              styleClass="alinhamentoEsquerda">
+                                        <h:outputText value="#{lem.material.grupo}"
+                                                      title="#{lem.material.grupo}"/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Medida" style="width: 5%;"
+                                              styleClass="alinhamentoCentralizado">
+                                        <h:outputText value="#{lem.material.unidadeMedida.sigla}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </p:tab>
+                    </p:tabView>
+                </p:tab>
+
+                <p:tab title="Gestores">
+                    <p:outputPanel id="outputgestores">
+                        <h:panelGrid columns="2">
+                            <fc:outputLabelObrigatorio value="Gestor: "/>
+                            <p:autoComplete
+                                value="#{localEstoqueControlador.gestorLocalEstoqueSelecionado.usuarioSistema}"
+                                completeMethod="#{localEstoqueControlador.completaUsuariosGestoresDeMateriaisDaUnidade}"
+                                converter="#{usuarioSistemaControlador.converterGenerico}"
+                                var="usugestor"
+                                queryDelay="1000"
+                                maxResults="50"
+                                dropdown="true"
+                                panelStyle="max-height: 230px;max-width: 800px"
+                                size="70"
+                                itemValue="#{usugestor.id}"
+                                itemLabel="#{usugestor.pessoaFisica.toString()}">
+                            </p:autoComplete>
+
+                            <fc:outputLabelObrigatorio value="Início de Vigência:"/>
+                            <p:calendar id="iniciovigencia"
+                                        onkeypress="mascara(this, mdata)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        autocomplete="off"
+                                        locale="pt_BR"
+                                        value="#{localEstoqueControlador.gestorLocalEstoqueSelecionado.inicioVigencia}"
+                                        navigator="true" size="15"
+                                        pattern="dd/MM/yyyy" showOn="button">
+                            </p:calendar>
+
+                            <h:outputLabel value="Fim de Vigência:"/>
+                            <p:calendar id="iniciofim"
+                                        onkeypress="mascara(this, mdata)"
+                                        maxlength="10"
+                                        style="text-align: right"
+                                        autocomplete="off"
+                                        locale="pt_BR"
+                                        value="#{localEstoqueControlador.gestorLocalEstoqueSelecionado.fimVigencia}"
+                                        navigator="true" size="15"
+                                        pattern="dd/MM/yyyy" showOn="button">
+                            </p:calendar>
+                        </h:panelGrid>
+                        <p:commandButton value="Confirmar"
+                                         styleClass="padrao mrig05 mtop05"
+                                         onclick="aguarde.show()"
+                                         oncomplete="aguarde.hide()"
+                                         process="outputgestores"
+                                         title="Clique para confirmar o gestor."
+                                         update="outputgestores"
+                                         actionListener="#{localEstoqueControlador.confirmarGestor()}"
+                                         icon="ui-icon-check"/>
+
+                        <p:commandButton value="Cancelar"
+                                         process="@this"
+                                         styleClass="padrao mtop05"
+                                         onclick="aguarde.show();"
+                                         oncomplete="aguarde.hide()"
+                                         title="Clique para cancelar o gestor."
+                                         actionListener="#{localEstoqueControlador.cancelarGestor()}"
+                                         update="outputgestores"
+                                         icon="ui-icon-cancel"/>
+
+                        <p:dataTable paginator="true"
+                                     id="tabela-gestores"
+                                     rowStyleClass="#{empty rowIx or rowIx mod 2 ne 0 ? 'linha-selecionada trintaAltura' : 'trintaAltura'}"
+                                     rowIndexVar="rowIx"
+                                     styleClass="mtop05"
+                                     emptyMessage="Não foram localizados registros para serem apresentados"
+                                     value="#{localEstoqueControlador.selecionado.listaGestorLocalEstoque}"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport}  &lt;span class='titulo-tabela mrig10'>GESTOR(ES) DO LOCAL DE ESTOQUE&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="({startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages})"
+                                     rowsPerPageTemplate="10,25,50,100"
+                                     var="gestor">
+
+                            <p:column headerText="Ações" styleClass="alinhamentoCentralizado" style="width: 30px;">
+                                <p:commandButton icon="ui-icon-trash"
+                                                 process="@this"
+                                                 onclick="if (!confirm('Tem certeza que deseja remover este registro?')) {return false; } else {aguarde.show();}"
+                                                 oncomplete="aguarde.hide()"
+                                                 rendered="#{!localEstoqueControlador.isVisualizar()}"
+                                                 actionListener="#{localEstoqueControlador.removerGestor(gestor)}"
+                                                 title="Clique para remover este registro."
+                                                 update="tabela-gestores"/>
+                            </p:column>
+                            <p:column headerText="Gestor" styleClass="alinhamentoEsquerda">
+                                <h:outputText value="#{gestor.usuarioSistema.pessoaFisica}"/>
+                            </p:column>
+                            <p:column headerText="Início de Vigência" style="text-align: center;">
+                                <h:outputText value="#{gestor.inicioVigencia}" converter="javax.faces.DateTime"/>
+                            </p:column>
+                            <p:column headerText="Fim de Vigência" style="text-align: center;">
+                                <h:outputText value="#{gestor.fimVigencia}" converter="javax.faces.DateTime"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab title="Endereço">
+                    <p:outputPanel id="panel-endereco">
+                        <h:panelGrid columns="2" id="grid-endereco">
+                            <fc:outputLabelObrigatorio value="Cadastro Imobiliário: "/>
+                            <h:panelGroup>
+                                <p:autoComplete
+                                    value="#{localEstoqueControlador.selecionado.cadastroImobiliario}"
+                                    completeMethod="#{localEstoqueControlador.completarCadastroImobiliario}"
+                                    converter="#{localEstoqueControlador.converterCadastroImobiliario}"
+                                    var="bci"
+                                    queryDelay="1000"
+                                    maxResults="50"
+                                    dropdown="true"
+                                    panelStyle="max-height: 230px;max-width: 800px"
+                                    size="70"
+                                    itemValue="#{bci.id}"
+                                    itemLabel="#{bci.inscricaoCadastral} - #{bci.complementoEndereco}">
+                                    <p:ajax event="itemSelect"
+                                            process="@this"
+                                            onstart="aguarde.show()"
+                                            oncomplete="aguarde.hide()"
+                                            listener="#{localEstoqueControlador.buscarEnderecoLocalEstoque()}"
+                                            update=":Formulario:tabGeral:panel-endereco"/>
+                                </p:autoComplete>
+
+                                <p:commandButton process="@none"
+                                                 id="bt-ver-bci"
+                                                 icon="ui-icon-search"
+                                                 styleClass="mlef05"
+                                                 update="@none"
+                                                 disabled="#{localEstoqueControlador.selecionado.cadastroImobiliario eq null}"
+                                                 onclick="window.open('#{request.contextPath}/cadastro-imobiliario/ver/#{localEstoqueControlador.selecionado.cadastroImobiliario.id}/','_blank');"/>
+                            </h:panelGroup>
+
+                            <h:outputText value="Endereço do Imóvel: "
+                                          rendered="#{localEstoqueControlador.enderecoLocalEstoque ne null}"/>
+
+                            <h:panelGrid columns="2"
+                                         rendered="#{localEstoqueControlador.enderecoLocalEstoque ne null}">
+                                <h:outputText value="Logradouro: " style="color: grey"/>
+                                <h:outputText value="#{localEstoqueControlador.enderecoLocalEstoque.logradouro}"/>
+
+                                <h:outputText value="Número: " style="color: grey"/>
+                                <h:outputText value="#{localEstoqueControlador.enderecoLocalEstoque.numero}"/>
+
+                                <h:outputText value="Bairro: " style="color: grey"/>
+                                <h:outputText value="#{localEstoqueControlador.enderecoLocalEstoque.bairro}"/>
+
+                                <h:outputText value="CEP: " style="color: grey"/>
+                                <h:outputText value="#{localEstoqueControlador.enderecoLocalEstoque.cep}"/>
+
+                                <h:outputText value="Complemento: " style="color: grey"/>
+                                <h:outputText value="#{localEstoqueControlador.enderecoLocalEstoque.complemento}"/>
+                            </h:panelGrid>
+                        </h:panelGrid>
+
+                        <p:outputPanel id="panel-map"
+                                       rendered="#{localEstoqueControlador.selecionado.cadastroImobiliario ne null}">
+                            <div class="alert alert-info" align="center">
+                                <strong>Mapa da Localização</strong>
+                            </div>
+
+                            <div class="thumbnail">
+                                <div id="mapa"
+                                     style="width: 100%; text-align: center; vertical-align: top;"/>
+
+                                <br/>
+                                <div style="width: 100%; text-align: center;">
+                                    <p:commandLink actionListener="#{localEstoqueControlador.verInscricaoMapa}"
+                                                   value="Centralizar Lote"/>
+                                </div>
+                            </div>
+                        </p:outputPanel>
+                    </p:outputPanel>
+                </p:tab>
+
+
+                <p:tab title="Local(is) de Armazenamento(s)" id="tabArvore">
+                    <p:outputPanel id="panelArvore">
+                        <p:tree value="#{localEstoqueControlador.arvoreLocalEstoque.arvore}"
+                                id="arvore"
+                                var="doc"
+                                style="border : none; width: 100%;"
+                                selectionMode="multiple"
+                                selection="#{localEstoqueControlador.arvoreLocalEstoque.selecionados}">
+                            <p:treeNode expandedIcon="ui-icon-home"
+                                        collapsedIcon="ui-icon-home">
+                                <h:outputText value="#{doc}" escape="false"/>
+                            </p:treeNode>
+                        </p:tree>
+                    </p:outputPanel>
+                </p:tab>
+            </p:tabView>
+            <fc:rodapePretty id="rpRodapePretty" controlador="#{localEstoqueControlador}"/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

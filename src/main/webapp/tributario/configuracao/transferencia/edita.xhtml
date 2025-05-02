@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:fc="http://java.sun.com/jsf/composite/components" xmlns:f="http://java.sun.com/jsf/core">
+<ui:composition template="/corpo.xhtml">
+
+    <ui:define name="body">
+        <script type="text/javascript">
+            var timer;
+
+            function acompanhaTransferencia() {
+                dialogo.show();
+                timer = setInterval(function () {
+                    atualizar();
+                }, 1000);
+            }
+
+            function termina() {
+                clearInterval(timer);
+                $('#calculando').css('display', 'none');
+                $('#calculado').css('display', 'block');
+                $('#barraProgresso').css('display', 'none');
+                $('#tipoProcesso').css('display', 'none');
+                $('#processogeral').css('display', 'none');
+                $('#barraProgressoGeral').css('display', 'none');
+                $('#tabela-estimativa').css('display', 'none');
+
+            }
+
+        </script>
+        <h:form id="Formulario">
+            <p:remoteCommand
+                update=":progressoTransferencia"
+                actionListener="#{transferenciaParametrosTributarioControlador.verificarSeTerminou()}"
+                name="atualizar"/>
+            <p:panel header="Transferência de Parâmetros de Exercício" styleClass="mbot10">
+                <h:panelGrid columns="2">
+                    <fc:outputLabelObrigatorio value="Exercício de Origem:"/>
+                    <p:inputMask mask="9999" id="exericicioOrigem"
+                                 value="#{transferenciaParametrosTributarioControlador.origem}"
+                                 converter="#{exercicioControlador.converterExercicio}" size="15">
+                    </p:inputMask>
+                    <fc:outputLabelObrigatorio value="Exercício de Destino:"/>
+                    <p:inputMask mask="9999" id="exericicioDestino"
+                                 value="#{transferenciaParametrosTributarioControlador.destino}"
+                                 converter="#{exercicioControlador.converterExercicio}" size="15">
+                        <p:ajax event="blur"
+                                listener="#{transferenciaParametrosTributarioControlador.buscarUfmDestino()}"
+                                update="ufmDestino"/>
+                    </p:inputMask>
+
+                    <fc:outputLabelObrigatorio value="UFM de Destino:"/>
+                    <p:inputText id="ufmDestino"
+                                 disabled="#{transferenciaParametrosTributarioControlador.ufmDestino gt 0}"
+                                 value="#{transferenciaParametrosTributarioControlador.ufmDestino}"
+                                 size="15">
+                        <f:convertNumber pattern="###,##0.00"/>
+                    </p:inputText>
+                </h:panelGrid>
+            </p:panel>
+            <p:panel header="Processo de Transferência" styleClass="mbot10" id="panelTransferencias">
+                <p:outputPanel id="processos">
+                    <h:panelGrid columns="3">
+                        <p:selectManyCheckbox id="grid"
+                                              value="#{transferenciaParametrosTributarioControlador.transferenciasSelecionadas}"
+                                              layout="pageDirection"
+                                              columns="2">
+                            <f:selectItems value="#{transferenciaParametrosTributarioControlador.transferencias}"
+                                           var="siprev"
+                                           itemLabel="#{siprev.descricao}" itemValue="#{siprev}"/>
+                            <p:ajax onstart="aguarde.show()" oncomplete="aguarde.hide()" update="processos"/>
+                        </p:selectManyCheckbox>
+                    </h:panelGrid>
+                    <p:commandButton value="Marcar Todos" icon="ui-icon-check"
+                                     styleClass="padrao"
+                                     update="@form"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     rendered="#{!transferenciaParametrosTributarioControlador.todosMarcados}"
+                                     actionListener="#{transferenciaParametrosTributarioControlador.marcarTodosProcessos()}"/>
+                    <p:commandButton value="Desmarcar Todos" icon="ui-icon-check"
+                                     styleClass="padrao"
+                                     update="@form"
+                                     rendered="#{transferenciaParametrosTributarioControlador.todosMarcados}"
+                                     onclick="aguarde.show()"
+                                     oncomplete="aguarde.hide()"
+                                     actionListener="#{transferenciaParametrosTributarioControlador.desmarcarTodosProcessos()}"/>
+                </p:outputPanel>
+            </p:panel>
+            <p:commandButton value="Transferir" icon="ui-icon-shuffle"
+                             styleClass="operacao prioritario"
+                             update="@form"
+                             onclick="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             actionListener="#{transferenciaParametrosTributarioControlador.processarTransferencia()}"/>
+        </h:form>
+
+        <p:dialog widgetVar="dialogo"
+                  id="dialogEfetivacao"
+                  width="800"
+                  closable="false"
+                  resizable="false"
+                  modal="true" position="center" dynamic="true" header="Realizando a efetivação">
+
+            <p:outputPanel id="progressoTransferencia">
+                <div class="alert alert-info centralizado " id="calculando">
+                    <strong>Aguarde,</strong> O processo está em execução
+
+                </div>
+                <div class="alert alert-success centralizado " style="display: none" id="calculado">
+                    <strong>Pronto!</strong> O processo de Transferência de Parâmetros foi realizado com sucesso <br/>
+                    <br/>
+                    <p:button value="Ok" icon="ui-icon-check" styleClass="operacao"
+                              href="/tributario/transferencia-de-parametros-de-exercicio/"
+                        />
+                </div>
+                <div class="centralizado" id="processogeral">
+                    <strong>Transferindo Parâmetros #{transferenciaParametrosTributarioControlador.transfCorrente + 1} /
+                        #{transferenciaParametrosTributarioControlador.quantidadeProcesso} </strong><br/>
+                </div>
+
+                <div class="progress progress-striped active progress-success" id="barraProgressoGeral">
+                    <div class="bar"
+                         style="width: #{transferenciaParametrosTributarioControlador.percentualGeralProcesso}%"></div>
+                </div>
+
+
+                <div class="centralizado" id="tipoProcesso">
+                    <strong>#{transferenciaParametrosTributarioControlador.assistenteBarraProgresso.descricaoProcesso}</strong><br/>
+                </div>
+
+                <div class="progress progress-striped active" id="barraProgresso">
+                    <div class="bar"
+                         style="width: #{transferenciaParametrosTributarioControlador.assistenteBarraProgresso.porcentagemDoCalculo}%"></div>
+                </div>
+                <div id="tabela-estimativa">
+                    <table style="width: 100%; text-align: center">
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="#{transferenciaParametrosTributarioControlador.assistenteBarraProgresso.calculados}"/>
+                                de
+                                <h:outputText
+                                    value="#{transferenciaParametrosTributarioControlador.assistenteBarraProgresso.total}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Decorrido #{transferenciaParametrosTributarioControlador.assistenteBarraProgresso.tempoDecorrido}"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h:outputText
+                                    value="Tempo Estimado #{transferenciaParametrosTributarioControlador.assistenteBarraProgresso.tempoEstimado}"/>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+            </p:outputPanel>
+
+        </p:dialog>
+    </ui:define>
+</ui:composition>
+</html>

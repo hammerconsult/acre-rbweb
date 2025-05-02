@@ -1,0 +1,1 @@
+update fiscaldesignado f set f.usuariosistema_id = (select u.usuariosistema_id from usuariofiscal u where u.id = f.usuariofiscal_id);

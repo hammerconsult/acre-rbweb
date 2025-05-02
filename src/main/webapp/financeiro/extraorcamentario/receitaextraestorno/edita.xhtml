@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:co="http://java.sun.com/jsf/composite/components/contabil"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+
+        <h:form id="Formulario">
+
+            <p:remoteCommand name="limparReceitaExtra"
+                             process="@this"
+                             update=":Formulario:panelReceita :Formulario:ec :Formulario:valor :Formulario:compHis">
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{receitaExtraEstornoControlador.selecionado.receitaExtra}"/>
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{receitaExtraEstornoControlador.selecionado.eventoContabil}"/>
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{receitaExtraEstornoControlador.selecionado.valor}"/>
+
+                <f:setPropertyActionListener value="#{null}"
+                                             target="#{receitaExtraEstornoControlador.selecionado.complementoHistorico}"/>
+            </p:remoteCommand>
+
+            <fc:cabecalhoPretty controlador="#{receitaExtraEstornoControlador}"
+                                origem="#{receitaExtraEstornoControlador.caminhoPadrao}listar/"/>
+
+            <p:panel header="Estorno de Receita Extraorçamentária">
+                <h:panelGrid columns="2">
+                    <h:outputText value="Número:"/>
+                    <p:inputText title="Número do gerado automaticamente ao salvar"
+                                 id="numero"
+                                 size="21"
+                                 readonly="true"
+                                 disabled="#{receitaExtraEstornoControlador.verificaEdicao}"
+                                 value="#{receitaExtraEstornoControlador.selecionado.numero}">
+                        <p:watermark for="numero" value="Gerado automaticamente"/>
+                    </p:inputText>
+
+                    <h:outputText value="Data: "/>
+                    <p:calendar title="Data de operação do sistema" id="dataEstorno"
+                                disabled="true"
+                                navigator="true" locale="pt_BR" pattern="dd/MM/yyyy" size="21"
+                                validator="#{receitaExtraEstornoControlador.validaDataReceitaExtraEstorno}"
+                                value="#{receitaExtraEstornoControlador.selecionado.dataEstorno}"
+                                onkeyup="mascara(this,Data)">
+                        <p:ajax event="dateSelect"
+                                listener="#{receitaExtraEstornoControlador.recuperaSaldos()}"
+                                update=":Formulario:ec"/>
+                    </p:calendar>
+
+                    <h:outputText value="Data de Conciliação: "/>
+                    <co:data-conciliacao
+                        dataConciliacao="#{receitaExtraEstornoControlador.selecionado.dataConciliacao}"/>
+
+                    <h:outputText value="Unidade Organizacional: "/>
+                    <fc:codigo-descricao-hierarquia tipoHierarquia="ORCAMENTARIA"
+                                                    unidadeOrganizacional="#{receitaExtraEstornoControlador.selecionado.unidadeOrganizacional}"
+                                                    dataMovimento="#{receitaExtraEstornoControlador.selecionado.dataEstorno}"/>
+
+                    <fc:outputLabelObrigatorio value="Receita Extraorçamentária: "/>
+                    <h:panelGrid columns="3">
+                        <p:autoComplete queryDelay="1000" id="receitaExtra"
+                                        size="70"
+                                        title="Informe a Receita Extraorçamentária."
+                                        disabled="#{receitaExtraEstornoControlador.verificaEdicao}"
+                                        value="#{receitaExtraEstornoControlador.selecionado.receitaExtra}"
+                                        completeMethod="#{receitaExtraEstornoControlador.completaReceitaExtra}"
+                                        converter="#{receitaExtraControlador.converterGenerico}"
+                                        var="re"
+                                        styleClass="mrig02"
+                                        itemValue="#{re.id}"
+                                        style="margin-left: -3px"
+                                        itemLabel="#{re} - #{re.pessoa.nomeCpfCnpj}"
+                                        onkeyup="if(keyUpCampoVazio(this)){limparReceitaExtra();}">
+                            <p:ajax event="itemSelect"
+                                    onstart="aguarde.show()"
+                                    oncomplete="aguarde.hide();setaFoco('Formulario:compHis')"
+                                    process="@this"
+                                    listener="#{receitaExtraEstornoControlador.selecionouReceitaExtra}"
+                                    update=":Formulario:ec :Formulario:panelReceita :Formulario:saldoRE :Formulario:valor :Formulario:compHis"/>
+                        </p:autoComplete>
+
+                        <p:commandButton styleClass="botao_azul icone_branco"
+                                         update=":Formulario-dialog:panelDialog "
+                                         onstart="aguarde.show()"
+                                         oncomplete="dialog.show();aguarde.hide()"
+                                         icon="ui-icon-search"
+                                         title="Clique para selecionar uma receita extraorçamentária."
+                                         disabled="#{receitaExtraEstornoControlador.selecionado.id ne null}"/>
+
+                    </h:panelGrid>
+
+                    <h:outputText value="Evento Contábil: "/>
+                    <h:panelGrid id="ec" columns="2">
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.eventoContabil}"
+                                      rendered="#{receitaExtraEstornoControlador.selecionado.eventoContabil != null}"
+                                      styleClass="negrito"/>
+                        <h:outputText value="Evento não encontrado!"
+                                      styleClass="negrito"
+                                      rendered="#{receitaExtraEstornoControlador.selecionado.eventoContabil == null}"/>
+                    </h:panelGrid>
+                </h:panelGrid>
+
+                <p:spacer/>
+                <p:panel id="panelReceita"
+                         visible="#{receitaExtraEstornoControlador.selecionado.receitaExtra ne null}">
+
+                    <co:titulo-panel titulo="Receita Extraorçamentária"/>
+
+                    <h:panelGrid columns="2" cellpadding="2">
+                        <h:outputText value="Número: "/>
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.numero}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Data: "/>
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.dataReceita}"
+                                      styleClass="negrito">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+
+                        <h:outputText value="Data de Conciliação: "/>
+                        <co:data-conciliacao
+                            dataConciliacao="#{receitaExtraEstornoControlador.selecionado.receitaExtra.dataConciliacao}"/>
+
+                        <h:outputText value="Unidade Organizacional: "/>
+                        <h:outputText
+                            value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.unidadeOrganizacional}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Transportada: "/>
+                        <h:outputText
+                            value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.transportado ? 'Sim' : 'Não'}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Conta Bancária: "/>
+                        <h:outputText
+                            value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.subConta.contaBancariaEntidade.toStringAutoCompleteContaBancaria()}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Conta Financeira: "/>
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.subConta}"
+                                      styleClass="negrito"/>
+
+                        <p:spacer/>
+                        <h:panelGrid id="panelInfoBancario" columns="2" cellpadding="0">
+                            <h:outputText value="Saldo: "/>
+                            <h:outputText id="saldoCF"
+                                          styleClass="negrito"
+                                          value="#{receitaExtraEstornoControlador.saldoContaFinanceiraRecuperado}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </h:panelGrid>
+
+                        <h:outputText value="Fonte de Recurso: "/>
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.fonteDeRecursos}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Conta Extraorçamentária: "/>
+                        <h:outputText
+                            value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.contaExtraorcamentaria}"
+                            styleClass="negrito"/>
+
+                        <p:spacer/>
+                        <h:panelGrid columns="2" cellpadding="0">
+                            <h:outputText value="Saldo: "/>
+                            <h:outputText id="saldoCE"
+                                          style="font-weight: bold"
+                                          value="#{receitaExtraEstornoControlador.saldoContaExtraorcamentariaRecuperado}">
+                                <f:convertNumber type="currency"/>
+                            </h:outputText>
+                        </h:panelGrid>
+
+                        <h:outputText value="Tipo de Conta Extra: "/>
+                        <h:outputText
+                            value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.contaExtraorcamentaria.tipoContaExtraorcamentaria.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Evento Contábil: "/>
+                        <h:outputText
+                            value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.eventoContabil.descricao}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Pessoa: "/>
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.pessoa} "
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Classe: "/>
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.classeCredor}"
+                                      styleClass="negrito"/>
+
+                        <h:outputText value="Histórico: "/>
+                        <h:outputText
+                            value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.complementoHistorico}"
+                            styleClass="negrito"/>
+
+                        <h:outputText value="Saldo:" style="margin-right: 25px"/>
+                        <h:outputText id="saldoRE"
+                                      styleClass="negrito"
+                                      value="#{receitaExtraEstornoControlador.saldoReceitaExtraRecuperado}">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+
+                        <h:outputText value="Valor: "/>
+                        <h:outputText value="#{receitaExtraEstornoControlador.selecionado.receitaExtra.valor}"
+                                      styleClass="negrito">
+                            <f:convertNumber type="currency"/>
+                        </h:outputText>
+                    </h:panelGrid>
+                </p:panel>
+
+
+                <h:panelGrid columns="2" cellpadding="2">
+                    <fc:outputLabelObrigatorio value="Histórico: "/>
+                    <h:panelGrid columns="2">
+                        <p:inputTextarea id="compHis"
+                                         title="Informe o histórico."
+                                         value="#{receitaExtraEstornoControlador.selecionado.complementoHistorico}"
+                                         cols="68"
+                                         rows="4"
+                                         autoResize="true"
+                                         maxlength="3000"
+                                         style="margin-left: 77px"
+                                         counterTemplate="{0} Caracteres Restantes." counter="counter"/>
+                        <h:outputText id="counter"/>
+                    </h:panelGrid>
+
+                    <fc:outputLabelObrigatorio value="Valor: "/>
+                    <p:inputText title="Digite o valor do Estorno"
+                                 id="valor"
+                                 size="20"
+                                 onkeydown="mascaraMonetaria(this);"
+                                 disabled="#{receitaExtraEstornoControlador.verificaEdicao}"
+                                 value="#{receitaExtraEstornoControlador.selecionado.valor}"
+                                 style="text-align: right; margin-left: 80px">
+                        <f:convertNumber type="currency"/>
+                    </p:inputText>
+
+                </h:panelGrid>
+            </p:panel>
+            <h:panelGrid columns="4">
+                <fc:rodapePretty controlador="#{receitaExtraEstornoControlador}"/>
+                <fc:botaoTargetBlank label="Imprimir Nota"
+                                     rendered="#{receitaExtraEstornoControlador.selecionado.id ne null}"
+                                     actionListener="#{receitaExtraEstornoControlador.gerarNotaOrcamentaria(false)}"
+                                     imprimeNoDialog="true" update="@this"
+                                     styleClass="mtop10"
+                                     style="height: 30px"
+                                     icon="ui-icon-print"
+                                     title="Clique para gerar a nota de estorno de receita extraorçamentária."/>
+
+                <p:commandButton value="Download Nota"
+                                 rendered="#{receitaExtraEstornoControlador.selecionado.id ne null}"
+                                 title="Clique para fazer o download da nota de estorno de receita extraorçamentária."
+                                 ajax="false"
+                                 icon="ui-icon-arrowthick-1-s"
+                                 styleClass="mtop10 mrig05">
+                    <p:fileDownload value="#{receitaExtraEstornoControlador.gerarNotaOrcamentaria(true)}"/>
+                </p:commandButton>
+            </h:panelGrid>
+        </h:form>
+
+        <p:dialog widgetVar="dialog"
+                  modal="true"
+                  resizable="false"
+                  closable="true"
+                  position="center"
+                  style="position: fixed!important;"
+                  width="1000"
+                  height="480">
+            <h:form id="Formulario-dialog">
+                <p:panel id="panelDialog">
+                    <fc:pesquisaGenerico id="lista"
+                                         caminhoAtual="edita"
+                                         caminhoControlador="#{receitaExtraEstornoControlador.caminho}"
+                                         actionSelecionar="#{receitaExtraEstornoControlador.actionSelecionar()}"
+                                         nomeDaClasse="ReceitaExtra"
+                                         iconmSelecionar="check-icon.png"
+                                         novo="#{receitaExtraEstornoControlador.novo()}"
+                                         selecionar="#{receitaExtraEstornoControlador.selecionarReceita}"
+                                         mostrarHistorico="false"
+                                         mostrarBotaoNovo="false"
+                                         pesquisaNoEnter="false"
+                                         mostrarBotaoImprimirRelatorioUnicoRegistro="false"
+                                         mostrarBotaoImprimirRelatorioTabela="false"
+                                         mostrarBotaoEditarConfiguracaoRelatorio="false"
+                                         pretty="true"
+                                         meuControlador="#{receitaExtraSemRetencaoPesquisaGenerica}"
+                                         dialog="true"/>
+                </p:panel>
+            </h:form>
+        </p:dialog>
+
+        <p:dialog widgetVar="dialogImprimirNota"
+                  modal="true"
+                  closable="false"
+                  resizable="false"
+                  dynamic="true"
+                  showHeader="false"
+                  position="center"
+                  style="position: fixed !important;">
+
+            <h:form id="formImprimirNota">
+                <center>
+                    <p:panel id="panelImprimirNota" header="Imprimir Nota">
+
+                        <br/>
+                        <h:outputText value="Deseja Imprimir a Nota de Estorno de Receita Extra?"/>
+
+                        <br/><br/><br/>
+                        <h:panelGrid columns="4" style="text-align: center">
+                            <h:commandLink
+                                actionListener="#{receitaExtraEstornoControlador.gerarNotaOrcamentaria(false)}"
+                                target="_blank"
+                                style="height: 30px;">
+                                <p:commandButton id="botaoNota"
+                                                 value="SIM"
+                                                 imprimeNoDialog="true"
+                                                 onstart="aguarde.show()"
+                                                 oncomplete="aguarde.hide()"
+                                                 title="Clique para imprimir a nota de estorno de receita extraorçamentária."
+                                                 onclick="efetivaPagamento();"
+                                                 icon="ui-icon-check"
+                                                 styleClass="padrao mrig05"
+                                                 ajax="false">
+                                </p:commandButton>
+                            </h:commandLink>
+
+                            <p:commandButton value="NÃO"
+                                             onstart="aguarde.show()"
+                                             oncomplete="aguarde.hide()"
+                                             title="Clique cancelar a impressão da nota de estorno de receita extraorçamentária."
+                                             icon="ui-icon-cancel"
+                                             styleClass="padrao"
+                                             process="@this"
+                                             actionListener="#{receitaExtraEstornoControlador.redireciona()}"/>
+
+                            <p:remoteCommand name="efetivaPagamento"
+                                             actionListener="#{receitaExtraEstornoControlador.redireciona()}"/>
+                        </h:panelGrid>
+                    </p:panel>
+                </center>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
+</html>

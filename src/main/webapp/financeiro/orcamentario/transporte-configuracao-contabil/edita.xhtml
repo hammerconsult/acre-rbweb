@@ -1,0 +1,1476 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//PT"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:fc="http://java.sun.com/jsf/composite/components"
+      xmlns:p="http://primefaces.org/ui"
+>
+<ui:composition template="/corpo.xhtml">
+    <ui:define name="body">
+        <h:form id="Formulario">
+            <script type="text/javascript">
+                var timer;
+
+                function inicializarProcesso() {
+                    dialogProgressBar.show();
+                    timer = setInterval(function () {
+                        consultarProcesso();
+                    }, 1000);
+                }
+
+                function finalizarProcesso() {
+                    clearInterval(timer);
+                    dialogProgressBar.hide();
+                }
+            </script>
+
+            <fc:cabecalhoPretty controlador="#{transporteConfiguracaoContabilControlador}"
+                                origem="#{transporteConfiguracaoContabilControlador.caminhoPadrao}novo/"/>
+
+
+            <p:panel header="Transporte de Configuração Contábil">
+
+                <h:panelGrid columns="2" id="gridGeral">
+                    <h:outputText value="Data do Transporte: "/>
+                    <h:outputText value="#{transporteConfiguracaoContabilControlador.selecionado.dataTransporte}"
+                                  styleClass="negrito"
+                                  id="dataTransporte">
+                        <f:convertDateTime type="date"/>
+                    </h:outputText>
+
+                    <fc:outputLabelObrigatorio value="Exercício de Destino: " for="exercicioDestino"/>
+                    <p:inputText value="#{transporteConfiguracaoContabilControlador.selecionado.exercicioDestino}"
+                                 converter="#{exercicioControlador.converterExercicio}"
+                                 title="Informe o exercício de destino."
+                                 id="exercicioDestino"
+                                 size="10"
+                                 maxlength="4">
+                        <p:ajax event="blur"
+                                process="@this"/>
+                    </p:inputText>
+
+                    <fc:outputLabelObrigatorio value="Grupo: "/>
+                    <p:selectOneMenu value="#{transporteConfiguracaoContabilControlador.grupo}">
+                        <f:selectItems var="gp"
+                                       itemLabel="#{gp}"
+                                       itemValue="#{gp.name()}"
+                                       value="#{transporteConfiguracaoContabilControlador.grupos}"/>
+                        <p:ajax event="change"
+                                listener="#{transporteConfiguracaoContabilControlador.verificarConfiguracoes()}"
+                                update="tipoConfiguracao tabGrupos"
+                                process="@this"/>
+                    </p:selectOneMenu>
+
+                    <fc:outputLabelObrigatorio value="Configuração: "/>
+                    <p:selectManyCheckbox
+                        id="tipoConfiguracao"
+                        layout="pageDirection"
+                        value="#{transporteConfiguracaoContabilControlador.tiposConfiguracao}">
+                        <f:selectItems var="tipo"
+                                       itemLabel="#{tipo}"
+                                       itemValue="#{tipo.name()}"
+                                       value="#{transporteConfiguracaoContabilControlador.tiposDeTransportes}"/>
+                        <p:ajax event="change"
+                                process="@this"/>
+                    </p:selectManyCheckbox>
+                </h:panelGrid>
+                <div align="right">
+                    <h:panelGrid columns="2">
+                        <h:outputText value="Filtros: "/>
+                        <p:selectOneRadio value="#{transporteConfiguracaoContabilControlador.opcao}">
+                            <f:selectItems value="#{transporteConfiguracaoContabilControlador.opcoes}"
+                                           var="op"
+                                           itemLabel="#{op.descricao}"/>
+                            <p:ajax event="change"
+                                    process="@this"
+                                    update="tabGrupos"/>
+                        </p:selectOneRadio>
+                    </h:panelGrid>
+                </div>
+                <p:tabView id="tabGrupos">
+                    <p:tab title="Eventos" rendered="#{transporteConfiguracaoContabilControlador.grupo eq 'EVENTOS'}">
+                        <p:dataTable value="#{transporteConfiguracaoContabilControlador.itensEvento}"
+                                     var="ie"
+                                     styleClass="mtop03"
+                                     rowStyleClass="#{ie.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Eventos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                     currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                     emptyMessage="Não foram localizados registros para serem apresentados."
+                                     rowIndexVar="rowlx">
+                            <p:column style="width: 4%">
+                                <p:rowToggler rendered="#{ie.erroDuranteProcessamento}"/>
+                            </p:column>
+                            <p:column headerText="Evento"
+                                      filterBy="#{ie.itemEventoCLP.eventoContabil.toString()}"
+                                      sortBy="#{ie.itemEventoCLP.eventoContabil.toString()}">
+                                <h:outputText value="#{ie.itemEventoCLP.eventoContabil}"/>
+                            </p:column>
+                            <p:column headerText="CLP"
+                                      filterBy="#{ie.clp.toString()}"
+                                      sortBy="#{ie.clp.toString()}">
+                                <h:outputText value="#{ie.clp}"/>
+                            </p:column>
+                            <p:rowExpansion>
+                                <h:outputText styleClass="negrito" value="Descrição do erro: #{ie.mensagemDeErro}"/>
+                            </p:rowExpansion>
+                        </p:dataTable>
+                    </p:tab>
+                    <p:tab title="OCCs" rendered="#{transporteConfiguracaoContabilControlador.grupo eq 'OCCS'}">
+                        <p:tabView>
+                            <p:tab title="Conta">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.occsConta}"
+                                             var="occConta"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{occConta.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Contas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occConta.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG" filterBy="#{occConta.tagOCC.toString()}"
+                                              sortBy="#{occConta.tagOCC.toString()}">
+                                        <h:outputText value="#{occConta.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta" filterBy="#{occConta.contaOrigem.toString()}"
+                                              sortBy="#{occConta.contaOrigem.toString()}">
+                                        <h:outputText value="#{occConta.contaOrigem}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra" filterBy="#{occConta.contaContabil.toString()}"
+                                              sortBy="#{occConta.contaContabil.toString()}">
+                                        <h:outputText value="#{occConta.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra" filterBy="#{occConta.contaIntra.toString()}"
+                                              sortBy="#{occConta.contaIntra.toString()}">
+                                        <h:outputText value="#{occConta.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occConta.contaInterUniao.toString()}"
+                                              sortBy="#{occConta.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occConta.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occConta.contaInterEstado.toString()}"
+                                              sortBy="#{occConta.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occConta.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occConta.contaInterMunicipal.toString()}"
+                                              sortBy="#{occConta.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occConta.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occConta.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occConta.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occConta.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occConta.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Conta Financeira">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.occsBanco}"
+                                             var="occBanco"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{occBanco.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Conta Financeiras&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occBanco.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG"
+                                              filterBy="#{occBanco.tagOCC.toString()}"
+                                              sortBy="#{occBanco.tagOCC.toString()}">
+                                        <h:outputText value="#{occBanco.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Financeira" filterBy="#{occBanco.subConta.toString()}"
+                                              sortBy="#{occBanco.subConta.toString()}">
+                                        <h:outputText value="#{occBanco.subConta}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra" filterBy="#{occBanco.contaContabil.toString()}"
+                                              sortBy="#{occBanco.contaContabil.toString()}">
+                                        <h:outputText value="#{occBanco.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra" filterBy="#{occBanco.contaIntra.toString()}"
+                                              sortBy="#{occBanco.contaIntra.toString()}">
+                                        <h:outputText value="#{occBanco.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occBanco.contaInterUniao.toString()}"
+                                              sortBy="#{occBanco.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occBanco.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occBanco.contaInterEstado.toString()}"
+                                              sortBy="#{occBanco.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occBanco.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occBanco.contaInterMunicipal.toString()}"
+                                              sortBy="#{occBanco.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occBanco.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occBanco.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occBanco.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occBanco.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occBanco.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Classe de Pessoa">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.occsClassePessoa}"
+                                             var="occClasse"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{occClasse.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Classes de Pessoa&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occClasse.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG" filterBy="#{occClasse.tagOCC.toString()}"
+                                              sortBy="#{occClasse.tagOCC.toString()}">
+                                        <h:outputText value="#{occClasse.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Classe de Pessoa"
+                                              filterBy="#{occClasse.classePessoa.toString()}"
+                                              sortBy="#{occClasse.classePessoa.toString()}">
+                                        <h:outputText value="#{occClasse.classePessoa}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra" filterBy="#{occClasse.contaContabil.toString()}"
+                                              sortBy="#{occClasse.contaContabil.toString()}">
+                                        <h:outputText value="#{occClasse.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra" filterBy="#{occClasse.contaIntra.toString()}"
+                                              sortBy="#{occClasse.contaIntra.toString()}">
+                                        <h:outputText value="#{occClasse.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occClasse.contaInterUniao.toString()}"
+                                              sortBy="#{occClasse.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occClasse.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occClasse.contaInterEstado.toString()}"
+                                              sortBy="#{occClasse.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occClasse.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occClasse.contaInterMunicipal.toString()}"
+                                              sortBy="#{occClasse.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occClasse.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occClasse.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occClasse.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occClasse.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occClasse.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Grupo Patrimonial">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.occsGrupoBem}"
+                                             var="occGrupoBem"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{occGrupoBem.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Grupos Patrimoniais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occGrupoBem.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG" filterBy="#{occGrupoBem.tagOCC.toString()}"
+                                              sortBy="#{occGrupoBem.tagOCC.toString()}">
+                                        <h:outputText value="#{occGrupoBem.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo Patrimonial"
+                                              filterBy="#{occGrupoBem.grupoBem.toString()}"
+                                              sortBy="#{occGrupoBem.grupoBem.toString()}">
+                                        <h:outputText value="#{occGrupoBem.grupoBem}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Grupo" filterBy="#{occGrupoBem.tipoGrupo.descricao}"
+                                              sortBy="#{occGrupoBem.tipoGrupo.descricao}">
+                                        <h:outputText value="#{occGrupoBem.tipoGrupo.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra"
+                                              filterBy="#{occGrupoBem.contaContabil.toString()}"
+                                              sortBy="#{occGrupoBem.contaContabil.toString()}">
+                                        <h:outputText value="#{occGrupoBem.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra" filterBy="#{occGrupoBem.contaIntra.toString()}"
+                                              sortBy="#{occGrupoBem.contaIntra.toString()}">
+                                        <h:outputText value="#{occGrupoBem.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occGrupoBem.contaInterUniao.toString()}"
+                                              sortBy="#{occGrupoBem.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occGrupoBem.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occGrupoBem.contaInterEstado.toString()}"
+                                              sortBy="#{occGrupoBem.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occGrupoBem.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occGrupoBem.contaInterMunicipal.toString()}"
+                                              sortBy="#{occGrupoBem.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occGrupoBem.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occGrupoBem.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occGrupoBem.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occGrupoBem.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occGrupoBem.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Grupo Material">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.occsGrupoMaterial}"
+                                             var="occGrupoMaterial"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{occGrupoMaterial.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Grupos de Materiais&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occGrupoMaterial.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG"
+                                              filterBy="#{occGrupoMaterial.tagOCC.toString()}"
+                                              sortBy="#{occGrupoMaterial.tagOCC.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo de Material"
+                                              filterBy="#{occGrupoMaterial.grupoMaterial.toString()}"
+                                              sortBy="#{occGrupoMaterial.grupoMaterial.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.grupoMaterial}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra"
+                                              filterBy="#{occGrupoMaterial.contaContabil.toString()}"
+                                              sortBy="#{occGrupoMaterial.contaContabil.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra"
+                                              filterBy="#{occGrupoMaterial.contaIntra.toString()}"
+                                              sortBy="#{occGrupoMaterial.contaIntra.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occGrupoMaterial.contaInterUniao.toString()}"
+                                              sortBy="#{occGrupoMaterial.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occGrupoMaterial.contaInterEstado.toString()}"
+                                              sortBy="#{occGrupoMaterial.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occGrupoMaterial.contaInterMunicipal.toString()}"
+                                              sortBy="#{occGrupoMaterial.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occGrupoMaterial.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occGrupoMaterial.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occGrupoMaterial.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occGrupoMaterial.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Natureza Dívida Pública">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.occsNaturezaDividaPublica}"
+                                    var="occNat"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{occNat.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Naturezas da Dívida Pública&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occNat.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG"
+                                              filterBy="#{occNat.tagOCC.toString()}"
+                                              sortBy="#{occNat.tagOCC.toString()}">
+                                        <h:outputText value="#{occNat.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Natureza da Dívida Pública"
+                                              filterBy="#{occNat.categoriaDividaPublica.descricao}"
+                                              sortBy="#{occNat.categoriaDividaPublica.descricao}">
+                                        <h:outputText value="#{occNat.categoriaDividaPublica}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra"
+                                              filterBy="#{occNat.contaContabil.toString()}"
+                                              sortBy="#{occNat.contaContabil.toString()}">
+                                        <h:outputText value="#{occNat.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra"
+                                              filterBy="#{occNat.contaIntra.toString()}"
+                                              sortBy="#{occNat.contaIntra.toString()}">
+                                        <h:outputText value="#{occNat.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occNat.contaInterUniao.toString()}"
+                                              sortBy="#{occNat.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occNat.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occNat.contaInterEstado.toString()}"
+                                              sortBy="#{occNat.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occNat.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occNat.contaInterMunicipal.toString()}"
+                                              sortBy="#{occNat.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occNat.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occNat.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occNat.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occNat.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occNat.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Tipo Passivo Atuarial">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.occsTipoPassivoAtuarial}"
+                                    var="occTipoPas"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{occTipoPas.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Tipos de Passivo Atuarial&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occTipoPas.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG" filterBy="#{occTipoPas.tagOCC.toString()}"
+                                              sortBy="#{occTipoPas.tagOCC.toString()}">
+                                        <h:outputText value="#{occTipoPas.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Passivo Atuarial"
+                                              filterBy="#{occTipoPas.tipoPassivoAtuarial.descricao}"
+                                              sortBy="#{occTipoPas.tipoPassivoAtuarial.descricao}">
+                                        <h:outputText value="#{occTipoPas.tipoPassivoAtuarial}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra" filterBy="#{occTipoPas.contaContabil.toString()}"
+                                              sortBy="#{occTipoPas.contaContabil.toString()}">
+                                        <h:outputText value="#{occTipoPas.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra" filterBy="#{occTipoPas.contaIntra.toString()}"
+                                              sortBy="#{occTipoPas.contaIntra.toString()}">
+                                        <h:outputText value="#{occTipoPas.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occTipoPas.contaInterUniao.toString()}"
+                                              sortBy="#{occTipoPas.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occTipoPas.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occTipoPas.contaInterEstado.toString()}"
+                                              sortBy="#{occTipoPas.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occTipoPas.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occTipoPas.contaInterMunicipal.toString()}"
+                                              sortBy="#{occTipoPas.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occTipoPas.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occTipoPas.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occTipoPas.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occTipoPas.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occTipoPas.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Origem do Recurso"
+                                   rendered="#{!empty transporteConfiguracaoContabilControlador.occsOrigemRecurso}">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.occsOrigemRecurso}"
+                                             var="occOrigem"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{occOrigem.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Origens de Recurso&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{occOrigem.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="TAG"
+                                              filterBy="#{occOrigem.tagOCC.toString()}"
+                                              sortBy="#{occOrigem.tagOCC.toString()}">
+                                        <h:outputText value="#{occOrigem.tagOCC}"/>
+                                    </p:column>
+                                    <p:column headerText="Origem do Recurso"
+                                              filterBy="#{occOrigem.origem.toString()}"
+                                              sortBy="#{occOrigem.origem.toString()}">
+                                        <h:outputText value="#{occOrigem.origem}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Extra"
+                                              filterBy="#{occOrigem.contaContabil.toString()}"
+                                              sortBy="#{occOrigem.contaContabil.toString()}">
+                                        <h:outputText value="#{occOrigem.contaContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra"
+                                              filterBy="#{occOrigem.contaIntra.toString()}"
+                                              sortBy="#{occOrigem.contaIntra.toString()}">
+                                        <h:outputText value="#{occOrigem.contaIntra}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra União"
+                                              filterBy="#{occOrigem.contaInterUniao.toString()}"
+                                              sortBy="#{occOrigem.contaInterUniao.toString()}">
+                                        <h:outputText value="#{occOrigem.contaInterUniao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Estado"
+                                              filterBy="#{occOrigem.contaInterEstado.toString()}"
+                                              sortBy="#{occOrigem.contaInterEstado.toString()}">
+                                        <h:outputText value="#{occOrigem.contaInterEstado}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Intra Município"
+                                              filterBy="#{occOrigem.contaInterMunicipal.toString()}"
+                                              sortBy="#{occOrigem.contaInterMunicipal.toString()}">
+                                        <h:outputText value="#{occOrigem.contaInterMunicipal}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo Conta Auxiliar SICONFI"
+                                              filterBy="#{occOrigem.tipoContaAuxiliarSiconfi.toString()}"
+                                              sortBy="#{occOrigem.tipoContaAuxiliarSiconfi.toString()}">
+                                        <h:outputText value="#{occOrigem.tipoContaAuxiliarSiconfi}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{occOrigem.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                        </p:tabView>
+                    </p:tab>
+                    <p:tab title="CDEs" rendered="#{transporteConfiguracaoContabilControlador.grupo eq 'CDES'}">
+                        <p:tabView>
+                            <p:tab title="Obrigação a Pagar">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.obrigacoesAPagar}"
+                                             var="obr"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{obr.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Obrigações a Pagar&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{obr.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{obr.eventoContabil.toString()}"
+                                              sortBy="#{obr.eventoContabil.toString()}">
+                                        <h:outputText value="#{obr.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{obr.tipoLancamento.descricao}"
+                                              sortBy="#{obr.tipoLancamento.descricao}">
+                                        <h:outputText value="#{obr.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Despesa"
+                                              filterBy="#{obr.tipoContaDespesa.descricao}"
+                                              sortBy="#{obr.tipoContaDespesa.descricao}">
+                                        <h:outputText value="#{obr.tipoContaDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Subtipo de Despesa"
+                                              filterBy="#{obr.subTipoDespesa.descricao}"
+                                              sortBy="#{obr.subTipoDespesa.descricao}">
+                                        <h:outputText value="#{obr.subTipoDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Reconhecimento"
+                                              filterBy="#{obr.tipoReconhecimento.descricao}"
+                                              sortBy="#{obr.tipoReconhecimento.descricao}">
+                                        <h:outputText value="#{obr.tipoReconhecimento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{obr.conta.toString()}"
+                                              sortBy="#{obr.conta.toString()}">
+                                        <h:outputText value="#{obr.conta}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{obr.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Empenho">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.empenhos}"
+                                             var="emp"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{emp.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Empenhos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{emp.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{emp.eventoContabil.toString()}"
+                                              sortBy="#{emp.eventoContabil.toString()}">
+                                        <h:outputText value="#{emp.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{emp.tipoLancamento.descricao}"
+                                              sortBy="#{emp.tipoLancamento.descricao}">
+                                        <h:outputText value="#{emp.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Despesa"
+                                              filterBy="#{emp.tipoContaDespesa.descricao}"
+                                              sortBy="#{emp.tipoContaDespesa.descricao}">
+                                        <h:outputText value="#{emp.tipoContaDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Subtipo de Despesa"
+                                              filterBy="#{emp.subTipoDespesa.descricao}"
+                                              sortBy="#{emp.subTipoDespesa.descricao}">
+                                        <h:outputText value="#{emp.subTipoDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Reconhecimento"
+                                              filterBy="#{emp.tipoReconhecimento.descricao}"
+                                              sortBy="#{emp.tipoReconhecimento.descricao}">
+                                        <h:outputText value="#{emp.tipoReconhecimento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{emp.configEmpenhoContaDespesas.get(0).contaDespesa.toString()}"
+                                              sortBy="#{emp.configEmpenhoContaDespesas.get(0).contaDespesa.toString()}">
+                                        <h:outputText value="#{emp.configEmpenhoContaDespesas.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{emp.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Inscrição em Restos a Pagar">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.empenhosDeResto}"
+                                             var="empRest"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{empRest.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Inscrições em Restos a Pagar&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{empRest.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{empRest.eventoContabil.toString()}"
+                                              sortBy="#{empRest.eventoContabil.toString()}">
+                                        <h:outputText value="#{empRest.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{empRest.tipoLancamento.descricao}"
+                                              sortBy="#{empRest.tipoLancamento.descricao}">
+                                        <h:outputText value="#{empRest.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Resto"
+                                              filterBy="#{empRest.tipoRestosProcessados.descricao}"
+                                              sortBy="#{empRest.tipoRestosProcessados.descricao}">
+                                        <h:outputText value="#{empRest.tipoRestosProcessados.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Em Liquidação?">
+                                        <h:outputText value="#{empRest.emLiquidacao ? 'Sim' : 'Não'}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{empRest.configEmpenhoRestoContaDespesas.get(0).contaDespesa.toString()}"
+                                              sortBy="#{empRest.configEmpenhoRestoContaDespesas.get(0).contaDespesa.toString()}">
+                                        <h:outputText
+                                            value="#{empRest.configEmpenhoRestoContaDespesas.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{empRest.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Cancelamento de Restos a Pagar">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.cancelamentosDeResto}"
+                                             var="cancRest"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{cancRest.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Cancelamentos de Restos a Pagar&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{cancRest.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{cancRest.eventoContabil.toString()}"
+                                              sortBy="#{cancRest.eventoContabil.toString()}">
+                                        <h:outputText value="#{cancRest.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{cancRest.tipoLancamento.descricao}"
+                                              sortBy="#{cancRest.tipoLancamento.descricao}">
+                                        <h:outputText value="#{cancRest.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Resto"
+                                              filterBy="#{cancRest.tipoRestosProcessados.descricao}"
+                                              sortBy="#{cancRest.tipoRestosProcessados.descricao}">
+                                        <h:outputText value="#{cancRest.tipoRestosProcessados.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Cancelamento/Prescrição"
+                                              filterBy="#{cancRest.cancelamentoPrescricao.descricao}"
+                                              sortBy="#{cancRest.cancelamentoPrescricao.descricao}">
+                                        <h:outputText value="#{cancRest.cancelamentoPrescricao.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Patrimonio Líquido"
+                                              filterBy="#{cancRest.patrimonioLiquido.descricao}"
+                                              sortBy="#{cancRest.patrimonioLiquido.descricao}">
+                                        <h:outputText value="#{cancRest.patrimonioLiquido.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{cancRest.configCancelamentoRestoContaDespesas.get(0).contaDespesa.toString()}"
+                                              sortBy="#{cancRest.configCancelamentoRestoContaDespesas.get(0).contaDespesa.toString()}">
+                                        <h:outputText
+                                            value="#{cancRest.configCancelamentoRestoContaDespesas.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{cancRest.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Liquidação">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.liquidacoes}"
+                                             var="liq"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{liq.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Liquidações&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{liq.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{liq.eventoContabil.toString()}"
+                                              sortBy="#{liq.eventoContabil.toString()}">
+                                        <h:outputText value="#{liq.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{liq.tipoLancamento.descricao}"
+                                              sortBy="#{liq.tipoLancamento.descricao}">
+                                        <h:outputText value="#{liq.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Subtipo de Despesa"
+                                              filterBy="#{liq.subTipoDespesa.descricao}"
+                                              sortBy="#{liq.subTipoDespesa.descricao}">
+                                        <h:outputText value="#{liq.subTipoDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Reconhecimento"
+                                              filterBy="#{liq.tipoReconhecimento.descricao}"
+                                              sortBy="#{liq.tipoReconhecimento.descricao}">
+                                        <h:outputText value="#{liq.tipoReconhecimento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{liq.configLiquidacaoContaDespesas.get(0).contaDespesa.toString()}"
+                                              sortBy="#{liq.configLiquidacaoContaDespesas.get(0).contaDespesa.toString()}">
+                                        <h:outputText value="#{liq.configLiquidacaoContaDespesas.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{liq.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Liquidação de Restos a Pagar">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.liquidacoesDeResto}"
+                                             var="liqRest"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{liqRest.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Liquidações de Restos a Pagar&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{liqRest.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{liqRest.eventoContabil.toString()}"
+                                              sortBy="#{liqRest.eventoContabil.toString()}">
+                                        <h:outputText value="#{liqRest.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{liqRest.tipoLancamento.descricao}"
+                                              sortBy="#{liqRest.tipoLancamento.descricao}">
+                                        <h:outputText value="#{liqRest.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Subtipo de Despesa"
+                                              filterBy="#{liqRest.subTipoDespesa.descricao}"
+                                              sortBy="#{liqRest.subTipoDespesa.descricao}">
+                                        <h:outputText value="#{liqRest.subTipoDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{liqRest.configLiqResPagContDesp.get(0).contaDespesa.toString()}"
+                                              sortBy="#{liqRest.configLiqResPagContDesp.get(0).contaDespesa.toString()}">
+                                        <h:outputText value="#{liqRest.configLiqResPagContDesp.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{liqRest.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Pagamento">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.pagamentos}"
+                                             var="pag"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{pag.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Pagamentos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{pag.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{pag.eventoContabil.toString()}"
+                                              sortBy="#{pag.eventoContabil.toString()}">
+                                        <h:outputText value="#{pag.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{pag.tipoLancamento.descricao}"
+                                              sortBy="#{pag.tipoLancamento.descricao}">
+                                        <h:outputText value="#{pag.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Despesa"
+                                              filterBy="#{pag.tipoContaDespesa.descricao}"
+                                              sortBy="#{pag.tipoContaDespesa.descricao}">
+                                        <h:outputText value="#{pag.tipoContaDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{pag.configPagamentoContaDespesas.get(0).contaDespesa.toString()}"
+                                              sortBy="#{pag.configPagamentoContaDespesas.get(0).contaDespesa.toString()}">
+                                        <h:outputText value="#{pag.configPagamentoContaDespesas.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{pag.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Pagamento de Restos a Pagar">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.pagamentosDeResto}"
+                                             var="pagRest"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{pagRest.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Pagamentos de Restos a Pagar&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{pagRest.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{pagRest.eventoContabil.toString()}"
+                                              sortBy="#{pagRest.eventoContabil.toString()}">
+                                        <h:outputText value="#{pagRest.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{pagRest.tipoLancamento.descricao}"
+                                              sortBy="#{pagRest.tipoLancamento.descricao}">
+                                        <h:outputText value="#{pagRest.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Restos Processados"
+                                              filterBy="#{pagRest.tipoRestosProcessados.descricao}"
+                                              sortBy="#{pagRest.tipoRestosProcessados.descricao}">
+                                        <h:outputText value="#{pagRest.tipoRestosProcessados.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Despesa"
+                                              filterBy="#{pagRest.tipoContaDespesa.descricao}"
+                                              sortBy="#{pagRest.tipoContaDespesa.descricao}">
+                                        <h:outputText value="#{pagRest.tipoContaDespesa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{pagRest.configPagResPagContDesp.get(0).contaDespesa.toString()}"
+                                              sortBy="#{pagRest.configPagResPagContDesp.get(0).contaDespesa.toString()}">
+                                        <h:outputText value="#{pagRest.configPagResPagContDesp.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{pagRest.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Receita Realizada">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.receitasRealizadas}"
+                                             var="rec"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{rec.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Receitas Realizadas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{rec.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{rec.eventoContabil.toString()}"
+                                              sortBy="#{rec.eventoContabil.toString()}">
+                                        <h:outputText value="#{rec.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{rec.tipoLancamento.descricao}"
+                                              sortBy="#{rec.tipoLancamento.descricao}">
+                                        <h:outputText value="#{rec.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Operação"
+                                              filterBy="#{rec.operacaoReceitaRealizada.descricao}"
+                                              sortBy="#{rec.operacaoReceitaRealizada.descricao}">
+                                        <h:outputText value="#{rec.operacaoReceitaRealizada.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Receita"
+                                              filterBy="#{rec.configRecRealizadaContaRecs.get(0).contaReceita.toString()}"
+                                              sortBy="#{rec.configRecRealizadaContaRecs.get(0).contaReceita.toString()}">
+                                        <h:outputText value="#{rec.configRecRealizadaContaRecs.get(0).contaReceita}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{rec.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Crédito a Receber">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.creditosAReceber}"
+                                             var="cred"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{cred.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Créditos a Receber&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{cred.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{cred.eventoContabil.toString()}"
+                                              sortBy="#{cred.eventoContabil.toString()}">
+                                        <h:outputText value="#{cred.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{cred.tipoLancamento.descricao}"
+                                              sortBy="#{cred.tipoLancamento.descricao}">
+                                        <h:outputText value="#{cred.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Operação"
+                                              filterBy="#{cred.operacaoCreditoReceber.descricao}"
+                                              sortBy="#{cred.operacaoCreditoReceber.descricao}">
+                                        <h:outputText value="#{cred.operacaoCreditoReceber.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Conta de Receita"
+                                              filterBy="#{cred.tiposCredito.descricao}"
+                                              sortBy="#{cred.tiposCredito.descricao}">
+                                        <h:outputText value="#{cred.tiposCredito.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Receita"
+                                              filterBy="#{cred.contaReceita.toString()}"
+                                              sortBy="#{cred.contaReceita.toString()}">
+                                        <h:outputText value="#{cred.contaReceita}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{cred.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Dívida Ativa">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.dividasAtivas}"
+                                             var="dividas"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{dividas.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Dívidas Ativas&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{dividas.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{dividas.eventoContabil.toString()}"
+                                              sortBy="#{dividas.eventoContabil.toString()}">
+                                        <h:outputText value="#{dividas.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{dividas.tipoLancamento.descricao}"
+                                              sortBy="#{dividas.tipoLancamento.descricao}">
+                                        <h:outputText value="#{dividas.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Operação"
+                                              filterBy="#{dividas.operacaoDividaAtiva.descricao}"
+                                              sortBy="#{dividas.operacaoDividaAtiva.descricao}">
+                                        <h:outputText value="#{dividas.operacaoDividaAtiva.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Conta de Receita"
+                                              filterBy="#{dividas.tiposCredito.descricao}"
+                                              sortBy="#{dividas.tiposCredito.descricao}">
+                                        <h:outputText value="#{dividas.tiposCredito.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Receita"
+                                              filterBy="#{dividas.contaReceita.toString()}"
+                                              sortBy="#{dividas.contaReceita.toString()}">
+                                        <h:outputText value="#{dividas.contaReceita}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{dividas.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Investimento">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.investimentos}"
+                                             var="invest"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{invest.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Investimentos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{invest.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{invest.eventoContabil.toString()}"
+                                              sortBy="#{invest.eventoContabil.toString()}">
+                                        <h:outputText value="#{invest.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{invest.tipoLancamento.descricao}"
+                                              sortBy="#{invest.tipoLancamento.descricao}">
+                                        <h:outputText value="#{invest.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Operação"
+                                              filterBy="#{invest.operacaoInvestimento.descricao}"
+                                              sortBy="#{invest.operacaoInvestimento.descricao}">
+                                        <h:outputText value="#{invest.operacaoInvestimento.descricao}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{invest.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Patrimônio Liquido">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.patrimoniosLiquidos}"
+                                             var="patri"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{patri.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Patrimônios Liquidos&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{patri.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Evento Contábil"
+                                              filterBy="#{patri.eventoContabil.toString()}"
+                                              sortBy="#{patri.eventoContabil.toString()}">
+                                        <h:outputText value="#{patri.eventoContabil}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Lançamento"
+                                              filterBy="#{patri.tipoLancamento.descricao}"
+                                              sortBy="#{patri.tipoLancamento.descricao}">
+                                        <h:outputText value="#{patri.tipoLancamento.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Operação Patrimônio Líquido"
+                                              filterBy="#{patri.operacaoPatrimonioLiquido.descricao}"
+                                              sortBy="#{patri.operacaoPatrimonioLiquido.descricao}">
+                                        <h:outputText value="#{patri.operacaoPatrimonioLiquido.descricao}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{patri.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                        </p:tabView>
+                    </p:tab>
+                    <p:tab title="Outros" rendered="#{transporteConfiguracaoContabilControlador.grupo eq 'OUTROS'}">
+                        <p:tabView>
+                            <p:tab title="Configuração Conta de Despesa Grupo Patrimonial">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.configuracoesDespesaBens}"
+                                    var="confBens"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{confBens.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Configurações Conta de Despesa Grupo Patrimonial&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{confBens.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo Patrimonial"
+                                              filterBy="#{confBens.grupoBem.toString()}"
+                                              sortBy="#{confBens.grupoBem.toString()}">
+                                        <h:outputText value="#{confBens.grupoBem}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Grupo Patrimonial"
+                                              filterBy="#{confBens.tipoGrupoBem.descricao}"
+                                              sortBy="#{confBens.tipoGrupoBem.descricao}">
+                                        <h:outputText value="#{confBens.tipoGrupoBem.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{confBens.contaDespesa.toString()}"
+                                              sortBy="#{confBens.contaDespesa.toString()}">
+                                        <h:outputText value="#{confBens.contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{confBens.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Configuração Conta de Despesa Grupo Material">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.configuracoesGrupoMaterial}"
+                                    var="confMat"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{confMat.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Configurações Conta de Despesa Grupo Material&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{confMat.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Grupo Material"
+                                              filterBy="#{confMat.grupoMaterial.toString()}"
+                                              sortBy="#{confMat.grupoMaterial.toString()}">
+                                        <h:outputText value="#{confMat.grupoMaterial}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Estoque"
+                                              filterBy="#{confMat.tipoEstoque.descricao}"
+                                              sortBy="#{confMat.tipoEstoque.descricao}">
+                                        <h:outputText value="#{confMat.tipoEstoque.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{confMat.contaDespesa.toString()}"
+                                              sortBy="#{confMat.contaDespesa.toString()}">
+                                        <h:outputText value="#{confMat.contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{confMat.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Configuração Conta de Despesa Tipo de Viagem">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.configuracoesTipoViagemContaDespesa}"
+                                    var="confVia"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{confVia.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Configurações Conta de Despesa Tipo de Viagem&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{confVia.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Viagem"
+                                              filterBy="#{confVia.tipoViagem.descricao}"
+                                              sortBy="#{confVia.tipoViagem.descricao}">
+                                        <h:outputText value="#{confVia.tipoViagem.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{confVia.contaDespesa.toString()}"
+                                              sortBy="#{confVia.contaDespesa.toString()}">
+                                        <h:outputText value="#{confVia.contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{confVia.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Configuração Conta de Despesa Tipo de Pessoa">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.configuracoesTipoPessoa}"
+                                    var="confPes"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{confPes.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Configurações Conta de Despesa Tipo de Pessoa&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{confPes.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Pessoa"
+                                              filterBy="#{confPes.tipoPessoa.descricao}"
+                                              sortBy="#{confPes.tipoPessoa.descricao}">
+                                        <h:outputText value="#{confPes.tipoPessoa.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Exercício"
+                                              filterBy="#{confPes.exercicio.ano}"
+                                              sortBy="#{confPes.exercicio.ano}">
+                                        <h:outputText value="#{confPes.exercicio.ano}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{confPes.contaDespesa.toString()}"
+                                              sortBy="#{confPes.contaDespesa.toString()}">
+                                        <h:outputText value="#{confPes.contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{confPes.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Configuração Conta de Despesa Tipo de Objeto de Compra">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.configuracoesTipoObjetoCompra}"
+                                    var="confToc"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{confToc.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Configurações Conta de Despesa Tipo de Objeto de Compra&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{confToc.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Tipo de Objeto de compra"
+                                              filterBy="#{confToc.tipoObjetoCompra.descricao}"
+                                              sortBy="#{confToc.tipoObjetoCompra.descricao}">
+                                        <h:outputText value="#{confToc.tipoObjetoCompra.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Subtipo de Objeto de compra"
+                                              filterBy="#{confToc.subtipoObjetoCompra.descricao}"
+                                              sortBy="#{confToc.subtipoObjetoCompra.descricao}">
+                                        <h:outputText value="#{confToc.subtipoObjetoCompra.descricao}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta de Despesa"
+                                              filterBy="#{confToc.contasDespesa.get(0).contaDespesa.toString()}"
+                                              sortBy="#{confToc.contasDespesa.get(0).contaDespesa.toString()}">
+                                        <h:outputText value="#{confToc.contasDespesa.get(0).contaDespesa}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{confToc.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Unidades da Conta Financeira">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.unidadesDaContaFinanceira}"
+                                    var="und"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{und.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Unidades da Conta Financeira&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{und.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Financeira" filterBy="#{und.conta.toString()}"
+                                              sortBy="#{und.conta.toString()}">
+                                        <h:outputText value="#{und.conta}"/>
+                                    </p:column>
+                                    <p:column headerText="Unidade Organizacional"
+                                              filterBy="#{und.unidadeOrganizacional.toString()}"
+                                              sortBy="#{und.unidadeOrganizacional.toString()}">
+                                        <h:outputText value="#{und.unidadeOrganizacional}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{und.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Fontes da Conta Financeira">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.fontesDaContaFinanceira}"
+                                    var="ft"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{ft.erroDuranteProcessamento ? 'fundo-vermelho-medio' : empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Fontes da Conta Financeira&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column style="width: 4%">
+                                        <p:rowToggler rendered="#{ft.erroDuranteProcessamento}"/>
+                                    </p:column>
+                                    <p:column headerText="Conta Financeira" filterBy="#{ft.conta.toString()}"
+                                              sortBy="#{ft.conta.toString()}">
+                                        <h:outputText value="#{ft.conta}"/>
+                                    </p:column>
+                                    <p:column headerText="Fonte de Recurso" filterBy="#{ft.fonte.toString()}"
+                                              sortBy="#{ft.fonte.toString()}">
+                                        <h:outputText value="#{ft.fonte}"/>
+                                    </p:column>
+                                    <p:rowExpansion>
+                                        <h:outputText styleClass="negrito"
+                                                      value="Descrição do erro: #{ft.mensagemDeErro}"/>
+                                    </p:rowExpansion>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Unidade Gestora">
+                                <p:dataTable value="#{transporteConfiguracaoContabilControlador.unidadesGestoras}"
+                                             var="ug"
+                                             styleClass="mtop03"
+                                             rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                             paginator="true"
+                                             rows="10"
+                                             paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Unidades Gestoras&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                             currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                             emptyMessage="Não foram localizados registros para serem apresentados."
+                                             rowIndexVar="rowlx">
+                                    <p:column headerText="Unidade Gestora" filterBy="#{ug.toString()}"
+                                              sortBy="#{ug.toString()}">
+                                        <h:outputText value="#{ug}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:tab>
+                            <p:tab title="Grupo Orçamentário">
+                                <p:dataTable
+                                    value="#{transporteConfiguracaoContabilControlador.transportesGruposOrcamentarios}"
+                                    var="go"
+                                    styleClass="mtop03"
+                                    rowStyleClass="#{empty rowlx or rowlx mod 2 ne 0 ? 'linha-selecionada' : 'trintaAltura'}"
+                                    paginator="true"
+                                    rows="10"
+                                    paginatorTemplate="{CurrentPageReport} &lt;span class='titulo-tabela mrig10'>Grupos Orçamentários&lt;/span> {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                    currentPageReportTemplate="{startRecord} - {endRecord} de {totalRecords}, Página: {currentPage}/{totalPages}"
+                                    emptyMessage="Não foram localizados registros para serem apresentados."
+                                    rowIndexVar="rowlx">
+                                    <p:column headerText="Grupo Orçamentário"
+                                              filterBy="#{go.grupoOrcamentario.toString()}"
+                                              sortBy="#{go.grupoOrcamentario.toString()}">
+                                        <h:outputText value="#{go.grupoOrcamentario}"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:tab>
+                        </p:tabView>
+                    </p:tab>
+                </p:tabView>
+            </p:panel>
+
+            <p:commandButton value="Transportar"
+                             styleClass="operacao prioritario mtop10 mrig05"
+                             id="btnTransportar"
+                             onstart="aguarde.show()"
+                             oncomplete="aguarde.hide()"
+                             process=":Formulario"
+                             icon="ui-icon-transferthick-e-w"
+                             title="Clique para transportar as configurações contábeis."
+                             actionListener="#{transporteConfiguracaoContabilControlador.transportarConfiguracao}"/>
+
+            <p:commandButton value="Simular"
+                             styleClass="operacao mtop10 mrig05"
+                             id="btnSimular"
+                             onclick="statusDialog.show();"
+                             oncomplete="statusDialog.hide();"
+                             update=":Formulario"
+                             process=":Formulario"
+                             icon="ui-icon-search"
+                             title="Clique para simular o transporte das configurações contábeis."
+                             actionListener="#{transporteConfiguracaoContabilControlador.simularConfiguracao}"/>
+
+            <fc:botaoTargetBlank actionListener="#{transporteConfiguracaoContabilControlador.gerarLog()}"
+                                 label="Exportar Log"
+                                 id="exportacao"
+                                 process="@this"
+                                 styleClass="mrig05 mtop10 operacao"
+                                 rendered="#{!empty transporteConfiguracaoContabilControlador.assistenteTransporteConfiguracaoContabil.conteudoLog}"
+                                 title="Clique para exportar o log em PDF."/>
+        </h:form>
+    </ui:define>
+</ui:composition>
+</html>

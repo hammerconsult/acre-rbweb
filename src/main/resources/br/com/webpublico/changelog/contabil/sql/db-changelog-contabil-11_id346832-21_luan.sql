@@ -1,0 +1,6 @@
+insert into PAGINAPREFEITURAPORTAL
+values (hibernate_sequence.nextval, 608930532, 'SQL',
+        '{"consulta":"select nome, chave, ''height: 100px;'' as style from paginaprefeituraportal where modulo_id = (select id from moduloprefeituraportal where modulo = ''ORIENTACOES'') $WHERE order by ordem","count":"select count(id) from paginaprefeituraportal where modulo_id = (select id from moduloprefeituraportal where modulo = ''ORIENTACOES'') $WHERE","totalRegistros":42,"fields":[{"posicao":1,"descricao":"Nome","columnName":"NOME","columnValue":"NOME","tipoAlinhamento":"CENTRO","totalizar":false,"link":{"chaveDestino":"CHAVE","columnOrigem":"","columnDestino":""},"tipo":"STRING","tipoEnum":null,"valorPadrao":null,"escondido":false},{"posicao":2,"descricao":"CHAVE","columnName":"CHAVE","columnValue":"CHAVE","tipoAlinhamento":"CENTRO","totalizar":false,"link":null,"tipo":"STRING","tipoEnum":null,"valorPadrao":null,"escondido":true},{"posicao":3,"descricao":"STYLE","columnName":"STYLE","columnValue":"STYLE","tipoAlinhamento":"CENTRO","totalizar":false,"link":null,"tipo":"STRING","tipoEnum":null,"valorPadrao":null,"escondido":true}],"pesquisaveis":[],"tabs":[],"paineis":[]}',
+        'Orientações', 'orientacoes', 'TABELA_UNICA', '<div></div>', 1, 1,
+        (select id from moduloprefeituraportal where modulo = 'PORTAL'),
+        1, null, null, null);
