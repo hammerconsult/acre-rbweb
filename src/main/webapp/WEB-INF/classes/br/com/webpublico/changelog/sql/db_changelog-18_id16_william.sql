@@ -1,0 +1,1 @@
+update CONTRATOCEASA set VALORUFMATUAL = null

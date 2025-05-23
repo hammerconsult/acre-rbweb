@@ -1,0 +1,1 @@
+update itemsaidainutilizavel set tipoinutilizacaomaterial_id = null;

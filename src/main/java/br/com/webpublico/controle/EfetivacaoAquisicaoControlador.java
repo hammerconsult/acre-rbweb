@@ -131,6 +131,8 @@ public class EfetivacaoAquisicaoControlador extends PrettyControlador<Aquisicao>
         selecionado = facade.recuperarComDepenciasDocumentosFiscais(getId());
         itensSolicitacaoAquisicao = Lists.newArrayList();
         itensAquisicao = Lists.newArrayList();
+
+        selecionado.getSolicitacaoAquisicao().setRequisicaoDeCompra(facade.getRequisicaoDeCompraFacade().recuperarComDependenciasRequisicaoExecucao(selecionado.getSolicitacaoAquisicao().getRequisicaoDeCompra().getId()));
     }
 
     @Override

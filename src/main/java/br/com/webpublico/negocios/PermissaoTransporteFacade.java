@@ -74,7 +74,7 @@ public class PermissaoTransporteFacade extends CalculoExecutorDepoisDePagar<Perm
     private CombustivelFacade combustivelFacade;
     @EJB
     private MoedaFacade moedaFacade;
-    
+
     public PermissaoTransporteFacade() {
         super(PermissaoTransporte.class);
     }
@@ -278,13 +278,13 @@ public class PermissaoTransporteFacade extends CalculoExecutorDepoisDePagar<Perm
             " where coalesce(pt.finalvigencia, :dataAtual) >= :dataAtual " +
             " and perm.finalvigencia is null " +
             " and ce.id = :cadastroEconomico";
-        Query q = em.createNativeQuery(sql, PermissaoTransporte.class);
+        Query q = em.createNativeQuery(sql);
         q.setParameter("cadastroEconomico", ce.getId());
         q.setParameter("dataAtual", DataUtil.dataSemHorario(getSistemaFacade().getDataOperacao()));
         List<BigDecimal> result = q.getResultList();
         List<PermissaoTransporte> retorno = Lists.newArrayList();
         for (BigDecimal idPermissao : result) {
-            retorno.add(recuperar(idPermissao));
+            retorno.add(recuperar(idPermissao.longValue()));
         }
         return retorno;
     }
@@ -953,7 +953,6 @@ public class PermissaoTransporteFacade extends CalculoExecutorDepoisDePagar<Perm
     public void gerarTermoPermissaoMotoristaAuxiliar(PermissaoTransporte pt,
                                                      ParametrosTransitoTransporte parametroVigente,
                                                      MotoristaAuxiliar motorista) {
-        if (pt.isMotoTaxi()) {
             TermoRBTrans termo = new TermoRBTrans();
             termo.setTipoTermoRBTrans(TipoTermoRBTrans.TERMO_AUTORIZA_MOTORISTA);
             termo.setDescricao(TipoTermoRBTrans.TERMO_AUTORIZA_MOTORISTA.getDescricao() +
@@ -969,7 +968,6 @@ public class PermissaoTransporteFacade extends CalculoExecutorDepoisDePagar<Perm
                      AtributosNulosException ex) {
                 logger.error(ex.getMessage());
             }
-        }
     }
 
     public void gerarTermoAutorizacaoVeiculo(PermissaoTransporte pt,
@@ -1380,7 +1378,7 @@ public class PermissaoTransporteFacade extends CalculoExecutorDepoisDePagar<Perm
             " where permissao.tipopermissaorbtrans = :tipoPermissao " +
             "  and (lower(coalesce(pfcmc.nome, pjcmc.razaosocial)) like lower(:parte) or " +
             "       coalesce(pfcmc.cpf, pjcmc.cnpj) like :parte or " +
-            "       cmc.inscricaocadastral like :parte ) ");
+            "       cmc.inscricaocadastral like :parte) fetch first 15 rows only");
         q.setParameter("tipoPermissao", tipoPermissao.name());
         q.setParameter("parte", "%" + parte.trim().replaceAll("\\.", "").replaceAll("-", "").replaceAll("/", "") + "%");
         List<BigDecimal> result = q.getResultList();

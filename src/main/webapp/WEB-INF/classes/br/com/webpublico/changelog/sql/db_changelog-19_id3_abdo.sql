@@ -1,0 +1,1 @@
+ update naturezajuridica set necessitacnae = 1

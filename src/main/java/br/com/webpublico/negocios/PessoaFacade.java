@@ -19,9 +19,9 @@ import br.com.webpublico.entidadesauxiliares.rh.AverbacaoContratoPorServico;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.enums.rh.SituacaoPessoaPortal;
 import br.com.webpublico.exception.ValidacaoException;
-import br.com.webpublico.negocios.comum.ConfiguracaoEmailFacade;
 import br.com.webpublico.negocios.comum.SolicitacaoCadastroPessoaFacade;
 import br.com.webpublico.negocios.comum.UsuarioWebFacade;
+import br.com.webpublico.negocios.jdbc.AuditoriaJDBC;
 import br.com.webpublico.negocios.rh.portal.PessoaFisicaPortalFacade;
 import br.com.webpublico.negocios.tributario.AuditoriaFacade;
 import br.com.webpublico.negocios.tributario.LeitorWsConfig;
@@ -29,30 +29,26 @@ import br.com.webpublico.nfse.domain.dtos.DadosPessoaisNfseDTO;
 import br.com.webpublico.nfse.domain.dtos.ImagemUsuarioNfseDTO;
 import br.com.webpublico.nfse.domain.dtos.PessoaNfseDTO;
 import br.com.webpublico.nfse.domain.dtos.RegisterNfseDTO;
-import br.com.webpublico.nfse.facades.ConviteUsuarioNfseFacade;
 import br.com.webpublico.nfse.util.ArquivoUtil;
 import br.com.webpublico.pessoa.dto.DependenteDTO;
 import br.com.webpublico.pessoa.dto.DependenteVinculoFPDTO;
 import br.com.webpublico.pessoa.dto.PessoaFisicaDTO;
-import br.com.webpublico.util.DataUtil;
-import br.com.webpublico.util.EmailService;
-import br.com.webpublico.util.Persistencia;
-import br.com.webpublico.util.Util;
+import br.com.webpublico.util.*;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.hibernate.Hibernate;
 import org.hibernate.envers.AuditReader;
 import org.hibernate.envers.AuditReaderFactory;
+import org.hibernate.envers.NotAudited;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.UploadedFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ejb.*;
-import javax.persistence.EntityManager;
-import javax.persistence.LockModeType;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
+import javax.persistence.*;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -2002,5 +1998,69 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
             return SituacaoCadastralPessoa.valueOf(resultado.get(0));
         }
         return null;
+    }
+
+    public boolean cadastroAtualizado(PessoaFisica pessoaFisica) {
+        int periodoEmMesesParaSolicitarAtualizacao = 6;
+        Integer diferencaMesesEntidadePai = null;
+        Integer diferencaMesesEntidadeFilho = null;
+        pessoaFisica = pessoaFisicaFacade.recuperar(pessoaFisica.getId());
+        try {
+            ValidaPessoa.validarPerfilTributario(pessoaFisica);
+        } catch (Exception ex) {
+            return false;
+        }
+        String sqlAud = "select rev.datahora " +
+            " from pessoa_aud aud " +
+            "         left join revisaoauditoria rev on aud.rev = rev.id " +
+            "where aud.id = :idPessoa " +
+            "order by rev.datahora desc fetch first 1 row only";
+        Query query = em.createNativeQuery(sqlAud);
+        query.setParameter("idPessoa", pessoaFisica.getId());
+        List<Date> resultado = query.getResultList();
+        if (!resultado.isEmpty()) {
+            diferencaMesesEntidadePai = DataUtil.diferencaMesesInteira(resultado.get(0), new Date());
+        }
+
+        Map<String, List<Long>> mapIdFilhosAud = buscarIdAudFilhos(PessoaFisica.class, pessoaFisica.getId());
+        for (Map.Entry<String, List<Long>> entry : mapIdFilhosAud.entrySet()) {
+            String sqlAudFilhos = " select rev.datahora " +
+                " from " + entry.getKey() + " aud " +
+                "         left join revisaoauditoria rev on aud.rev = rev.id " +
+                " where aud.id in :idFilhos " +
+                " order by rev.datahora desc fetch first 1 row only ";
+            Query queryFilhos = em.createNativeQuery(sqlAudFilhos);
+            queryFilhos.setParameter("idFilhos", entry.getValue());
+            List<Date> resultadoFilhos = queryFilhos.getResultList();
+            if (!resultadoFilhos.isEmpty()) {
+                diferencaMesesEntidadeFilho = DataUtil.diferencaMesesInteira(resultadoFilhos.get(0), new Date());
+                if (diferencaMesesEntidadeFilho <= periodoEmMesesParaSolicitarAtualizacao) break;
+            }
+        }
+
+        return (diferencaMesesEntidadePai != null && diferencaMesesEntidadePai <= periodoEmMesesParaSolicitarAtualizacao) ||
+            (diferencaMesesEntidadeFilho != null && diferencaMesesEntidadeFilho <= periodoEmMesesParaSolicitarAtualizacao);
+    }
+
+    private Map<String, List<Long>> buscarIdAudFilhos(Class classe, Long id) {
+        Map<String, List<Long>> retorno = Maps.newHashMap();
+        for (Field field : Persistencia.getAtributos(classe)) {
+            if (field.isAnnotationPresent(OneToMany.class) && !Strings.isNullOrEmpty(field.getAnnotation(OneToMany.class).mappedBy()) && !field.isAnnotationPresent(NotAudited.class)) {
+                String mappedBy = field.getAnnotation(OneToMany.class).mappedBy();
+                Class genericTypeFromCollection = AuditoriaJDBC.getGenericTypeFromCollection(field, classe);
+                String referenciaTabela = Util.getNomeTabela(genericTypeFromCollection) + "_aud";
+                String select = " select distinct id from " + referenciaTabela + " where " + mappedBy + "_id = " + id;
+                Query q = em.createNativeQuery(select);
+                List<BigDecimal> resultList = q.getResultList();
+                for (BigDecimal idAudFilho : resultList) {
+                    if (retorno.containsKey(referenciaTabela)) {
+                        retorno.get(referenciaTabela).add(idAudFilho.longValue());
+                    } else {
+                        retorno.put(referenciaTabela, Lists.newArrayList(idAudFilho.longValue()));
+                    }
+                }
+            }
+        }
+        return retorno;
     }
 }

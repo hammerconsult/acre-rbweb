@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelatorioSaldoFinanceiro_subreport1_subreport1" pageWidth="672" pageHeight="802" columnWidth="672" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.zoom" value="1.5026296018031553"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="CONTA_ID" class="java.lang.Long"/>
+	<parameter name="SUBCONTA_ID" class="java.lang.Long"/>
+	<parameter name="SQL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" and 1=1 "]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DATAREFERENCIA" class="java.lang.String"/>
+	<parameter name="EXERCICIO_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[0l]]></defaultValueExpression>
+	</parameter>
+	<parameter name="VW_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FONTE_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select font.codigo || ' - ' || font.descricao as fonte ,
+sum(coalesce(ssb.totaldebito - ssb.totalcredito, 0)) as soma,
+ssb.datasaldo,
+vw.codigo || ' - ' || vw.descricao as vw_org
+from saldosubconta ssb
+inner join vwhierarquiaorcamentaria vw on ssb.unidadeorganizacional_id = vw.subordinada_id
+ inner join VWHIERARQUIAORCAMENTARIA vworg on vworg.subordinada_id = vw.superior_id
+inner join subconta sb on ssb.subconta_id = sb.id
+inner join contabancariaentidade cbe on sb.contabancariaentidade_id = cbe.id
+inner join fontederecursos font on ssb.fontederecursos_id = font.id
+and font.exercicio_id = $P!{EXERCICIO_ID}
+inner join agencia ag on cbe.agencia_id = ag.id
+inner join banco b on ag.banco_id = b.id
+inner join (select max(datasaldo) as datasaldo, subconta_id, fontederecursos_id, unidadeorganizacional_id from saldosubconta where CAST(datasaldo AS date) <= to_date($P{DATAREFERENCIA}, 'DD/MM/YYYY') group by subconta_id, fontederecursos_id, unidadeorganizacional_id)
+dataSaldo on dataSaldo.subconta_id = ssb.subconta_id and ssb.datasaldo = dataSaldo.datasaldo and ssb.fontederecursos_id = dataSaldo.fontedeRecursos_id and ssb.unidadeorganizacional_id = dataSaldo.unidadeorganizacional_id
+WHERE CBE.ID = $P{CONTA_ID} AND SB.ID = $P{SUBCONTA_ID} $P!{SQL} and VW.ID = $P{VW_ID}
+and ssb.datasaldo between vw.iniciovigencia and coalesce (vw.fimvigencia, ssb.datasaldo)
+and ssb.datasaldo between vworg.iniciovigencia and coalesce (vworg.fimvigencia, ssb.datasaldo)
+and coalesce(ssb.totalcredito - ssb.totaldebito, 0) <> 0
+group by font.codigo, font.descricao, ssb.datasaldo, vw.codigo, vw.descricao, font.id]]>
+	</queryString>
+	<field name="FONTE" class="java.lang.String"/>
+	<field name="SOMA" class="java.math.BigDecimal"/>
+	<field name="DATASALDO" class="java.sql.Timestamp"/>
+	<field name="VW_ORG" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="10" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="38" y="0" width="497" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FONTE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00-C;#,##0.00-D" isBlankWhenNull="true">
+				<reportElement x="535" y="0" width="100" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SOMA}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

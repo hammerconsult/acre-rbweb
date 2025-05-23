@@ -34,10 +34,9 @@ public enum TipoTermoRBTrans {
      */
     TERMO_AUTORIZA_TRANSFERENCIA_PERMISSAO("Termo de Autorização de Transferência de Permissão", TipoPermissaoRBTrans.TAXI),
     /**
-     * Gerado para: Moto-Táxi .
      * Quando: Ao Cadastrar um novo auxiliar.
      */
-    TERMO_AUTORIZA_MOTORISTA("Termo de Permissão de Condutor Auxiliar", TipoPermissaoRBTrans.MOTO_TAXI),
+    TERMO_AUTORIZA_MOTORISTA("Termo de Permissão de Condutor Auxiliar", TipoPermissaoRBTrans.TAXI, TipoPermissaoRBTrans.MOTO_TAXI, TipoPermissaoRBTrans.FRETE),
     /**
      * Gerado para: Táxi, Moto-Táxi e Frete
      * Quando: Solicitado baixa e inserção ao mesmo tempo.
@@ -45,7 +44,7 @@ public enum TipoTermoRBTrans {
     TERMO_AUTORIZA_BAIXA_INSERCAO_VEICULO("Termo de Baixa e Inserção de Veículo", TipoPermissaoRBTrans.TAXI, TipoPermissaoRBTrans.MOTO_TAXI, TipoPermissaoRBTrans.FRETE);
 
     private String descricao;
-    private TipoPermissaoRBTrans[] tiposPermissao;
+    private final TipoPermissaoRBTrans[] tiposPermissao;
 
     private TipoTermoRBTrans(String descricao, TipoPermissaoRBTrans... tiposPermissao) {
         this.descricao = descricao;

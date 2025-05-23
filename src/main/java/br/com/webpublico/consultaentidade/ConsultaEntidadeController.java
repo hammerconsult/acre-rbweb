@@ -50,6 +50,8 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -221,7 +223,7 @@ public class ConsultaEntidadeController implements Serializable {
             if (consulta != null && consulta.resultados != null) {
                 consulta.resultados.clear();
             } else {
-                logger.info("Não foi encontrada consulta no banco com a chave "+chave);
+                logger.info("Não foi encontrada consulta no banco com a chave " + chave);
             }
         } catch (Exception e) {
             logger.error("Não foi possível recuperar a consulta para a chave", e);
@@ -261,7 +263,7 @@ public class ConsultaEntidadeController implements Serializable {
         try {
             InputStream resourceAsStream = getJsonResourceAsStreamPorChave(chave);
             if (resourceAsStream != null) {
-                consulta = new ObjectMapper().readValue(IOUtils.toString(resourceAsStream), ConsultaEntidade.class);
+                consulta = new ObjectMapper().readValue(IOUtils.toString(resourceAsStream, StandardCharsets.UTF_8.name()), ConsultaEntidade.class);
                 if (consulta != null) {
                     facade.salvarConsultaEntidade(consulta);
                 }
@@ -579,10 +581,10 @@ public class ConsultaEntidadeController implements Serializable {
         String json = new ObjectMapper().writeValueAsString(consulta);
         JSONObject jsonObject = new JSONObject(json);
 
-        fos.write(jsonObject.toString(JSON_INDENTATION).getBytes());
+        fos.write(jsonObject.toString(JSON_INDENTATION).getBytes(StandardCharsets.UTF_8));
         fos.close();
 
-        InputStream stream = new FileInputStream(txt);
+        InputStream stream = Files.newInputStream(txt.toPath());
         return new DefaultStreamedContent(stream, JSON_CONTENT_TYPE, consulta.chave + JSON_EXTENSION);
     }
 

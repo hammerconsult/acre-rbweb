@@ -428,7 +428,7 @@ public class AuditoriaJDBC extends JdbcDaoSupport implements Serializable {
         }
     }
 
-    public Class getGenericTypeFromCollection(Field field, Class classe) {
+    public static Class getGenericTypeFromCollection(Field field, Class classe) {
         ParameterizedType pt = (ParameterizedType) field.getGenericType();
         for (Type t : pt.getActualTypeArguments()) {
             if (Persistencia.isEntidade((Class) t)) {

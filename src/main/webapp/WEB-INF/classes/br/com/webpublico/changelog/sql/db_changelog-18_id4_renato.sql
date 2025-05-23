@@ -1,0 +1,1 @@
+update parametroevento set tipobalancete = 'MENSAL'

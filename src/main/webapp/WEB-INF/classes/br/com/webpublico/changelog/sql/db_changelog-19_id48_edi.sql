@@ -1,0 +1,1 @@
+update estornotransferencia set recebida = dataconciliacao

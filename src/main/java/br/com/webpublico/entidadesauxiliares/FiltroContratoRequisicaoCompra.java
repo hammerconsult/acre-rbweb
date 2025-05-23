@@ -10,6 +10,11 @@ public class FiltroContratoRequisicaoCompra {
     Licitacao licitacao;
     Contrato contrato;
     ObjetoCompra objetoCompra;
+    String parte;
+
+    public FiltroContratoRequisicaoCompra() {
+        parte = "";
+    }
 
     public HierarquiaOrganizacional getHierarquiaOrganizacional() {
         return hierarquiaOrganizacional;
@@ -65,5 +70,13 @@ public class FiltroContratoRequisicaoCompra {
 
     public void setObjetoCompra(ObjetoCompra objetoCompra) {
         this.objetoCompra = objetoCompra;
+    }
+
+    public String getParte() {
+        return parte;
+    }
+
+    public void setParte(String parte) {
+        this.parte = parte;
     }
 }

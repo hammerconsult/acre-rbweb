@@ -1,0 +1,1 @@
+update NATUREZARENDIMENTOREINF set INICIOVIGENCIA = to_date('01/01/2023', 'dd/MM/yyyy') where INICIOVIGENCIA is null

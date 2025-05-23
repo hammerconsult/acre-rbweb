@@ -1,0 +1,1 @@
+update itemAposentadoria i set i.eventofp_id = (select e.eventofp_id from itemaposentadoriaeventofp e where e.id = i.id)

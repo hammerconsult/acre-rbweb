@@ -75,16 +75,6 @@ public class RequisicaoDeCompra extends SuperEntidade {
     private TipoRequisicaoCompra tipoRequisicao;
 
     @ManyToOne
-    @Pesquisavel
-    @Etiqueta("Contrato")
-    private Contrato contrato;
-
-    @ManyToOne
-    @Pesquisavel
-    @Etiqueta("Reconhecimento de Dívida")
-    private ReconhecimentoDivida reconhecimentoDivida;
-
-    @ManyToOne
     @Obrigatorio
     @Etiqueta("Criado por")
     private PessoaFisica criadoPor;
@@ -116,7 +106,6 @@ public class RequisicaoDeCompra extends SuperEntidade {
         itens = Lists.newArrayList();
         execucoes = Lists.newArrayList();
         situacaoRequisicaoCompra = SituacaoRequisicaoCompra.EM_ELABORACAO;
-
     }
 
     public String getDescricaoPrazoEntrega() {
@@ -143,13 +132,6 @@ public class RequisicaoDeCompra extends SuperEntidade {
         this.criadoPor = criadoPor;
     }
 
-    public ReconhecimentoDivida getReconhecimentoDivida() {
-        return reconhecimentoDivida;
-    }
-
-    public void setReconhecimentoDivida(ReconhecimentoDivida reconhecimentoDivida) {
-        this.reconhecimentoDivida = reconhecimentoDivida;
-    }
 
     public SituacaoRequisicaoCompra getSituacaoRequisicaoCompra() {
         return situacaoRequisicaoCompra;
@@ -184,11 +166,24 @@ public class RequisicaoDeCompra extends SuperEntidade {
     }
 
     public Contrato getContrato() {
-        return contrato;
+        Optional<RequisicaoCompraExecucao> first = execucoes.stream()
+            .filter(exec -> exec.getExecucaoContratoEmpenho() != null && exec.getExecucaoContrato() != null && tipoRequisicao.isContrato())
+            .findAny();
+        return first.map(RequisicaoCompraExecucao::getContrato).orElse(null);
     }
 
-    public void setContrato(Contrato contrato) {
-        this.contrato = contrato;
+    public ReconhecimentoDivida getReconhecimentoDivida() {
+        Optional<RequisicaoCompraExecucao> first = execucoes.stream()
+            .filter(exec -> exec.getReconhecimentoDivida() != null && tipoRequisicao.isReconhecimentoDivida())
+            .findAny();
+        return first.map(RequisicaoCompraExecucao::getReconhecimentoDivida).orElse(null);
+    }
+
+    public ExecucaoProcesso getExecucaoProcesso() {
+        Optional<RequisicaoCompraExecucao> first = execucoes.stream()
+            .filter(exec -> exec.getExecucaoProcessoEmpenho() != null && exec.getExecucaoProcesso() != null && tipoRequisicao.isExecucaoProcesso())
+            .findAny();
+        return first.map(RequisicaoCompraExecucao::getExecucaoProcesso).orElse(null);
     }
 
     public Long getId() {
@@ -247,37 +242,20 @@ public class RequisicaoDeCompra extends SuperEntidade {
         this.tipoObjetoCompra = tipoObjetoCompra;
     }
 
-    public ExecucaoProcesso getExecucaoProcesso() {
-        try {
-            Optional<RequisicaoCompraExecucao> first = execucoes.stream()
-                .filter(exec -> exec.getExecucaoProcesso() != null && tipoRequisicao.isExecucaoProcesso())
-                .findFirst();
-            return first.map(RequisicaoCompraExecucao::getExecucaoProcesso).orElse(null);
-        } catch (NullPointerException e) {
-            return null;
-        }
+    public List<RequisicaoCompraExecucao> getExecucoes() {
+        return execucoes;
     }
 
-    public Pessoa getIdProcesso() {
-        switch (tipoRequisicao) {
-            case CONTRATO:
-                return contrato.getContratado();
-            case RECONHECIMENTO_DIVIDA:
-                return reconhecimentoDivida.getFornecedor();
-            case ATA_REGISTRO_PRECO:
-            case DISPENSA_LICITACAO_INEXIGIBILIDADE:
-                return getExecucaoProcesso().getFornecedor();
-            default:
-                return null;
-        }
+    public void setExecucoes(List<RequisicaoCompraExecucao> processos) {
+        this.execucoes = processos;
     }
 
     public String getDescricaoProcesso() {
         switch (tipoRequisicao) {
             case CONTRATO:
-                return contrato.toString();
+                return getContrato().toString();
             case RECONHECIMENTO_DIVIDA:
-                return reconhecimentoDivida.toString();
+                return getReconhecimentoDivida().toString();
             case ATA_REGISTRO_PRECO:
             case DISPENSA_LICITACAO_INEXIGIBILIDADE:
                 return getExecucaoProcesso().getDescricaoProcesso();
@@ -287,28 +265,17 @@ public class RequisicaoDeCompra extends SuperEntidade {
     }
 
     public Pessoa getFornecedor() {
-        if (isTipoContrato() && contrato != null) {
-            return contrato.getContratado();
-        } else if (isTipoReconhecimentoDivida() && reconhecimentoDivida != null) {
-            return reconhecimentoDivida.getFornecedor();
-        } else if (getExecucaoProcesso() != null) {
+        if (tipoRequisicao.isContrato() && getContrato() != null) {
+            return getContrato().getContratado();
+
+        } else if (tipoRequisicao.isReconhecimentoDivida() && getReconhecimentoDivida() != null) {
+            return getReconhecimentoDivida().getFornecedor();
+
+        } else if (tipoRequisicao.isExecucaoProcesso() && getExecucaoProcesso() !=null) {
             return getExecucaoProcesso().getFornecedor();
+
         }
         return null;
-    }
-
-    public Date getDataProcesso() {
-        switch (tipoRequisicao) {
-            case CONTRATO:
-                return contrato.getDataAprovacao();
-            case RECONHECIMENTO_DIVIDA:
-                return reconhecimentoDivida.getDataReconhecimento();
-            case ATA_REGISTRO_PRECO:
-            case DISPENSA_LICITACAO_INEXIGIBILIDADE:
-                return getExecucaoProcesso().getDataLancamento();
-            default:
-                return new Date();
-        }
     }
 
     public boolean hasFornecedor() {
@@ -354,21 +321,40 @@ public class RequisicaoDeCompra extends SuperEntidade {
     }
 
     public Boolean isEmElaboracao() {
-        return SituacaoRequisicaoCompra.EM_ELABORACAO.equals(situacaoRequisicaoCompra);
+        return situacaoRequisicaoCompra != null && situacaoRequisicaoCompra.isEmElaboracao();
+    }
+
+    public boolean isLicitacaoMaiorDesconto(Contrato contrato, AtaRegistroPreco ataRegistroPreco) {
+        if (ataRegistroPreco != null) {
+            return isAtaMaiorDesconto(ataRegistroPreco);
+        }
+        return isContratoMaiorDesconto(contrato);
     }
 
     public boolean isLicitacaoMaiorDesconto() {
-        if (isTipoContrato() && contrato != null && contrato.isDeRegistroDePrecoExterno()) {
+        if (isTipoAtaRegistroPreco()  && getExecucaoProcesso() != null && getExecucaoProcesso().getAtaRegistroPreco() !=null) {
+            return isAtaMaiorDesconto(getExecucaoProcesso().getAtaRegistroPreco());
+        }
+        return isContratoMaiorDesconto(getContrato());
+    }
+
+    private boolean isContratoMaiorDesconto(Contrato contrato) {
+        if (isTipoContrato()
+            && contrato != null
+            && contrato.isDeRegistroDePrecoExterno()) {
             return contrato.getRegistroSolicitacaoMaterialExterno() != null && contrato.getRegistroSolicitacaoMaterialExterno().getTipoAvaliacao().isMaiorDesconto();
         }
-        Licitacao licitacao = null;
-        if (isTipoContrato() && contrato != null && contrato.getLicitacao() != null) {
-            licitacao = contrato.getLicitacao();
+        return isTipoContrato()
+            && contrato != null
+            && contrato.getLicitacao() != null
+            && contrato.getLicitacao().getTipoAvaliacao().isMaiorDesconto();
+    }
 
-        } else if (isTipoAtaRegistroPreco() && getExecucaoProcesso() != null && getExecucaoProcesso().getAtaRegistroPreco() != null) {
-            licitacao = getExecucaoProcesso().getAtaRegistroPreco().getLicitacao();
-        }
-        return licitacao != null && licitacao.getTipoAvaliacao().isMaiorDesconto();
+    private boolean isAtaMaiorDesconto(AtaRegistroPreco ataRegistroPreco) {
+        return isTipoAtaRegistroPreco()
+            && ataRegistroPreco != null
+            && ataRegistroPreco.getLicitacao() != null
+            && ataRegistroPreco.getLicitacao().getTipoAvaliacao().isMaiorDesconto();
     }
 
     public BigDecimal getValorTotal() {
@@ -381,36 +367,8 @@ public class RequisicaoDeCompra extends SuperEntidade {
         return total;
     }
 
-    public BigDecimal getValorTotalDesdobradoItens() {
-        BigDecimal total = BigDecimal.ZERO;
-        if (hasItens()) {
-            for (ItemRequisicaoDeCompra item : itens) {
-                total = total.add(item.getValorTotalDesdobrado());
-            }
-        }
-        return total;
-    }
-
-    public BigDecimal getValorTotalDescontoItens() {
-        BigDecimal total = BigDecimal.ZERO;
-        if (hasItens()) {
-            for (ItemRequisicaoDeCompra item : itens) {
-                total = total.add(item.getValorDescontoTotal());
-            }
-        }
-        return total;
-    }
-
     public boolean hasItens() {
         return itens != null && !itens.isEmpty();
-    }
-
-    public List<RequisicaoCompraExecucao> getExecucoes() {
-        return execucoes;
-    }
-
-    public void setExecucoes(List<RequisicaoCompraExecucao> execucoes) {
-        this.execucoes = execucoes;
     }
 
     public AtaRegistroPreco getAtaRegistroPreco() {

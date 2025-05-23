@@ -307,9 +307,9 @@ public class ExclusaoContratoFacade extends AbstractFacade<ExclusaoContrato> {
             "   from requisicaodecompra req" +
             "   inner join requisicaocompraexecucao reqex on reqex.requisicaocompra_id = req.id " +
             "   inner join execucaocontrato ex on ex.id = reqex.execucaocontrato_id" +
-            "   inner join contrato c on c.id = req.contrato_id" +
+            "   inner join contrato c on c.id = ex.contrato_id" +
             "   inner join exercicio exerc on exerc.id = c.exerciciocontrato_id" +
-            "   where req.contrato_id = :idMovimento" +
+            "   where c.id = :idMovimento" +
             " union all" +
             "   select sol.id as id, " +
             "      'SOLICITACAO_AQUISICAO' as tipo_movimento," +
@@ -467,7 +467,7 @@ public class ExclusaoContratoFacade extends AbstractFacade<ExclusaoContrato> {
             "   from requisicaodecompra req " +
             "   inner join requisicaocompraexecucao reqex on reqex.requisicaocompra_id = req.id " +
             "   inner join execucaocontrato ex on ex.id = reqex.execucaocontrato_id " +
-            "   inner join contrato c on c.id = req.contrato_id " +
+            "   inner join contrato c on c.id = ex.contrato_id " +
             "   inner join exercicio exerc on exerc.id = c.exerciciocontrato_id" +
             "   where reqex.execucaocontrato_id = :idMovimento " +
             " union all " +
@@ -480,11 +480,12 @@ public class ExclusaoContratoFacade extends AbstractFacade<ExclusaoContrato> {
             "   inner join solicitacaoaquisicao sol on sol.id = aq.solicitacaoaquisicao_id " +
             "   inner join requisicaodecompra req on req.id = sol.requisicaodecompra_id " +
             "   inner join requisicaocompraexecucao reqex on reqex.requisicaocompra_id = req.id " +
-            "   inner join contrato c on c.id = req.contrato_id " +
+            "   inner join execucaocontrato ex on ex.id = reqex.execucaocontrato_id " +
+            "   inner join contrato c on c.id = ex.contrato_id " +
             "   inner join exercicio exerc on exerc.id = c.exerciciocontrato_id " +
             "   where reqex.execucaocontrato_id = :idMovimento " +
             " union all" +
-            "   select em.id as id, " +
+            "   select distinct em.id as id, " +
             "      'ENTRADA_COMPRA' as tipo_movimento," +
             "       em.dataentrada as data_movimento," +
             "       em.numero  || '/' || exerc.ano || ' referente a requisição de compra nº ' || req.numero as movimento," +
@@ -493,7 +494,8 @@ public class ExclusaoContratoFacade extends AbstractFacade<ExclusaoContrato> {
             "   inner join entradacompramaterial ecm on ecm.id = em.id " +
             "   inner join requisicaodecompra req on req.id = ecm.requisicaodecompra_id" +
             "   inner join requisicaocompraexecucao reqex on reqex.requisicaocompra_id = req.id " +
-            "   inner join contrato c on c.id = req.contrato_id" +
+            "   inner join execucaocontrato ex on ex.id = reqex.execucaocontrato_id " +
+            "   inner join contrato c on c.id = ex.contrato_id" +
             "   inner join exercicio exerc on exerc.id = c.exerciciocontrato_id" +
             "   where reqex.execucaocontrato_id = :idMovimento " +
             " union all " +
@@ -599,7 +601,7 @@ public class ExclusaoContratoFacade extends AbstractFacade<ExclusaoContrato> {
             "   inner join execucaocontrato ex on ex.id = exemp.execucaocontrato_id " +
             "   where ex.idorigem = :idMovimento" +
             " union all" +
-            "   select req.id as id, " +
+            "   select distinct req.id as id, " +
             "      'REQUISICAO_COMPRA' as tipo_movimento," +
             "       req.datarequisicao as data_movimento," +
             "       req.numero || '/' || exerc.ano || ' - referente a execução nº ' || ex.numero as movimento," +
@@ -607,7 +609,7 @@ public class ExclusaoContratoFacade extends AbstractFacade<ExclusaoContrato> {
             "   from requisicaodecompra req " +
             "   inner join requisicaocompraexecucao reqex on reqex.requisicaocompra_id = req.id " +
             "   inner join execucaocontrato ex on ex.id = reqex.execucaocontrato_id " +
-            "   inner join contrato c on c.id = req.contrato_id " +
+            "   inner join contrato c on c.id = ex.contrato_id " +
             "   inner join exercicio exerc on exerc.id = c.exerciciocontrato_id " +
             "   where ex.idorigem = :idMovimento" +
             " ) ";

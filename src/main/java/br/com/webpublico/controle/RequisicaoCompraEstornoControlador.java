@@ -37,7 +37,6 @@ public class RequisicaoCompraEstornoControlador extends PrettyControlador<Requis
     @EJB
     private RequisicaoCompraEstornoFacade facade;
     private RequisicaoDeCompra requisicaoDeCompra;
-    private List<ItemRequisicaoCompraEstorno> itensEstorno;
 
     public RequisicaoCompraEstornoControlador() {
         super(RequisicaoCompraEstorno.class);
@@ -63,7 +62,6 @@ public class RequisicaoCompraEstornoControlador extends PrettyControlador<Requis
     public void novo() {
         super.novo();
         selecionado.setDataLancamento(facade.getSistemaFacade().getDataOperacao());
-        itensEstorno = null;
     }
 
     @Override
@@ -78,6 +76,7 @@ public class RequisicaoCompraEstornoControlador extends PrettyControlador<Requis
         try {
             selecionado.realizarValidacoes();
             validarItens();
+            selecionado.getItens().removeIf(item -> !item.hasQuantidade());
             selecionado = facade.salvarEstorno(selecionado);
             FacesUtil.addOperacaoRealizada("O estorno de requisição de compra foi salva com sucesso.");
             FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + selecionado.getId() + "/");
@@ -91,22 +90,18 @@ public class RequisicaoCompraEstornoControlador extends PrettyControlador<Requis
 
     private void validarItens() {
         ValidacaoException ve = new ValidacaoException();
-        if (selecionado.getItensRequisicaoCompraEstorno().isEmpty()) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("Para realizar o estorno, é necessário selecionar ao menos um (1) item.");
+        if (selecionado.getItens().stream().noneMatch(ItemRequisicaoCompraEstorno::hasQuantidade)) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("Para realizar o estorno, é necessário que menos um (1) item tenha quantidade informada maior que zero(0).");
         }
         ve.lancarException();
-        for (ItemRequisicaoCompraEstorno itemEstorno : selecionado.getItensRequisicaoCompraEstorno()) {
-            if (itemEstorno.getQuantidade().compareTo(BigDecimal.ZERO) == 0) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("O campo quantidade deve ser maior que zero (0) para o item " + itemEstorno.getItemRequisicaoCompra() + ".");
+        for (ItemRequisicaoCompraEstorno itemEstorno : selecionado.getItens()) {
+            if (itemEstorno.getQuantidade().compareTo(BigDecimal.ZERO) < 0) {
+                ve.adicionarMensagemDeOperacaoNaoPermitida("O campo quantidade deve ser maior que zero (0) para o item " + itemEstorno.getItemRequisicaoCompra().getNumero() + ".");
             } else if (itemEstorno.getQuantidadeDisponivel().subtract(itemEstorno.getQuantidade()).compareTo(BigDecimal.ZERO) < 0) {
                 ve.adicionarMensagemDeOperacaoNaoPermitida("A quantidade que deseja estornar é maior que a quantidade disponível para o item Nº <b>" + itemEstorno.getItemRequisicaoCompra().getNumero() + "</b>.");
             }
         }
         ve.lancarException();
-    }
-
-    public BigDecimal buscarQuantidadeRestante(ItemRequisicaoDeCompra item) {
-        return facade.getRequisicaoDeCompraFacade().buscarQuantidadeRestante(item);
     }
 
     public void gerarRelatorio(String tipoRelatorioExtensao) {
@@ -145,38 +140,19 @@ public class RequisicaoCompraEstornoControlador extends PrettyControlador<Requis
         if (selecionado.getRequisicaoDeCompra() != null) {
             requisicaoDeCompra = facade.getRequisicaoDeCompraFacade().recuperar(selecionado.getRequisicaoDeCompra().getId());
             selecionado.setRequisicaoDeCompra(requisicaoDeCompra);
-            itensEstorno = Lists.newArrayList();
             for (ItemRequisicaoDeCompra itemRequisicao : requisicaoDeCompra.getItens()) {
-                if (requisicaoDeCompra.isTipoReconhecimentoDivida() || requisicaoDeCompra.isTipoExecucaoProcesso()) {
-                    criarItemEstornoRequisao(itemRequisicao, null);
-                    continue;
-                }
                 for (ItemRequisicaoCompraExecucao itemReqExec : itemRequisicao.getItensRequisicaoExecucao()) {
-                    criarItemEstornoRequisao(itemRequisicao, itemReqExec);
+
+                    ItemRequisicaoCompraEstorno item = new ItemRequisicaoCompraEstorno();
+                    item.setRequisicaoCompraEstorno(selecionado);
+                    item.setItemRequisicaoCompraExec(itemReqExec);
+                    BigDecimal qtdeEstornada = facade.buscarQuantidadeEstornadaRequisicao(itemReqExec);
+                    item.setQuantidadeDisponivel(itemReqExec.getQuantidade().subtract(qtdeEstornada));
+                    item.setQuantidade(item.getQuantidadeDisponivel());
+                    Util.adicionarObjetoEmLista(selecionado.getItens(), item);
                 }
             }
         }
-    }
-
-    private void criarItemEstornoRequisao(ItemRequisicaoDeCompra itemRequisicao, ItemRequisicaoCompraExecucao itemRequisicaoExecucao) {
-        ItemRequisicaoCompraEstorno item = new ItemRequisicaoCompraEstorno();
-        item.setItemRequisicaoCompra(itemRequisicao);
-        item.setQuantidade(BigDecimal.ZERO);
-        if (requisicaoDeCompra.isTipoContrato()) {
-            item.setItemRequisicaoCompraExec(itemRequisicaoExecucao);
-            BigDecimal qtdeEstornada = facade.buscarQuantidadeEstornadaRequisicaoContrato(itemRequisicaoExecucao);
-            item.setQuantidadeDisponivel(itemRequisicaoExecucao.getQuantidade().subtract(qtdeEstornada));
-        } else {
-            BigDecimal qtdeEstornada = facade.buscarQuantidadeEstornadaRequisicao(itemRequisicao);
-            item.setQuantidadeDisponivel(itemRequisicao.getQuantidade().subtract(qtdeEstornada));
-        }
-        if (item.getQuantidadeDisponivel().compareTo(BigDecimal.ZERO) > 0) {
-            Util.adicionarObjetoEmLista(itensEstorno, item);
-        }
-    }
-
-    public void calcularQuantidade(ItemRequisicaoCompraExecucao itemReqExec, ItemRequisicaoCompraEstorno itemEstorno) {
-        itemEstorno.setQuantidade(itemEstorno.getQuantidade().add(itemReqExec.getQuantidade()));
     }
 
     public boolean hasRequisicaoSelecionada() {
@@ -184,14 +160,13 @@ public class RequisicaoCompraEstornoControlador extends PrettyControlador<Requis
     }
 
     public boolean isTipoContrato() {
-        return selecionado.getRequisicaoDeCompra() !=null && selecionado.getRequisicaoDeCompra().isTipoContrato();
+        return selecionado.getRequisicaoDeCompra() != null && selecionado.getRequisicaoDeCompra().isTipoContrato();
     }
 
     public void atribuirNullRequisicao() {
         selecionado.setRequisicaoDeCompra(null);
         setRequisicaoDeCompra(null);
-        setItensEstorno(Lists.<ItemRequisicaoCompraEstorno>newArrayList());
-        selecionado.getItensRequisicaoCompraEstorno().clear();
+        selecionado.setItens(Lists.<ItemRequisicaoCompraEstorno>newArrayList());
     }
 
     public RequisicaoDeCompra getRequisicaoDeCompra() {
@@ -201,47 +176,4 @@ public class RequisicaoCompraEstornoControlador extends PrettyControlador<Requis
     public void setRequisicaoDeCompra(RequisicaoDeCompra requisicaoDeCompra) {
         this.requisicaoDeCompra = requisicaoDeCompra;
     }
-
-    public List<ItemRequisicaoCompraEstorno> getItensEstorno() {
-        return itensEstorno;
-    }
-
-    public void setItensEstorno(List<ItemRequisicaoCompraEstorno> itensEstorno) {
-        this.itensEstorno = itensEstorno;
-    }
-
-    public boolean mostrarBotaoSelecionarTodos() {
-        return itensEstorno != null && selecionado.getItensRequisicaoCompraEstorno().size() != itensEstorno.size();
-    }
-
-    public void desmarcarTodos() {
-        for (ItemRequisicaoCompraEstorno item : itensEstorno) {
-            desmarcarObjeto(item);
-        }
-        selecionado.getItensRequisicaoCompraEstorno().clear();
-    }
-
-    public void selecionarTodos() {
-        desmarcarTodos();
-        for (ItemRequisicaoCompraEstorno itemRequisicaoCompraEstorno : itensEstorno) {
-            selecionarObjeto(itemRequisicaoCompraEstorno);
-        }
-    }
-
-    public boolean mostrarBotaoSelecionarObjeto(ItemRequisicaoCompraEstorno itemRequisicaoCompraEstorno) {
-        return !selecionado.getItensRequisicaoCompraEstorno().contains(itemRequisicaoCompraEstorno);
-    }
-
-    public void desmarcarObjeto(ItemRequisicaoCompraEstorno item) {
-        selecionado.getItensRequisicaoCompraEstorno().remove(item);
-        item.setRequisicaoCompraEstorno(null);
-        item.setQuantidade(BigDecimal.ZERO);
-    }
-
-    public void selecionarObjeto(ItemRequisicaoCompraEstorno item) {
-        item.setRequisicaoCompraEstorno(selecionado);
-        item.setQuantidade(item.getQuantidadeDisponivel());
-        Util.adicionarObjetoEmLista(selecionado.getItensRequisicaoCompraEstorno(), item);
-    }
-
 }

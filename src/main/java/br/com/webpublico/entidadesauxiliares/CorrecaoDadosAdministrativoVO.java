@@ -1,9 +1,7 @@
 package br.com.webpublico.entidadesauxiliares;
 
-import br.com.webpublico.entidades.AlteracaoContratual;
-import br.com.webpublico.entidades.Bem;
-import br.com.webpublico.entidades.UnidadeOrganizacional;
-import br.com.webpublico.entidades.UsuarioSistema;
+import br.com.webpublico.entidades.*;
+import br.com.webpublico.enums.TipoRequisicaoCompra;
 import br.com.webpublico.util.AssistenteBarraProgresso;
 import com.google.common.collect.Lists;
 
@@ -13,26 +11,29 @@ import java.util.List;
 public class CorrecaoDadosAdministrativoVO {
 
     private List<Bem> bens;
-    private List<ItemDoctoItemEntradaVO> itensDocumentoEntrada;
+    private List<RequisicaoCompraCorrecaoDados> requisicoesCompra;
     private TipoFuture tipoFuture;
     private AssistenteBarraProgresso assistenteBarraProgresso;
     private Date dataOperacao;
     private UsuarioSistema usuarioSistema;
     private UnidadeOrganizacional unidadeOrganizacional;
     private AlteracaoContratual alteracaoContratual;
+    private RequisicaoDeCompra requisicaoDeCompra;
+    private TipoRequisicaoCompra tipoRequisicaoCompra;
     private List<AlteracaoContratual> alteracoesContratuais;
 
     public CorrecaoDadosAdministrativoVO() {
         bens = Lists.newArrayList();
-        itensDocumentoEntrada = Lists.newArrayList();
+        requisicoesCompra = Lists.newArrayList();
+        tipoRequisicaoCompra = TipoRequisicaoCompra.CONTRATO;
     }
 
-    public List<ItemDoctoItemEntradaVO> getItensDocumentoEntrada() {
-        return itensDocumentoEntrada;
+    public List<RequisicaoCompraCorrecaoDados> getRequisicoesCompra() {
+        return requisicoesCompra;
     }
 
-    public void setItensDocumentoEntrada(List<ItemDoctoItemEntradaVO> itensDocumentoEntrada) {
-        this.itensDocumentoEntrada = itensDocumentoEntrada;
+    public void setRequisicoesCompra(List<RequisicaoCompraCorrecaoDados> requisicoesCompra) {
+        this.requisicoesCompra = requisicoesCompra;
     }
 
     public List<Bem> getBens() {
@@ -99,9 +100,28 @@ public class CorrecaoDadosAdministrativoVO {
         this.alteracoesContratuais = alteracoesContratuais;
     }
 
+    public RequisicaoDeCompra getRequisicaoDeCompra() {
+        return requisicaoDeCompra;
+    }
+
+    public void setRequisicaoDeCompra(RequisicaoDeCompra requisicaoDeCompra) {
+        this.requisicaoDeCompra = requisicaoDeCompra;
+    }
+
+    public TipoRequisicaoCompra getTipoRequisicaoCompra() {
+        return tipoRequisicaoCompra;
+    }
+
+    public void setTipoRequisicaoCompra(TipoRequisicaoCompra tipoRequisicaoCompra) {
+        this.tipoRequisicaoCompra = tipoRequisicaoCompra;
+    }
+
     public enum TipoFuture {
         CONSULTA_BENS,
-        REPROCESSAMENTO_ALTERACAO_CONTRATUAL,
-        ITEM_DOCUMENTO_FISCAL;
+        PADRAO;
+    }
+
+    public enum TipoAlteracaoDados {
+        INSERT, UPDATE, DEPRECATE;
     }
 }

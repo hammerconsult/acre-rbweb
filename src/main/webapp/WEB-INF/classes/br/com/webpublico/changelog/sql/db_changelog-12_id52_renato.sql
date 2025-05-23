@@ -1,0 +1,1 @@
+update contacontabil set CELULADEINFORMACAO_ID = null

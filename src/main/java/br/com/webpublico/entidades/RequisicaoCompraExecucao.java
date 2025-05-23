@@ -4,7 +4,6 @@ import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.anotacoes.Etiqueta;
-import com.google.common.collect.ComparisonChain;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
@@ -13,7 +12,7 @@ import javax.persistence.*;
 @Audited
 @GrupoDiagrama(nome = "Licitacao")
 @Etiqueta("Requisição de Compra Execução")
-public class RequisicaoCompraExecucao extends SuperEntidade implements Comparable<RequisicaoCompraExecucao> {
+public class RequisicaoCompraExecucao extends SuperEntidade {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -25,10 +24,16 @@ public class RequisicaoCompraExecucao extends SuperEntidade implements Comparabl
     private RequisicaoDeCompra requisicaoCompra;
 
     @ManyToOne
-    private ExecucaoContrato execucaoContrato;
+    @Etiqueta("Execução Contrato Empenho")
+    private ExecucaoContratoEmpenho execucaoContratoEmpenho;
 
     @ManyToOne
-    private ExecucaoProcesso execucaoProcesso;
+    @Etiqueta("Execução Processo Empenho")
+    private ExecucaoProcessoEmpenho execucaoProcessoEmpenho;
+
+    @ManyToOne
+    @Etiqueta("Execução Reconhecimento Dívida")
+    private SolicitacaoEmpenhoReconhecimentoDivida execucaoReconhecimentoDiv;
 
     @Override
     public Long getId() {
@@ -47,40 +52,77 @@ public class RequisicaoCompraExecucao extends SuperEntidade implements Comparabl
         this.requisicaoCompra = requisicaoCompra;
     }
 
-    public ExecucaoContrato getExecucaoContrato() {
-        return execucaoContrato;
+
+    public ExecucaoContratoEmpenho getExecucaoContratoEmpenho() {
+        return execucaoContratoEmpenho;
     }
 
-    public void setExecucaoContrato(ExecucaoContrato execucaoContrato) {
-        this.execucaoContrato = execucaoContrato;
+    public void setExecucaoContratoEmpenho(ExecucaoContratoEmpenho execucaoContratoEmpenho) {
+        this.execucaoContratoEmpenho = execucaoContratoEmpenho;
+    }
+
+    public ExecucaoProcessoEmpenho getExecucaoProcessoEmpenho() {
+        return execucaoProcessoEmpenho;
+    }
+
+    public void setExecucaoProcessoEmpenho(ExecucaoProcessoEmpenho execucaoProcessoEmpenho) {
+        this.execucaoProcessoEmpenho = execucaoProcessoEmpenho;
+    }
+
+    public ExecucaoContrato getExecucaoContrato() {
+        return getExecucaoContratoEmpenho().getExecucaoContrato();
     }
 
     public ExecucaoProcesso getExecucaoProcesso() {
-        return execucaoProcesso;
+        return getExecucaoProcessoEmpenho().getExecucaoProcesso();
     }
 
-    public void setExecucaoProcesso(ExecucaoProcesso execucaoProcesso) {
-        this.execucaoProcesso = execucaoProcesso;
+    public ReconhecimentoDivida getReconhecimentoDivida() {
+        return execucaoReconhecimentoDiv.getReconhecimentoDivida();
+    }
+
+    public SolicitacaoEmpenhoReconhecimentoDivida getExecucaoReconhecimentoDiv() {
+        return execucaoReconhecimentoDiv;
+    }
+
+    public void setExecucaoReconhecimentoDiv(SolicitacaoEmpenhoReconhecimentoDivida execucaoReconhecimentoDivida) {
+        this.execucaoReconhecimentoDiv = execucaoReconhecimentoDivida;
+    }
+
+    public Long getIdExecucao() {
+        if (requisicaoCompra.isTipoContrato()) {
+            return getExecucaoContrato().getId();
+        } else if (requisicaoCompra.isTipoExecucaoProcesso()) {
+            return getExecucaoProcesso().getId();
+        } else {
+            return getReconhecimentoDivida().getId();
+        }
+    }
+
+    public Empenho getEmpenho() {
+        if (execucaoContratoEmpenho != null) {
+            return execucaoContratoEmpenho.getEmpenho();
+        } else if (execucaoProcessoEmpenho != null) {
+            return execucaoProcessoEmpenho.getEmpenho();
+        }
+        return execucaoReconhecimentoDiv.getSolicitacaoEmpenho().getEmpenho();
+    }
+
+    public Contrato getContrato() {
+        return getExecucaoContrato().getContrato();
     }
 
     @Override
     public String toString() {
         try {
             if (requisicaoCompra.isTipoContrato()) {
-                return "Nº " + execucaoContrato.getNumero() + " - " + DataUtil.getDataFormatada(execucaoContrato.getDataLancamento()) + " - " + Util.formataValor(execucaoContrato.getValor());
+                return "Nº " + getExecucaoContrato().getNumero() + " - " + DataUtil.getDataFormatada(getExecucaoContrato().getDataLancamento()) + " - " + Util.formataValor(getExecucaoContrato().getValor());
+            } else if (requisicaoCompra.isTipoExecucaoProcesso()) {
+                return "Nº " + getExecucaoProcesso().getNumero() + " - " + DataUtil.getDataFormatada(getExecucaoProcesso().getDataLancamento()) + " - " + Util.formataValor(getExecucaoProcesso().getValor());
             }
-            return "Nº " + execucaoProcesso.getNumero() + " - " + DataUtil.getDataFormatada(execucaoProcesso.getDataLancamento()) + " - " + Util.formataValor(execucaoProcesso.getValor());
+            return "Nº " + getReconhecimentoDivida().getNumero() + " - " + DataUtil.getDataFormatada(getReconhecimentoDivida().getDataReconhecimento());
         } catch (NullPointerException e) {
             return "";
-        }
-    }
-
-    @Override
-    public int compareTo(RequisicaoCompraExecucao o) {
-        try {
-            return ComparisonChain.start().compare(getExecucaoContrato().getNumero(), o.getExecucaoContrato().getNumero()).result();
-        } catch (Exception e) {
-            return 0;
         }
     }
 }

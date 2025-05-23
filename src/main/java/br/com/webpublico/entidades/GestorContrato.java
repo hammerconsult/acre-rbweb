@@ -94,7 +94,11 @@ public class GestorContrato extends SuperEntidade {
 
     @Override
     public String toString() {
-        return servidor.toString();
+        try {
+            return getGestor();
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public String getGestor() {

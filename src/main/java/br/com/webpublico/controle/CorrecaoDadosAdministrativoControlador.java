@@ -3,6 +3,7 @@ package br.com.webpublico.controle;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.CorrecaoDadosAdministrativoVO;
 import br.com.webpublico.enums.TipoEventoBem;
+import br.com.webpublico.enums.TipoRequisicaoCompra;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.negocios.CorrecaoDadosAdministrativoFacade;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
@@ -17,6 +18,7 @@ import com.ocpsoft.pretty.faces.annotation.URLMappings;
 import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
+import javax.faces.model.SelectItem;
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -54,7 +56,6 @@ public class CorrecaoDadosAdministrativoControlador implements Serializable {
 
         selecionado.setUsuarioSistema(facade.getSistemaFacade().getUsuarioCorrente());
         selecionado.setUnidadeOrganizacional(facade.getSistemaFacade().getUnidadeOrganizacionalAdministrativaCorrente());
-
         buscarBloqueiosSingleton();
     }
 
@@ -233,6 +234,8 @@ public class CorrecaoDadosAdministrativoControlador implements Serializable {
             }
             future = null;
             FacesUtil.executaJavaScript("terminarFuture()");
+            FacesUtil.addOperacaoRealizada("Processo concluido com sucesso.");
+
         }
     }
 
@@ -301,7 +304,7 @@ public class CorrecaoDadosAdministrativoControlador implements Serializable {
 
     public void reprocessarAlteracaoContratual() {
         try {
-            novoAssitenteBarraProgresso(CorrecaoDadosAdministrativoVO.TipoFuture.REPROCESSAMENTO_ALTERACAO_CONTRATUAL);
+            novoAssitenteBarraProgresso(CorrecaoDadosAdministrativoVO.TipoFuture.PADRAO);
             future = facade.reprocessarAlteracaoContratual(selecionado);
             FacesUtil.executaJavaScript("iniciarFuture()");
         } catch (Exception e) {
@@ -309,27 +312,42 @@ public class CorrecaoDadosAdministrativoControlador implements Serializable {
         }
     }
 
-    public void atualizarValorLiquidadoItemDocumentoFiscal() {
+    public List<RequisicaoDeCompra> completarRequisicaoCompra(String parte) {
+        if (selecionado.getTipoRequisicaoCompra() == null) return Lists.newArrayList();
+        return facade.getRequisicaoDeCompraFacade().buscarRequisicoesPorTipo(parte.trim(), selecionado.getTipoRequisicaoCompra());
+    }
+
+    public void buscarRequisicaoCompra() {
         try {
-            if (selecionado.getItensDocumentoEntrada() != null) {
-                selecionado.getItensDocumentoEntrada().clear();
+            selecionado.setRequisicoesCompra(Lists.newArrayList());
+            if (selecionado.getTipoRequisicaoCompra() == null){
+                FacesUtil.addCampoObrigatorio("O campo tipo de requisição deve ser informado.");
+                return;
             }
-            novoAssitenteBarraProgresso(CorrecaoDadosAdministrativoVO.TipoFuture.ITEM_DOCUMENTO_FISCAL);
-            future = facade.buscarDocumentosFiscaisAndItens(selecionado);
+            novoAssitenteBarraProgresso(CorrecaoDadosAdministrativoVO.TipoFuture.PADRAO);
+            future = facade.buscarRequisicaoCompra(selecionado);
             FacesUtil.executaJavaScript("iniciarFuture()");
         } catch (Exception e) {
             FacesUtil.addOperacaoNaoRealizada(e.getMessage());
         }
     }
 
-    public void inserirEfetivacaoMaterial() {
+    public void atribuirEmpenhoRequisicaoCompraComUnicoEmpenho() {
         try {
-            novoAssitenteBarraProgresso(CorrecaoDadosAdministrativoVO.TipoFuture.ITEM_DOCUMENTO_FISCAL);
-            future = facade.inserirEfetivacaoMaterial(selecionado);
+            if (Util.isListNullOrEmpty(selecionado.getRequisicoesCompra())){
+                FacesUtil.addCampoObrigatorio("Não há requisições na lista para serem processadas.");
+                return;
+            }
+            novoAssitenteBarraProgresso(CorrecaoDadosAdministrativoVO.TipoFuture.PADRAO);
+            future = facade.atribuirEmpenhoRequisicaoCompraComUnicoEmpenho(selecionado);
             FacesUtil.executaJavaScript("iniciarFuture()");
         } catch (Exception e) {
             FacesUtil.addOperacaoNaoRealizada(e.getMessage());
         }
+    }
+
+    public List<SelectItem> getTiposRequisicao() {
+        return Util.getListSelectItem(Arrays.asList(TipoRequisicaoCompra.values()));
     }
 
     private void novoAssitenteBarraProgresso(CorrecaoDadosAdministrativoVO.TipoFuture tipoFuture) {

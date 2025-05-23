@@ -1,0 +1,2 @@
+CREATE INDEX idx_fk_parcela_situacao
+ON parcelavalordivida(situacaoatual_ID)

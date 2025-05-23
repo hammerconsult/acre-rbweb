@@ -129,6 +129,8 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     private EmendaFacade emendaFacade;
     @EJB
     private CodigoCOFacade codigoCOFacade;
+    @EJB
+    private ReconhecimentoDividaFacade reconhecimentoDividaFacade;
 
     public EmpenhoFacade() {
         super(Empenho.class);
@@ -1480,7 +1482,15 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     public Date buscarMaiorDataEmpenhosPorRequisicaoDeCompra(RequisicaoDeCompra requisicaoDeCompra) {
         try {
-            String sql = "select max(trunc(emp.dataempenho)) from requisicaodecompra req " + "           left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " + "           left join execucaocontrato ex on ex.id = reqEx.execucaocontrato_id " + "           left join execucaocontratoempenho exEmp on ex.id = exEmp.execucaocontrato_id " + "           left join execucaoprocesso exproc on exproc.id = reqEx.execucaoprocesso_id " + "           left join execucaoprocessoempenho exProcEmp on exproc.id = exProcEmp.execucaoprocesso_id " + "           left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " + "           left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " + "           inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exProcEmp.empenho_id, sol.empenho_id) " + "         where req.id = :requisicao " + "         order by emp.dataempenho desc ";
+            String sql = "select max(trunc(emp.dataempenho)) from requisicaodecompra req " +
+                "           left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
+                "           left join execucaocontratoempenho exEmp on  exEmp.id = reqEx.execucaocontratoempenho_id " +
+                "           left join execucaoprocessoempenho exEmpProc on exEmpProc.id = reqEx.execucaoprocessoempenho_id " +
+                "           left join solicitacaoempenhorecdiv solrd on solrd.id = reqEx.execucaoreconhecimentodiv_id " +
+                "           left join solicitacaoempenho sol on sol.id = solrd.solicitacaoempenho_id " +
+                "           inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
+                "         where req.id = :requisicao " +
+                "         order by emp.dataempenho desc ";
             Query q = em.createNativeQuery(sql);
             q.setParameter("requisicao", requisicaoDeCompra.getId());
             q.setMaxResults(1);
@@ -1511,6 +1521,21 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return q.getResultList();
     }
 
+    public List<Empenho> buscarEmpenhosPorRequisicaoCompra(Long idRequisicao) {
+        String sql = " select distinct emp.* from requisicaodecompra req  " +
+            "           inner join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
+            "           left join execucaocontratoempenho exEmp on  exEmp.id = reqEx.execucaocontratoempenho_id " +
+            "           left join execucaoprocessoempenho exEmpProc on exEmpProc.id = reqEx.execucaoprocessoempenho_id " +
+            "           left join solicitacaoempenhorecdiv solrd on solrd.id = reqEx.execucaoreconhecimentodiv_id " +
+            "           left join solicitacaoempenho sol on sol.id = solrd.solicitacaoempenho_id " +
+            "           inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
+            "          where req.id = :idRequisicao " +
+            "          order by emp.numero ";
+        Query q = em.createNativeQuery(sql, Empenho.class);
+        q.setParameter("idRequisicao", idRequisicao);
+        return q.getResultList();
+    }
+
     public Empenho buscarEmpenhoNovoPorEmpenho(Empenho empenho) {
         String sql = "select * from Empenho where empenho_id = :idEmpenho ";
         Query q = em.createNativeQuery(sql, Empenho.class);
@@ -1521,13 +1546,6 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         } catch (NoResultException ex) {
             return null;
         }
-    }
-
-    public List<Empenho> buscarEmpenhosPorRequisicaoCompra(Long idRequisicao) {
-        String sql = " select distinct emp.* from requisicaodecompra req  " + " left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " + " left join execucaocontrato ex on ex.id = reqEx.execucaocontrato_id " + " left join execucaocontratoempenho exEmp on ex.id = exEmp.execucaocontrato_id " + " left join execucaoprocesso exProc on exProc.id = reqEx.execucaoprocesso_id " + " left join execucaoprocessoempenho exEmpProc on exProc.id = exEmpProc.execucaoprocesso_id " + " left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " + " left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " + " inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " + " where req.id = :idRequisicao " + " order by emp.numero ";
-        Query q = em.createNativeQuery(sql, Empenho.class);
-        q.setParameter("idRequisicao", idRequisicao);
-        return q.getResultList();
     }
 
     public List<Empenho> buscarEmpenhosNormaisAndRestos(UnidadeOrganizacional unidadeOrganizacional, String filtro, Exercicio exercicio) {
@@ -1675,14 +1693,14 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
 
-    public List<TipoContaDespesa> buscarTiposContaDespesaExecucaoEmpenho(Long idProcesso) {
+    public List<TipoContaDespesa> buscarTiposContaDespesaExecucaoEmpenho(Long idExecucao) {
         String sql = " select distinct emp.tipocontadespesa from empenho emp " +
             "           left join execucaoprocessoempenho exproc on exproc.empenho_id = emp.id " +
             "           left join execucaocontratoempenho excont on excont.empenho_id = emp.id " +
             "           left join reconhecimentodivida rd on rd.id = emp.reconhecimentodivida_id " +
-            "          where coalesce(exproc.execucaoprocesso_id, excont.execucaocontrato_id, rd.id) = :idProcesso ";
+            "          where coalesce(exproc.execucaoprocesso_id, excont.execucaocontrato_id, rd.id) = :idExecucao ";
         Query q = em.createNativeQuery(sql);
-        q.setParameter("idProcesso", idProcesso);
+        q.setParameter("idExecucao", idExecucao);
         List<String> resultado = q.getResultList();
         if (Util.isListNullOrEmpty(q.getResultList())) {
             return Lists.newArrayList();
@@ -1705,6 +1723,10 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         Query q = em.createNativeQuery(sql);
         q.setParameter("idEmpenho", empenho.getId());
         return !q.getResultList().isEmpty();
+    }
+
+    public ReconhecimentoDividaFacade getReconhecimentoDividaFacade() {
+        return reconhecimentoDividaFacade;
     }
 }
 

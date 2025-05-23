@@ -795,10 +795,12 @@ public class EntradaMaterialFacade extends AbstractFacade<EntradaMaterial> {
             "         inner join entradacompramaterial ecm on docem.entradacompramaterial_id = ecm.id " +
             "         inner join tipodocumentofiscal tipo on doc.tipodocumentofiscal_id = tipo.id " +
             "         left join requisicaodecompra req on ecm.requisicaodecompra_id = req.id " +
-            "         left join reconhecimentodivida rd on req.reconhecimentodivida_id = rd.id " +
             "         left join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
             "         left join execucaoprocesso execproc on execproc.id = rce.execucaoprocesso_id " +
-            "         left join contrato c on c.id = req.contrato_id " +
+            "         left join solicitacaoempenhorecdiv solrd on rce.execucaoreconhecimentodiv_id = solrd.id " +
+            "         left join reconhecimentodivida rd on solrd.reconhecimentodivida_id = rd.id " +
+            "         left join execucaocontrato excont on excont.id = rce.execucaocontrato_id " +
+            "         left join contrato c on c.id = excont.contrato_id " +
             " where coalesce(c.contratado_id, rd.fornecedor_id, execproc.fornecedor_id) = :idFornecedor " +
             "    and tipo.id = :idTipo ";
         if (!Util.isStringNulaOuVazia(chave)) {

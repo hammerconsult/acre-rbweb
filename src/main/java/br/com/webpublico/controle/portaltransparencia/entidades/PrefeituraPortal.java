@@ -140,11 +140,10 @@ public class PrefeituraPortal implements Serializable {
     @Etiqueta(value = "Esfera do Poder")
     private EsferaDoPoder esferaDoPoder;
     private Boolean habilitarBannerCalamidade;
-    @Etiqueta("Logo topo")
+    @Etiqueta("Organograma")
     @Tabelavel
     @Pesquisavel
     @ManyToOne(cascade = CascadeType.ALL)
-    @Obrigatorio
     private Arquivo organograma;
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "prefeitura")
     private List<UnidadePrefeituraPortal> unidades;

@@ -31,11 +31,7 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
     @EJB
     private ContratoFacade contratoFacade;
     @EJB
-    private ProcessoDeCompraFacade processoDeCompraFacade;
-    @EJB
     private SolicitacaoMaterialFacade solicitacaoMaterialFacade;
-    @EJB
-    private MaterialFacade materialFacade;
     @EJB
     private SingletonGeradorCodigo singletonGeradorCodigo;
     @EJB
@@ -55,9 +51,9 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
     @EJB
     private ObjetoCompraFacade objetoCompraFacade;
     @EJB
-    private AssociacaoGrupoObjetoCompraGrupoMaterialFacade associcaoGrupoMaterial;
+    private AssociacaoGrupoObjetoCompraGrupoMaterialFacade associcaoGrupoMaterialFacade;
     @EJB
-    private GrupoObjetoCompraGrupoBemFacade associcaoGrupoBem;
+    private GrupoObjetoCompraGrupoBemFacade associcaoGrupoBemFacade;
     @EJB
     private ItemPregaoFacade itemPregaoFacade;
     @EJB
@@ -74,7 +70,6 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
     private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
     @EJB
     private AtaRegistroPrecoFacade ataRegistroPrecoFacade;
-
     @EJB
     private DispensaDeLicitacaoFacade dispensaDeLicitacaoFacade;
     @EJB
@@ -83,6 +78,12 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
     private LicitacaoFacade licitacaoFacade;
     @EJB
     private DerivacaoObjetoCompraComponenteFacade derivacaoObjetoCompraComponenteFacade;
+    @EJB
+    private SolicitacaoAquisicaoFacade solicitacaoAquisicaoFacade;
+    @EJB
+    private ConfigGrupoMaterialFacade configGrupoMaterialFacade;
+    @EJB
+    private ConfigDespesaBensFacade configGrupoBemFacade;
 
     public RequisicaoDeCompraFacade() {
         super(RequisicaoDeCompra.class);
@@ -99,11 +100,6 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         Hibernate.initialize(entity.getItens());
         if (entity.getExecucoes() != null) {
             Hibernate.initialize(entity.getExecucoes());
-            for (RequisicaoCompraExecucao execucao : entity.getExecucoes()) {
-                if (execucao.getExecucaoContrato() != null) {
-                    execucao.setExecucaoContrato(execucaoContratoFacade.recuperarComDependenciasExecucaoEmpenho(execucao.getExecucaoContrato().getId()));
-                }
-            }
         }
         if (entity.getItens() != null) {
             for (ItemRequisicaoDeCompra item : entity.getItens()) {
@@ -134,23 +130,39 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return super.recuperar(id);
     }
 
-    public List<RequisicaoDeCompra> recuperarFiltrando(String trim) {
+    public RequisicaoDeCompra salvarRequisicao(RequisicaoDeCompra entity) {
+        if (entity.getId() == null && entity.getNumero() == null) {
+            entity.setNumero(singletonGeradorCodigo.getProximoCodigo(RequisicaoDeCompra.class, "numero"));
+        }
+        entity = movimentarSituacaoRequisicaoCompra(entity, SituacaoRequisicaoCompra.EM_ELABORACAO);
+        return entity;
+    }
+
+    public RequisicaoDeCompra movimentarSituacaoRequisicaoCompra(RequisicaoDeCompra requisicaoCompra, SituacaoRequisicaoCompra situacao) {
+        requisicaoCompra.setSituacaoRequisicaoCompra(situacao);
+        requisicaoCompra = em.merge(requisicaoCompra);
+        return requisicaoCompra;
+    }
+
+    public List<RequisicaoDeCompra> recuperarFiltrando(String parte) {
         String sql = " select rc.* from requisicaodecompra rc " +
-            "  where (to_char(rc.numero) like :numero or rc.descricao like :descricao)" +
+            "  where (rc.numero like :parte or lower(" + Util.getTranslate("rc.descricao") + ") like " + Util.getTranslate(":parte") + ")" +
             "  order by numero desc ";
         Query q = em.createNativeQuery(sql, RequisicaoDeCompra.class);
-        q.setParameter("numero", "%" + trim + "%");
-        q.setParameter("descricao", "%" + trim.toLowerCase() + "%");
+        q.setParameter("parte", "%" + parte.toLowerCase() + "%");
+        q.setMaxResults(MAX_RESULTADOS_NA_CONSULTA);
         return q.getResultList();
     }
 
-    public List<RequisicaoDeCompra> buscarRequisicaoCompraCardapio(Cardapio cardapio) {
-        String sql;
-        sql = " select req.* from requisicaodecompra req " +
-            "       inner join cardapiorequisicaocompra crc on crc.requisicaocompra_id = req.id " +
-            "   where crc.cardapio_id = :idCardapio ";
+    public List<RequisicaoDeCompra> buscarRequisicoesPorTipo(String parte, TipoRequisicaoCompra tipoRequisicao) {
+        String sql = " select rc.* from requisicaodecompra rc " +
+            "  where (rc.numero like :parte or lower(" + Util.getTranslate("rc.descricao") + ") like " + Util.getTranslate(":parte") + ")" +
+            "  and rc.tiporequisicao = :tipoReq " +
+            "  order by numero ";
         Query q = em.createNativeQuery(sql, RequisicaoDeCompra.class);
-        q.setParameter("idCardapio", cardapio.getId());
+        q.setParameter("parte", "%" + parte.toLowerCase() + "%");
+        q.setParameter("tipoReq", tipoRequisicao.name());
+        q.setMaxResults(300);
         return q.getResultList();
     }
 
@@ -171,29 +183,18 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return q.getResultList();
     }
 
-    public List<ItemRequisicaoDeCompra> buscarItensRequisicao(RequisicaoDeCompra requisicaoCompra) {
+    public List<ItemRequisicaoDeCompra> buscarItensRequisicaoAndItensExecucao(RequisicaoDeCompra requisicaoCompra) {
         String sql = " select item.* from itemrequisicaodecompra item " +
             "          where item.requisicaodecompra_id = :idRequisicao " +
             "          order by item.numero ";
         Query q = em.createNativeQuery(sql, ItemRequisicaoDeCompra.class);
         q.setParameter("idRequisicao", requisicaoCompra.getId());
         List<ItemRequisicaoDeCompra> itens = q.getResultList();
-        if (itens == null || itens.isEmpty()) {
-            return Lists.newArrayList();
+        if (!Util.isListNullOrEmpty(itens)) {
+            itens.stream().map(ItemRequisicaoDeCompra::getItensRequisicaoExecucao).forEach(Hibernate::initialize);
+            return itens;
         }
-        return itens;
-    }
-
-    public List<ItemRequisicaoCompraExecucao> buscarItensRequisicaoExecucao(ItemRequisicaoDeCompra itemRequisicao) {
-        String sql = " select item.* from itemrequisicaocompraexec item " +
-            "          where item.itemrequisicaocompra_id = :idItem ";
-        Query q = em.createNativeQuery(sql, ItemRequisicaoCompraExecucao.class);
-        q.setParameter("idItem", itemRequisicao.getId());
-        List itens = q.getResultList();
-        if (Util.isListNullOrEmpty(itens)) {
-            return Lists.newArrayList();
-        }
-        return itens;
+        return Lists.newArrayList();
     }
 
     public List<RequisicaoCompraExecucao> buscarRequisicaoExecucao(Long idRequisicao) {
@@ -208,21 +209,98 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return resultList;
     }
 
-    public List<RequisicaoExecucaoExecucaoVO> buscarExecucoesEmpenhadas(Long idProcesso) {
+    public List<RequisicaoCompraExecucaoVO> buscarRequisicaoExecucaoComponente(Long idRequisicao) {
+        String sql = " " +
+            "   select distinct " +
+            "        coalesce(excont.id, exproc.id, rc.id)                                      as id_execucao, " +
+            "        coalesce(to_char(excont.numero), to_char(exproc.numero), rc.numero)           as numero, " +
+            "        coalesce(excont.datalancamento, exproc.datalancamento, rc.datareconhecimento) as data_lancamento, " +
+            "        coalesce(excont.valor, exproc.valor, " +
+            "                         (select sum(coalesce(item.valortotal,0)) " +
+            "                          from itemreconhecimentodivida item " +
+            "                          where item.reconhecimentodivida_id = rc.id))                as valor, " +
+            "        req.tiporequisicao                                                            as tipo_req, " +
+            "        req.tipoobjetocompra                                                          as tipo_objeto," +
+            "        vw.codigo || ' - ' || vw.descricao                                            as unidade_orc," +
+            "        rce.id                                                                        as id_req_exec " +
+            "    from requisicaocompraexecucao rce " +
+            "         inner join requisicaodecompra req on req.id = rce.requisicaocompra_id " +
+            "         left join execucaocontratoempenho ece on ece.id = rce.execucaocontratoempenho_id " +
+            "         left join execucaocontrato excont on excont.id = ece.execucaocontrato_id " +
+            "         left join solicitacaoempenhorecdiv solrd on solrd.id = rce.execucaoreconhecimentodiv_id " +
+            "         left join solicitacaoempenho se on se.id = solrd.solicitacaoempenho_id " +
+            "         left join reconhecimentodivida rc on rc.id = solrd.reconhecimentodivida_id " +
+            "         left join execucaoprocessoempenho epe on epe.id = rce.execucaoprocessoempenho_id " +
+            "         left join execucaoprocesso exproc on exproc.id = epe.execucaoprocesso_id " +
+            "         inner join vwhierarquiaorcamentaria vw on vw.subordinada_id = coalesce(excont.unidadeorcamentaria_id, rc.unidadeorcamentaria_id, exproc.unidadeorcamentaria_id) " +
+            "               and trunc(req.datarequisicao) between vw.iniciovigencia and coalesce(vw.fimvigencia, trunc(req.datarequisicao))" +
+            "  where req.id = :idRequisicao ";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("idRequisicao", idRequisicao);
+        List<RequisicaoCompraExecucaoVO> list = Lists.newArrayList();
+        try {
+            for (Object[] obj : (List<Object[]>) q.getResultList()) {
+                RequisicaoCompraExecucaoVO reqExecVO = new RequisicaoCompraExecucaoVO();
+                reqExecVO.setId(((BigDecimal) obj[0]).longValue());
+                reqExecVO.setNumero((String) obj[1]);
+                reqExecVO.setDataLancamento((Date) obj[2]);
+                reqExecVO.setValor((BigDecimal) obj[3]);
+                reqExecVO.setTipoProcesso(TipoRequisicaoCompra.valueOf((String) obj[4]));
+                reqExecVO.setTipoObjetoCompra(TipoObjetoCompra.valueOf((String) obj[5]));
+                reqExecVO.setUnidadeOrcamentaria((String) obj[6]);
+
+                long idReqExec = ((BigDecimal) obj[7]).longValue();
+                reqExecVO.setEmpenhosVO(buscarEmpenhoRequisicaoExecucao(idReqExec, reqExecVO.getTipoObjetoCompra()));
+                list.add(reqExecVO);
+            }
+            return list;
+        } catch (NoResultException nre) {
+            return list;
+        }
+    }
+
+    public List<RequisicaoCompraEmpenhoVO> buscarEmpenhoRequisicaoExecucao(Long idReqExec, TipoObjetoCompra tipoObjetoCompra) {
+        String sql = " " +
+            "   select emp.* " +
+            "    from requisicaocompraexecucao rce " +
+            "         left join execucaocontratoempenho ece on ece.id = rce.execucaocontratoempenho_id " +
+            "         left join execucaoprocessoempenho epe on epe.id = rce.execucaoprocessoempenho_id " +
+            "         left join solicitacaoempenhorecdiv solrd on solrd.id = rce.execucaoreconhecimentodiv_id " +
+            "         left join solicitacaoempenho se on se.id = solrd.solicitacaoempenho_id " +
+            "         inner join empenho emp on emp.id = coalesce(ece.empenho_id, epe.empenho_id, se.empenho_id) " +
+            "  where rce.id = :idReqExec ";
+        Query q = em.createNativeQuery(sql, Empenho.class);
+        q.setParameter("idReqExec", idReqExec);
+        List<RequisicaoCompraEmpenhoVO> list = Lists.newArrayList();
+        try {
+            List<Empenho> empenhos = q.getResultList();
+            for (Empenho emp : empenhos) {
+                RequisicaoCompraEmpenhoVO empVO = novoEmpenhoVO(emp, tipoObjetoCompra);
+                list.add(empVO);
+            }
+            return list;
+        } catch (NoResultException nre) {
+            return list;
+        }
+    }
+
+    public List<RequisicaoCompraExecucaoVO> buscarExecucoesEmpenhadas(Long idProcesso, TipoObjetoCompra tipoObjetoCompra) {
         String sql;
         sql = " " +
             " select id, " +
             "        numero, " +
             "        data_lancamento," +
             "        valor, " +
-            "        tipo " +
-            "  from (" +
+            "        tipo," +
+            "        id_unidade " +
+            "  from ( " +
             "       select distinct" +
             "           ex.id as id, " +
-            "           ex.numero as numero, " +
+            "           to_char(ex.numero) as numero, " +
             "           ex.datalancamento as data_lancamento," +
             "           ex.valor as valor, " +
-            "           'CONTRATO' as tipo " +
+            "           'CONTRATO' as tipo, " +
+            "          ex.unidadeorcamentaria_id as id_unidade " +
             "          from execucaocontrato ex " +
             "           inner join execucaocontratoempenho exemp on exemp.execucaocontrato_id = ex.id  " +
             "           inner join empenho emp on emp.id = exemp.empenho_id  " +
@@ -231,10 +309,11 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
             "          union all " +
             "         select distinct " +
             "           ex.id as id, " +
-            "           ex.numero as numero, " +
+            "           to_char(ex.numero) as numero, " +
             "           ex.datalancamento as data_lancamento," +
             "           ex.valor as valor, " +
-            "           'ATA_REGISTRO_PRECO' as tipo " +
+            "           'ATA_REGISTRO_PRECO' as tipo, " +
+            "          ex.unidadeorcamentaria_id as id_unidade " +
             "          from execucaoprocesso ex " +
             "           inner join execucaoprocessoempenho exemp on exemp.execucaoprocesso_id = ex.id " +
             "           inner join execucaoprocessoata exata on exata.execucaoprocesso_id = ex.id " +
@@ -243,34 +322,49 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
             "          union all " +
             "         select distinct " +
             "           ex.id as id, " +
-            "           ex.numero as numero, " +
+            "           to_char(ex.numero) as numero, " +
             "           ex.datalancamento as data_lancamento," +
             "           ex.valor as valor, " +
-            "           'DISPENSA_LICITACAO_INEXIGIBILIDADE' as tipo " +
+            "           'DISPENSA_LICITACAO_INEXIGIBILIDADE' as tipo, " +
+            "          ex.unidadeorcamentaria_id as id_unidade " +
             "          from execucaoprocesso ex " +
             "           inner join execucaoprocessoempenho exemp on exemp.execucaoprocesso_id = ex.id " +
             "           inner join execucaoprocessodispensa exdisp on exdisp.execucaoprocesso_id = ex.id " +
             "           inner join empenho emp on emp.id = exemp.empenho_id  " +
-            "          where exdisp.dispensalicitacao_id = :idProcesso" +
-            ") order by numero ";
+            "          where exdisp.dispensalicitacao_id = :idProcesso " +
+            "      union all " +
+            "         select distinct " +
+            "           rd.id as id, " +
+            "           to_char(rd.numero)  as numero, " +
+            "           rd.datareconhecimento as data_lancamento, " +
+            "           coalesce((select sum(item.valortotal) from itemreconhecimentodivida item " +
+            "             where item.reconhecimentodivida_id = rd.id), 0) as valor, " +
+            "           'RECONHECIMENTO_DIVIDA' as tipo," +
+            "          rd.unidadeorcamentaria_id as id_unidade " +
+            "          from reconhecimentodivida rd " +
+            "          where rd.id = :idProcesso " +
+            " ) ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idProcesso", idProcesso);
         q.setParameter("operacaoPreExecucao", OperacaoSaldoItemContrato.PRE_EXECUCAO.name());
-        List<RequisicaoExecucaoExecucaoVO> list = Lists.newArrayList();
+        List<RequisicaoCompraExecucaoVO> list = Lists.newArrayList();
         try {
             for (Object[] obj : (List<Object[]>) q.getResultList()) {
-                RequisicaoExecucaoExecucaoVO item = new RequisicaoExecucaoExecucaoVO();
-                item.setId(((BigDecimal) obj[0]).longValue());
-                item.setNumero(((BigDecimal) obj[1]).intValue());
-                item.setDataLancamento((Date) obj[2]);
-                item.setValorExecucao((BigDecimal) obj[3]);
-                item.setTipoExecucao(TipoRequisicaoCompra.valueOf((String) obj[4]));
-                if (item.getTipoExecucao().isContrato()) {
-                    item.setExecucaoContrato(em.find(ExecucaoContrato.class, item.getId()));
-                } else {
-                    item.setExecucaoProcesso(em.find(ExecucaoProcesso.class, item.getId()));
+                RequisicaoCompraExecucaoVO reqExecVO = new RequisicaoCompraExecucaoVO();
+                reqExecVO.setId(((BigDecimal) obj[0]).longValue());
+                reqExecVO.setNumero((String) obj[1]);
+                reqExecVO.setDataLancamento((Date) obj[2]);
+                reqExecVO.setValor((BigDecimal) obj[3]);
+                reqExecVO.setTipoProcesso(TipoRequisicaoCompra.valueOf((String) obj[4]));
+                reqExecVO.setTipoObjetoCompra(tipoObjetoCompra);
+
+                Long idUnidade = ((BigDecimal) obj[5]).longValue();
+                HierarquiaOrganizacional hoOrc = hierarquiaOrganizacionalFacade.buscarHierarquiaPorTipoIdUnidadeEData(TipoHierarquiaOrganizacional.ORCAMENTARIA, idUnidade, sistemaFacade.getDataOperacao());
+                if (hoOrc != null) {
+                    reqExecVO.setUnidadeOrcamentaria(hoOrc.toString());
                 }
-                list.add(item);
+                buscarEmpenhoExecucao(reqExecVO, tipoObjetoCompra);
+                list.add(reqExecVO);
             }
             return list;
         } catch (NoResultException nre) {
@@ -278,7 +372,64 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         }
     }
 
-    public List<ItemProcessoLicitacao> buscarItensProcesso(Long idProcesso) {
+    public void buscarEmpenhoExecucao(RequisicaoCompraExecucaoVO reqExecVO, TipoObjetoCompra tipoObjetoCompra) {
+        if (reqExecVO.getTipoProcesso().isContrato()) {
+            List<ExecucaoContratoEmpenho> empenhosExec = execucaoContratoFacade.buscarExecucaoContratoEmpenhoPorExecucao(reqExecVO.getId());
+            for (ExecucaoContratoEmpenho exEmp : empenhosExec) {
+                if (TipoContaDespesa.getTiposContaDespesaPorTipoObjetoCompra(tipoObjetoCompra).contains(exEmp.getEmpenho().getTipoContaDespesa())) {
+                    RequisicaoCompraEmpenhoVO novoEmp = novoEmpenhoVO(exEmp.getEmpenho(), tipoObjetoCompra);
+                    novoEmp.setExecucaoContratoEmpenho(exEmp);
+                    reqExecVO.getEmpenhosVO().add(novoEmp);
+                }
+            }
+        } else if (reqExecVO.getTipoProcesso().isExecucaoProcesso()) {
+            List<ExecucaoProcessoEmpenho> empenhosExec = execucaoProcessoFacade.buscarExecucaoProcessoEmpenhoPorExecucao(reqExecVO.getId());
+            empenhosExec.forEach(exEmp -> {
+                if (TipoContaDespesa.getTiposContaDespesaPorTipoObjetoCompra(tipoObjetoCompra).contains(exEmp.getEmpenho().getTipoContaDespesa())) {
+                    RequisicaoCompraEmpenhoVO novoEmp = novoEmpenhoVO(exEmp.getEmpenho(), tipoObjetoCompra);
+                    novoEmp.setExecucaoProcessoEmpenho(exEmp);
+                    reqExecVO.getEmpenhosVO().add(novoEmp);
+                }
+            });
+        } else {
+            List<SolicitacaoEmpenhoReconhecimentoDivida> empenhosDivida = reconhecimentoDividaFacade.buscarSolicitacaoReconhecimentoDivida(reqExecVO.getId());
+            empenhosDivida.forEach(exEmp -> {
+                if (TipoContaDespesa.getTiposContaDespesaPorTipoObjetoCompra(tipoObjetoCompra).contains(exEmp.getSolicitacaoEmpenho().getEmpenho().getTipoContaDespesa())) {
+                    RequisicaoCompraEmpenhoVO novoEmp = novoEmpenhoVO(exEmp.getSolicitacaoEmpenho().getEmpenho(), tipoObjetoCompra);
+                    novoEmp.setExecucaoReconhecimentoDivida(exEmp);
+                    reqExecVO.getEmpenhosVO().add(novoEmp);
+                }
+            });
+        }
+        Collections.sort(reqExecVO.getEmpenhosVO());
+    }
+
+    public RequisicaoCompraEmpenhoVO novoEmpenhoVO(Empenho emp, TipoObjetoCompra tipoObjetoCompra) {
+        RequisicaoCompraEmpenhoVO novoEmp = new RequisicaoCompraEmpenhoVO();
+        novoEmp.setEmpenho(emp);
+        if (emp != null) {
+            novoEmp.setDesdobramentoEmpenho(empenhoFacade.buscarDesdobramento(emp));
+        }
+
+        if (novoEmp.getDesdobramentoEmpenho() != null) {
+            if (tipoObjetoCompra.isMaterialConsumo()) {
+                GrupoMaterial grupoMaterial = configGrupoMaterialFacade.buscarGrupoPorConta(novoEmp.getDesdobramentoEmpenho().getConta());
+                if (grupoMaterial != null) {
+                    novoEmp.setIdGrupo(grupoMaterial.getId());
+                    novoEmp.setCodigoGrupo(grupoMaterial.getCodigo());
+                }
+            } else if (tipoObjetoCompra.isMaterialPermanente()) {
+                GrupoBem grupoBem = configGrupoBemFacade.buscarGrupoBemPorContaDespesa(sistemaFacade.getDataOperacao(), novoEmp.getDesdobramentoEmpenho().getConta());
+                if (grupoBem != null) {
+                    novoEmp.setIdGrupo(grupoBem.getId());
+                    novoEmp.setCodigoGrupo(grupoBem.getCodigo());
+                }
+            }
+        }
+        return novoEmp;
+    }
+
+    public List<ItemRequisicaoProcessoLicitatorio> buscarItensProcessoLicitatorio(Long idExecucao) {
         String sql = " " +
             " select item.id                                          as id_item, " +
             "       ic.tipocontrole                                   as tipo_controle, " +
@@ -293,7 +444,7 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
             "        where itemdot.execucaocontratoitem_id = item.id) as tipo_conta_desp " +
             " from execucaocontratoitem item " +
             "         inner join itemcontrato ic on ic.id = item.itemcontrato_id " +
-            " where item.execucaocontrato_id = :idProcesso " +
+            " where item.execucaocontrato_id = :idExecucao " +
             " union all " +
             " select item.id              as id_item, " +
             "       itemcot.tipocontrole as tipo_controle, " +
@@ -313,7 +464,7 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
             "         inner join itemprocessodecompra ipc on ipc.id = item.itemprocessocompra_id " +
             "         inner join itemsolicitacao ism on ism.id = ipc.itemsolicitacaomaterial_id " +
             "         inner join itemcotacao itemcot on itemcot.id = ism.itemcotacao_id " +
-            " where exproc.id = :idProcesso " +
+            " where exproc.id = :idExecucao " +
             " union all " +
             " select item.id                             as id_item, " +
             "       itemcot.tipocontrole                 as tipo_controle, " +
@@ -333,7 +484,7 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
             "         inner join itemprocessodecompra ipc on ipc.id = item.itemprocessocompra_id " +
             "         inner join itemsolicitacao ism on ism.id = ipc.itemsolicitacaomaterial_id " +
             "         inner join itemcotacao itemcot on itemcot.id = ism.itemcotacao_id " +
-            " where item.execucaoprocesso_id = :idProcesso " +
+            " where item.execucaoprocesso_id = :idExecucao " +
             " union all " +
             " select item.id                      as id_item, " +
             "        'QUANTIDADE'                 as tipo_controle, " +
@@ -345,30 +496,39 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
             " from itemreconhecimentodivida item " +
             "         inner join reconhecimentodivida rd on rd.id = item.reconhecimentodivida_id " +
             "         left join empenho emp on emp.reconhecimentodivida_id = rd.id " +
-            " where rd.id = :idProcesso ";
+            " where rd.id = :idExecucao ";
         Query q = em.createNativeQuery(sql);
-        q.setParameter("idProcesso", idProcesso);
-        List<ItemProcessoLicitacao> list = Lists.newArrayList();
+        q.setParameter("idExecucao", idExecucao);
+        List<ItemRequisicaoProcessoLicitatorio> list = Lists.newArrayList();
+
         try {
             for (Object[] obj : (List<Object[]>) q.getResultList()) {
-                ItemProcessoLicitacao item = new ItemProcessoLicitacao();
+                ItemRequisicaoProcessoLicitatorio item = new ItemRequisicaoProcessoLicitatorio();
                 item.setIdItem(((BigDecimal) obj[0]).longValue());
                 item.setTipoControle(TipoControleLicitacao.valueOf((String) obj[1]));
                 item.setTipoProcesso(TipoRequisicaoCompra.valueOf((String) obj[2]));
                 item.setTipoContaDespesa(obj[3] != null ? TipoContaDespesa.valueOf((String) obj[3]) : TipoContaDespesa.NAO_APLICAVEL);
                 if (item.getTipoProcesso().isContrato()) {
                     item.setItemExecucaoContrato(em.find(ExecucaoContratoItem.class, item.getIdItem()));
+                    item.setObjetoCompra(item.getItemExecucaoContrato().getObjetoCompra());
                 } else if (item.getTipoProcesso().isExecucaoProcesso()) {
                     item.setItemExecucaoProcesso(em.find(ExecucaoProcessoItem.class, item.getIdItem()));
+                    item.setObjetoCompra(item.getItemExecucaoProcesso().getObjetoCompra());
                 } else {
                     item.setItemReconhecimentoDivida(em.find(ItemReconhecimentoDivida.class, item.getIdItem()));
+                    item.setObjetoCompra(item.getItemReconhecimentoDivida().getObjetoCompra());
                 }
+                recuperarGrupoContaDespesa(item.getObjetoCompra());
                 list.add(item);
             }
             return list;
         } catch (NoResultException nre) {
             return list;
         }
+    }
+
+    public void recuperarGrupoContaDespesa(ObjetoCompra objetoCompra) {
+        objetoCompra.setGrupoContaDespesa(objetoCompraFacade.criarGrupoContaDespesa(objetoCompra.getTipoObjetoCompra(), objetoCompra.getGrupoObjetoCompra()));
     }
 
     public Boolean isRequisicaoCompraCardapio(RequisicaoDeCompra requisicao) {
@@ -389,22 +549,55 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return q.getResultList() != null && !q.getResultList().isEmpty();
     }
 
-    public BigDecimal getQuantidadeUtilizadaItemExecucaoContrato(ExecucaoContratoItem itemExecucaoContrato, ItemRequisicaoCompraExecucao itemRequisicaoExecucao) {
+    public BigDecimal getQuantidadeUtilizadaItemExecucaoContrato(ExecucaoContratoItem execItem, FonteDespesaORC fonteDespesaORC, ItemRequisicaoCompraExecucao itemReqEx) {
         String sql = " " +
-            "           select coalesce(sum(irce.quantidade),0) as quantidadeUtilizada      " +
+            "           select distinct coalesce(sum(ircp.quantidade),0) as quantidadeUtilizada  " +
             "           from requisicaodecompra rdc                                                       " +
-            "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = rdc.id     " +
-            "           inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id     " +
-            "           where irce.execucaocontratoitem_id = :idItemExecucao  " +
+            "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = rdc.id " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id " +
+            "           inner join execucaocontratoitem exitem on exitem.id = ircp.execucaocontratoitem_id " +
+            "           inner join empenho emp on emp.id = ircp.empenho_id " +
+            "           where exitem.id = :idItemExecucao  " +
+            "           and emp.fontedespesaorc_id = :idFonteDespOrc " +
+            "           and rdc.situacaorequisicaocompra not in (:estornada, :estornadaParcial)  ";
+        if (itemReqEx != null && itemReqEx.getId() != null) {
+            sql += "    and ircp.id <> :idItemReqProc ";
+        }
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("estornada", SituacaoRequisicaoCompra.ESTORNADA.name());
+        q.setParameter("estornadaParcial", SituacaoRequisicaoCompra.ESTORNADA_PARCIAL.name());
+        q.setParameter("idItemExecucao", execItem.getId());
+        q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
+        if (itemReqEx != null && itemReqEx.getId() != null) {
+            q.setParameter("idItemReqProc", itemReqEx.getId());
+        }
+        try {
+            return (BigDecimal) q.getSingleResult();
+        } catch (NoResultException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    public BigDecimal getQuantidadeUtilizadaItemExecucaoProcesso(ExecucaoProcessoItem execItem, FonteDespesaORC fonteDespesaORC, ItemRequisicaoCompraExecucao itemReqEx) {
+        String sql = " " +
+            "           select distinct coalesce(sum(ircp.quantidade),0) as quantidadeUtilizada  " +
+            "           from requisicaodecompra rdc                                                       " +
+            "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = rdc.id " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id " +
+            "           inner join execucaoprocessoitem exitem on exitem.id = ircp.execucaoprocessoitem_id " +
+            "           inner join empenho emp on emp.id = ircp.empenho_id " +
+            "           where exitem.id = :idItemExecucao  " +
+            "           and emp.fontedespesaorc_id = :idFonteDespOrc " +
             "           and rdc.situacaorequisicaocompra <> :estornada  ";
-        if (itemRequisicaoExecucao != null && itemRequisicaoExecucao.getId() != null) {
-            sql += "    and irce.id <> :idItemReqExecucao  ";
+        if (itemReqEx != null && itemReqEx.getId() != null) {
+            sql += "    and ircp.id <> :idItemReqProc ";
         }
         Query q = em.createNativeQuery(sql);
         q.setParameter("estornada", SituacaoRequisicaoCompra.ESTORNADA.name());
-        q.setParameter("idItemExecucao", itemExecucaoContrato.getId());
-        if (itemRequisicaoExecucao != null && itemRequisicaoExecucao.getId() != null) {
-            q.setParameter("idItemReqExecucao", itemRequisicaoExecucao.getId());
+        q.setParameter("idItemExecucao", execItem.getId());
+        q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
+        if (itemReqEx != null && itemReqEx.getId() != null) {
+            q.setParameter("idItemReqProc", itemReqEx.getId());
         }
         try {
             return (BigDecimal) q.getSingleResult();
@@ -413,56 +606,25 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         }
     }
 
-    public BigDecimal getQuantidadeEmRequisicaoItemExecucaoProcesso(ExecucaoProcessoItem itemExecucaoProcesso, ItemRequisicaoDeCompra itemRequisicao) {
+    public BigDecimal getQuantidadeUtilizadaItemReconhecimentoDivida(ItemReconhecimentoDivida execItem, FonteDespesaORC fonteDespesaORC, ItemRequisicaoCompraExecucao itemReqEx) {
         String sql = " " +
-            "           select coalesce(sum(irc.quantidade),0) as quantidade      " +
-            "           from requisicaodecompra req" +
-            "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = req.id                                                       " +
-            "           where irc.execucaoprocessoitem_id = :idItemAta  " +
-            "           and req.situacaorequisicaocompra <> :estornada  ";
-        if (itemRequisicao != null && itemRequisicao.getId() != null) {
-            sql += "    and irc.id <> :itemRequisicao  ";
-        }
-        if (itemRequisicao != null && itemRequisicao.getRequisicaoDeCompra().getId() != null) {
-            sql += "    and req.id <> :idRequisicao  ";
-        }
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("estornada", SituacaoRequisicaoCompra.ESTORNADA.name());
-        q.setParameter("idItemAta", itemExecucaoProcesso.getId());
-        if (itemRequisicao != null && itemRequisicao.getId() != null) {
-            q.setParameter("itemRequisicao", itemRequisicao.getId());
-        }
-        if (itemRequisicao != null && itemRequisicao.getRequisicaoDeCompra().getId() != null) {
-            q.setParameter("idRequisicao", itemRequisicao.getRequisicaoDeCompra().getId());
-        }
-        try {
-            return (BigDecimal) q.getSingleResult();
-        } catch (NoResultException e) {
-            return BigDecimal.ZERO;
-        }
-    }
-
-    public BigDecimal getQuantidadeUtilizadaItemReconhecimentoDivida(ItemReconhecimentoDivida itemReconhecimento, ItemRequisicaoDeCompra itemRequisicao) {
-        String sql = " " +
-            "           select coalesce(sum(irc.quantidade),0) as quantidadeUtilizada      " +
+            "           select distinct coalesce(sum(ircp.quantidade),0) as quantidadeUtilizada  " +
             "           from requisicaodecompra rdc                                                       " +
-            "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = rdc.id     " +
-            "           where irc.itemreconhecimentodivida_id = :idItemReconhecimento  " +
+            "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = rdc.id " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id " +
+            "           inner join empenho emp on emp.id = ircp.empenho_id " +
+            "           where ird.id = :idItemProcesso  " +
+            "           and emp.fontedespesaorc_id = :idFonteDespOrc " +
             "           and rdc.situacaorequisicaocompra <> :estornada  ";
-        if (itemRequisicao != null && itemRequisicao.getId() != null) {
-            sql += "    and irc.id <> :itemRequisicao  ";
-        }
-        if (itemRequisicao != null && itemRequisicao.getRequisicaoDeCompra().getId() != null) {
-            sql += "    and rdc.id <> :idRequisicao  ";
+        if (itemReqEx != null && itemReqEx.getId() != null) {
+            sql += "    and ircp.id <> :idItemReqProc ";
         }
         Query q = em.createNativeQuery(sql);
         q.setParameter("estornada", SituacaoRequisicaoCompra.ESTORNADA.name());
-        q.setParameter("idItemReconhecimento", itemReconhecimento.getId());
-        if (itemRequisicao != null && itemRequisicao.getId() != null) {
-            q.setParameter("itemRequisicao", itemRequisicao.getId());
-        }
-        if (itemRequisicao != null && itemRequisicao.getRequisicaoDeCompra().getId() != null) {
-            q.setParameter("idRequisicao", itemRequisicao.getRequisicaoDeCompra().getId());
+        q.setParameter("idItemProcesso", execItem.getId());
+        q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
+        if (itemReqEx != null && itemReqEx.getId() != null) {
+            q.setParameter("idItemReqProc", itemReqEx.getId());
         }
         try {
             return (BigDecimal) q.getSingleResult();
@@ -471,39 +633,25 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         }
     }
 
-    public BigDecimal getValorUtilizadoItemExecucaoContrato(ExecucaoContratoItem itemExecucaoContrato, List<Long> idsItemReqDesdobrados) {
+    public BigDecimal getValorUtilizadoItemExecucaoContrato(ExecucaoContratoItem itemExecCont, FonteDespesaORC fonteDespesaORC, List<Long> idsItemReqDesdobrados) {
         String sql = " " +
-            "           select coalesce(sum(irce.valortotal),0) as quantidadeUtilizada      " +
+            "           select coalesce(sum(ircp.valortotal),0) as quantidadeUtilizada      " +
             "           from requisicaodecompra rdc                                                       " +
             "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = rdc.id     " +
-            "           inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id     " +
-            "           where irce.execucaocontratoitem_id = :idItemExecucao  " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id  " +
+            "           inner join execucaocontratoitem exitem on exitem.id = ircp.execucaocontratoitem_id" +
+            "           inner join execucaocontratoitemdot exdot on exitem.id = exdot.execucaocontratoitem_id" +
+            "           inner join execucaocontratotipofonte exfonte on exfonte.id = exdot.execucaocontratotipofonte_id " +
+            "           where ircp.execucaocontratoitem_id = :idItemExecucao  " +
             "           and rdc.situacaorequisicaocompra <> :estornada ";
+        sql += fonteDespesaORC != null ? " and exfonte.fontedespesaorc_id = :idFonteDespOrc " : " ";
         sql += !Util.isListNullOrEmpty(idsItemReqDesdobrados) ? " and irc.id not in (:idsItemReqDesdobrados) " : "";
         Query q = em.createNativeQuery(sql);
         q.setParameter("estornada", SituacaoRequisicaoCompra.ESTORNADA.name());
-        q.setParameter("idItemExecucao", itemExecucaoContrato.getId());
-        if (!Util.isListNullOrEmpty(idsItemReqDesdobrados)){
-            q.setParameter("idsItemReqDesdobrados", idsItemReqDesdobrados);
+        q.setParameter("idItemExecucao", itemExecCont.getId());
+        if (fonteDespesaORC != null) {
+            q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
         }
-        try {
-            return (BigDecimal) q.getSingleResult();
-        } catch (NoResultException e) {
-            return BigDecimal.ZERO;
-        }
-    }
-
-    public BigDecimal getValorUtilizadoItemExecucaoProcesso(ExecucaoProcessoItem itemExecucaoProcesso, List<Long> idsItemReqDesdobrados) {
-        String sql = " " +
-            "           select coalesce(sum(item.valortotal),0) as valor_utilizado      " +
-            "           from requisicaodecompra rdc " +
-            "           inner join itemrequisicaodecompra item on item.requisicaodecompra_id = rdc.id                                                       " +
-            "           where item.execucaoprocessoitem_id = :idItemAta  " +
-            "           and rdc.situacaorequisicaocompra <> :estornada  ";
-        sql += !Util.isListNullOrEmpty(idsItemReqDesdobrados) ? " and item.id not in (:idsItemReqDesdobrados) " : "";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("estornada", SituacaoRequisicaoCompra.ESTORNADA.name());
-        q.setParameter("idItemAta", itemExecucaoProcesso.getId());
         if (!Util.isListNullOrEmpty(idsItemReqDesdobrados)) {
             q.setParameter("idsItemReqDesdobrados", idsItemReqDesdobrados);
         }
@@ -514,22 +662,47 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         }
     }
 
-    public RequisicaoDeCompra salvarRequisicao(RequisicaoDeCompra entity) {
-        if (entity.getId() == null && entity.getNumero() == null) {
-            entity.setNumero(singletonGeradorCodigo.getProximoCodigo(RequisicaoDeCompra.class, "numero"));
+    public BigDecimal getValorUtilizadoItemExecucaoProcesso(ExecucaoProcessoItem itemExecCont, FonteDespesaORC fonteDespesaORC, List<Long> idsItemReqDesdobrados) {
+        String sql = " " +
+            "           select coalesce(sum(ircp.valortotal),0) as quantidadeUtilizada      " +
+            "           from requisicaodecompra rdc                                                       " +
+            "           inner join itemrequisicaodecompra irc on irc.requisicaodecompra_id = rdc.id     " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id  " +
+            "           inner join execucaoprocessoitem exitem on exitem.id = ircp.execucaoprocessoitem_id" +
+            "           inner join execucaoprocessofonteitem exdot on exitem.id = exdot.execucaoprocessoitem_id" +
+            "           inner join execucaoprocessofonte exfonte on exfonte.id = exdot.execucaoprocessofonte_id " +
+            "           where exitem.id = :idItemExecucao  " +
+            "           and rdc.situacaorequisicaocompra <> :estornada ";
+        sql += fonteDespesaORC != null ? " and exfonte.fontedespesaorc_id = :idFonteDespOrc " : " ";
+        sql += !Util.isListNullOrEmpty(idsItemReqDesdobrados) ? " and irc.id not in (:idsItemReqDesdobrados) " : "";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("estornada", SituacaoRequisicaoCompra.ESTORNADA.name());
+        q.setParameter("idItemExecucao", itemExecCont.getId());
+        if (fonteDespesaORC != null) {
+            q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
         }
-        entity = movimentarSituacaoRequisicaoCompra(entity, SituacaoRequisicaoCompra.EM_ELABORACAO);
-        return entity;
+        if (!Util.isListNullOrEmpty(idsItemReqDesdobrados)) {
+            q.setParameter("idsItemReqDesdobrados", idsItemReqDesdobrados);
+        }
+        try {
+            return (BigDecimal) q.getSingleResult();
+        } catch (NoResultException e) {
+            return BigDecimal.ZERO;
+        }
     }
 
     public Pessoa getFornecedorRequisicao(RequisicaoDeCompra requisicaoCompra) {
         String hql = " select coalesce(pCont, pRd, pExProc) from RequisicaoDeCompra req " +
             "           inner join req.execucoes rce " +
-            "           left join req.contrato c" +
-            "           left join req.reconhecimentoDivida rc " +
-            "           left join rce.execucaoProcesso exproc " +
+            "           left join rce.execucaoContratoEmpenho excontemp " +
+            "           left join excontemp.execucaoContrato excont " +
+            "           left join excont.contrato c " +
             "           left join c.contratado pCont  " +
+            "           left join rce.execucaoReconhecimentoDiv exdp " +
+            "           left join exdp.reconhecimentoDivida rc " +
             "           left join rc.fornecedor pRd  " +
+            "           left join rce.execucaoProcessoEmpenho exprocemp " +
+            "           left join exprocemp.execucaoProcesso exproc " +
             "           left join exproc.fornecedor pExProc  " +
             "        where req.id = :idRequisicao ";
         Query q = em.createQuery(hql);
@@ -537,18 +710,22 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         try {
             return (Pessoa) q.getSingleResult();
         } catch (NoResultException | NonUniqueResultException e) {
-            return null;
+            throw new ExcecaoNegocioGenerica("Não foi possível recuperar o fornecedor da requisição de compra.");
         }
     }
 
     public UnidadeOrganizacional getUnidadeAdministrativa(RequisicaoDeCompra requisicaoCompra, Date dataOperacao) {
-        String sql = " select unid.* from requisicaodecompra req " +
-            "         left join contrato c on c.id = req.contrato_id " +
+        String sql = " select distinct unid.* from requisicaodecompra req " +
+            "         left join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id" +
+            "         left join execucaocontratoempenho ece on ece.id = rce.execucaocontratoempenho_id " +
+            "         left join execucaocontrato excont on excont.id = ece.execucaocontrato_id " +
+            "         left join contrato c on c.id = excont.contrato_id " +
             "         left join unidadecontrato uc on uc.contrato_id = c.id " +
             "              and to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(uc.iniciovigencia) and coalesce(trunc(uc.fimvigencia), to_date(:dataOperacao, 'dd/MM/yyyy')) " +
-            "         left join reconhecimentodivida rc on rc.id = req.reconhecimentodivida_id " +
-            "         left join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
-            "         left join execucaoprocesso exproc on exproc.id = rce.execucaoprocesso_id " +
+            "         left join solicitacaoempenhorecdiv solrd on solrd.id = rce.execucaoreconhecimentodiv_id " +
+            "         left join reconhecimentodivida rc on rc.id = solrd.reconhecimentodivida_id " +
+            "         left join execucaoprocessoempenho epe on epe.id = rce.execucaoprocessoempenho_id " +
+            "         left join execucaoprocesso exproc on exproc.id = epe.execucaoprocesso_id " +
             "         left join execucaoprocessoata exata on exata.execucaoprocesso_id = exproc.id " +
             "         left join ataregistropreco ata on ata.id = exata.ataregistropreco_id " +
             "         left join execucaoprocessodispensa exdisp on exdisp.execucaoprocesso_id = exproc.id " +
@@ -572,8 +749,8 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
             "       where (req.numero like :filtro or lower(req.descricao) like :filtro ) " +
             "       and req.situacaorequisicaocompra in (:situacoesMovimentacoes) " +
             "       and exists (select distinct 1 from ITEMREQUISICAODECOMPRA item " +
-            "             left join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = item.id" +
-            "             left join ITEMREQUISICAOCOMPRAEST est on est.itemrequisicaocompraexec_id = irce.id " +
+            "             left join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = item.id" +
+            "             left join ITEMREQUISICAOCOMPRAEST est on est.itemrequisicaocompraexec_id = ircp.id " +
             "             where item.QUANTIDADE > 0 " +
             "             and item.REQUISICAODECOMPRA_ID = req.id " +
             "             group by item.id, item.QUANTIDADE " +
@@ -625,28 +802,31 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
 
-    public BigDecimal buscarQuantidadeRestante(ItemRequisicaoDeCompra item) {
-        String sql = " select sum(quantidade) from (" +
-            " select item.quantidade as quantidade from ItemRequisicaoDeCompra item " +
-            " where item.id = :itemId " +
+    public BigDecimal buscarQuantidadeRestante(ItemRequisicaoDeCompra itemReq) {
+        String sql = " " +
+            " select sum(quantidade) from ( " +
+            "  select item.quantidade as quantidade " +
+            "   from itemrequisicaodecompra item " +
+            "  where item.id = :idItemReq " +
             " union all " +
             " select coalesce(est.quantidade, 0) * - 1 as quantidade " +
-            "   from ITEMREQUISICAOCOMPRAEST est " +
-            "   inner join itemrequisicaocompraexec irce on irce.id = est.itemrequisicaocompraexec_id" +
-            " where irce.itemRequisicaoCompra_id = :itemId ) ";
+            "   from itemrequisicaocompraest est " +
+            "   inner join itemrequisicaocompraexec irce on irce.id = est.itemrequisicaocompraexec_id " +
+            " where irce.itemrequisicaocompra_id = :idItemReq) ";
         Query q = em.createNativeQuery(sql);
-        q.setParameter("itemId", item.getId());
+        q.setParameter("idItemReq", itemReq.getId());
         List<BigDecimal> resultado = q.getResultList();
         if (resultado == null || resultado.isEmpty()) {
             return BigDecimal.ZERO;
         }
+
         return resultado.get(0);
     }
 
     public BigDecimal buscarQuantidadeTotal(RequisicaoDeCompra requisicaoDeCompra) {
-        String sql = " select coalesce(sum(irce.quantidade),0) as quantidade_total " +
-            "           from itemrequisicaocompraexec irce " +
-            "           inner join itemrequisicaodecompra irc on irc.id = irce.itemrequisicaocompra_id " +
+        String sql = " select coalesce(sum(ircp.quantidade),0) as quantidade_total " +
+            "           from itemrequisicaocompraexec ircp " +
+            "           inner join itemrequisicaodecompra irc on irc.id = ircp.itemrequisicaocompra_id " +
             "          where irc.requisicaodecompra_id = :idRequisicao ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idRequisicao", requisicaoDeCompra.getId());
@@ -657,30 +837,40 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return resultado.get(0);
     }
 
-    public ItemRequisicaoDeCompra getItemRequisicaoPorItemContrato(ItemContrato itemContrato, RequisicaoDeCompra requisicao) {
-        String sql = " select irc.* from itemrequisicaodecompra irc " +
-            "          where irc.requisicaodecompra_id = :idRequisicao " +
-            "          and irc.itemcontrato_id = :idItemContrato ";
-        Query q = em.createNativeQuery(sql, ItemRequisicaoDeCompra.class);
-        q.setParameter("idRequisicao", requisicao.getId());
-        q.setParameter("idItemContrato", itemContrato.getId());
-        try {
-            return (ItemRequisicaoDeCompra) q.getSingleResult();
-        } catch (NoResultException | NonUniqueResultException e) {
-            return null;
-        }
-    }
-
     public List<ItemRequisicaoDeCompra> buscarItemRequisicaoDerivacaoComponente(ItemContrato itemContrato, RequisicaoDeCompra requisicao, DerivacaoObjetoCompra derivacaoObjetoCompra) {
-        String sql = " select irc.* from itemrequisicaodecompra irc " +
+        String sql = " select distinct irc.id, irc.numero from itemrequisicaodecompra irc " +
             "           inner join derivacaoobjcompracomp comp on comp.id = irc.derivacaocomponente_id " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id " +
+            "           inner join execucaocontratoitem exitem on exitem.id = ircp.execucaocontratoitem_id " +
             "          where irc.requisicaodecompra_id = :idRequisicao " +
-            "          and irc.itemcontrato_id = :idItemContrato " +
-            "          and comp.derivacaoobjetocompra_id = :idDerivacao ";
-        Query q = em.createNativeQuery(sql, ItemRequisicaoDeCompra.class);
+            "           and exitem.itemcontrato_id = :idItemContrato " +
+            "           and comp.derivacaoobjetocompra_id = :idDerivacao ";
+        Query q = em.createNativeQuery(sql);
         q.setParameter("idRequisicao", requisicao.getId());
         q.setParameter("idItemContrato", itemContrato.getId());
         q.setParameter("idDerivacao", derivacaoObjetoCompra.getId());
+        List resultado = q.getResultList();
+
+        List<ItemRequisicaoDeCompra> itensReq = Lists.newArrayList();
+        for (Object[] obj : (List<Object[]>) resultado) {
+            ItemRequisicaoDeCompra itemReq = em.find(ItemRequisicaoDeCompra.class, ((BigDecimal) obj[0]).longValue());
+            Hibernate.initialize(itemReq.getItensRequisicaoExecucao());
+            itensReq.add(itemReq);
+        }
+        return itensReq;
+    }
+
+    public List<ItemRequisicaoDeCompra> buscarItensDesdobrado(ItemContrato itemContrato, RequisicaoDeCompra requisicao, Integer numeroItemProcesso) {
+        String sql = " select irc.* from itemrequisicaodecompra irc " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id " +
+            "           inner join execucaocontratoitem exitem on exitem.id = ircp.execucaocontratoitem_id " +
+            "          where irc.requisicaodecompra_id = :idRequisicao " +
+            "           and exitem.itemcontrato_id = :idItemContrato " +
+            "           and irc.numeroitemprocesso = :numeroItemProcesso ";
+        Query q = em.createNativeQuery(sql, ItemRequisicaoDeCompra.class);
+        q.setParameter("idRequisicao", requisicao.getId());
+        q.setParameter("idItemContrato", itemContrato.getId());
+        q.setParameter("numeroItemProcesso", numeroItemProcesso);
         List<ItemRequisicaoDeCompra> itensReq = q.getResultList();
         for (ItemRequisicaoDeCompra itemReq : itensReq) {
             Hibernate.initialize(itemReq.getItensRequisicaoExecucao());
@@ -692,8 +882,10 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         String sql = " select distinct doc.* from derivacaoobjetocompra doc" +
             "           inner join derivacaoobjcompracomp comp on comp.derivacaoobjetocompra_id = doc.id " +
             "           inner join itemrequisicaodecompra irc on irc.derivacaocomponente_id = comp.id " +
+            "           inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = irc.id " +
+            "           inner join execucaocontratoitem exitem on exitem.id = ircp.execucaocontratoitem_id " +
             "          where irc.requisicaodecompra_id = :idRequisicao " +
-            "          and irc.itemcontrato_id = :idItemContrato ";
+            "          and exitem.itemcontrato_id = :idItemContrato ";
         Query q = em.createNativeQuery(sql, DerivacaoObjetoCompra.class);
         q.setParameter("idRequisicao", requisicao.getId());
         q.setParameter("idItemContrato", itemContrato.getId());
@@ -704,28 +896,20 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         }
     }
 
-    public ItemRequisicaoDeCompra getItemRequisicaoPorItemExecucaoProcesso(ExecucaoProcessoItem execucaoProcessoItem, RequisicaoDeCompra requisicao) {
-        String sql = " select irc.* from itemrequisicaodecompra irc " +
-            "          where irc.requisicaodecompra_id = :idRequisicao " +
-            "          and irc.execucaoprocessoitem_id = :idItemExecProc ";
-        Query q = em.createNativeQuery(sql, ItemRequisicaoDeCompra.class);
-        q.setParameter("idRequisicao", requisicao.getId());
-        q.setParameter("idItemExecProc", execucaoProcessoItem.getId());
-        try {
-            return (ItemRequisicaoDeCompra) q.getSingleResult();
-        } catch (NoResultException | NonUniqueResultException e) {
+    public ItemRequisicaoCompraExecucao getItemRequisicaoExecucaoPorItemExecucao(Long idItemExec, Long idFonteDespesaOrc, RequisicaoDeCompra requisicao) {
+        if (requisicao.getId() == null) {
             return null;
         }
-    }
-
-    public ItemRequisicaoCompraExecucao getItemRequisicaoExecucaoPorItemExecucao(ExecucaoContratoItem itemExecucao, RequisicaoDeCompra requisicao) {
         String sql = " select irce.* from itemrequisicaocompraexec irce " +
             "           inner join itemrequisicaodecompra irc on irc.id = irce.itemrequisicaocompra_id " +
+            "           inner join empenho emp on emp.id = irce.empenho_id " +
             "          where irc.requisicaodecompra_id = :idRequisicao " +
-            "          and irce.execucaocontratoitem_id = :idItemExecucao ";
+            "          and coalesce(irce.execucaocontratoitem_id, irce.execucaoprocessoitem_id, irce.itemreconhecimentodivida_id)  = :idItemExecucao " +
+            "          and emp.fontedespesaorc_id = :idFonte ";
         Query q = em.createNativeQuery(sql, ItemRequisicaoCompraExecucao.class);
         q.setParameter("idRequisicao", requisicao.getId());
-        q.setParameter("idItemExecucao", itemExecucao.getId());
+        q.setParameter("idItemExecucao", idItemExec);
+        q.setParameter("idFonte", idFonteDespesaOrc);
         try {
             return (ItemRequisicaoCompraExecucao) q.getSingleResult();
         } catch (NoResultException | NonUniqueResultException e) {
@@ -735,50 +919,10 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
 
     public BigDecimal getValorEmRequisicao(ExecucaoContratoItem item) {
         String sql = " " +
-            " select coalesce(sum(irce.valortotal),0) as valortotal " +
+            " select coalesce(sum(ircp.valortotal),0) as valortotal " +
             " from ItemRequisicaoDeCompra item " +
-            "   inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = item.id " +
-            " where irce.execucaocontratoitem_id = :idItemExecucao  ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idItemExecucao", item.getId());
-        List<BigDecimal> resultado = q.getResultList();
-        if (resultado == null || resultado.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        return resultado.get(0);
-    }
-
-    public BigDecimal buscarQuantidadeRestantePorItemExecucao(ExecucaoContratoItem item) {
-        String sql = " select coalesce(sum(quantidade),0) from (" +
-            " select irce.quantidade as quantidade from ItemRequisicaoDeCompra item " +
-            " inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = item.id " +
-            " where irce.execucaocontratoitem_id = :idItemExecucao  " +
-            " union all " +
-            " select coalesce(est.quantidade, 0) * - 1 as quantidade from ITEMREQUISICAOCOMPRAEST est " +
-            " inner join itemrequisicaocompraexec irce on irce.id = est.itemrequisicaocompraexec_id     " +
-            " where irce.execucaocontratoitem_id = :idItemExecucao)";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idItemExecucao", item.getId());
-        List<BigDecimal> resultado = q.getResultList();
-        if (resultado == null || resultado.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        return resultado.get(0);
-    }
-
-    public BigDecimal buscarValorEmRequisicaoCompraItemExecucaoProcesso(ExecucaoProcessoItem item) {
-        String sql = " " +
-            " select coalesce(sum(valor_total),0) " +
-            " from (" +
-            "  select item.valortotal as valor_total " +
-            "  from ItemRequisicaoDeCompra item " +
-            "  where item.execucaoprocessoitem_id = :idItemExecucao  " +
-            "  union all " +
-            "  select (coalesce(est.quantidade, 0) * (item.valorunitario)) * - 1 as valor_total " +
-            "  from ITEMREQUISICAOCOMPRAEST est " +
-            "   inner join ItemRequisicaoDeCompra item on item.id = est.itemrequisicaocompra_id     " +
-            "  where item.execucaoprocessoitem_id = :idItemExecucao" +
-            " ) ";
+            "   inner join itemrequisicaocompraexec ircp on ircp.itemrequisicaocompra_id = item.id " +
+            " where ircp.execucaocontratoitem_id = :idItemExecucao  ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemExecucao", item.getId());
         List<BigDecimal> resultado = q.getResultList();
@@ -820,88 +964,35 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return retorno;
     }
 
-    public RequisicaoDeCompra movimentarSituacaoRequisicaoCompra(RequisicaoDeCompra requisicaoCompra, SituacaoRequisicaoCompra situacao) {
-        requisicaoCompra.setSituacaoRequisicaoCompra(situacao);
-        requisicaoCompra = em.merge(requisicaoCompra);
-        return requisicaoCompra;
-    }
-
     public List<EmpenhoDocumentoFiscal> buscarEmpenhosDocumentoFiscal(FiltroEmpenhoDocumentoFiscal filtro) {
-        String sql = "select " +
-            "       emp.id                                                       as id_empenho, " +
-            "       coalesce(iem.numeroitem, irc.numero)                         as numero_item, " +
-            "       coalesce(mat.codigo || ' - ' || mat.descricao, oc.descricao) as descricao_item, " +
-            "       gmitem.codigo || ' - ' || gmitem.descricao                   as grupo_item, " +
-            "       case " +
-            "           when req.tiporequisicao = 'CONTRATO' then coalesce(irce.quantidade, 1) " +
-            "           else irc.quantidade end                                  as qtde, " +
-            "       case " +
-            "           when req.tiporequisicao = 'CONTRATO' then irce.valorunitario " +
-            "           else irc.valorunitario end                               as vl_unitario, " +
-            "       case " +
-            "           when req.tiporequisicao = 'CONTRATO' then irce.valortotal " +
-            "           else irc.valortotal end                                  as vl_total," +
-            "       cliq.codigo || ' - ' || cliq.DESCRICAO                       as desdobramento_emp  " +
-            "from itemrequisicaodecompra irc " +
+        String sql = "" +
+            "  select " +
+            "      emp.id                                             as id_empenho, " +
+            "      coalesce(iem.numeroitem, irc.numero)               as numero_item, " +
+            "      case when mat.id is not null " +
+            "           then mat.codigo || ' - ' || mat.descricao " +
+            "           else oc.descricao end                          as descricao_item, " +
+            "      gm.codigo || ' - ' || gm.descricao                  as grupo_item, " +
+            "      irce.quantidade                                     as qtde, " +
+            "      irce.valorunitario                                  as vl_unitario, " +
+            "      irce.valortotal                                     as vl_total," +
+            "      c.codigo || ' - ' || c.descricao                    as desdobramento_emp  " +
+            " from itemrequisicaodecompra irc " +
             "         inner join requisicaodecompra req on req.id = irc.requisicaodecompra_id " +
+            "         inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
+            "         inner join objetocompra oc on oc.id = irc.objetocompra_id " +
+            "         inner join empenho emp on emp.id = irce.empenho_id " +
+            "         inner join desdobramentoempenho desd on desd.empenho_id = emp.id " +
+            "         inner join conta c on c.id = desd.conta_id " +
+            "         inner join configgrupomaterial cgm on cgm.contadespesa_id = c.id " +
+            "         inner join grupomaterial gm on gm.id = cgm.grupomaterial_id " +
             "         left join itemcompramaterial icm on icm.itemrequisicaodecompra_id = irc.id " +
             "         left join itementradamaterial iem on iem.id = icm.itementradamaterial_id " +
             "         left join material mat on mat.id = iem.material_id " +
             "         left join itemdoctoitementrada idie on idie.itementradamaterial_id = iem.id " +
-            "         left join doctofiscalentradacompra dfec on dfec.id = idie.doctofiscalentradacompra_id ";
-
-        if (filtro.getTipoRequisicaoCompra().isReconhecimentoDivida()) {
-            sql += "   inner join itemreconhecimentodivida itemrd on itemrd.id = irc.itemreconhecimentodivida_id " +
-                "      inner join objetocompra oc on oc.id = itemrd.objetocompra_id " +
-                "      inner join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " +
-                "      inner join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
-                "      inner join empenho emp on emp.id = sol.empenho_id " +
-                "      left join itemrequisicaocompraexec irce on irc.id = irce.itemrequisicaocompra_id " ;
-        } else if (filtro.getTipoRequisicaoCompra().isContrato()) {
-            sql += "   inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
-                "      inner join execucaocontratoitem eci on eci.id = irce.execucaocontratoitem_id " +
-                "      inner join itemcontrato ic on ic.id = eci.itemcontrato_id " +
-                "      left join itemcontratovigente icv on icv.itemcontrato_id = ic.id " +
-                "      left join itemcotacao icot on icot.id = icv.itemcotacao_id " +
-                "      left join itemcontratoitempropfornec icpf on icpf.itemcontrato_id = ic.id " +
-                "      left join itemcontratoitemirp iirp on iirp.itemcontrato_id = ic.id " +
-                "      left join itemcontratoadesaoataint iata on iata.itemcontrato_id = ic.id " +
-                "      left join itemcontratoitemsolext icise on icise.itemcontrato_id = ic.id " +
-                "      left join itemcontratoitempropdisp icipfd on icipfd.itemcontrato_id = ic.id " +
-                "      left join itempropostafornedisp ipfd on icipfd.itempropfornecdispensa_id = ipfd.id " +
-                "      left join itempropfornec ipf on coalesce(icpf.itempropostafornecedor_id, iirp.itempropostafornecedor_id, " +
-                "                                               iata.itempropostafornecedor_id) = ipf.id " +
-                "      left join itemprocessodecompra ipc " +
-                "                on ipc.id = coalesce(ipf.itemprocessodecompra_id, ipfd.itemprocessodecompra_id) " +
-                "      left join itemsolicitacao itemsol on itemsol.id = ipc.itemsolicitacaomaterial_id " +
-                "      left join itemsolicitacaoexterno ise on ise.id = icise.itemsolicitacaoexterno_id " +
-                "      inner join objetocompra oc on oc.id = coalesce(ic.objetocompracontrato_id, itemsol.objetocompra_id, " +
-                "                                                     ise.objetocompra_id, icot.objetocompra_id) " +
-                "      inner join execucaocontrato ex on ex.id = eci.execucaocontrato_id " +
-                "      inner join execucaocontratoempenho exemp on exemp.execucaocontrato_id = ex.id " +
-                "      inner join empenho emp on emp.id = exemp.empenho_id ";
-        } else {
-            sql += "   inner join execucaoprocessoitem itemexproc on itemexproc.id = irc.execucaoprocessoitem_id " +
-                "      inner join execucaoprocesso exproc on exproc.id = itemexproc.execucaoprocesso_id " +
-                "      inner join execucaoprocessoempenho exprocemp on exprocemp.execucaoprocesso_id = exproc.id " +
-                "      inner join empenho emp on emp.id = exprocemp.empenho_id " +
-                "      inner join objetocompra oc on coalesce(irc.objetocompra_id, mat.objetocompra_id) = oc.id " +
-                "      left join itemrequisicaocompraexec irce on irc.id = irce.itemrequisicaocompra_id ";
-        }
-        sql += "  inner join exercicio ex on emp.exercicio_id = ex.id " +
-            "     inner join desdobramentoempenho desd on desd.empenho_id = emp.id " +
-            "     inner join conta cliq on cliq.id = desd.conta_id " +
-            "     inner join configgrupomaterial cgm on cgm.contadespesa_id = cliq.id " +
-            "     inner join grupomaterial gmemp on gmemp.id = cgm.grupomaterial_id " +
-            "     inner join associacaogruobjcomgrumat agm on agm.grupoobjetocompra_id = oc.grupoobjetocompra_id " +
-            "     inner join grupomaterial gmitem on gmitem.id = agm.grupomaterial_id " +
-            "where trunc(emp.dataempenho) between trunc(agm.iniciovigencia) and coalesce(trunc(agm.finalvigencia), " +
-            "                                                                                         trunc(emp.dataempenho)) " +
-            "  and trunc(emp.dataempenho) between trunc(cgm.iniciovigencia) and coalesce(trunc(cgm.fimvigencia), " +
-            "                                                                                         trunc(emp.dataempenho)) " +
-            "  and gmemp.id = gmitem.id " ;
+            "         left join doctofiscalentradacompra dfec on dfec.id = idie.doctofiscalentradacompra_id " +
+            "    where trunc(emp.dataempenho) between trunc(cgm.iniciovigencia) and coalesce(trunc(cgm.fimvigencia), trunc(emp.dataempenho)) ";
         sql += filtro.getCondicaoSql();
-
         Query q = em.createNativeQuery(sql);
         List<Object[]> resultado = q.getResultList();
 
@@ -961,24 +1052,16 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return requisicaoCompraEstornoFacade;
     }
 
-    public GrupoMaterialFacade getGrupoMaterialFacade() {
-        return grupoMaterialFacade;
-    }
-
-    public GrupoBemFacade getGrupoBemFacade() {
-        return grupoBemFacade;
-    }
-
     public ObjetoCompraFacade getObjetoCompraFacade() {
         return objetoCompraFacade;
     }
 
-    public AssociacaoGrupoObjetoCompraGrupoMaterialFacade getAssocicaoGrupoMaterial() {
-        return associcaoGrupoMaterial;
+    public AssociacaoGrupoObjetoCompraGrupoMaterialFacade getAssocicaoGrupoMaterialFacade() {
+        return associcaoGrupoMaterialFacade;
     }
 
-    public GrupoObjetoCompraGrupoBemFacade getAssocicaoGrupoBem() {
-        return associcaoGrupoBem;
+    public GrupoObjetoCompraGrupoBemFacade getAssocicaoGrupoBemFacade() {
+        return associcaoGrupoBemFacade;
     }
 
     public ItemPregaoFacade getItemPregaoFacade() {
@@ -997,24 +1080,12 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
         return solicitacaoMaterialFacade;
     }
 
-    public ProcessoDeCompraFacade getProcessoDeCompraFacade() {
-        return processoDeCompraFacade;
-    }
-
     public EmpenhoFacade getEmpenhoFacade() {
         return empenhoFacade;
     }
 
     public ContratoFacade getContratoFacade() {
         return contratoFacade;
-    }
-
-    public MaterialFacade getMaterialFacade() {
-        return materialFacade;
-    }
-
-    public SingletonGeradorCodigo getSingletonGeradorCodigo() {
-        return singletonGeradorCodigo;
     }
 
     public SistemaFacade getSistemaFacade() {
@@ -1063,5 +1134,9 @@ public class RequisicaoDeCompraFacade extends AbstractFacade<RequisicaoDeCompra>
 
     public DerivacaoObjetoCompraComponenteFacade getDerivacaoObjetoCompraComponenteFacade() {
         return derivacaoObjetoCompraComponenteFacade;
+    }
+
+    public SolicitacaoAquisicaoFacade getSolicitacaoAquisicaoFacade() {
+        return solicitacaoAquisicaoFacade;
     }
 }

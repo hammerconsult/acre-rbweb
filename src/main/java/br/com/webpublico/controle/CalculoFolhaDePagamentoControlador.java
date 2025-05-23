@@ -285,7 +285,7 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
     public List<VinculoFP> completarContratoFP(String parte) {
         if (folhaDePagamento != null && folhaDePagamento.getTipoFolhaDePagamento() != null) {
             if (!TipoFolhaDePagamento.isFolhaRescisao(getFolhaDePagamento())) {
-                return contratoFPFacade.recuperaContratoVigenteNaoCedidoMatricula(parte.trim(), folhaDePagamento.getMes().getNumeroMes(), folhaDePagamento.getAno());
+                return contratoFPFacade.recuperaContratoVigenteSemCedenciaOuAfastamento(parte.trim(), folhaDePagamento.getMes().getNumeroMes(), folhaDePagamento.getAno());
             }
 
             if (TipoFolhaDePagamento.isFolhaRescisao(folhaDePagamento)) {
@@ -574,20 +574,20 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
             if (TipoFolhaDePagamento.isFolhaRescisao(folha) && hieraquiasOrganizacionaisSelecionadas.isEmpty()) {
                 vinculos = folhaDePagamentoFacade.recuperaContratosExonerados(getFolhaDePagamento());
             } else if (!hieraquiasOrganizacionaisSelecionadas.isEmpty()) {
-                vinculos = contratoFPFacade.recuperaMatriculaPorOrgaoRecursivaPelaView(hieraquiasOrganizacionaisSelecionadas, folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
+                vinculos = contratoFPFacade.listarVinculosPorHierarquiaSemCedenciaEstagioOuAfastamento(hieraquiasOrganizacionaisSelecionadas, folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
             } else {
-                vinculos = folhaDePagamentoFacade.recuperarTodasMatriculas(folha.getMes(), folha.getAno());
+                vinculos = folhaDePagamentoFacade.recuperarMatriculasSemCedenciaEstagioOuAfastamento(folha.getMes(), folha.getAno());
             }
         } else if (TipoCalculo.LOTE.equals(filtro.getTipoCalculo())) {
-            vinculos = folhaDePagamentoFacade.findVinculosByLote(filtro.getLoteProcessamento());
+            vinculos = folhaDePagamentoFacade.findVinculosSemCedenciaAfastamentoByLote(filtro.getLoteProcessamento(), folha.getMes(), folha.getAno());
             folha.setLoteProcessamento(filtro.getLoteProcessamento());
         } else if (TipoCalculo.ORGAO.equals(filtro.getTipoCalculo())) {
-            vinculos = contratoFPFacade.recuperaMatriculaPorOrgaoRecursivaPelaView(Lists.newArrayList(filtro.getHierarquiaOrganizacional()), folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
+            vinculos = contratoFPFacade.listarVinculosPorHierarquiaSemCedenciaEstagioOuAfastamento(Lists.newArrayList(filtro.getHierarquiaOrganizacional()), folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
         } else if (TipoCalculo.INDIVIDUAL.equals(filtro.getTipoCalculo())) {
             filtro.getVinculoFP().getMatriculaFP().getPessoa().setFichaJaExcluidas(false);
             vinculos.add(filtro.getVinculoFP());
         } else if (TipoCalculo.ENTIDADE.equals(filtro.getTipoCalculo())) {
-            vinculos = contratoFPFacade.buscarVinculoFpPorItemEntidadeDPContas(filtro.getItemEntidadeDPContas(), TipoFolhaDePagamento.isFolhaRescisao(folha));
+            vinculos = contratoFPFacade.buscarVinculosPorItemDPContasSemCedenciaOuAfastamento(filtro.getItemEntidadeDPContas(), TipoFolhaDePagamento.isFolhaRescisao(folha), folha.getMes(), folha.getAno());
         }
 
         detalheProcessamentoFolha.getDetalhesCalculoRH().setTotalServidores(vinculos.size());

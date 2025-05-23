@@ -35,6 +35,7 @@ import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 
 @ManagedBean(name = "processoParcelamentoControlador")
@@ -88,6 +89,7 @@ public class ProcessoParcelamentoControlador extends PrettyControlador<ProcessoP
     private Boolean autorizacaoCancelarParcelamento;
     private AssistenteBarraProgresso assistenteBarraProgresso;
     private AssistenteSimulacaoParcelamento assistenteSimulacaoParcelamento;
+    private PessoaFisica prorietarioSelecionado;
 
     public ProcessoParcelamentoControlador() {
         super(ProcessoParcelamento.class);
@@ -290,7 +292,7 @@ public class ProcessoParcelamentoControlador extends PrettyControlador<ProcessoP
         super.novo();
         inicializarAtributosDoSelecionado();
         assistenteSimulacaoParcelamento = new AssistenteSimulacaoParcelamento(processoParcelamentoFacade,
-            processoParcelamentoFacade.getSistemaFacade().getUsuarioCorrente(), selecionado,null, new Date());
+            processoParcelamentoFacade.getSistemaFacade().getUsuarioCorrente(), selecionado, null, new Date());
 
         selecionado.setQuantidadeMaximaParcelas(0);
         comunicacaoSoftPlans = Lists.newArrayList();
@@ -924,13 +926,47 @@ public class ProcessoParcelamentoControlador extends PrettyControlador<ProcessoP
     public void carregarCadastro() {
         try {
             validarPessoaParcelamento();
+            prorietarioSelecionado = null;
+            if (selecionado.getPessoa() != null && selecionado.getPessoa() instanceof PessoaFisica) {
+                PessoaFisica pf = selecionado.getPessoa().getAsPessoaFisica();
+                if (!getFacade().getPessoaFacade().cadastroAtualizado(pf)) {
+                    montarMensagemDialogAtualizacaoCadastroPF(pf);
+                    abrirDialogAtualizacaoCadastralPF();
+                    return;
+                }
+            }
             recuperarCadastros();
+            if (selecionado.getCadastro() instanceof CadastroImobiliario) {
+                boolean possuiProprietarioComCadastroDesatualizado = false;
+                for (Propriedade propriedade : propriedadesBCI) {
+                    if (propriedade.getPessoa().isPessoaFisica() && !getFacade().getPessoaFacade().cadastroAtualizado(propriedade.getPessoa().getAsPessoaFisica())) {
+                        possuiProprietarioComCadastroDesatualizado = true;
+                        break;
+                    }
+                }
+                if (possuiProprietarioComCadastroDesatualizado) {
+                    if (propriedadesBCI.size() == 1 && propriedadesBCI.get(0).getPessoa().isPessoaFisica()) {
+                        PessoaFisica pf = propriedadesBCI.get(0).getPessoa().getAsPessoaFisica();
+                        prorietarioSelecionado = pf;
+                        montarMensagemDialogAtualizacaoCadastroPF(pf);
+                        abrirDialogAtualizacaoCadastralPF();
+                    } else {
+                        FacesUtil.atualizarComponente("formDialogoAtualizacaoPFCadastro");
+                        FacesUtil.executaJavaScript("dialogoProprietariosCI.show();");
+                    }
+                }
+            }
             reinicializarTodosOsValores();
         } catch (ValidacaoException ve) {
             selecionado.setPessoa(null);
             selecionado.setCadastro(null);
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
+    }
+
+    public List<Propriedade> proprietariosPessoaFisica() {
+        if (propriedadesBCI == null) return Lists.newArrayList();
+        return propriedadesBCI.stream().filter(p -> p.getPessoa().isPessoaFisica()).collect(Collectors.toList());
     }
 
     private void recuperarCadastros() {
@@ -1511,5 +1547,32 @@ public class ProcessoParcelamentoControlador extends PrettyControlador<ProcessoP
         processoParcelamentoFacade.reativarProcessoParcelamento(selecionado, selecionado.getCancelamentoParcelamento());
         FacesUtil.addInfo("Processo de Parcelamento reativado com sucesso!", "");
         FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + selecionado.getId() + "/");
+    }
+
+    @Override
+    public void limparCampoPessoaFisica() {
+        selecionado.setPessoa(null);
+        selecionado.setCadastro(null);
+    }
+
+    @Override
+    public Long idPfParaAtualizacaoCadastral() {
+        return prorietarioSelecionado != null ? prorietarioSelecionado.getId() : selecionado.getPessoa().getId();
+    }
+
+    public void fecharDialogSelecaoProprietarioCI() {
+        FacesUtil.executaJavaScript("dialogoProprietariosCI.hide();");
+        selecionado.setPessoa(null);
+        selecionado.setCadastro(null);
+        FacesUtil.atualizarComponente("Formulario");
+    }
+
+    public void selecionouProprietario(Propriedade prop) {
+        FacesUtil.executaJavaScript("dialogoProprietariosCI.hide();");
+        if (!getFacade().getPessoaFacade().cadastroAtualizado(prop.getPessoa().getAsPessoaFisica())) {
+            prorietarioSelecionado = prop.getPessoa().getAsPessoaFisica();
+            montarMensagemDialogAtualizacaoCadastroPF(prop.getPessoa().getAsPessoaFisica());
+            abrirDialogAtualizacaoCadastralPF();
+        }
     }
 }

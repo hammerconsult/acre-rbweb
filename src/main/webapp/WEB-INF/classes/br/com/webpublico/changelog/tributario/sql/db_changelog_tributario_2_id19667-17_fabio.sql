@@ -1,0 +1,1 @@
+update ITEMCONFIGURACAOACRESCIMOS item set item.multa_id = (select max(id) from MULTACONFIGURACAOACRESCIMO multa where multa.CONFIGURACAOACRESCIMOS_ID = item.CONFIGURACAOACRESCIMOS_ID) where item.multa_id is null

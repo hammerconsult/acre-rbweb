@@ -83,7 +83,7 @@ public class AnexoPortalTransparenciaFacade extends AbstractFacade<AnexoPortalTr
 
     private void validarAnexoJaCadastrado(AnexoPortalTransparencia selecionado) {
         ValidacaoException ve = new ValidacaoException();
-        if (hasAnexoPorExercicioPaginaEMes(selecionado)) {
+        if (hasAnexoPorNomeExercicioPaginaEMes(selecionado)) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("Não deve existir mais que um registro com o mesmo Exercício: <b>" + selecionado.getExercicio() +
                 "</b>, Página do Portal: <b>" + selecionado.getPaginaPrefeituraPortal().getNome() + " - " + selecionado.getPaginaPrefeituraPortal().getChave() + "</b>" +
                 (selecionado.getMes() != null ? " e Mês: <b>" + selecionado.getMes().getDescricao() + "</b>" : ""));
@@ -91,17 +91,19 @@ public class AnexoPortalTransparenciaFacade extends AbstractFacade<AnexoPortalTr
         ve.lancarException();
     }
 
-    public boolean hasAnexoPorExercicioPaginaEMes(AnexoPortalTransparencia anexoPortal) {
+    public boolean hasAnexoPorNomeExercicioPaginaEMes(AnexoPortalTransparencia anexoPortal) {
         String sql = " select anexoPortal.id " +
             "  from anexoportaltransparencia anexoPortal " +
             " where anexoPortal.exercicio_id = :idExercicio " +
             "   and anexoPortal.paginaprefeituraportal_id = :idPagina " +
+            "   and anexoPortal.nome = :nomeAnexoPortal " +
             (anexoPortal.getMes() != null ? " and anexoPortal.mes = :mes " : "") +
             (anexoPortal.getId() != null ? " and anexoPortal.id <> :idAnexoPortal " : "") +
             " order by anexoPortal.datacadastro desc ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idExercicio", anexoPortal.getExercicio().getId());
         q.setParameter("idPagina", anexoPortal.getPaginaPrefeituraPortal().getId());
+        q.setParameter("nomeAnexoPortal", anexoPortal.getNome());
         if (anexoPortal.getMes() != null) {
             q.setParameter("mes", anexoPortal.getMes().name());
         }

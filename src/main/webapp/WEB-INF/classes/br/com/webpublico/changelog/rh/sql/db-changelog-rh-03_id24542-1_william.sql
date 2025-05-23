@@ -1,0 +1,1 @@
+delete SITUACAOCONTRATOFP where id = 759607776;

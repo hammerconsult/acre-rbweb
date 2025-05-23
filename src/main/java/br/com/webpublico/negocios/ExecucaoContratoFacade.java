@@ -152,6 +152,10 @@ public class ExecucaoContratoFacade extends AbstractFacade<ExecucaoContrato> {
         return entity;
     }
 
+    public ExecucaoContrato recuperarSemDependencias(Object id) {
+        return super.recuperar(id);
+    }
+
     @Override
     public void remover(ExecucaoContrato entity) {
         estornarSaldoReservadoPorLicitacao(entity);
@@ -1034,19 +1038,28 @@ public class ExecucaoContratoFacade extends AbstractFacade<ExecucaoContrato> {
         return q.getResultList();
     }
 
-    public ExecucaoContratoItemDotacao buscarItemDotacao(ExecucaoContrato execucao, FonteDespesaORC fonte, ExecucaoContratoItem item) {
+    public ExecucaoContratoItemDotacao buscarItemDotacaoPorItemExecucao(ExecucaoContratoItem execucaoItem, FonteDespesaORC fonteDespOrc) {
         String sql = " select itemdot.* from execucaocontratoitemdot itemdot " +
-            "         inner join execucaocontratotipofonte exfonte on exfonte.id = itemdot.execucaocontratotipofonte_id " +
-            "         inner join execucaocontratotipo extipo on extipo.id = exfonte.execucaocontratotipo_id " +
-            "where extipo.execucaocontrato_id = :idExecucao " +
-            "and exfonte.fontedespesaorc_id = :idFonte " +
-            "and itemdot.execucaocontratoitem_id = :idItem ";
+            "           inner join execucaocontratotipofonte exfonte on exfonte.id = itemdot.execucaocontratotipofonte_id  " +
+            "          where itemdot.execucaocontratoitem_id = :idItem " +
+            "           and exfonte.fontedespesaorc_id = :idFonteDespOrc ";
         Query q = em.createNativeQuery(sql, ExecucaoContratoItemDotacao.class);
-        q.setParameter("idExecucao", execucao.getId());
-        q.setParameter("idFonte", fonte.getId());
-        q.setParameter("idItem", item.getId());
+        q.setParameter("idItem", execucaoItem.getId());
+        q.setParameter("idFonteDespOrc", fonteDespOrc.getId());
         try {
             return (ExecucaoContratoItemDotacao) q.getSingleResult();
+        } catch (NoResultException nre) {
+            return null;
+        }
+    }
+
+    public List<ExecucaoContratoItemDotacao> buscarItensDotacaoPorItemExecucao(ExecucaoContratoItem execucaoItem) {
+        String sql = " select itemdot.* from execucaocontratoitemdot itemdot " +
+            "          where itemdot.execucaocontratoitem_id = :idItem ";
+        Query q = em.createNativeQuery(sql, ExecucaoContratoItemDotacao.class);
+        q.setParameter("idItem", execucaoItem.getId());
+        try {
+            return q.getResultList();
         } catch (NoResultException nre) {
             return null;
         }
@@ -1078,6 +1091,15 @@ public class ExecucaoContratoFacade extends AbstractFacade<ExecucaoContrato> {
             "          order by emp.numero ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("idExecucao", execucaoContrato.getId());
+        return q.getResultList();
+    }
+
+    public List<ExecucaoContratoEmpenho> buscarExecucaoContratoEmpenhoPorExecucao(Long idExecucao) {
+        String sql = " select exemp.* from execucaocontratoempenho exemp " +
+            "          where exemp.execucaocontrato_id = :idExecucao " +
+            "           and exemp.empenho_id is not null " ;
+        Query q = em.createNativeQuery(sql, ExecucaoContratoEmpenho.class);
+        q.setParameter("idExecucao", idExecucao);
         return q.getResultList();
     }
 

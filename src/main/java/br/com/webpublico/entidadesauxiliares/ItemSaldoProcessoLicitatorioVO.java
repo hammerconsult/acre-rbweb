@@ -150,14 +150,14 @@ public class ItemSaldoProcessoLicitatorioVO {
     }
 
     public BigDecimal getQuantidadeDisponivel(){
-        if (saldoVO.getTipoSaldo().isAta()){
+        if (saldoVO.getTipoProcesso().isAta()){
             return quantidadeAta.subtract(quantidadeExecutadaSemContrato).subtract(quantidadeContratada).add(quantidadeEstornadaExecucaoSemContrato);
         }
         return quantidadeProcesso.subtract(quantidadeExecutadaSemContrato).subtract(quantidadeContratada).add(quantidadeEstornadaExecucaoSemContrato);
     }
 
     public BigDecimal getValorDisponivel(){
-        if (saldoVO.getTipoSaldo().isAta()){
+        if (saldoVO.getTipoProcesso().isAta()){
             return valorAta.subtract(valorExecutadoSemContrato).subtract(valorContratado).add(valorEstornadoExecucaoSemContrato);
         }
         return valorProcesso.subtract(valorExecutadoSemContrato).subtract(valorContratado).add(valorEstornadoExecucaoSemContrato);

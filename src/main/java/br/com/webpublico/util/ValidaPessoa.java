@@ -4,12 +4,12 @@
  */
 package br.com.webpublico.util;
 
+import br.com.webpublico.entidades.EnderecoCorreio;
 import br.com.webpublico.entidades.Pessoa;
 import br.com.webpublico.entidades.PessoaFisica;
 import br.com.webpublico.entidades.PessoaJuridica;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
-import br.com.webpublico.negocios.PessoaFacade;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.slf4j.Logger;
@@ -454,8 +454,10 @@ public class ValidaPessoa {
     }
 
     public static void validarPerfilTributario(Pessoa pessoa) {
-
-            ValidacaoException ve = new ValidacaoException();
+        ValidacaoException ve = new ValidacaoException();
+        if (!Util.valida_CpfCnpj(String.valueOf(pessoa.getCpf_Cnpj()))) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("CPF/CNPJ inválido!");
+        } else {
             if (pessoa instanceof PessoaFisica) {
                 PessoaFisica pf = (PessoaFisica) pessoa;
                 if (pf.getNome().length() < 3) {
@@ -470,36 +472,67 @@ public class ValidaPessoa {
                 if (pf.getMae() == null || pf.getMae().isEmpty()) {
                     ve.adicionarMensagemDeCampoObrigatorio("Nome da mãe deve ser informado.");
                 }
-                if (pf.getRg().getNumero() == null || pf.getRg().getNumero().trim().isEmpty()) {
-                    ve.adicionarMensagemDeCampoObrigatorio("Número do RG deve ser informado.");
-                }
-                if (pf.getRg().getOrgaoEmissao() == null || pf.getRg().getOrgaoEmissao().trim().isEmpty()) {
-                    ve.adicionarMensagemDeCampoObrigatorio("Órgão Emissor deve ser informado.");
-                }
                 if (pf.getEnderecos().isEmpty()) {
                     ve.adicionarMensagemDeCampoObrigatorio("Endereço deve ser informado.");
+                } else {
+                    if (pessoa.getEnderecos().stream().noneMatch(e -> TipoEndereco.DOMICILIO_FISCAL.equals(e.getTipoEndereco()))) {
+                        ve.adicionarMensagemDeCampoObrigatorio("É obrigatório ter pelo menos um endereço do tipo Domicílio Fiscal.");
+                    }
+                    for (EnderecoCorreio endereco : pf.getEnderecos()) {
+                        validarEnderecosJaAdicionados(ve, endereco);
+                    }
                 }
-                if (pf.getEmail() == null || (!pf.getEmail().contains("@") && !pf.getEmail().trim().isEmpty())) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida("O e-mail informado é inválido!");
+                if (pf.getEmail() == null || pf.getEmail().isEmpty()) {
+                    ve.adicionarMensagemDeOperacaoNaoPermitida("Informe o email.");
+                } else {
+                    if (!pf.getEmail().contains("@")) {
+                        ve.adicionarMensagemDeOperacaoNaoPermitida("O e-mail informado é inválido.");
+                    }
                 }
                 if (pf.getHomePage() != null && !pf.getHomePage().trim().isEmpty() && !pf.getHomePage().toLowerCase().contains("www.")) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida("A Home Page informada é inválida!");
+                    ve.adicionarMensagemDeOperacaoNaoPermitida("A Home Page informada é inválida.");
                 }
                 if (pf.getRg() != null
                     && pf.getRg().getDataemissao() != null
                     && pf.getRg().getDataemissao().after(new Date())) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida("A Data Emissão do RG deve ser menor que a data atual!");
+                    ve.adicionarMensagemDeOperacaoNaoPermitida("A Data Emissão do RG deve ser menor que a data atual.");
+                }
+                if (pessoa.getTelefones() == null || pessoa.getTelefones().isEmpty()) {
+                    ve.adicionarMensagemDeCampoObrigatorio("Informe pelo menos um telefone.");
                 }
             } else {
                 PessoaJuridica pj = (PessoaJuridica) pessoa;
                 if (pj.getRazaoSocial().trim().isEmpty()) {
-                    ve.adicionarMensagemDeCampoObrigatorio("A Razão Social deve ser informada!");
+                    ve.adicionarMensagemDeCampoObrigatorio("A Razão Social deve ser informada.");
                 }
                 if (pj.getCnpj() == null || pj.getCnpj().isEmpty()) {
                     ve.adicionarMensagemDeCampoObrigatorio("O CNPJ deve ser informado.");
                 }
             }
-            ve.lancarException();
+        }
+        ve.lancarException();
+    }
 
+    private static void validarEnderecosJaAdicionados(ValidacaoException ve, EnderecoCorreio endereco) {
+        TipoEndereco tipoEndereco = endereco.getTipoEndereco();
+        if (endereco.getCep() == null || endereco.getCep().trim().isEmpty()) {
+            ve.adicionarMensagemDeCampoObrigatorio(montarMensagemCampoEnderecoObrigatorio(tipoEndereco, "CEP"));
+        }
+        if (endereco.getLocalidade() == null || endereco.getLocalidade().trim().isEmpty()) {
+            ve.adicionarMensagemDeCampoObrigatorio(montarMensagemCampoEnderecoObrigatorio(tipoEndereco, "cidade"));
+        }
+        if (endereco.getBairro() == null || endereco.getBairro().trim().isEmpty()) {
+            ve.adicionarMensagemDeCampoObrigatorio(montarMensagemCampoEnderecoObrigatorio(tipoEndereco, "bairro"));
+        }
+        if (endereco.getLogradouro() == null || endereco.getLogradouro().trim().isEmpty()) {
+            ve.adicionarMensagemDeCampoObrigatorio(montarMensagemCampoEnderecoObrigatorio(tipoEndereco, "logradouro"));
+        }
+        if (endereco.getNumero() == null || endereco.getNumero().trim().isEmpty()) {
+            ve.adicionarMensagemDeCampoObrigatorio(montarMensagemCampoEnderecoObrigatorio(tipoEndereco, "número"));
+        }
+    }
+
+    private static String montarMensagemCampoEnderecoObrigatorio(TipoEndereco tipoEndereco, String campo) {
+        return "O campo " + campo + " do tipo de endereço " + tipoEndereco + " é obrigatório, edite o endereço e adicione o campo.";
     }
 }

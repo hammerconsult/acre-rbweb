@@ -1,0 +1,15 @@
+delete from consultaentidade where chave = 'MOTORISTA';
+delete from consultaentidade where chave = 'VEICULO_OBJETO_FROTA';
+delete from consultaentidade where chave = 'EQUIPAMENTO';
+delete from consultaentidade where chave = 'BAIXA_OBJETO_FROTA';
+delete from consultaentidade where chave = 'COTA_ABASTECIMENTO';
+delete from consultaentidade where chave = 'ABASTECIMENTO_FROTA';
+delete from consultaentidade where chave = 'LANCAMENTO_TAXA_VEICULO';
+delete from consultaentidade where chave = 'MANUTENCAO';
+delete from consultaentidade where chave = 'MULTA_VEICULO';
+delete from consultaentidade where chave = 'OCORRENCIA_OBJETO_FROTA';
+delete from consultaentidade where chave = 'REVISAO_OBJETO_FROTA';
+delete from consultaentidade where chave = 'VIAGEM';
+delete from consultaentidade where chave = 'DIARIO_TRAFEGO';
+delete from consultaentidade where chave = 'SOLICITACAO_OBJETO_FROTA';
+delete from consultaentidade where chave = 'RESERVA_OBJETO_FROTA';

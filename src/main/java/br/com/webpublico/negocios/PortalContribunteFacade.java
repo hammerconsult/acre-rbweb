@@ -7,6 +7,8 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.arquivo.dto.ArquivoDTO;
 import br.com.webpublico.controle.ConsultaDebitoControlador;
 import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidades.DocumentoCondutorOtt;
+import br.com.webpublico.entidades.DocumentoVeiculoOtt;
 import br.com.webpublico.entidades.comum.SolicitacaoCadastroPessoa;
 import br.com.webpublico.entidades.comum.TermoUso;
 import br.com.webpublico.entidades.comum.UsuarioWeb;
@@ -768,7 +770,7 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     public void addAnexosCondutor(CondutorOperadoraTecnologiaTransporte condutorOperadoraTecnologiaTransporte,
                                   List<AnexoCondutorOttDTO> anexos) throws Exception {
         for (AnexoCondutorOttDTO anexo : anexos) {
-            if(anexo.getId() == null) {
+            if (anexo.getId() == null) {
                 CondutorOperadoraDetentorArquivo condArq = new CondutorOperadoraDetentorArquivo();
                 condArq.setCondutorOtt(condutorOperadoraTecnologiaTransporte);
                 condArq.popularDadosDocumento(anexo);
@@ -839,13 +841,15 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     public void addAnexosOperadoraTecnologiaTransporte(OperadoraTecnologiaTransporte operadoraTecnologiaTransporte,
                                                        List<AnexoCredenciamentoOttDTO> anexos) throws Exception {
         for (AnexoCredenciamentoOttDTO anexo : anexos) {
-            OperadoraTransporteDetentorArquivo ottArq = new OperadoraTransporteDetentorArquivo();
-            ottArq.setOperadoraTecTransporte(operadoraTecnologiaTransporte);
-            ottArq.popularDadosDocumentoCredenciamento(anexo);
-            DetentorArquivoComposicao detentorArquivoComposicao = criarDetentorArquivoComposicao(anexo.getConteudo(),
-                anexo.getNome(), anexo.getDescricao());
-            ottArq.setDetentorArquivoComposicao(detentorArquivoComposicao);
-            operadoraTecnologiaTransporte.getDetentorArquivoComposicao().add(ottArq);
+            if (anexo.getId() == null) {
+                OperadoraTransporteDetentorArquivo ottArq = new OperadoraTransporteDetentorArquivo();
+                ottArq.setOperadoraTecTransporte(operadoraTecnologiaTransporte);
+                ottArq.popularDadosDocumentoCredenciamento(anexo);
+                DetentorArquivoComposicao detentorArquivoComposicao = criarDetentorArquivoComposicao(anexo.getConteudo(),
+                    anexo.getNome(), anexo.getDescricao());
+                ottArq.setDetentorArquivoComposicao(detentorArquivoComposicao);
+                operadoraTecnologiaTransporte.getDetentorArquivoComposicao().add(ottArq);
+            }
         }
     }
 
@@ -1537,13 +1541,6 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         return msg;
     }
 
-    public String enviarEmailOTTComSenhaCriada(UsuarioWeb usuarioWeb, String senha) {
-        String corpoEmail = criarEmailNovoUsuarioOTT(senha, usuarioWeb.getPessoa());
-        enviarEmail(usuarioWeb.getEmail(), corpoEmail, "Acesso à Área do Contribuinte");
-        return "Foi enviado uma nova senha temporária para o e-mail " + usuarioWeb.getEmail() +
-            ", caso esse não seja seu email, por favor, dirija-se a uma central de atendimento para regularizar seu cadastro.";
-    }
-
     public ConsultaCPF verificarDisponibilidadeCPF(String cpf) {
         cpf = StringUtil.retornaApenasNumeros(cpf);
         Pessoa pessoa;
@@ -1658,37 +1655,6 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         UsuarioWeb usuarioWeb = usuarioWebFacade.recuperarUsuarioPorLogin(cpf);
         usuarioWeb.setActivated(false);
         usuarioWebFacade.salvar(usuarioWeb);
-    }
-
-    private String criarEmailNovoUsuarioOTT(String senha, Pessoa pessoa) {
-        StringBuilder novoUsuario = new StringBuilder();
-        novoUsuario.append("Recebemos sua solicitação para acesso no <b>Portal do Cidadão</b> da Prefeitura Municipal de Rio Branco, no serviço de <b>Cadastro de OTT.</b>").append("<br/>");
-        novoUsuario.append("Para a sua segurança, <b>Acesse à Área do Contribuinte</b> do sistema no endereço <a href=\"http://portalcidadao.riobranco.ac.gov.br\">http://portalcidadao.riobranco.ac.gov.br</a>, efetue seu login com os dados informados abaixo.").append("<br/>");
-        novoUsuario.append("<br/>");
-        novoUsuario.append("Login: ").append(StringUtil.retornaApenasNumeros(pessoa.getCpf_Cnpj())).append("<br/>");
-        novoUsuario.append("Senha temporária: ").append(senha).append("<br/>");
-        novoUsuario.append("<br/>");
-        novoUsuario.append("Altere sua senha de acesso por uma combinação de sua preferência.");
-        novoUsuario.append("<br/>");
-        novoUsuario.append("Caso você não tenha solicitado estas informações, por favor entre em contato com o suporte.").append("<br/>");
-        StringBuilder textoEmail = new StringBuilder(montarEmailOTT(pessoa.getNome(), pessoa.getCpf_Cnpj(), novoUsuario.toString()));
-        return textoEmail.toString();
-    }
-
-    public String montarEmailOTT(String nome, String cpfCnpj, String detalhe) {
-        StringBuilder sb = new StringBuilder();
-        String cnpj = Util.formatarCnpj(cpfCnpj);
-        if (nome != null) {
-            sb.append("Olá ").append("<b>").append(nome).append(" (").append(cnpj).append(")").append("</b>").append("<br/><br/>");
-        }
-        sb.append(detalhe);
-        sb.append(getParteFinalDoEmailOTT());
-        return sb.toString();
-    }
-
-    public String getParteFinalDoEmailOTT() {
-        String rodapeRbTrans = configuracaoTributarioFacade.recuperarRodapeEmailPortal(true);
-        return "<br/><br/>" + rodapeRbTrans;
     }
 
     @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)

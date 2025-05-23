@@ -1,0 +1,3 @@
+insert into HORARIOCONTRATOFP values (hibernate_sequence.nextval, to_date('31/12/2008', 'dd/MM/yyyy'),to_date('01/09/2006', 'dd/MM/yyyy'), 639107941, null);
+insert into LOTACAOFUNCIONAL values (hibernate_sequence.nextval, to_date('01/09/2006', 'dd/MM/yyyy'), to_date('31/12/2008', 'dd/MM/yyyy'), to_date('01/09/2006', 'dd/MM/yyyy'), (select max(id) from HORARIOCONTRATOFP), 58757047, null, 639022207, 639022198, null);
+insert into HIERARQUIAORGANIZACIONAL values (hibernate_sequence.nextval, '01.13.00.00000.000.90', 4, 'ADMINISTRATIVA' , 58757047, 58758401, 0 , 4, '00003', 6194119, 'OUTROS' , null, to_date('01/09/2006', 'dd/MM/yyyy'), to_date('31/12/2008', 'dd/MM/yyyy'), 'SECRETARIA MUN DE SAÚDE - COMISSIONADO');

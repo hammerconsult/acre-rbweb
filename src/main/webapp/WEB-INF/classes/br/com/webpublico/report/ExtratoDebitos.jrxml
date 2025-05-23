@@ -1,0 +1,899 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="ExtratoDebitos" pageWidth="842" pageHeight="595" orientation="Landscape" whenNoDataType="NoDataSection" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+	<property name="ireport.zoom" value="1.2396694214876043"/>
+	<property name="ireport.x" value="19"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="CONDICAO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" "]]></defaultValueExpression>
+	</parameter>
+	<parameter name="USUARIO" class="java.lang.String"/>
+	<parameter name="FILTROS" class="java.lang.String"/>
+	<parameter name="BRASAO" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT
+  COALESCE(pf.nome, pj.razaosocial) AS contribuinte,
+  COALESCE(pf.cpf, pj.cnpj) AS cfp_cnpj,
+  pj.inscricaoestadual,
+  pj.nomefantasia,
+  pessoa.email as email,
+  (select telefone from telefone where pessoa_id = pessoa.id and rownum = 1) as telefone,
+  (SELECT
+      trim(e.logradouro) || ', ' || trim(e.numero) || ', ' || trim(e.complemento) || ', ' || trim(e.bairro) ||', CEP:' || trim(e.cep) || ', ' || trim(e.localidade) || ', ' || trim(e.uf)
+      FROM enderecocorreio e
+      INNER JOIN pessoa_enderecocorreio pe
+      ON e.id = pe.enderecoscorreio_id
+      WHERE pe.pessoa_id = pessoa.id
+      and (e.tipoendereco ='RESIDENCIAL' OR e.tipoendereco ='COMERCIAL' OR e.tipoendereco = 'CORRESPONDENCIA')
+      AND rownum =1
+  ) AS endereco,
+  COALESCE(bci.inscricaocadastral, cmc.inscricaocadastral, TO_CHAR(bcr.codigo), ceasa.numeroContrato, rendas.numeroContrato) AS inscricao,
+  lote.codigolote AS lotebci,
+  quadra.descricao AS quadrabci,
+  bcr.nomepropriedade AS nomerural,
+  bcr.localizacaolote AS localizacaorural,
+  bcr.numeroincra,
+  InitCap(REPLACE(cmc.classificacaoatividade , '_', ' ')) AS classificacaocmc,
+  natjur.descricao AS cmc_naturezajuridica,
+  divida.descricao                                        AS divida,
+  exercicio.ano                                           AS exercicio,
+  parcela.sequenciaparcela parcela,
+  op.promocional                            AS cota_unica,
+  calculo.subdivida                         AS SD,
+  TO_CHAR(parcela.vencimento, 'DD/MM/YYYY') AS vencimento,
+  dam.numerodam,
+  parcela.id                                           AS id_parcela,
+  InitCap(REPLACE(situacao.situacaoparcela, '_', ' ')) AS situacao,
+  TO_CHAR(situacao.datalancamento, 'DD/MM/YYYY')       AS data_operacao,
+  CASE
+    WHEN parcelamento.id IS NOT NULL
+    THEN 'Parcelamento nº.'
+      || parcelamento.numero
+    WHEN da.id IS NOT NULL
+    THEN 'Ins. D.A. nº.'
+      || da.numero
+    WHEN daoriginal.id IS NOT NULL
+    THEN 'Ins. D.A. nº.'
+      || daoriginal.numero
+    WHEN lotebaixa.id IS NOT NULL
+    THEN 'Arrecadação nº.'
+      || lotebaixa.CODIGOLOTE
+      || ' '
+      || banco.descricao
+    WHEN processodebito.id IS NOT NULL
+    THEN 'Proc. Débitos nº.'
+      || processodebito.CODIGO
+    ELSE 'Processo de Calc. de ' || divida.descricao
+  END AS descricao_operacao,
+  coalesce(
+  CASE
+    WHEN situacao.situacaoparcela = 'PAGO'
+    THEN itemlote.valorpago
+    ELSE
+    ((situacao.saldo/
+        coalesce((select m.valor from Moeda m inner join indiceeconomico indice on indice.id = m.indiceeconomico_id where m.mes = TO_NUMBER(TO_CHAR(parcela.dataRegistro,'MM')) and m.ano = exercicio.ano and indice.descricao = 'UFM'),1))
+ * coalesce((select m.valor from Moeda m inner join indiceeconomico indice on indice.id = m.indiceeconomico_id where m.mes = TO_NUMBER(TO_CHAR(current_date,'MM')) and m.ano = TO_NUMBER(TO_CHAR(current_date,'yyyy')) and indice.descricao = 'UFM'),1))
+  END, 0) AS valor,
+  coalesce(
+  CASE
+    WHEN situacao.situacaoparcela = 'PAGO'
+    THEN COALESCE(itemlote.juropago, 0)
+    ELSE COALESCE(ac.juros, 0)
+  END, 2) AS juros,
+  coalesce(
+  CASE
+    WHEN situacao.situacaoparcela = 'PAGO'
+    THEN COALESCE(itemlote.multapago, 0)
+    ELSE COALESCE(ac.multa,0)
+  END, 0)  AS multa,
+   CASE
+    WHEN situacao.situacaoparcela = 'PAGO'
+    then 0 else
+  (select coalesce(sum(item.valor * (desconto.porcentagemDesconto/100)),0) from descontoitemparcela desconto inner join itemparcelavalordivida item on item.id = desconto.itemparcelavalordivida_id where item.parcelavalordivida_id = parcela.id and desconto.porcentagemdesconto >0) end as desconto,
+  PARCELA.DIVIDAATIVA
+ FROM parcelavalordivida parcela
+LEFT JOIN temp_acrescimos ac ON ac.parcela_id = parcela.id
+INNER JOIN valordivida ON valordivida.id = parcela.valordivida_id
+INNER JOIN situacaoparcelavalordivida situacao ON situacao.parcela_id = parcela.id
+INNER JOIN calculo ON calculo.id = valordivida.calculo_id
+INNER JOIN cadastro ON cadastro.id = calculo.cadastro_id
+INNER JOIN divida ON divida.id = valordivida.divida_id
+INNER JOIN exercicio ON exercicio.id = valordivida.exercicio_id
+INNER JOIN opcaopagamento op ON op.id = parcela.opcaopagamento_id
+INNER JOIN calculopessoa cp ON cp.calculo_id = calculo.id
+INNER JOIN pessoa on pessoa.id = cp.pessoa_id
+LEFT JOIN pessoafisica pf ON pf.id = pessoa.id
+LEFT JOIN pessoajuridica pj ON pj.id = pessoa.id
+LEFT JOIN cadastroimobiliario bci ON bci.id = cadastro.id
+LEFT JOIN lote ON lote.id = bci.lote_id
+LEFT JOIN quadra ON quadra.id = lote.quadra_id
+LEFT JOIN cadastroeconomico cmc ON cmc.id = cadastro.id
+LEFT JOIN naturezajuridica natjur ON cmc.naturezajuridica_id = natjur.id
+LEFT JOIN cadastrorural bcr ON bcr.id = cadastro.id
+LEFT JOIN contratorendaspatrimoniais rendas ON rendas.id = cadastro.id
+LEFT JOIN contratoceasa ceasa ON ceasa.id = cadastro.id
+LEFT JOIN processoparcelamento parcelamento ON parcelamento.id = calculo.id
+LEFT JOIN iteminscricaodividaativa itemda ON itemda.id = calculo.id
+LEFT JOIN inscricaodividaativa da ON da.id = itemda.inscricaodividaativa_id
+LEFT JOIN inscricaodividaparcela idporiginal ON idporiginal.parcelavalordivida_id = parcela.id
+LEFT JOIN iteminscricaodividaativa itemdaoriginal ON itemdaoriginal.id = idporiginal.iteminscricaodividaativa_id
+LEFT JOIN inscricaodividaativa daoriginal ON daoriginal.id = itemdaoriginal.inscricaodividaativa_id
+LEFT JOIN itemdam itemdam on itemdam.parcela_id = parcela.id
+LEFT JOIN dam dam ON itemdam.dam_id = dam.id
+LEFT JOIN itemlotebaixa itemlote ON itemlote.dam_id = dam.id
+LEFT JOIN lotebaixa ON lotebaixa.id = itemlote.lotebaixa_id
+LEFT JOIN banco ON banco.id = lotebaixa.banco_id
+LEFT JOIN itemprocessodebito ON itemprocessodebito.parcela_id = parcela.id
+LEFT JOIN processodebito ON processodebito.id = itemprocessodebito.processodebito_id
+
+WHERE situacao.id    =
+  (SELECT MAX(s.id)
+      FROM situacaoparcelavalordivida s
+   WHERE s.parcela_id = situacao.parcela_id)
+   AND (dam.id is null or dam.situacao = 'ABERTO')
+$P!{CONDICAO}
+ORDER BY COALESCE(pf.nome, pj.razaosocial),
+  COALESCE(bci.inscricaocadastral, cmc.inscricaocadastral, TO_CHAR(bcr.codigo), ceasa.numeroContrato, rendas.numeroContrato),
+  exercicio.ano ,
+  divida.descricao ,
+  op.promocional ,
+  to_number(regexp_substr(parcela.sequenciaparcela,'[[:digit:]]*')),
+  calculo.subdivida ,
+  parcela.vencimento,
+  situacao.id]]>
+	</queryString>
+	<field name="CONTRIBUINTE" class="java.lang.String"/>
+	<field name="CFP_CNPJ" class="java.lang.String"/>
+	<field name="INSCRICAOESTADUAL" class="java.lang.String"/>
+	<field name="NOMEFANTASIA" class="java.lang.String"/>
+	<field name="EMAIL" class="java.lang.String"/>
+	<field name="TELEFONE" class="java.lang.String"/>
+	<field name="ENDERECO" class="java.lang.String"/>
+	<field name="INSCRICAO" class="java.lang.String"/>
+	<field name="LOTEBCI" class="java.lang.String"/>
+	<field name="QUADRABCI" class="java.lang.String"/>
+	<field name="NOMERURAL" class="java.lang.String"/>
+	<field name="LOCALIZACAORURAL" class="java.lang.String"/>
+	<field name="NUMEROINCRA" class="java.lang.String"/>
+	<field name="CLASSIFICACAOCMC" class="java.lang.String"/>
+	<field name="CMC_NATUREZAJURIDICA" class="java.lang.String"/>
+	<field name="DIVIDA" class="java.lang.String"/>
+	<field name="EXERCICIO" class="java.math.BigDecimal"/>
+	<field name="PARCELA" class="java.lang.String"/>
+	<field name="COTA_UNICA" class="java.math.BigDecimal"/>
+	<field name="SD" class="java.math.BigDecimal"/>
+	<field name="VENCIMENTO" class="java.lang.String"/>
+	<field name="NUMERODAM" class="java.lang.String"/>
+	<field name="ID_PARCELA" class="java.math.BigDecimal"/>
+	<field name="SITUACAO" class="java.lang.String"/>
+	<field name="DATA_OPERACAO" class="java.lang.String"/>
+	<field name="DESCRICAO_OPERACAO" class="java.lang.String"/>
+	<field name="VALOR" class="java.math.BigDecimal"/>
+	<field name="JUROS" class="java.math.BigDecimal"/>
+	<field name="MULTA" class="java.math.BigDecimal"/>
+	<field name="DESCONTO" class="java.math.BigDecimal"/>
+	<field name="DIVIDAATIVA" class="java.math.BigDecimal"/>
+	<variable name="QTDPARCELASABERTAS" class="java.lang.Integer" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Count">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto")? $F{ID_PARCELA}:null]]></variableExpression>
+	</variable>
+	<variable name="QTDCADASTROS" class="java.lang.Integer" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Count">
+		<variableExpression><![CDATA[$F{ID_PARCELA}]]></variableExpression>
+	</variable>
+	<variable name="QTDPARCELASPAGAS" class="java.lang.Integer" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Count">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago")? $F{ID_PARCELA}:null]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALVALORPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago")? $F{VALOR} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALMULTAPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago") ? $F{MULTA} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALJUROSPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago") ? $F{JUROS} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALTOTALPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago") ? $V{TOTAL} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALVALORABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $F{VALOR} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALMULTAABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $F{MULTA} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALJUROSABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $F{JUROS} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="SUBTOTALTOTALABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="INSCRICAO" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $V{TOTAL} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALVALORPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago")? $F{VALOR} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALMULTAPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago") ? $F{MULTA} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALJUROSPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago") ? $F{JUROS} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALTOTALPAGO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Pago") ? $V{TOTAL} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALVALORABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $F{VALOR} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALMULTAABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $F{MULTA} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALJUROSABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $F{JUROS} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="TOTALTOTALABERTO" class="java.math.BigDecimal" resetType="Group" resetGroup="CONTRIBUINTE" calculation="Sum">
+		<variableExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto") ? $V{TOTAL} : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<variable name="QTDDIVIDAATIVA" class="java.lang.Integer" calculation="Count">
+		<variableExpression><![CDATA[$F{DIVIDAATIVA}.compareTo(new BigDecimal("1")) == 0? $F{ID_PARCELA}:null]]></variableExpression>
+	</variable>
+	<variable name="QTDDIVIDAEXERCICIO" class="java.lang.Integer" calculation="Count">
+		<variableExpression><![CDATA[$F{DIVIDAATIVA}.compareTo(new BigDecimal("1")) != 0? $F{ID_PARCELA}:null]]></variableExpression>
+	</variable>
+	<variable name="TOTAL" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[($F{VALOR}.subtract($F{DESCONTO})).add($F{JUROS}).add($F{MULTA})]]></variableExpression>
+	</variable>
+	<group name="CONTRIBUINTE">
+		<groupExpression><![CDATA[$F{CONTRIBUINTE}]]></groupExpression>
+		<groupHeader>
+			<band height="20">
+				<staticText>
+					<reportElement x="4" y="0" width="78" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Contribuinte]]></text>
+				</staticText>
+				<textField isBlankWhenNull="true">
+					<reportElement x="4" y="10" width="260" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{CONTRIBUINTE}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="263" y="0" width="50" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="true"/>
+					</textElement>
+					<text><![CDATA[CPF/CNPJ]]></text>
+				</staticText>
+				<textField isBlankWhenNull="true">
+					<reportElement x="263" y="10" width="50" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{CFP_CNPJ}]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="true">
+					<reportElement x="473" y="10" width="329" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{ENDERECO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="473" y="0" width="78" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Endereço]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="323" y="0" width="50" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Telefone]]></text>
+				</staticText>
+				<textField isBlankWhenNull="true">
+					<reportElement x="323" y="10" width="71" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{TELEFONE}]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="true">
+					<reportElement x="394" y="10" width="78" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{EMAIL}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="394" y="0" width="57" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isBold="true"/>
+					</textElement>
+					<text><![CDATA[e-mail]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="22">
+				<staticText>
+					<reportElement positionType="Float" x="551" y="10" width="83" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Total em Aberto]]></text>
+				</staticText>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="760" y="0" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALTOTALPAGO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="641" y="0" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALVALORPAGO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="719" y="10" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALJUROSABERTO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement positionType="Float" x="551" y="0" width="83" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Total Pago]]></text>
+				</staticText>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="719" y="0" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALJUROSPAGO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="760" y="10" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALTOTALABERTO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="680" y="10" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALMULTAABERTO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="641" y="10" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALVALORABERTO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="680" y="0" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{TOTALMULTAPAGO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="">
+					<reportElement positionType="Float" x="71" y="11" width="17" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{QTDPARCELASABERTAS}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement positionType="Float" x="1" y="11" width="69" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Parcelas Em Aberto:]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="1" y="2" width="69" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Parcelas Pagas:]]></text>
+				</staticText>
+				<textField pattern="">
+					<reportElement positionType="Float" x="71" y="2" width="17" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{QTDPARCELASPAGAS}]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement x="641" y="0" width="159" height="1" forecolor="#999999"/>
+					<graphicElement>
+						<pen lineWidth="0.5"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement positionType="Float" x="0" y="21" width="802" height="1"/>
+					<graphicElement>
+						<pen lineWidth="0.5"/>
+					</graphicElement>
+				</line>
+				<staticText>
+					<reportElement positionType="Float" x="97" y="11" width="69" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Parcelas Exercício:]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="97" y="2" width="69" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Parcelas D.A.:]]></text>
+				</staticText>
+				<textField pattern="">
+					<reportElement positionType="Float" x="167" y="2" width="17" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{QTDDIVIDAATIVA}]]></textFieldExpression>
+				</textField>
+				<textField pattern="">
+					<reportElement positionType="Float" x="167" y="11" width="17" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{QTDDIVIDAEXERCICIO}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupFooter>
+	</group>
+	<group name="INSCRICAO">
+		<groupExpression><![CDATA[$F{INSCRICAO}]]></groupExpression>
+		<groupHeader>
+			<band height="24">
+				<rectangle>
+					<reportElement positionType="Float" mode="Transparent" x="1" y="-20" width="800" height="30" forecolor="#E7E7E7" backcolor="#E7E7E7"/>
+				</rectangle>
+				<textField isBlankWhenNull="true">
+					<reportElement positionType="Float" x="4" y="0" width="798" height="10" isPrintWhenDetailOverflows="true"/>
+					<textElement markup="html">
+						<font fontName="Arial" size="7" isBold="false"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Inscrição: <b>" + $F{INSCRICAO} + "</b>"+
+($F{NOMEFANTASIA} != null?"  Nome Fantazia: "+$F{NOMEFANTASIA}: " ") +
+($F{INSCRICAOESTADUAL} != null?"  Inscrição Estadual: "+$F{INSCRICAOESTADUAL}: " " )+
+($F{CLASSIFICACAOCMC} != null ?"  Classificação da Atividade: "+$F{CLASSIFICACAOCMC}: " ") +
+($F{CMC_NATUREZAJURIDICA} != null? " Natureza Jurídica: " +  $F{CMC_NATUREZAJURIDICA} : " ")+
+($F{NOMERURAL}!=null?"  Nome da Propriedade: " +$F{NOMERURAL}:" ") +
+($F{LOTEBCI} != null?"  Lote: " +$F{LOTEBCI}: " ") +
+($F{QUADRABCI}!=null?"  Quadra: " +$F{QUADRABCI}:" ") +
+($F{LOCALIZACAORURAL}!=null?"  Localização: " + $F{LOCALIZACAORURAL}: " ") +
+($F{NUMEROINCRA}!=null?"  INCRA: " +$F{NUMEROINCRA}:" ")]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement positionType="Float" x="4" y="14" width="194" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Dívida]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="200" y="14" width="27" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Exercício]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="229" y="14" width="21" height="10"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Parcela]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="251" y="14" width="20" height="10"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[SD]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="272" y="14" width="37" height="10"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Vencimento]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="311" y="14" width="113" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Situação]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="425" y="14" width="135" height="10"/>
+					<textElement>
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Operação]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="607" y="14" width="39" height="10"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Valor]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="647" y="14" width="38" height="10"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Multa]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="686" y="14" width="38" height="10"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Juros]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="762" y="14" width="38" height="10"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Total]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="561" y="14" width="45" height="10"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Data Operação]]></text>
+				</staticText>
+				<staticText>
+					<reportElement positionType="Float" x="724" y="14" width="38" height="10"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="false"/>
+					</textElement>
+					<text><![CDATA[Desconto]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="26">
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="641" y="3" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALVALORPAGO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement positionType="Float" x="566" y="3" width="68" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Subtotal Pago]]></text>
+				</staticText>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="680" y="3" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALMULTAPAGO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="720" y="3" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALJUROSPAGO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="760" y="3" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALTOTALPAGO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement positionType="Float" x="549" y="14" width="85" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<text><![CDATA[Subtotal em Aberto]]></text>
+				</staticText>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="641" y="13" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALVALORABERTO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="681" y="13" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALMULTAABERTO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="721" y="13" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALJUROSABERTO}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00">
+					<reportElement positionType="Float" x="760" y="13" width="39" height="12"/>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7" isItalic="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{SUBTOTALTOTALABERTO}]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement x="636" y="0" width="166" height="1" forecolor="#999999"/>
+					<graphicElement>
+						<pen lineWidth="0.5"/>
+					</graphicElement>
+				</line>
+			</band>
+		</groupFooter>
+	</group>
+	<group name="DIVIDA">
+		<groupExpression><![CDATA[$F{DIVIDA}]]></groupExpression>
+	</group>
+	<group name="EXERCICIO">
+		<groupExpression><![CDATA[$F{EXERCICIO}]]></groupExpression>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="84" splitType="Stretch">
+			<textField>
+				<reportElement x="4" y="64" width="798" height="11"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="7" isBold="true" isItalic="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{FILTROS}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="56" y="8" width="221" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA MUNICIPAL DE RIO BRANCO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="56" y="22" width="221" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[SECRETARIA DE FAZENDA]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="56" y="36" width="168" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="9" isBold="true" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[EXTRATO DE DÉBITOS]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="63" width="802" height="1"/>
+			</line>
+			<image>
+				<reportElement x="6" y="7" width="43" height="47"/>
+				<imageExpression><![CDATA[$P{BRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+		</band>
+	</title>
+	<detail>
+		<band height="9" splitType="Stretch">
+			<staticText>
+				<reportElement positionType="Float" mode="Opaque" x="4" y="0" width="797" height="9" backcolor="#DEDEDE">
+					<printWhenExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font fontName="Arial" size="6" isBold="false" isItalic="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="4" y="0" width="194" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement>
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DIVIDA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="229" y="0" width="21" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PARCELA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="251" y="0" width="20" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SD}]]></textFieldExpression>
+			</textField>
+			<textField pattern="MM/dd/yyyy" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="272" y="0" width="37" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VENCIMENTO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="311" y="0" width="113" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement>
+					<font fontName="Arial" size="7" isItalic="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SITUACAO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="425" y="0" width="135" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement>
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESCRICAO_OPERACAO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="607" y="0" width="39" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" x="200" y="0" width="27" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement>
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EXERCICIO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="646" y="0" width="39" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{MULTA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="685" y="0" width="39" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{JUROS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="763" y="0" width="36" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{TOTAL}]]></textFieldExpression>
+			</textField>
+			<textField pattern="MM/dd/yyyy" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="561" y="0" width="45" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DATA_OPERACAO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="798" y="0" width="8" height="9">
+					<printWhenExpression><![CDATA[$F{SITUACAO}.equals("Em Aberto")]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="6" isBold="true" isItalic="false" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[*]]></text>
+			</staticText>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="724" y="0" width="38" height="9" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESCONTO}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="21" splitType="Stretch">
+			<staticText>
+				<reportElement positionType="Float" x="733" y="11" width="69" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="5" isBold="false" isItalic="true" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[* parcelas em aberto]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="1" width="144" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<text><![CDATA[WebPúblico - Módulo: TRIBUTÁRIO]]></text>
+			</staticText>
+			<textField evaluationTime="Report">
+				<reportElement x="782" y="0" width="19" height="11"/>
+				<textElement>
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd/MM/yyyy">
+				<reportElement x="424" y="0" width="359" height="11"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Usuário: "+ $P{USUARIO} + " - Emitido em " +new SimpleDateFormat("dd/MM/yyyy").format(new Date()) + " às " + new SimpleDateFormat("hh:mm").format(new Date()) + " Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="46" splitType="Stretch"/>
+	</summary>
+	<noData>
+		<band height="95">
+			<staticText>
+				<reportElement x="6" y="80" width="276" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Não foram encontrados dados para os filtros informados]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="4" y="57" width="798" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="7" isBold="true" isItalic="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{FILTROS}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="56" y="1" width="221" height="15"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA MUNICIPAL DE RIO BRANCO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="56" y="15" width="221" height="15"/>
+				<textElement verticalAlignment="Bottom">
+					<font fontName="Arial" size="9" isBold="true"/>
+				</textElement>
+				<text><![CDATA[SECRETARIA DE FAZENDA]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="56" y="31" width="168" height="16"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="9" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[EXTRATO DE DÉBITOS]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="56" width="802" height="1"/>
+			</line>
+			<image>
+				<reportElement x="6" y="0" width="43" height="47"/>
+				<imageExpression><![CDATA[$P{BRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+		</band>
+	</noData>
+</jasperReport>

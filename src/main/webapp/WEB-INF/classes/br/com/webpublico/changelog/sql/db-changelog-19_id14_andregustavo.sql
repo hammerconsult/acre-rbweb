@@ -1,0 +1,1 @@
+update credencialrbtrans set datavalidade = '31/03/2016' where id in (354114213,354116017);

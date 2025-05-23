@@ -573,7 +573,7 @@ public class ContratoFacade extends AbstractFacade<Contrato> {
         return Lists.newArrayList();
     }
 
-    public List<Contrato> buscarFiltrandoOndeUsuarioGestorLicitacao(String parte, FiltroContratoRequisicaoCompra filtroContratoRequisicaoCompra, TipoObjetoCompra tipoObjetoCompra, Integer maxResult) {
+    public List<Contrato> buscarFiltrandoOndeUsuarioGestorLicitacao(FiltroContratoRequisicaoCompra filtroVO, TipoObjetoCompra tipoObjetoCompra, Integer maxResult) {
         String sql = " " +
             "   select distinct con.* from contrato con " +
             "     inner join exercicio e on e.id = con.exerciciocontrato_id " +
@@ -620,57 +620,55 @@ public class ContratoFacade extends AbstractFacade<Contrato> {
             "              where u_un.usuariosistema_id = :idUsuario " +
             "              and u_un.unidadeorganizacional_id = uc.unidadeadministrativa_id " +
             "              and u_un.gestorlicitacao = :gestoLicitacao ) ";
-        if (filtroContratoRequisicaoCompra != null) {
-            if (filtroContratoRequisicaoCompra.getHierarquiaOrganizacional() != null && filtroContratoRequisicaoCompra.getHierarquiaOrganizacional().getSubordinada() != null) {
-                sql += " and uc.unidadeadministrativa_id = :unidadeOrganizacionalId ";
-            }
-            if (filtroContratoRequisicaoCompra.getExercicio() != null) {
-                sql += " and con.exerciciocontrato_id = :exercicioId ";
-            }
-            if (filtroContratoRequisicaoCompra.getLicitacao() != null) {
-                sql += " and con.id in (select conlic.contrato_id from conlicitacao conlic where conlic.licitacao_id = :licitacaoId) ";
-            }
-            if (filtroContratoRequisicaoCompra.getFiscal() != null) {
-                sql += " and con.id in (select f.contrato_id from fiscalcontrato f " +
-                    " left join fiscalexternocontrato fe on fe.id = f.id " +
-                    " left join contrato c on c.id = fe.contratofiscal_id " +
-                    " left join fiscalinternocontrato fi on fi.id = f.id " +
-                    " left join contratofp cfp on cfp.id = fi.servidor_id " +
-                    " left join pessoafisica pf on pf.id = fi.servidorpf_id " +
-                    " left join vinculofp v on v.id = cfp.id " +
-                    " left join matriculafp m on m.id = v.matriculafp_id " +
-                    " left join pessoa p on p.id = coalesce(c.contratado_id, m.pessoa_id, pf.id)" +
-                    " where p.id = :pessoaFiscalId) ";
-            }
-            if (filtroContratoRequisicaoCompra.getGestor() != null) {
-                sql += " and con.id in (select g.contrato_id from gestorcontrato g " +
-                    " left join contratofp cfp on cfp.id = g.servidor_id " +
-                    " left join pessoafisica pf on pf.id = g.servidorpf_id " +
-                    " left join vinculofp v on v.id = cfp.id " +
-                    " left join matriculafp m on m.id = v.matriculafp_id " +
-                    " left join pessoa p on p.id = m.pessoa_id " +
-                    " where p.id = :pessoaGestorId) ";
-            }
-            if (filtroContratoRequisicaoCompra.getObjetoCompra() != null) {
-                sql += " and con.id in (select ic.contrato_id from itemcontrato ic" +
-                    " left join itemcontratovigente icv on icv.itemcontrato_id = ic.id " +
-                    " left join itemcotacao icot on icot.id = icv.itemcotacao_id " +
-                    " left join itemcontratoitempropfornec icpf on icpf.itemcontrato_id = ic.id " +
-                    " left join itemcontratoitemirp iirp on iirp.itemcontrato_id = ic.id " +
-                    " left join itemcontratoadesaoataint iata on iata.itemcontrato_id = ic.id " +
-                    " left join itemcontratoitemsolext icise on icise.itemcontrato_id = ic.id " +
-                    " left join itemcontratoitempropdisp icipfd on icipfd.itemcontrato_id = ic.id " +
-                    " left join itempropostafornedisp ipfd on icipfd.itempropfornecdispensa_id = ipfd.id " +
-                    " left join itempropfornec ipf on coalesce(icpf.itempropostafornecedor_id, iirp.itempropostafornecedor_id, iata.itempropostafornecedor_id) = ipf.id " +
-                    " left join itemprocessodecompra ipc on ipc.id = coalesce(ipf.itemprocessodecompra_id, ipfd.itemprocessodecompra_id) " +
-                    " left join itemsolicitacao itemsol on itemsol.id = ipc.itemsolicitacaomaterial_id " +
-                    " left join itemsolicitacaoexterno ise on ise.id = icise.itemsolicitacaoexterno_id " +
-                    " inner join objetocompra oc on oc.id = coalesce(itemsol.objetocompra_id, ise.objetocompra_id, icot.objetocompra_id) " +
-                    " where oc.id = :objetoCompraId)";
-            }
+        if (filtroVO.getHierarquiaOrganizacional() != null && filtroVO.getHierarquiaOrganizacional().getSubordinada() != null) {
+            sql += " and uc.unidadeadministrativa_id = :unidadeOrganizacionalId ";
+        }
+        if (filtroVO.getExercicio() != null) {
+            sql += " and con.exerciciocontrato_id = :exercicioId ";
+        }
+        if (filtroVO.getLicitacao() != null) {
+            sql += " and con.id in (select conlic.contrato_id from conlicitacao conlic where conlic.licitacao_id = :licitacaoId) ";
+        }
+        if (filtroVO.getFiscal() != null) {
+            sql += " and con.id in (select f.contrato_id from fiscalcontrato f " +
+                " left join fiscalexternocontrato fe on fe.id = f.id " +
+                " left join contrato c on c.id = fe.contratofiscal_id " +
+                " left join fiscalinternocontrato fi on fi.id = f.id " +
+                " left join contratofp cfp on cfp.id = fi.servidor_id " +
+                " left join pessoafisica pf on pf.id = fi.servidorpf_id " +
+                " left join vinculofp v on v.id = cfp.id " +
+                " left join matriculafp m on m.id = v.matriculafp_id " +
+                " left join pessoa p on p.id = coalesce(c.contratado_id, m.pessoa_id, pf.id)" +
+                " where p.id = :pessoaFiscalId) ";
+        }
+        if (filtroVO.getGestor() != null) {
+            sql += " and con.id in (select g.contrato_id from gestorcontrato g " +
+                " left join contratofp cfp on cfp.id = g.servidor_id " +
+                " left join pessoafisica pf on pf.id = g.servidorpf_id " +
+                " left join vinculofp v on v.id = cfp.id " +
+                " left join matriculafp m on m.id = v.matriculafp_id " +
+                " left join pessoa p on p.id = m.pessoa_id " +
+                " where p.id = :pessoaGestorId) ";
+        }
+        if (filtroVO.getObjetoCompra() != null) {
+            sql += " and con.id in (select ic.contrato_id from itemcontrato ic" +
+                " left join itemcontratovigente icv on icv.itemcontrato_id = ic.id " +
+                " left join itemcotacao icot on icot.id = icv.itemcotacao_id " +
+                " left join itemcontratoitempropfornec icpf on icpf.itemcontrato_id = ic.id " +
+                " left join itemcontratoitemirp iirp on iirp.itemcontrato_id = ic.id " +
+                " left join itemcontratoadesaoataint iata on iata.itemcontrato_id = ic.id " +
+                " left join itemcontratoitemsolext icise on icise.itemcontrato_id = ic.id " +
+                " left join itemcontratoitempropdisp icipfd on icipfd.itemcontrato_id = ic.id " +
+                " left join itempropostafornedisp ipfd on icipfd.itempropfornecdispensa_id = ipfd.id " +
+                " left join itempropfornec ipf on coalesce(icpf.itempropostafornecedor_id, iirp.itempropostafornecedor_id, iata.itempropostafornecedor_id) = ipf.id " +
+                " left join itemprocessodecompra ipc on ipc.id = coalesce(ipf.itemprocessodecompra_id, ipfd.itemprocessodecompra_id) " +
+                " left join itemsolicitacao itemsol on itemsol.id = ipc.itemsolicitacaomaterial_id " +
+                " left join itemsolicitacaoexterno ise on ise.id = icise.itemsolicitacaoexterno_id " +
+                " inner join objetocompra oc on oc.id = coalesce(itemsol.objetocompra_id, ise.objetocompra_id, icot.objetocompra_id) " +
+                " where oc.id = :objetoCompraId)";
         }
         Query q = em.createNativeQuery(sql, Contrato.class);
-        q.setParameter("filtro", "%" + parte.trim().toLowerCase() + "%");
+        q.setParameter("filtro", "%" + filtroVO.getParte().trim().toLowerCase() + "%");
         q.setParameter("idUsuario", sistemaFacade.getUsuarioCorrente().getId());
         q.setParameter("gestoLicitacao", Boolean.TRUE);
         q.setParameter("tipoObjetoCompra", tipoObjetoCompra.name());
@@ -678,25 +676,23 @@ public class ContratoFacade extends AbstractFacade<Contrato> {
         q.setParameter("situacaoContratoDeferido", SituacaoContrato.DEFERIDO.name());
         q.setParameter("tipoHierarquia", TipoHierarquiaOrganizacional.ADMINISTRATIVA.name());
         q.setParameter("contratoConcessao", Boolean.FALSE);
-        if (filtroContratoRequisicaoCompra != null) {
-            if (filtroContratoRequisicaoCompra.getHierarquiaOrganizacional() != null && filtroContratoRequisicaoCompra.getHierarquiaOrganizacional().getSubordinada() != null) {
-                q.setParameter("unidadeOrganizacionalId", filtroContratoRequisicaoCompra.getHierarquiaOrganizacional().getSubordinada().getId());
-            }
-            if (filtroContratoRequisicaoCompra.getExercicio() != null) {
-                q.setParameter("exercicioId", filtroContratoRequisicaoCompra.getExercicio().getId());
-            }
-            if (filtroContratoRequisicaoCompra.getLicitacao() != null) {
-                q.setParameter("licitacaoId", filtroContratoRequisicaoCompra.getLicitacao().getId());
-            }
-            if (filtroContratoRequisicaoCompra.getFiscal() != null) {
-                q.setParameter("pessoaFiscalId", filtroContratoRequisicaoCompra.getFiscal().getId());
-            }
-            if (filtroContratoRequisicaoCompra.getGestor() != null) {
-                q.setParameter("pessoaGestorId", filtroContratoRequisicaoCompra.getGestor().getId());
-            }
-            if (filtroContratoRequisicaoCompra.getObjetoCompra() != null) {
-                q.setParameter("objetoCompraId", filtroContratoRequisicaoCompra.getObjetoCompra().getId());
-            }
+        if (filtroVO.getHierarquiaOrganizacional() != null && filtroVO.getHierarquiaOrganizacional().getSubordinada() != null) {
+            q.setParameter("unidadeOrganizacionalId", filtroVO.getHierarquiaOrganizacional().getSubordinada().getId());
+        }
+        if (filtroVO.getExercicio() != null) {
+            q.setParameter("exercicioId", filtroVO.getExercicio().getId());
+        }
+        if (filtroVO.getLicitacao() != null) {
+            q.setParameter("licitacaoId", filtroVO.getLicitacao().getId());
+        }
+        if (filtroVO.getFiscal() != null) {
+            q.setParameter("pessoaFiscalId", filtroVO.getFiscal().getId());
+        }
+        if (filtroVO.getGestor() != null) {
+            q.setParameter("pessoaGestorId", filtroVO.getGestor().getId());
+        }
+        if (filtroVO.getObjetoCompra() != null) {
+            q.setParameter("objetoCompraId", filtroVO.getObjetoCompra().getId());
         }
         if (maxResult != null) {
             q.setMaxResults(maxResult);

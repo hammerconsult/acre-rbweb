@@ -4,6 +4,7 @@ import br.com.webpublico.consultaentidade.ConsultaEntidadeController;
 import br.com.webpublico.consultaentidade.FieldConsultaEntidade;
 import br.com.webpublico.consultaentidade.FiltroConsultaEntidade;
 import br.com.webpublico.consultaentidade.TipoCampo;
+import br.com.webpublico.entidades.PessoaFisica;
 import br.com.webpublico.entidades.RevisaoAuditoria;
 import br.com.webpublico.entidades.SuperEntidade;
 import br.com.webpublico.enums.Operacoes;
@@ -55,6 +56,7 @@ public abstract class PrettyControlador<T> implements Serializable, CleannerView
     private List<FiltroConsultaEntidade> filtrosPesquisa;
     private List<FieldConsultaEntidade> fieldsPesquisa;
     private ConsultaEntidadeController.ConverterFieldConsultaEntidade converterFieldConsulta;
+    private String mensagemAtualizacaoCadastralPF;
 
     protected RevisaoAuditoria ultimaRevisao;
 
@@ -81,6 +83,10 @@ public abstract class PrettyControlador<T> implements Serializable, CleannerView
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getMensagemAtualizacaoCadastralPF() {
+        return mensagemAtualizacaoCadastralPF;
     }
 
     protected void definirSessao() {
@@ -552,5 +558,46 @@ public abstract class PrettyControlador<T> implements Serializable, CleannerView
             logger.error("Erro ao duplicar o objeto da classe {}. {}", selecionado.getClass(), e.getMessage());
             logger.debug("Detalhes do erro ao duplicar o objeto da classe {}.", selecionado.getClass(), e);
         }
+    }
+
+    public void fecharDialogAtualizacaoCadastralPF() {
+        FacesUtil.executaJavaScript("dialogoAtualizacaoPF.hide();");
+        limparCampoPessoaFisica();
+        atualizarFormulario();
+    }
+
+    public void limparCampoPessoaFisica() {
+    }
+
+    public void abrirDialogAtualizacaoCadastralPF() {
+        FacesUtil.atualizarComponente(idDialogAtualizacaoCadastralPF()+":formDialogoAtualizacaoPF");
+        FacesUtil.executaJavaScript("dialogoAtualizacaoPF.show();");
+    }
+
+    public String idDialogAtualizacaoCadastralPF() {
+        return "dialogAtualizacaoCadastralPF";
+    }
+
+    public Long idPfParaAtualizacaoCadastral() {
+        return null;
+    }
+
+    private void atualizarFormulario() {
+        FacesUtil.atualizarComponente("Formulario");
+    }
+
+    public void navegarAteAtualizacaoCadastralPF() {
+        FacesUtil.executaJavaScript("dialogoAtualizacaoPF.hide();");
+        if (idPfParaAtualizacaoCadastral() != null) {
+            FacesUtil.redirecionamentoExterno(FacesUtil.getRequestContextPath() + "/tributario/configuracoes/pessoa/editarpessoafisica/" + idPfParaAtualizacaoCadastral(), true);
+        }
+        limparCampoPessoaFisica();
+        atualizarFormulario();
+    }
+
+    public void montarMensagemDialogAtualizacaoCadastroPF(PessoaFisica pf) {
+        mensagemAtualizacaoCadastralPF = "O contribuinte " +
+            pf.getNome() +
+            " não atualizou seus dados à mais de 6 meses, para proseguir será necessário fazer a atualização cadastral.";
     }
 }

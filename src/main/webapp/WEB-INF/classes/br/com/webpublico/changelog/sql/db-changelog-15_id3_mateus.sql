@@ -1,0 +1,1 @@
+update configitemdemonstrelatorio set coluna = 0 where coluna is null

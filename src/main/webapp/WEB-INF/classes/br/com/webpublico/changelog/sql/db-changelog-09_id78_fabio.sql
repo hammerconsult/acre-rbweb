@@ -1,0 +1,1 @@
+insert into usuariounidadeorganizacio (id, usuariosistema_id, unidadeorganizacional_id, gestorprotocolo, gestormateriais, gestorlicitacao, gestorpatrimonio) (select HIBERNATE_SEQUENCE.nextval, u.usuariosistema_id, u.unidadeorganizacional_id, 0, 0, 0, 0 from USUARIOUNIDADEORG u);

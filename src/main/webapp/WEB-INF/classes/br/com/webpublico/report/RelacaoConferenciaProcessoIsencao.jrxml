@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelacaoConferenciaProcessoIsencao" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+	<property name="ireport.zoom" value="1.2100000000000009"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="BRASAO" class="java.lang.String"/>
+	<parameter name="USUARIO" class="java.lang.String"/>
+	<parameter name="WHERE" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" AND 1=1 "]]></defaultValueExpression>
+	</parameter>
+	<parameter name="NOME_RELATORIO" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[select cadastros.*,
+coalesce(pf.nome, pj.razaosocial) as nome,
+coalesce(pf.cpf, pj.cnpj) as cpfcnpj
+
+from (select
+ci.id as ID,
+ci.inscricaocadastral AS INSCRICAO,
+lote.AREALOTE AS AREALOTE,
+lote.CODIGOLOTE as lote,
+coalesce((select sum(construcao.areaconstruida) from construcao where imovel_id = ci.id and coalesce(cancelada,0) <> 1),0) as areaconstruida,
+ci.ATIVO as ativo,
+(select sum(bci.valor) from eventocalculoconstrucao bci
+            inner join eventoconfiguradobci conf on conf.id = bci.eventocalculo_id
+            inner join eventocalculo evento on evento.id = conf.eventocalculo_id
+            inner join construcao cons on bci.construcao_id = cons.id
+            where cons.imovel_id = ci.id and evento.identificacao = 'fracaoIdeal') as fracaoIdeal,
+coalesce((select count(prop.id) from PROPRIEDADE prop
+            inner join cadastroimobiliario cad on cad.id = prop.imovel_id
+           where prop.pessoa_id = propriedade.pessoa_id and prop.finalvigencia is null and cad.ativo = 1),0) as qntimoveis,
+pessoa.id as pessoa,
+(select valor from (select sum(coalesce(item.valorreal, 0)) as valor, c.datacalculo as dtcalc,
+                                       rank() over (partition by ex.ano order by c.datacalculo desc) rnk
+                                from calculoiptu calc_iptu
+                                         inner join itemcalculoiptu item on calc_iptu.id = item.calculoiptu_id
+                                         inner join calculo c on calc_iptu.id = c.id
+                                         inner join valordivida vd on c.id = vd.calculo_id
+                                         inner join exercicio ex on vd.exercicio_id = ex.id
+                                where calc_iptu.cadastroimobiliario_id = ci.id
+                                  and ex.ano in ( 2021, 2020) group by ex.ano, c.datacalculo)
+             where rnk = 1
+             order by dtcalc desc fetch first 1 rows only) as valorUltimo
+from CADASTROIMOBILIARIO ci
+inner join lote on lote.id = ci.LOTE_ID
+left join propriedade on propriedade.IMOVEL_ID = ci.id
+and propriedade.INICIOVIGENCIA <= SYSDATE AND COALESCE(propriedade.FINALVIGENCIA,SYSDATE) >= SYSDATE
+left join pessoa on pessoa.id = propriedade.PESSOA_ID
+) cadastros
+
+inner join pessoa p on p.id = cadastros.pessoa
+left join pessoafisica pf on pf.id = p.id
+left join pessoajuridica pj on pj.id = p.id
+WHERE ATIVO = 1
+$P!{WHERE}]]>
+	</queryString>
+	<field name="ID" class="java.math.BigDecimal"/>
+	<field name="INSCRICAO" class="java.lang.String"/>
+	<field name="AREALOTE" class="java.math.BigDecimal"/>
+	<field name="LOTE" class="java.lang.String"/>
+	<field name="AREACONSTRUIDA" class="java.math.BigDecimal"/>
+	<field name="ATIVO" class="java.math.BigDecimal"/>
+	<field name="FRACAOIDEAL" class="java.math.BigDecimal"/>
+	<field name="QNTIMOVEIS" class="java.math.BigDecimal"/>
+	<field name="PESSOA" class="java.math.BigDecimal"/>
+	<field name="NOME" class="java.lang.String"/>
+	<field name="CPFCNPJ" class="java.lang.String"/>
+	<field name="valorUltimo" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="79" splitType="Stretch">
+			<staticText>
+				<reportElement x="84" y="33" width="338" height="17"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[SECRETARIA MUNICIPAL DE FINANÇAS]]></text>
+			</staticText>
+			<image>
+				<reportElement x="10" y="10" width="60" height="62"/>
+				<imageExpression><![CDATA[$P{BRASAO} + "Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+			<staticText>
+				<reportElement x="84" y="15" width="598" height="18"/>
+				<textElement>
+					<font fontName="Arial" size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA MUNICIPAL DE RIO BRANCO]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="84" y="50" width="453" height="13"/>
+				<textElement>
+					<font fontName="Arial" size="10"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{NOME_RELATORIO}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="11" splitType="Stretch">
+			<staticText>
+				<reportElement x="0" y="0" width="70" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Inscrição]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="69" y="0" width="59" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Área do Lote]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="131" y="0" width="63" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Área Construída]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="732" y="0" width="70" height="10"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Qtde Construções]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="266" y="0" width="387" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Proprietário]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="655" y="0" width="77" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="10" width="802" height="1"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineStyle="Dashed" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="0" y="0" width="802" height="1"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineStyle="Dashed" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="197" y="0" width="61" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Fração Ideal]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="10" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="0" y="0" width="70" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{INSCRICAO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="69" y="0" width="59" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AREALOTE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="131" y="0" width="63" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AREACONSTRUIDA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="732" y="0" width="70" height="10"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{QNTIMOVEIS}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="266" y="0" width="387" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOME}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="655" y="0" width="77" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CPFCNPJ}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="197" y="0" width="61" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FRACAOIDEAL}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="45" splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="11">
+			<textField pattern="dd/MM/yyyy">
+				<reportElement x="179" y="0" width="359" height="11"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Usuário: "+ $P{USUARIO} + " - Emitido em " +new SimpleDateFormat("dd/MM/yyyy").format(new Date()) + " às " + new SimpleDateFormat("hh:mm").format(new Date()) + " Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="537" y="0" width="19" height="11"/>
+				<textElement>
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="1" y="0" width="144" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<text><![CDATA[WebPúblico - Módulo: TRIBUTÁRIO]]></text>
+			</staticText>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="42" splitType="Stretch"/>
+	</summary>
+</jasperReport>

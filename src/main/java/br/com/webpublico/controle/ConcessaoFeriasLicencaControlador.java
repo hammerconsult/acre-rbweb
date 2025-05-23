@@ -7,15 +7,18 @@ package br.com.webpublico.controle;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.rh.ItemEnvioDadosRBPonto;
 import br.com.webpublico.entidades.rh.ParametroFerias;
+import br.com.webpublico.entidades.rh.configuracao.ConfiguracaoRH;
 import br.com.webpublico.enums.StatusPeriodoAquisitivo;
 import br.com.webpublico.enums.TipoFerias;
 import br.com.webpublico.enums.TipoPeriodoAquisitivo;
 import br.com.webpublico.enums.rh.TipoAutorizacaoRH;
 import br.com.webpublico.enums.rh.TipoInformacaoEnvioRBPonto;
+import br.com.webpublico.enums.rh.administracaopagamento.TipoTercoFeriasAutomatico;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.*;
 import br.com.webpublico.negocios.rh.administracaodepagamento.LancamentoTercoFeriasAutFacade;
+import br.com.webpublico.negocios.rh.configuracao.ConfiguracaoRHFacade;
 import br.com.webpublico.negocios.rh.integracaoponto.EnvioDadosRBPontoFacade;
 import br.com.webpublico.util.*;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
@@ -65,27 +68,16 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
     private ArquivoFacade arquivoFacade;
     @EJB
     private PeriodoAquisitivoFLFacade periodoAquisitivoFLFacade;
-    private ConverterGenerico converterPeriodoAquisitivoFL;
     @EJB
     private ContratoFPFacade contratoFPFacade;
-    private ConverterAutoComplete converterContratoFP;
-    private Date inicioAbonoPecuniario;
-    private Date fimAbonoPecuniario;
     @EJB
     private ConfiguracaoFaltasInjustificadasFacade configuracaoFaltasInjustificadasFacade;
-    private Integer totalFaltasInjustificadas;
-    private Integer diasDeDireito;
     @EJB
     private SugestaoFeriasFacade sugestaoFeriasFacade;
     @EJB
     private FaltasFacade faltasFacade;
-    private Arquivo arquivo;
-    private FileUploadEvent fileUploadEvent;
-    private UploadedFile file;
     @EJB
     private BasePeriodoAquisitivoFacade basePeriodoAquisitivoFacade;
-    @ManagedProperty(name = "sugestaoFeriasControlador", value = "#{sugestaoFeriasControlador}")
-    private SugestaoFeriasControlador sugestaoFeriasControlador;
     @EJB
     private AfastamentoFacade afastamentoFacade;
     @EJB
@@ -97,7 +89,22 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
     @EJB
     private LancamentoTercoFeriasAutFacade lancamentoTercoFeriasAutFacade;
     @EJB
+    private ConfiguracaoRHFacade configuracaoRHFacade;
+    @EJB
     private ParametroFeriasFacade parametroFeriasFacade;
+    private ConverterGenerico converterPeriodoAquisitivoFL;
+    private ConverterAutoComplete converterContratoFP;
+    private Date inicioAbonoPecuniario;
+    private Date fimAbonoPecuniario;
+    private Integer totalFaltasInjustificadas;
+    private Integer diasDeDireito;
+    private Arquivo arquivo;
+    private FileUploadEvent fileUploadEvent;
+    private UploadedFile file;
+
+    @ManagedProperty(name = "sugestaoFeriasControlador", value = "#{sugestaoFeriasControlador}")
+    private SugestaoFeriasControlador sugestaoFeriasControlador;
+
     private List<ItemEnvioDadosRBPonto> itensEnvioDadosRBPonto;
     private boolean habilitarCampoMesAno;
     private boolean permiteMesAnoAnteriorFinalPA;
@@ -371,26 +378,30 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
         if (selecionado.getFimVigencia() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo data de término da concessão deve ser informado.");
         }
-        if (selecionado.getMes() == null){
-            ve.adicionarMensagemDeCampoObrigatorio("O campo Mês de Pagamento deve ser informado.");
-        }
-        if (selecionado.getAno() == null){
-            ve.adicionarMensagemDeCampoObrigatorio("O campo Ano de Pagamento deve ser informado.");
-        }
-        if (selecionado.getAno() != null && selecionado.getMes() != null) {
-            if (selecionado.getMes() > 12 || selecionado.getMes() <= 0) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("O mês informado é inválido!");
+
+        if (isPermiteInformarMesAnoPagamento()) {
+            if (selecionado.getMes() == null) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo Mês de Pagamento deve ser informado.");
             }
-            if (selecionado.getAno() == 0) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("O ano informado é inválido!");
+            if (selecionado.getAno() == null) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo Ano de Pagamento deve ser informado.");
             }
-            if (!permiteMesAnoAnteriorFinalPA) {
-                java.time.LocalDate dataFinalPeriodo = DataUtil.dateToLocalDate(selecionado.getPeriodoAquisitivoFL().getFinalVigencia());
-                if ((selecionado.getMes() < dataFinalPeriodo.getMonthValue() && selecionado.getAno() == dataFinalPeriodo.getYear()) || selecionado.getAno() < dataFinalPeriodo.getYear()) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida("O Mês/Ano de Pagamento é inferior ao Mês/Ano do final de vigência do Período Aquisitivo.");
+            if (selecionado.getAno() != null && selecionado.getMes() != null) {
+                if (selecionado.getMes() > 12 || selecionado.getMes() <= 0) {
+                    ve.adicionarMensagemDeOperacaoNaoPermitida("O mês informado é inválido!");
+                }
+                if (selecionado.getAno() == 0) {
+                    ve.adicionarMensagemDeOperacaoNaoPermitida("O ano informado é inválido!");
+                }
+                if (!permiteMesAnoAnteriorFinalPA) {
+                    java.time.LocalDate dataFinalPeriodo = DataUtil.dateToLocalDate(selecionado.getPeriodoAquisitivoFL().getFinalVigencia());
+                    if ((selecionado.getMes() < dataFinalPeriodo.getMonthValue() && selecionado.getAno() == dataFinalPeriodo.getYear()) || selecionado.getAno() < dataFinalPeriodo.getYear()) {
+                        ve.adicionarMensagemDeOperacaoNaoPermitida("O Mês/Ano de Pagamento é inferior ao Mês/Ano do final de vigência do Período Aquisitivo.");
+                    }
                 }
             }
         }
+
         if (selecionado.getPeriodoAquisitivoFL() != null && selecionado.getPeriodoAquisitivoFL().getContratoFP().getFinalVigencia() != null) {
             Date finalContrato = selecionado.getPeriodoAquisitivoFL().getContratoFP().getFinalVigencia();
             if ((selecionado.getInicioVigencia() != null && selecionado.getInicioVigencia().after(finalContrato)) || (selecionado.getFimVigencia() != null && selecionado.getFimVigencia().after(finalContrato))) {
@@ -634,14 +645,17 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
         if (lancamentoTercoFeriasAutFacade.recuperaLancamentoTercoFeriasAutPorPeriodoAquisitivo(selecionado.getPeriodoAquisitivoFL()) != null) {
             java.time.LocalDate dataAtual = DataUtil.dateToLocalDate(sistemaFacade.getDataOperacao());
             java.time.LocalDate dataFinalPeriodo = DataUtil.dateToLocalDate(selecionado.getPeriodoAquisitivoFL().getFinalVigencia()).plusDays(1);
-            if (dataAtual.isBefore(dataFinalPeriodo) || (dataAtual.getYear() == dataFinalPeriodo.getYear() && dataAtual.getMonthValue() == dataFinalPeriodo.getMonthValue())) {
-                selecionado.setMes(dataFinalPeriodo.getMonthValue());
-                selecionado.setAno(dataFinalPeriodo.getYear());
-                habilitarCampoMesAno = false;
-            } else {
-                selecionado.setMes(null);
-                selecionado.setAno(null);
+            if (!isPermiteInformarMesAnoPagamento()) {
+                if (dataAtual.isBefore(dataFinalPeriodo) || (dataAtual.getYear() == dataFinalPeriodo.getYear() && dataAtual.getMonthValue() == dataFinalPeriodo.getMonthValue())) {
+                    selecionado.setMes(dataFinalPeriodo.getMonthValue());
+                    selecionado.setAno(dataFinalPeriodo.getYear());
+                    habilitarCampoMesAno = false;
+                } else {
+                    selecionado.setMes(null);
+                    selecionado.setAno(null);
+                }
             }
+
         }
     }
 
@@ -773,5 +787,11 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
 
     private void carregarEnvioDadosPonto() {
         itensEnvioDadosRBPonto = envioDadosRBPontoFacade.buscarItensEnvioDadosPontoPorIdentificador(selecionado.getId(), TipoInformacaoEnvioRBPonto.FERIAS);
+    }
+
+    public boolean isPermiteInformarMesAnoPagamento() {
+        ConfiguracaoRH configuracaoRH = configuracaoRHFacade.recuperarConfiguracaoRHVigente();
+        return configuracaoRH.getTipoTercoFeriasAutomatico() == null || !TipoTercoFeriasAutomatico.ANIVERSARIO_CONTRATO
+            .equals(configuracaoRH.getTipoTercoFeriasAutomatico());
     }
 }

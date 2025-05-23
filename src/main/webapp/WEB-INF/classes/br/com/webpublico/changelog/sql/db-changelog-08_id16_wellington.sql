@@ -1,0 +1,1 @@
+update cadastroeconomico ce set ce.classificacaoatividade = null where ce.classificacaoatividade = 'AUTONOMO';

@@ -1,0 +1,1 @@
+update processo set confidencial = 0

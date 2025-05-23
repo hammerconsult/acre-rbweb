@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelAnexoDoisDespUnidadeOrgao" pageWidth="842" pageHeight="595" orientation="Landscape" whenNoDataType="AllSectionsNoDetail" columnWidth="672" leftMargin="85" rightMargin="85" topMargin="70" bottomMargin="70">
+	<property name="ireport.zoom" value="1.652892561983476"/>
+	<property name="ireport.x" value="89"/>
+	<property name="ireport.y" value="31"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["/home/reidocrime/NetBeansProjects/sistemas/implantarProtocolo/webpublico/src/java/br/com/webpublico/report/"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="EXERCICIO_ID" class="java.lang.Long"/>
+	<parameter name="ANO_EXERCICIO" class="java.lang.String"/>
+	<parameter name="MUNICIPIO" class="java.lang.String"/>
+	<parameter name="IMAGEM" class="java.lang.String"/>
+	<parameter name="USER" class="java.lang.String"/>
+	<parameter name="SQL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" and 1=1 "]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select
+    distinct(mestre.codigo) as codigo,
+    MESTRE.DESCRICAO AS DESCRICAO,
+    mestre.orgid,
+    mestre.org_codigo as org_codigo,
+    mestre.org_descricao as org_descricao,
+    coalesce(mestre.valor, 0) as valor,
+    coalesce(valor_tres.valor_tres, 0) as valor_tres,
+    coalesce(valor_dois.valor_dois, 0) as valor_dois,
+    coalesce(valor_um.valor_um, 0) as valor_um,
+    NIVELESTRUTURA(mestre.codigo,'.')as nivel
+from(SELECT
+     trim(substr(codigo,0,instr(codigo,'.',1,1))) as cd_nivel_um,
+     trim(substr(codigo,0,instr(codigo,'.',1,2))) as cd_nivel_dois,
+     trim(substr(codigo,0,instr(codigo,'.',1,3))) as cd_nivel_tres,
+     codigo,
+     DESCRICAO,
+     orgid,
+     org_codigo,
+     org_descricao,
+     valor
+FROM
+    (with rec(conta_id, conta_superior, conta_codigo, conta_descricao, orgid, ho_codigo, ho_descricao, desp_valor)as(
+SELECT
+	c.ID,
+	c.SUPERIOR_ID,
+  trim(c.CODIGO) as codigo,
+  TRIM(C.DESCRICAO) AS DESCRICAO,
+  vworg.id as orgid,
+  TRIM(VWORG.CODIGO) AS ORG_CODIGO,
+  trim(vworg.DESCRICAO) as org_descricao,
+  sum(emp.VALOR) as valor
+FROM
+   conta c
+   inner join  provisaoppadespesa provdesp on c.id = provdesp.CONTADEDESPESA_ID
+   INNER JOIN DESPESAORC desp ON desp.PROVISAOPPADESPESA_ID = provdesp.ID
+   INNER JOIN EMPENHO emp ON emp.DESPESAORC_ID = desp.ID
+   inner join subacaoppa sa on sa.id = provdesp.SUBACAOPPA_ID and sa.exercicio_id = $P{EXERCICIO_ID}
+   inner join acaoppa a on a.id = sa.acaoppa_id
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = PROVDESP.UNIDADEORGANIZACIONAL_ID and emp.dataempenho between vw.iniciovigencia and coalesce(vw.fimvigencia, emp.dataempenho)
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID and emp.dataempenho between VWORG.iniciovigencia and coalesce(VWORG.fimvigencia, emp.dataempenho)
+   LEFT JOIN ENTIDADE ENT ON VW.ENTIDADE_ID = ENT.ID
+   WHERE PROVDESP.VALOR > 0
+   $P!{SQL}
+GROUP by vworg.id, vworg.CODIGO,vworg.DESCRICAO,c.CODIGO,c.DESCRICAO,c.ID,c.SUPERIOR_ID
+UNION ALL
+  select x.ID, x.SUPERIOR_ID, x.CODIGO, x.DESCRICAO, rec.orgid, ho_codigo, ho_descricao, null from rec
+  INNER JOIN CONTA x on x.ID=rec.conta_superior
+  )
+  select
+     DISTINCT(conta_id),
+     conta_superior,
+     conta_codigo as CODIGO,
+     CONTA_DESCRICAO AS DESCRICAO,
+     orgid,
+     ho_codigo as org_codigo,
+     ho_descricao as org_descricao,
+     desp_valor as valor
+from
+   rec
+ORDER BY ho_codigo,conta_codigo)x)MESTRE
+left JOIN
+       (SELECT
+             orgid,
+             org,
+             codigo,
+             sum(valor) as valor_tres from(SELECT
+	                                        C.ID AS ID,
+                                          vworg.id as orgid,
+	                                        vworg.codigo as org,
+                                          trim(substr(c.CODIGO,0,instr(c.CODIGO,'.',1,3))) as codigo,
+                                          emp.VALOR as valor
+                                      FROM
+                                         conta c
+                                         inner join  provisaoppadespesa provdesp on c.id = provdesp.CONTADEDESPESA_ID
+                                         INNER JOIN DESPESAORC desp ON desp.PROVISAOPPADESPESA_ID = provdesp.ID
+                                         INNER JOIN EMPENHO emp ON emp.DESPESAORC_ID = desp.ID
+                                         inner join subacaoppa sa on sa.id = provdesp.SUBACAOPPA_ID and sa.exercicio_id = $P{EXERCICIO_ID}
+                                         inner join acaoppa a on a.id = sa.acaoppa_id
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = PROVDESP.UNIDADEORGANIZACIONAL_ID and emp.dataempenho between vw.iniciovigencia and coalesce(vw.fimvigencia, emp.dataempenho)
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID and emp.dataempenho between VWORG.iniciovigencia and coalesce(VWORG.fimvigencia, emp.dataempenho)
+                                          LEFT JOIN ENTIDADE ENT ON VW.ENTIDADE_ID = ENT.ID
+                                         WHERE PROVDESP.VALOR > 0
+                                         $P!{SQL}
+                                         )X
+                                     group by orgid, org, codigo)valor_tres
+on  trim(mestre.org_codigo)=trim(valor_tres.org)
+and mestre.cd_nivel_tres=valor_tres.codigo
+left JOIN
+       (SELECT
+             orgid,
+             org,
+             codigo,
+             sum(valor) as valor_dois from(SELECT
+	                                        C.ID AS ID,
+                                          vworg.id as orgid,
+	                                        vworg.codigo as org,
+                                          trim(substr(c.CODIGO,0,instr(c.CODIGO,'.',1,2))) as codigo,
+                                          emp.VALOR as valor
+                                      FROM
+                                         conta c
+                                         inner join  provisaoppadespesa provdesp on c.id = provdesp.CONTADEDESPESA_ID
+                                         INNER JOIN DESPESAORC desp ON desp.PROVISAOPPADESPESA_ID = provdesp.ID
+                                         INNER JOIN EMPENHO emp ON emp.DESPESAORC_ID = desp.ID
+                                         inner join subacaoppa sa on sa.id = provdesp.SUBACAOPPA_ID
+                                         inner join acaoppa a on a.id = sa.acaoppa_id
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = PROVDESP.UNIDADEORGANIZACIONAL_ID and emp.dataempenho between vw.iniciovigencia and coalesce(vw.fimvigencia, emp.dataempenho)
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID and emp.dataempenho between VWORG.iniciovigencia and coalesce(VWORG.fimvigencia, emp.dataempenho)
+                                          LEFT JOIN ENTIDADE ENT ON VW.ENTIDADE_ID = ENT.ID
+                                         WHERE PROVDESP.VALOR > 0
+                                         $P!{SQL}
+                                         )X
+                                     group by orgid, org, codigo)valor_dois
+on  trim(mestre.org_codigo)=trim(valor_dois.org)
+and mestre.cd_nivel_dois=valor_dois.codigo
+left JOIN
+       (SELECT
+             orgid,
+             org,
+             codigo,
+             sum(valor) as valor_um from(SELECT
+	                                        C.ID AS ID,
+                                          vworg.id as orgid,
+	                                        vworg.codigo as org,
+                                          trim(substr(c.CODIGO,0,instr(c.CODIGO,'.',1,1))) as codigo,
+                                          emp.VALOR as valor
+                                      FROM
+                                         conta c
+                                         inner join  provisaoppadespesa provdesp on c.id = provdesp.CONTADEDESPESA_ID
+				INNER JOIN DESPESAORC desp ON desp.PROVISAOPPADESPESA_ID = provdesp.ID
+   				INNER JOIN EMPENHO emp ON emp.DESPESAORC_ID = desp.ID
+                                         inner join subacaoppa sa on sa.id = provdesp.SUBACAOPPA_ID and sa.exercicio_id = $P{EXERCICIO_ID}
+                                         inner join acaoppa a on a.id = sa.acaoppa_id
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = PROVDESP.UNIDADEORGANIZACIONAL_ID and emp.dataempenho between vw.iniciovigencia and coalesce(vw.fimvigencia, emp.dataempenho)
+   INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID and emp.dataempenho between VWORG.iniciovigencia and coalesce(VWORG.fimvigencia, emp.dataempenho)
+                                          LEFT JOIN ENTIDADE ENT ON VW.ENTIDADE_ID = ENT.ID
+                                         WHERE PROVDESP.VALOR > 0
+                                         $P!{SQL}
+                                         )X
+                                     group by orgid,org,codigo)valor_um
+on  trim(mestre.org_codigo)=trim(valor_um.org)
+AND MESTRE.CD_NIVEL_UM=VALOR_UM.CODIGO
+ORDER BY mestre.org_codigo,mestre.codigo]]>
+	</queryString>
+	<field name="CODIGO" class="java.lang.String"/>
+	<field name="DESCRICAO" class="java.lang.String"/>
+	<field name="ORGID" class="java.math.BigDecimal"/>
+	<field name="ORG_CODIGO" class="java.lang.String"/>
+	<field name="ORG_DESCRICAO" class="java.lang.String"/>
+	<field name="VALOR" class="java.math.BigDecimal"/>
+	<field name="VALOR_TRES" class="java.math.BigDecimal"/>
+	<field name="VALOR_DOIS" class="java.math.BigDecimal"/>
+	<field name="VALOR_UM" class="java.math.BigDecimal"/>
+	<field name="NIVEL" class="java.math.BigDecimal"/>
+	<variable name="VALOR_1" class="java.math.BigDecimal" resetType="Group" resetGroup="GROUP_ORG" calculation="Sum">
+		<variableExpression><![CDATA[$F{VALOR}]]></variableExpression>
+	</variable>
+	<variable name="SOMA_CAT" class="java.math.BigDecimal" calculation="Sum"/>
+	<variable name="TESTE" class="java.math.BigDecimal" resetType="Column" incrementType="Column" calculation="Sum">
+		<variableExpression><![CDATA[$F{VALOR}]]></variableExpression>
+	</variable>
+	<group name="GROUP_ORG" isStartNewPage="true">
+		<groupExpression><![CDATA[$F{ORG_CODIGO}]]></groupExpression>
+		<groupHeader>
+			<band height="72">
+				<textField isBlankWhenNull="true">
+					<reportElement x="41" y="48" width="100" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{ORG_CODIGO}]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="true">
+					<reportElement x="142" y="48" width="529" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{ORG_DESCRICAO}]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement x="0" y="60" width="672" height="1"/>
+				</line>
+				<staticText>
+					<reportElement x="1" y="48" width="40" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Orgão:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="571" y="16" width="100" height="12"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Exercício "+$P{ANO_EXERCICIO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="512" y="33" width="159" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Anexo 02 Despesa, da Lei 4320/64]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="47" y="33" width="465" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Natureza da Despesa Segundo as Categorias Econômicas]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="47" y="1" width="623" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$P{MUNICIPIO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="1" y="61" width="69" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Código]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="75" y="61" width="84" height="10"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Especificação]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="428" y="61" width="84" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Desdobramento]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="512" y="61" width="74" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Grupo]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="586" y="61" width="84" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Cat. Econômica]]></text>
+				</staticText>
+				<line>
+					<reportElement x="0" y="71" width="672" height="1"/>
+				</line>
+				<image>
+					<reportElement x="0" y="0" width="45" height="45"/>
+					<imageExpression><![CDATA[$P{IMAGEM} + "Brasao_de_Rio_Branco.gif"]]></imageExpression>
+				</image>
+				<staticText>
+					<reportElement x="47" y="16" width="525" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Secretaria Municipal de Finanças - Departamento de Contabilidade
+ ]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="13">
+				<textField pattern="#,##0.00" isBlankWhenNull="true">
+					<reportElement x="590" y="1" width="81" height="10"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{VALOR_1}]]></textFieldExpression>
+				</textField>
+				<break>
+					<reportElement x="0" y="11" width="100" height="1"/>
+				</break>
+				<subreport>
+					<reportElement x="0" y="12" width="672" height="1"/>
+					<subreportParameter name="EXERCICIO_ID">
+						<subreportParameterExpression><![CDATA[$P{EXERCICIO_ID}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="IMAGEM">
+						<subreportParameterExpression><![CDATA[$P{IMAGEM}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="SQL">
+						<subreportParameterExpression><![CDATA[$P{SQL}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="ORGAO_ID">
+						<subreportParameterExpression><![CDATA[$F{ORGID}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="MUNICIPIO">
+						<subreportParameterExpression><![CDATA[$P{MUNICIPIO}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="ANO_EXERCICIO">
+						<subreportParameterExpression><![CDATA[$P{ANO_EXERCICIO}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelAnexoDoisDespUnidadeOrgaoExecucao_subreport1.jasper"]]></subreportExpression>
+				</subreport>
+				<line>
+					<reportElement x="0" y="11" width="672" height="1"/>
+				</line>
+				<line>
+					<reportElement x="0" y="0" width="672" height="1"/>
+				</line>
+			</band>
+		</groupFooter>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="10" splitType="Stretch">
+			<textField>
+				<reportElement x="1" y="0" width="69" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CODIGO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="76" y="0" width="351" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DESCRICAO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00">
+				<reportElement x="428" y="0" width="84" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()>3]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="512" y="0" width="74" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()==3]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_TRES}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="586" y="0" width="84" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()==2]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_DOIS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="586" y="0" width="84" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()==1]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALOR_UM}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="11">
+			<textField>
+				<reportElement x="57" y="1" width="377" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{USER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="0" y="1" width="57" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<text><![CDATA[Emitido por:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="563" y="1" width="80" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isStrikeThrough="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="643" y="1" width="27" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isStrikeThrough="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="0" width="672" height="1"/>
+			</line>
+		</band>
+	</pageFooter>
+</jasperReport>

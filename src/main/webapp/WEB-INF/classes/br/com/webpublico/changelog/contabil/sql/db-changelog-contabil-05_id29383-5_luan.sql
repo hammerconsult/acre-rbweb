@@ -1,0 +1,1 @@
+update PPA SET ATOLEGAL_ID = null  WHERE ID = 873248559

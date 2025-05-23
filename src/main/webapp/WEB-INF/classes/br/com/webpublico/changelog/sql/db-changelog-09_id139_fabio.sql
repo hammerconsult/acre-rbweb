@@ -1,0 +1,1 @@
+update TERMOADVERTENCIA t set t.usuariosistema_id = (select u.usuariosistema_id from usuariofiscal u where u.id = t.usuariofiscal_id);

@@ -1,0 +1,907 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="DAMITBI" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+	<property name="ireport.zoom" value="0.931381984588737"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="496"/>
+	<parameter name="VALORDIVIDA_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="CAMINHOBRASAO" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String"/>
+	<parameter name="HOMOLOGACAO" class="java.lang.Boolean"/>
+	<parameter name="MSG_PIX" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[select (substr(pvd.codigoBarras, 0, 11) || substr(pvd.codigoBarras, 15, 11) || substr(pvd.codigoBarras, 29, 11) || substr(pvd.codigoBarras, 43, 11)) as codigobarras, pvd.codigobarras as codigobarrasdigito,
+  coalesce(adfisica.nome, adjuridica.razaosocial) as adquirente,
+  coalesce(adfisica.cpf, adjuridica.cnpj) as cpf_cnpj ,
+  pvd.numerodam,
+  (select endereco.logradouro
+        from enderecocorreio endereco
+        inner join pessoa_enderecocorreio pec on endereco.id = pec.enderecoscorreio_id
+        inner join pessoa p on p.id = pec.pessoa_id
+        where endereco.tipoendereco = 'RESIDENCIAL' and p.id = adquirente.id and rownum = 1) as logradouro,
+  (select endereco.numero
+        from enderecocorreio endereco
+        inner join pessoa_enderecocorreio pec on endereco.id = pec.enderecoscorreio_id
+        inner join pessoa p on p.id = pec.pessoa_id
+        where endereco.tipoendereco = 'RESIDENCIAL' and p.id = adquirente.id and rownum = 1) as numero,
+  (select endereco.bairro
+        from enderecocorreio endereco
+        inner join pessoa_enderecocorreio pec on endereco.id = pec.enderecoscorreio_id
+        inner join pessoa p on p.id = pec.pessoa_id
+        where endereco.tipoendereco = 'RESIDENCIAL' and p.id = adquirente.id and rownum = 1) as bairro,
+  (select endereco.localidade
+        from enderecocorreio endereco
+        inner join pessoa_enderecocorreio pec on endereco.id = pec.enderecoscorreio_id
+        inner join pessoa p on p.id = pec.pessoa_id
+        where endereco.tipoendereco = 'RESIDENCIAL' and p.id = adquirente.id and rownum = 1) as cidade,
+  (select endereco.uf
+        from enderecocorreio endereco
+        inner join pessoa_enderecocorreio pec on endereco.id = pec.enderecoscorreio_id
+        inner join pessoa p on p.id = pec.pessoa_id
+        where endereco.tipoendereco = 'RESIDENCIAL' and p.id = adquirente.id and rownum = 1) as uf,
+  pvd.valorparcela as valorparcela,
+  pvd.vencimento,
+  vd.valor as valortotal,
+  calculo.basecalculo,
+  calculo.aliquotabasecalculo,
+  calculo.valorfinanciado,
+  calculo.aliquotavalorfinanciado,
+  calculo.observacao,
+  (select coalesce(pf.nome, pj.razaosocial) from propriedaderural prop
+        inner join pessoa p on p.id = prop.pessoa_id
+        left join pessoafisica pf on pf.id = p.id
+        left join pessoajuridica pj on pj.id = p.id
+        where prop.imovel_id = cr.id
+	and prop.inicioVigencia <= current_date
+          and coalesce(prop.finalVigencia,current_date) >= current_date
+	and rownum =1) as transmitente,
+  (select coalesce(pf.cpf, pj.cnpj) from propriedaderural prop
+        inner join pessoa p on p.id = prop.pessoa_id
+        left join pessoafisica pf on pf.id = p.id
+        left join pessoajuridica pj on pj.id = p.id
+        where prop.imovel_id = cr.id
+	and prop.inicioVigencia <= current_date
+          and coalesce(prop.finalVigencia,current_date) >= current_date
+	and rownum =1) as cpf_cnpj_transmitente,
+  cr.nomepropriedade,
+  cr.localizacaolote,
+  cr.arealote,
+  cr.numeroincra,
+  tipoarearural.descricao as tipoarea,
+  pvd.id,
+ calculo.id as calculo_id,
+  (select count(pvdi.sequenciaparcela) as totalDeParcelas
+        from parcelavalordivida pvdi
+        join valordivida vdivida on vdivida.id = pvdi.valordivida_id
+        join calculoitbi caitbi on vdivida.calculo_id = caitbi.id
+        where vdivida.id = vd.id) as totalDeParcelas,
+  (select pvdivida.sequenciaparcela
+        from parcelavalordivida pvdivida join valordivida vdiv on vdiv.id = pvdivida.valordivida_id
+        join calculoitbi citbi on vdiv.calculo_id = citbi.id
+        where pvdivida.id = pvd.id ) as numerodaparcela,
+dam.qrcodepix
+from valordivida vd
+inner join parcelavalordivida pvd on pvd.valordivida_id = vd.id
+inner join itemvalordivida ivd on ivd.valordivida_id = vd.id
+inner join tributo on tributo.id = ivd.tributo_id
+inner join calculoitbi calculo on calculo.id = vd.calculo_id
+inner join cadastrorural cr on cr.id = calculo.cadastrorural_id
+inner join tipoarearural on tipoarearural.id = cr.tipoarearural_id
+left join adquirentescalculoitbi adqcalcitbi on adqcalcitbi.calculoitbi_id = calculo.id
+left join pessoa adquirente on adquirente.id = adqcalcitbi.adquirente_id
+--left join pessoa adquirente on adquirente.id = calculo.adquirente_id
+left join pessoafisica adfisica on adfisica.id = adquirente.id
+left join pessoajuridica adjuridica on adjuridica.id = adquirente.id
+where vd.id = $P{VALORDIVIDA_ID}
+  and adqcalcitbi.percentual = (select max(adqcalcitbi2.percentual) from adquirentescalculoitbi adqcalcitbi2 where adqcalcitbi2.calculoitbi_id = calculo.id)
+  and rownum = 1]]>
+	</queryString>
+	<field name="CODIGOBARRAS" class="java.lang.String"/>
+	<field name="CODIGOBARRASDIGITO" class="java.lang.String"/>
+	<field name="ADQUIRENTE" class="java.lang.String"/>
+	<field name="CPF_CNPJ" class="java.lang.String"/>
+	<field name="NUMERODAM" class="java.lang.String"/>
+	<field name="LOGRADOURO" class="java.lang.String"/>
+	<field name="NUMERO" class="java.lang.String"/>
+	<field name="BAIRRO" class="java.lang.String"/>
+	<field name="CIDADE" class="java.lang.String"/>
+	<field name="UF" class="java.lang.String"/>
+	<field name="VALORPARCELA" class="java.math.BigDecimal"/>
+	<field name="VENCIMENTO" class="java.sql.Timestamp"/>
+	<field name="VALORTOTAL" class="java.math.BigDecimal"/>
+	<field name="BASECALCULO" class="java.math.BigDecimal"/>
+	<field name="ALIQUOTABASECALCULO" class="java.math.BigDecimal"/>
+	<field name="VALORFINANCIADO" class="java.math.BigDecimal"/>
+	<field name="ALIQUOTAVALORFINANCIADO" class="java.math.BigDecimal"/>
+	<field name="OBSERVACAO" class="java.lang.String"/>
+	<field name="TRANSMITENTE" class="java.lang.String"/>
+	<field name="CPF_CNPJ_TRANSMITENTE" class="java.lang.String"/>
+	<field name="NOMEPROPRIEDADE" class="java.lang.String"/>
+	<field name="LOCALIZACAOLOTE" class="java.lang.String"/>
+	<field name="AREALOTE" class="java.lang.String"/>
+	<field name="NUMEROINCRA" class="java.lang.String"/>
+	<field name="TIPOAREA" class="java.lang.String"/>
+	<field name="ID" class="java.math.BigDecimal"/>
+	<field name="CALCULO_ID" class="java.math.BigDecimal"/>
+	<field name="TOTALDEPARCELAS" class="java.math.BigDecimal"/>
+	<field name="NUMERODAPARCELA" class="java.lang.String"/>
+	<field name="QRCODEPIX" class="java.lang.String"/>
+	<variable name="NUMEROPARCELAS" class="java.lang.String">
+		<variableExpression><![CDATA["Parcela " + $F{NUMERODAPARCELA} + " / " + $F{TOTALDEPARCELAS}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="795">
+			<rectangle>
+				<reportElement x="452" y="1" width="104" height="56"/>
+			</rectangle>
+			<rectangle>
+				<reportElement x="354" y="1" width="98" height="56"/>
+			</rectangle>
+			<line>
+				<reportElement x="0" y="61" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="90" width="555" height="1"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="74" width="448" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ADQUIRENTE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="455" y="74" width="95" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CPF_CNPJ}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="117" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="3" y="61" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Adquirente]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="3" y="90" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Endereço]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="455" y="61" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="103" width="223" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LOGRADOURO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="358" y="8" width="93" height="43"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="18"/>
+				</textElement>
+				<text><![CDATA[GR - ITBI]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="230" y="103" width="78" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NUMERO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="314" y="103" width="92" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BAIRRO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="410" y="103" width="94" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CIDADE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="509" y="103" width="45" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{UF}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="230" y="90" width="71" height="13"/>
+				<textElement/>
+				<text><![CDATA[Número]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="314" y="90" width="74" height="13"/>
+				<textElement/>
+				<text><![CDATA[Bairro]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="410" y="90" width="80" height="13"/>
+				<textElement/>
+				<text><![CDATA[Cidade]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="509" y="90" width="45" height="13"/>
+				<textElement/>
+				<text><![CDATA[UF]]></text>
+			</staticText>
+			<line>
+				<reportElement x="451" y="62" width="1" height="29"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="455" y="22" width="100" height="20"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NUMERODAM}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="146" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="3" y="118" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Transmitente]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="447" y="118" width="97" height="13"/>
+				<textElement/>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<line>
+				<reportElement x="441" y="117" width="1" height="29"/>
+			</line>
+			<line>
+				<reportElement x="0" y="175" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="162" y="177" width="84" height="13"/>
+				<textElement textAlignment="Center">
+					<font size="7"/>
+				</textElement>
+				<text><![CDATA[Áreas (m²)]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="218" width="249" height="1"/>
+			</line>
+			<line>
+				<reportElement x="125" y="176" width="1" height="42"/>
+			</line>
+			<line>
+				<reportElement x="248" y="176" width="1" height="42"/>
+			</line>
+			<line>
+				<reportElement x="183" y="191" width="1" height="27"/>
+			</line>
+			<line>
+				<reportElement x="125" y="190" width="124" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="3" y="220" width="111" height="13"/>
+				<textElement/>
+				<text><![CDATA[Observações]]></text>
+			</staticText>
+			<line>
+				<reportElement x="248" y="219" width="1" height="118"/>
+			</line>
+			<line>
+				<reportElement x="0" y="337" width="249" height="1"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="5" y="238" width="232" height="63"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{OBSERVACAO}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="555" y="61" width="1" height="242"/>
+			</line>
+			<line>
+				<reportElement x="0" y="62" width="1" height="275"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="131" width="407" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TRANSMITENTE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="446" y="131" width="101" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CPF_CNPJ_TRANSMITENTE}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="356" width="555" height="1"/>
+				<graphicElement>
+					<pen lineStyle="Dashed"/>
+				</graphicElement>
+			</line>
+			<rectangle>
+				<reportElement x="451" y="367" width="104" height="56"/>
+			</rectangle>
+			<rectangle>
+				<reportElement x="355" y="367" width="97" height="56"/>
+			</rectangle>
+			<line>
+				<reportElement x="0" y="427" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="456" width="555" height="1"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="440" width="455" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ADQUIRENTE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="455" y="440" width="95" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CPF_CNPJ}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="483" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="3" y="428" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Adquirente]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="3" y="457" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Endereço]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="455" y="428" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="469" width="226" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LOGRADOURO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="355" y="366" width="96" height="57"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="18" isStrikeThrough="false"/>
+				</textElement>
+				<text><![CDATA[GR - ITBI]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="236" y="469" width="68" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NUMERO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="317" y="469" width="89" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BAIRRO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="410" y="469" width="100" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CIDADE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="512" y="469" width="40" height="15"/>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{UF}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="237" y="457" width="64" height="13"/>
+				<textElement/>
+				<text><![CDATA[Número]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="317" y="457" width="54" height="13"/>
+				<textElement/>
+				<text><![CDATA[Bairro]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="410" y="457" width="80" height="13"/>
+				<textElement/>
+				<text><![CDATA[Cidade]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="514" y="457" width="33" height="13"/>
+				<textElement/>
+				<text><![CDATA[UF]]></text>
+			</staticText>
+			<line>
+				<reportElement x="452" y="428" width="1" height="29"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="455" y="388" width="100" height="20"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NUMERODAM}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="512" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="3" y="485" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Transmitente]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="455" y="484" width="97" height="13"/>
+				<textElement/>
+				<text><![CDATA[CPF/CNPJ]]></text>
+			</staticText>
+			<line>
+				<reportElement x="451" y="483" width="1" height="29"/>
+			</line>
+			<staticText>
+				<reportElement x="3" y="513" width="111" height="13"/>
+				<textElement/>
+				<text><![CDATA[Nome da Propriedade]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="541" width="555" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="4" y="543" width="94" height="13"/>
+				<textElement/>
+				<text><![CDATA[Cadastro Rural]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="584" width="247" height="1"/>
+			</line>
+			<line>
+				<reportElement x="101" y="542" width="1" height="42"/>
+			</line>
+			<line>
+				<reportElement x="246" y="542" width="1" height="42"/>
+			</line>
+			<staticText>
+				<reportElement x="3" y="586" width="111" height="18"/>
+				<textElement/>
+				<text><![CDATA[Observações]]></text>
+			</staticText>
+			<line>
+				<reportElement x="246" y="585" width="1" height="194"/>
+			</line>
+			<line>
+				<reportElement x="0" y="779" width="247" height="1"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="4" y="604" width="233" height="108"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{OBSERVACAO}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="555" y="427" width="1" height="241"/>
+			</line>
+			<line>
+				<reportElement x="0" y="428" width="1" height="351"/>
+			</line>
+			<staticText>
+				<reportElement x="331" y="513" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Localização]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="497" width="407" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TRANSMITENTE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="456" y="497" width="95" height="15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CPF_CNPJ_TRANSMITENTE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="126" y="541" width="90" height="13"/>
+				<textElement textAlignment="Center">
+					<font size="7"/>
+				</textElement>
+				<text><![CDATA[Áreas (m²)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="105" y="554" width="59" height="12"/>
+				<textElement textAlignment="Left">
+					<font size="7"/>
+				</textElement>
+				<text><![CDATA[Tipo]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="174" y="554" width="62" height="12"/>
+				<textElement textAlignment="Left">
+					<font size="7"/>
+				</textElement>
+				<text><![CDATA[Área]]></text>
+			</staticText>
+			<line>
+				<reportElement x="168" y="554" width="1" height="31"/>
+			</line>
+			<line>
+				<reportElement x="101" y="554" width="145" height="1"/>
+			</line>
+			<componentElement>
+				<reportElement x="250" y="684" width="303" height="23">
+					<printWhenExpression><![CDATA[$P{HOMOLOGACAO}.booleanValue() == false]]></printWhenExpression>
+				</reportElement>
+				<jr:barbecue xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd" type="Int2of5" drawText="false" checksumRequired="false">
+					<jr:codeExpression><![CDATA[$F{CODIGOBARRAS}]]></jr:codeExpression>
+				</jr:barbecue>
+			</componentElement>
+			<textField>
+				<reportElement x="3" y="525" width="320" height="15"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{NOMEPROPRIEDADE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="333" y="525" width="217" height="15"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{LOCALIZACAOLOTE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="4" y="557" width="97" height="20"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[$F{NUMEROINCRA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00">
+				<reportElement x="104" y="566" width="62" height="15"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TIPOAREA}]]></textFieldExpression>
+			</textField>
+			<textField pattern="###0.00">
+				<reportElement x="173" y="566" width="63" height="15"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AREALOTE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="130" y="193" width="50" height="11"/>
+				<textElement textAlignment="Left">
+					<font size="7"/>
+				</textElement>
+				<text><![CDATA[Tipo]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="188" y="192" width="51" height="12"/>
+				<textElement textAlignment="Left">
+					<font size="7"/>
+				</textElement>
+				<text><![CDATA[Área]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="6" y="193" width="111" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{NUMEROINCRA}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="6" y="177" width="111" height="13"/>
+				<textElement/>
+				<text><![CDATA[Cadastro Rural]]></text>
+			</staticText>
+			<textField pattern="###0.00">
+				<reportElement x="188" y="204" width="49" height="15"/>
+				<textElement textAlignment="Right">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AREALOTE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="131" y="204" width="48" height="14"/>
+				<textElement>
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TIPOAREA}]]></textFieldExpression>
+			</textField>
+			<image>
+				<reportElement x="10" y="363" width="49" height="60"/>
+				<imageExpression><![CDATA[$P{CAMINHOBRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+			<image>
+				<reportElement x="9" y="1" width="49" height="60"/>
+				<imageExpression><![CDATA[$P{CAMINHOBRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+			<textField>
+				<reportElement x="252" y="671" width="301" height="13"/>
+				<textElement textAlignment="Center">
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CODIGOBARRASDIGITO}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="229" y="457" width="1" height="26"/>
+			</line>
+			<line>
+				<reportElement x="313" y="457" width="1" height="26"/>
+			</line>
+			<line>
+				<reportElement x="406" y="457" width="1" height="26"/>
+			</line>
+			<line>
+				<reportElement x="326" y="512" width="1" height="29"/>
+			</line>
+			<componentElement>
+				<reportElement x="250" y="701" width="303" height="23">
+					<printWhenExpression><![CDATA[$P{HOMOLOGACAO}.booleanValue() == false]]></printWhenExpression>
+				</reportElement>
+				<jr:barbecue xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd" type="Int2of5" drawText="false" checksumRequired="false">
+					<jr:codeExpression><![CDATA[$F{CODIGOBARRAS}]]></jr:codeExpression>
+				</jr:barbecue>
+			</componentElement>
+			<line>
+				<reportElement x="407" y="91" width="1" height="26"/>
+			</line>
+			<line>
+				<reportElement x="324" y="147" width="1" height="29"/>
+			</line>
+			<line>
+				<reportElement x="310" y="91" width="1" height="26"/>
+			</line>
+			<line>
+				<reportElement x="226" y="91" width="1" height="26"/>
+			</line>
+			<line>
+				<reportElement x="506" y="91" width="1" height="26"/>
+			</line>
+			<line>
+				<reportElement x="510" y="457" width="1" height="26"/>
+			</line>
+			<staticText>
+				<reportElement x="59" y="366" width="299" height="21"/>
+				<textElement textAlignment="Center">
+					<font size="16"/>
+				</textElement>
+				<text><![CDATA[Estado do Acre]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="59" y="387" width="299" height="21"/>
+				<textElement textAlignment="Center">
+					<font size="15"/>
+				</textElement>
+				<text><![CDATA[Prefeitura do Município de Rio Branco]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="56" y="22" width="299" height="21"/>
+				<textElement textAlignment="Center">
+					<font size="15"/>
+				</textElement>
+				<text><![CDATA[Prefeitura do Município de Rio Branco]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="56" y="1" width="299" height="21"/>
+				<textElement textAlignment="Center">
+					<font size="16"/>
+				</textElement>
+				<text><![CDATA[Estado do Acre]]></text>
+			</staticText>
+			<line>
+				<reportElement x="249" y="276" width="181" height="1"/>
+			</line>
+			<textField pattern="dd/MM/yyyy" isBlankWhenNull="true">
+				<reportElement x="451" y="287" width="100" height="15"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VENCIMENTO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="¤ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="445" y="260" width="106" height="15"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALORPARCELA}]]></textFieldExpression>
+			</textField>
+			<subreport>
+				<reportElement x="249" y="177" width="308" height="69"/>
+				<subreportParameter name="CALCULO_ID">
+					<subreportParameterExpression><![CDATA[$F{CALCULO_ID}.longValue()]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "DAMITBI_subreport1.jasper"]]></subreportExpression>
+			</subreport>
+			<staticText>
+				<reportElement x="435" y="248" width="111" height="12"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Valor da Parcela]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="252" y="248" width="93" height="13"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Valor Total do ITBI]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="264" y="283" width="142" height="16"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[$V{NUMEROPARCELAS}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="249" y="302" width="307" height="1"/>
+			</line>
+			<line>
+				<reportElement x="249" y="247" width="307" height="1"/>
+			</line>
+			<line>
+				<reportElement x="430" y="248" width="1" height="54"/>
+			</line>
+			<staticText>
+				<reportElement x="435" y="275" width="111" height="12"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Vencimento]]></text>
+			</staticText>
+			<textField pattern="¤ #,##0.00">
+				<reportElement x="295" y="261" width="111" height="14"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALORTOTAL}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="262" y="648" width="142" height="16"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[$V{NUMEROPARCELAS}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="247" y="667" width="309" height="1"/>
+			</line>
+			<textField pattern="dd/MM/yyyy" isBlankWhenNull="true">
+				<reportElement x="449" y="652" width="100" height="15"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VENCIMENTO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="433" y="640" width="111" height="12"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Vencimento]]></text>
+			</staticText>
+			<textField pattern="¤ #,##0.00">
+				<reportElement x="293" y="626" width="111" height="14"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALORTOTAL}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="247" y="612" width="309" height="1"/>
+			</line>
+			<textField pattern="¤ #,##0.00" isBlankWhenNull="true">
+				<reportElement x="443" y="625" width="106" height="15"/>
+				<textElement textAlignment="Right">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VALORPARCELA}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="428" y="613" width="1" height="54"/>
+			</line>
+			<line>
+				<reportElement x="247" y="641" width="181" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="250" y="613" width="93" height="13"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Valor Total do ITBI]]></text>
+			</staticText>
+			<subreport>
+				<reportElement x="247" y="542" width="308" height="69"/>
+				<subreportParameter name="CALCULO_ID">
+					<subreportParameterExpression><![CDATA[$F{CALCULO_ID}.longValue()]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "DAMITBI_subreport1.jasper"]]></subreportExpression>
+			</subreport>
+			<staticText>
+				<reportElement x="433" y="613" width="111" height="12"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Valor da Parcela]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="3" y="148" width="111" height="13"/>
+				<textElement/>
+				<text><![CDATA[Nome da Propriedade]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="329" y="148" width="100" height="13"/>
+				<textElement/>
+				<text><![CDATA[Localização]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="329" y="160" width="217" height="15"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{LOCALIZACAOLOTE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="3" y="160" width="320" height="15"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{NOMEPROPRIEDADE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="3" y="338" width="100" height="13"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Via Contribuinte]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="5" y="781" width="100" height="13"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Via Banco]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="248" y="694" width="306" height="20">
+					<printWhenExpression><![CDATA[$P{HOMOLOGACAO}.booleanValue() == true]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="14" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[br.com.webpublico.enums.tributario.TipoPerfil.getDescricaoHomologacao()]]></textFieldExpression>
+			</textField>
+			<image scaleImage="RealHeight" onErrorType="Blank">
+				<reportElement positionType="Float" x="384" y="726" width="45" height="45"/>
+				<imageExpression><![CDATA[br.com.webpublico.BarCode.generateInputStreamQRCodePng($F{QRCODEPIX}, 350, 350)]]></imageExpression>
+			</image>
+			<textField>
+				<reportElement positionType="Float" x="357" y="770" width="100" height="8">
+					<printWhenExpression><![CDATA[$F{QRCODEPIX} != null]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{MSG_PIX}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

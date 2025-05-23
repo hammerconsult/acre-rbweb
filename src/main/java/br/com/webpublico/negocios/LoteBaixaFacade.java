@@ -3131,6 +3131,7 @@ public class LoteBaixaFacade extends AbstractFacade<LoteBaixa> {
     }
 
     @TransactionAttribute(value = TransactionAttributeType.REQUIRES_NEW)
+    @TransactionTimeout(unit = TimeUnit.HOURS, value = 1)
     public LoteBaixa criarLoteBaixaRBC001(LoteBaixaFacade.ProcessaArquivo processaArquivo,
                                           ArquivoLoteBaixa arquivoLoteBaixa,
                                           LoteBaixaDoArquivo loteBaixaDoArquivo) {
@@ -3154,38 +3155,42 @@ public class LoteBaixaFacade extends AbstractFacade<LoteBaixa> {
     }
 
     private void geraItensDoLote(RegistroRCB001 registroRCB001, LoteBaixa lote) {
-        DAM dam = loteBaixaFacade.recuperaDamPorCodigoBarrasSemDigitoVerificador(registroRCB001.getCodigoBarras());
-        ItemLoteBaixa itemLoteBaixa = new ItemLoteBaixa();
-        itemLoteBaixa.setValorPago(registroRCB001.getValorRecebido());
-        itemLoteBaixa.setCodigoBarrasInformado(CarneUtil.montaLinhaDigitavel(registroRCB001.getCodigoBarras()));
-        itemLoteBaixa.setDamInformado(loteBaixaFacade.retornaDamCodigoBarras(registroRCB001.getCodigoBarras()));
         try {
-            if (registroRCB001.getDataPagamento() != null && !"".equals(registroRCB001.getDataPagamento())) {
-                itemLoteBaixa.setDataPagamento(formatter.parse(registroRCB001.getDataPagamento()));
+            DAM dam = loteBaixaFacade.recuperaDamPorCodigoBarrasSemDigitoVerificador(registroRCB001.getCodigoBarras());
+            ItemLoteBaixa itemLoteBaixa = new ItemLoteBaixa();
+            itemLoteBaixa.setValorPago(registroRCB001.getValorRecebido());
+            itemLoteBaixa.setCodigoBarrasInformado(CarneUtil.montaLinhaDigitavel(registroRCB001.getCodigoBarras()));
+            itemLoteBaixa.setDamInformado(loteBaixaFacade.retornaDamCodigoBarras(registroRCB001.getCodigoBarras()));
+            try {
+                if (registroRCB001.getDataPagamento() != null && !"".equals(registroRCB001.getDataPagamento())) {
+                    itemLoteBaixa.setDataPagamento(formatter.parse(registroRCB001.getDataPagamento()));
+                }
+                if (registroRCB001.getDataCredito() != null && !"".equals(registroRCB001.getDataCredito())) {
+                    itemLoteBaixa.setDataCredito(formatter.parse(registroRCB001.getDataCredito()));
+                }
+            } catch (Exception e) {
+                logger.error("erro ao definir data de pagamento ou credito ", e);
             }
-            if (registroRCB001.getDataCredito() != null && !"".equals(registroRCB001.getDataCredito())) {
-                itemLoteBaixa.setDataCredito(formatter.parse(registroRCB001.getDataCredito()));
-            }
-        } catch (Exception e) {
-            logger.error("erro ao definir data de pagamento ou credito ", e);
-        }
-        itemLoteBaixa.setLoteBaixa(lote);
-        if (dam != null) {
-            itemLoteBaixa.setDam(dam);
-            for (ItemDAM itemDam : dam.getItens()) {
-                ItemLoteBaixaParcela it = new ItemLoteBaixaParcela();
-                it.setItemDam(itemDam);
-                it.setItemLoteBaixa(itemLoteBaixa);
+            itemLoteBaixa.setLoteBaixa(lote);
+            if (dam != null) {
+                itemLoteBaixa.setDam(dam);
+                for (ItemDAM itemDam : dam.getItens()) {
+                    ItemLoteBaixaParcela it = new ItemLoteBaixaParcela();
+                    it.setItemDam(itemDam);
+                    it.setItemLoteBaixa(itemLoteBaixa);
 
-                BigDecimal proporcao = (itemDam.getValorTotal().multiply(CEM))
-                    .divide(itemLoteBaixa.getValorPago(), 6, RoundingMode.HALF_UP);
-                proporcao = proporcao.divide(CEM, 6, RoundingMode.HALF_UP);
-                proporcao = proporcao.multiply(itemLoteBaixa.getValorPago());
-                it.setValorPago(proporcao);
-                itemLoteBaixa.getItemParcelas().add(it);
+                    BigDecimal proporcao = (itemDam.getValorTotal().multiply(CEM))
+                        .divide(itemLoteBaixa.getValorPago(), 6, RoundingMode.HALF_UP);
+                    proporcao = proporcao.divide(CEM, 6, RoundingMode.HALF_UP);
+                    proporcao = proporcao.multiply(itemLoteBaixa.getValorPago());
+                    it.setValorPago(proporcao);
+                    itemLoteBaixa.getItemParcelas().add(it);
+                }
             }
+            lote.getItemLoteBaixa().add(itemLoteBaixa);
+        } catch (Exception e) {
+            logger.error("Erro ao geraItensDoLote: ", e);
         }
-        lote.getItemLoteBaixa().add(itemLoteBaixa);
     }
 
 }

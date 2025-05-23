@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="CertidaoTempoServicoAntigo_subreport2" pageWidth="555" pageHeight="802" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.zoom" value="1.5"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="MATRICULA_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select total_dias,
+replace(replace(frt_extenso_monetario(total_dias), 'REAL'), 'REAIS') as extenso,
+trunc((total_dias/365)) as anos,
+trunc(((total_dias/365 - trunc((total_dias/365)))*365)/30) as meses,
+trunc(((((total_dias/365 - trunc((total_dias/365))))*365)/30 - trunc(((total_dias/365 - trunc((total_dias/365)))*365)/30))*30) as dias
+from (select sum(case
+when (vinculo2.finalVigencia is not null and extract(year from vinculo2.finalVigencia) = extract(year from vinculo2.inicioVigencia)) then
+(to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') -
+to_date(to_char(vinculo2.inicioVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') +1)
+
+when (extract(year from vinculo2.inicioVigencia) = exercicio.ano) then
+(to_date(
+case when extract(year from sysdate) = exercicio.ano then
+   to_char(sysdate, 'dd/MM/yyyy')
+else
+   '31/12/' || cast(exercicio.ano as varchar(255))
+end, 'dd/MM/yyyy') -
+to_date(vinculo2.inicioVigencia) +1)
+
+when (
+(vinculo2.finalVigencia is not null)
+and
+(extract(year from vinculo2.finalVigencia) = exercicio.ano )
+) then
+(to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy') -
+trunc(to_date(to_char(vinculo2.finalVigencia,'dd/MM/yyyy'), 'dd/MM/yyyy'),'YYYY') +1)
+
+when exercicio.ano = extract(year from sysdate) then
+(to_date(sysdate) -
+trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+
+else
+(to_date('31/12/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy') -
+trunc(to_date('01/01/' || cast(exercicio.ano as varchar(255)), 'dd/MM/yyyy'),'YYYY') +1)
+end -
+(coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(vinculo2.finalVigencia,sysdate),faltasjustificadas.fim))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else  trunc(LEAST(coalesce(vinculo2.finalVigencia,sysdate),faltasjustificadas.fim)) end -
+             case when (extract(year from faltasjustificadas.inicio) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else faltasjustificadas.inicio end) + 1)
+        from faltas faltasJustificadas
+        where faltasJustificadas.contratofp_id = contrato.id
+        and faltasJustificadas.tipofalta = 'FALTA_JUSTIFICADA'
+        and exercicio.ano >= extract(year from faltasjustificadas.inicio)
+        and exercicio.ano <= extract(year from faltasjustificadas.fim)),0)  +
+
+coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(vinculo2.finalVigencia,trunc(sysdate)),faltasInjustificadas.fim))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else  trunc(LEAST(coalesce(vinculo2.finalVigencia,trunc(sysdate)),faltasInjustificadas.fim)) end -
+             case when (extract(year from faltasInjustificadas.inicio) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else faltasInjustificadas.inicio end) + 1)
+        from faltas faltasInjustificadas
+        where faltasInjustificadas.contratofp_id = contrato.id
+        and faltasInjustificadas.tipofalta = 'FALTA_INJUSTIFICADA'
+        and exercicio.ano >= extract(year from faltasInjustificadas.inicio)
+        and exercicio.ano <= extract(year from faltasInjustificadas.fim)),0)  +
+
+coalesce((select sum((case when (extract(year from trunc(LEAST(coalesce(vinculo2.finalVigencia,sysdate),afastamento.termino))) > exercicio.ano) then to_date('31/12/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else trunc(LEAST(coalesce(vinculo2.finalVigencia,sysdate),afastamento.termino)) end -
+             case when (extract(year from afastamento.inicio) < exercicio.ano) then to_date('01/01/' || cast(exercicio.ano as varchar(4)), 'dd/MM/yyyy') else afastamento.inicio end) + 1)
+from afastamento afastamento
+inner join tipoafastamento on afastamento.tipoafastamento_id = tipoafastamento.id
+where tipoafastamento.descTempoServicoAposentadoria = 0 and coalesce(tipoafastamento.descontarTempoServicoEfetivo,0) = 1
+  and afastamento.contratofp_id = contrato.id
+  and exercicio.ano >= extract(year from afastamento.inicio)
+  and exercicio.ano <= extract(year from afastamento.termino)),0)))  as total_dias
+
+  from contratofp contrato inner join vinculofp vinculo2 on contrato.id = vinculo2.id
+inner join matriculafp matricula2 on matricula2.id = vinculo2.matriculafp_id
+inner join exercicio on extract(year from vinculo2.inicioVigencia) <= exercicio.ano
+where exercicio.ano  <= coalesce(extract(year from vinculo2.finalvigencia), extract(year from sysdate))  and matricula2.id = $P{MATRICULA_ID})]]>
+	</queryString>
+	<field name="TOTAL_DIAS" class="java.math.BigDecimal"/>
+	<field name="EXTENSO" class="java.lang.String"/>
+	<field name="ANOS" class="java.math.BigDecimal"/>
+	<field name="MESES" class="java.math.BigDecimal"/>
+	<field name="DIAS" class="java.math.BigDecimal"/>
+	<detail>
+		<band height="39" splitType="Stretch">
+			<textField>
+				<reportElement x="13" y="0" width="526" height="38"/>
+				<textElement textAlignment="Justified" verticalAlignment="Middle">
+					<font fontName="Arial"/>
+				</textElement>
+				<textFieldExpression><![CDATA["CERTIFICO, em face do apurado que, no período acima referido, o interessado conta, de efetivo exercício, o tempo líquido de " + $F{TOTAL_DIAS}+ " ( " + $F{EXTENSO} + ") DIA(S), ou seja, " + $F{ANOS} + " ANO(S), " + $F{MESES} + " MES(ES) E " + $F{DIAS} + "DIA(S)."]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="0" width="1" height="38"/>
+			</line>
+			<line>
+				<reportElement x="554" y="0" width="1" height="38"/>
+			</line>
+			<line>
+				<reportElement x="0" y="38" width="555" height="1"/>
+			</line>
+		</band>
+	</detail>
+</jasperReport>

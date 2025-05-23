@@ -684,17 +684,20 @@ public class PessoaTributarioControlador extends PrettyControlador<Pessoa> imple
 
     private void validarEndereco() {
         ValidacaoException ve = new ValidacaoException();
-        if (endereco.getCep() == null || "".equals(endereco.getCep().trim())) {
+        if (endereco.getCep() == null || endereco.getCep().trim().isEmpty()) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo CEP é obrigatório.");
         }
-        if (endereco.getLocalidade() == null || "".equals(endereco.getLocalidade().trim())) {
+        if (endereco.getLocalidade() == null || endereco.getLocalidade().trim().isEmpty()) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Cidade é obrigatório.");
         }
-        if (endereco.getBairro() == null || "".equals(endereco.getBairro().trim())) {
+        if (endereco.getBairro() == null || endereco.getBairro().trim().isEmpty()) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Bairro é obrigatório.");
         }
-        if (endereco.getLogradouro() == null || "".equals(endereco.getLogradouro().trim())) {
+        if (endereco.getLogradouro() == null || endereco.getLogradouro().trim().isEmpty()) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Logradouro é obrigatório.");
+        }
+        if (endereco.getNumero() == null || endereco.getNumero().trim().isEmpty()) {
+            ve.adicionarMensagemDeCampoObrigatorio("O campo número é obrigatório.");
         }
         ve.lancarException();
         if (!selecionado.getEnderecos().contains(endereco)) {
@@ -906,7 +909,8 @@ public class PessoaTributarioControlador extends PrettyControlador<Pessoa> imple
     }
 
     public List<SelectItem> getSexo() {
-        List<SelectItem> toReturn = new ArrayList<SelectItem>();
+        List<SelectItem> toReturn = Lists.newArrayList();
+        toReturn.add(new SelectItem(null, ""));
         for (Sexo object : Sexo.values()) {
             toReturn.add(new SelectItem(object, object.getDescricao()));
         }
@@ -1527,26 +1531,19 @@ public class PessoaTributarioControlador extends PrettyControlador<Pessoa> imple
 
     public void validarCampos() {
         ValidacaoException ve = new ValidacaoException();
-        if (!Util.valida_CpfCnpj(String.valueOf(selecionado.getCpf_Cnpj()))) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("CPF/CNPJ inválido!");
-        } else {
-            if (selecionado instanceof PessoaFisica) {
-                if (isOperacaoNovo() && pessoaFacade.hasOutraPessoaComMesmoCpf((PessoaFisica) selecionado, false)) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida(montarDescricaoValidacaoCpf());
-                }
-            } else if (selecionado instanceof PessoaJuridica) {
-                if (isOperacaoNovo() && pessoaFacade.hasOutraPessoaComMesmoCnpj((PessoaJuridica) selecionado, false)) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida(montarDescricaoValidacaoCnpj());
-                }
-                if (!((PessoaJuridica) selecionado).getSociedadePessoaJuridica().isEmpty()) {
-                    if (getTotalSocios().compareTo(CEM) != 0) {
-                        ve.adicionarMensagemDeOperacaoNaoPermitida("A proporção total dos sócios deve ser equivalente a 100%.");
-                    }
+        if (selecionado instanceof PessoaFisica) {
+            if (isOperacaoNovo() && pessoaFacade.hasOutraPessoaComMesmoCpf((PessoaFisica) selecionado, false)) {
+                ve.adicionarMensagemDeOperacaoNaoPermitida(montarDescricaoValidacaoCpf());
+            }
+        } else if (selecionado instanceof PessoaJuridica) {
+            if (isOperacaoNovo() && pessoaFacade.hasOutraPessoaComMesmoCnpj((PessoaJuridica) selecionado, false)) {
+                ve.adicionarMensagemDeOperacaoNaoPermitida(montarDescricaoValidacaoCnpj());
+            }
+            if (!((PessoaJuridica) selecionado).getSociedadePessoaJuridica().isEmpty()) {
+                if (getTotalSocios().compareTo(CEM) != 0) {
+                    ve.adicionarMensagemDeOperacaoNaoPermitida("A proporção total dos sócios deve ser equivalente a 100%.");
                 }
             }
-        }
-        if (selecionado instanceof PessoaFisica && (rg.getOrgaoEmissao() == null || rg.getOrgaoEmissao().isEmpty())) {
-            ve.adicionarMensagemDeCampoObrigatorio("O campo Órgão Emissor é obrigatório!");
         }
         if (operacaoRBTrans && imagemFoto == null) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("Selecione uma imagem!");

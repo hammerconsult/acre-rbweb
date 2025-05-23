@@ -41,12 +41,14 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Stateful
 public class ComunicaSofPlanFacade implements Serializable {
 
+    private static final String QUEUE_STACK_ENVIO_SOFTPLAN = "queueStackEnvioSoftplan";
     private static final String QUEUE_ENVIAR_SOFTPLAN_AUTOMATICO = "queueEnviarSoftPlanAutomatico";
     private static final String QUEUE_ENVIAR_SOFTPLAN_MANUAL = "queueEnviarSoftPlanManual";
     public static final Locale localeBrasil = new Locale("pt_BR_", "pt", "BR");
@@ -253,7 +255,7 @@ public class ComunicaSofPlanFacade implements Serializable {
                 AlteracaoParcelamentoSoftPlanDTO alteracaoParcelamentoSoftPlan =
                     new AlteracaoParcelamentoSoftPlanDTO(certidao.getId(), parcelamento.getId());
 
-                enviarCertidoes(Lists.newArrayList(alteracaoParcelamentoSoftPlan), false);
+                enviarCertidoes(Lists.newArrayList(alteracaoParcelamentoSoftPlan), true);
             } catch (Exception e) {
                 logger.error("Erro no método alterarParcelamento, na alteração de situação do parcelamento. {}", e.getMessage());
                 logger.debug("Detalhes do erro no método alterarParcelamento, na alteração de situação do parcelamento.", e);
@@ -279,7 +281,7 @@ public class ComunicaSofPlanFacade implements Serializable {
             certidao = itensDoParcelamento.get(0).getCertidao();
             InclusaoParcelamentoSoftPlanDTO inclusaoParcelamentoSoftPlan =
                 new InclusaoParcelamentoSoftPlanDTO(certidao.getId(), parcelamento.getId());
-            enviarCertidoes(Lists.newArrayList(inclusaoParcelamentoSoftPlan), false);
+            enviarCertidoes(Lists.newArrayList(inclusaoParcelamentoSoftPlan), true);
         } catch (Exception e) {
             logger.error("Erro no método comunicarParcelamento. {}", e.getMessage());
             logger.debug("Detalhe do erro no método comunicarParcelamento. {}", e);
@@ -644,6 +646,16 @@ public class ComunicaSofPlanFacade implements Serializable {
     }
 
     private void enviarRabbitMq(ServicoSoftplanDTO servico, boolean envioAutomatico) throws java.io.IOException {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        String stackWebpublico = IntStream.range(0, stackTrace.length)
+            .mapToObj(i -> stackTrace[stackTrace.length - 1 - i])
+            .filter((stackTraceElement) -> stackTraceElement.getClassName().contains("br.com.webpublico"))
+            .map((stackTraceElement -> stackTraceElement.getClassName() + "." + stackTraceElement.getMethodName()))
+            .reduce((a, b) -> a + " >> " + b)
+            .orElse("");
+
+        getRabbitMQService().basicPublish(QUEUE_STACK_ENVIO_SOFTPLAN, getObjectMapper().writeValueAsBytes(stackWebpublico));
+
         getRabbitMQService().basicPublish(envioAutomatico ? QUEUE_ENVIAR_SOFTPLAN_AUTOMATICO : QUEUE_ENVIAR_SOFTPLAN_MANUAL,
             getObjectMapper().writeValueAsBytes(servico));
     }

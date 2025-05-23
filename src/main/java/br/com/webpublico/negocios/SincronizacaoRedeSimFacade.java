@@ -66,8 +66,7 @@ public class SincronizacaoRedeSimFacade {
             "  inner join pessoa p on p.id = pj.id " +
             "  inner join enderecocorreio ec on ec.id = p.enderecoprincipal_id " +
             "  left join cadastroeconomico ce on ce.pessoa_id = pj.id " +
-            "where p.situacaocadastralpessoa = :ativo " +
-            "  and valida_cpf_cnpj(pj.cnpj) = 'S' " +
+            "where valida_cpf_cnpj(pj.cnpj) = 'S' " +
             "  and lower(trim(ec.localidade)) = lower(trim(:localidade)) " +
             "  and (select situacao.SITUACAOCADASTRAL " +
             "       from SITUACAOCADASTROECONOMICO situacao " +
@@ -88,7 +87,6 @@ public class SincronizacaoRedeSimFacade {
             sql += " and trunc(pj.ultimaIntegracaoRedeSim) <= :dataFinal ";
         }
         Query query = em.createNativeQuery(sql);
-        query.setParameter("ativo", SituacaoCadastralPessoa.ATIVO.name());
         query.setParameter("situacaoCadastro", Lists.newArrayList(SituacaoCadastralCadastroEconomico.ATIVA_REGULAR.name(),
             SituacaoCadastralCadastroEconomico.ATIVA_NAO_REGULAR.name(), SituacaoCadastralCadastroEconomico.INAPTA.name()));
         query.setParameter("localidade", configuracaoTributario.getCidade().getNome());

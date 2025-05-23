@@ -27,8 +27,6 @@ public class RequisicaoCompraEstornoFacade extends AbstractFacade<RequisicaoComp
     @EJB
     private SingletonGeradorCodigo singletonGeradorCodigo;
     @EJB
-    private ContratoFacade contratoFacade;
-    @EJB
     private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
 
     public RequisicaoCompraEstornoFacade() {
@@ -38,7 +36,7 @@ public class RequisicaoCompraEstornoFacade extends AbstractFacade<RequisicaoComp
     @Override
     public RequisicaoCompraEstorno recuperar(Object id) {
         RequisicaoCompraEstorno rce = em.find(RequisicaoCompraEstorno.class, id);
-        Hibernate.initialize(rce.getItensRequisicaoCompraEstorno());
+        Hibernate.initialize(rce.getItens());
         return super.recuperar(id);
     }
 
@@ -53,7 +51,7 @@ public class RequisicaoCompraEstornoFacade extends AbstractFacade<RequisicaoComp
     private void movimentarSituacaoRequisicaoCompra(RequisicaoCompraEstorno entity) {
         BigDecimal quantidadeTotalRequisicao = requisicaoDeCompraFacade.buscarQuantidadeTotal(entity.getRequisicaoDeCompra());
         BigDecimal quantidadeTotalEstornada = buscarQuantidadeTotal(entity.getRequisicaoDeCompra());
-        for (ItemRequisicaoCompraEstorno itemEstorno : entity.getItensRequisicaoCompraEstorno()) {
+        for (ItemRequisicaoCompraEstorno itemEstorno : entity.getItens()) {
             quantidadeTotalEstornada = quantidadeTotalEstornada.add(itemEstorno.getQuantidade());
         }
         boolean hasQuantidadeRestante = quantidadeTotalRequisicao.compareTo(quantidadeTotalEstornada) != 0;
@@ -61,25 +59,12 @@ public class RequisicaoCompraEstornoFacade extends AbstractFacade<RequisicaoComp
         requisicaoDeCompraFacade.movimentarSituacaoRequisicaoCompra(entity.getRequisicaoDeCompra(), situacao);
     }
 
-    public BigDecimal buscarQuantidadeEstornadaRequisicaoContrato(ItemRequisicaoCompraExecucao itemReqExec) {
+    public BigDecimal buscarQuantidadeEstornadaRequisicao(ItemRequisicaoCompraExecucao itemReqExec) {
         String sql = " select coalesce(sum(item.quantidade), 0) as quantidade " +
             "           from itemrequisicaocompraest item " +
             "           where item.itemrequisicaocompraexec_id = :idItemReqExecucao ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemReqExecucao", itemReqExec.getId());
-        List<BigDecimal> resultado = q.getResultList();
-        if (resultado == null || resultado.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        return resultado.get(0);
-    }
-
-    public BigDecimal buscarQuantidadeEstornadaRequisicao(ItemRequisicaoDeCompra itemRequisicao) {
-        String sql = "select coalesce(sum(item.quantidade), 0) as quantidade " +
-            "           from itemrequisicaodecompra item " +
-            "           where item.id = :idItemReq ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idItemReq", itemRequisicao.getId());
         List<BigDecimal> resultado = q.getResultList();
         if (resultado == null || resultado.isEmpty()) {
             return BigDecimal.ZERO;
@@ -101,12 +86,11 @@ public class RequisicaoCompraEstornoFacade extends AbstractFacade<RequisicaoComp
         return BigDecimal.ZERO;
     }
 
-    public BigDecimal getValorEstornado(ExecucaoContratoItem item) {
+    public BigDecimal getValorEstornadoRequisicaoContrato(ExecucaoContratoItem item) {
         String sql =
-            " select coalesce(sum(est.quantidade * item.valorunitario), 0) as valortotal " +
-                " from ITEMREQUISICAOCOMPRAEST est " +
+            " select coalesce(sum(est.quantidade * irce.valorunitario), 0) as valortotal " +
+                " from itemrequisicaocompraest est " +
                 "   inner join itemrequisicaocompraexec irce on irce.id = est.itemRequisicaoCompraExec_id     " +
-                "   inner join ItemRequisicaoDeCompra item on item.id = irce.itemRequisicaoCompra_id " +
                 " where irce.execucaocontratoitem_id = :idItemExecucao ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemExecucao", item.getId());
@@ -124,8 +108,8 @@ public class RequisicaoCompraEstornoFacade extends AbstractFacade<RequisicaoComp
         try {
             List<RequisicaoCompraEstorno> resultado = q.getResultList();
             for (RequisicaoCompraEstorno requisicaoCompraEstorno : resultado) {
-                Hibernate.initialize(requisicaoCompraEstorno.getItensRequisicaoCompraEstorno());
-                Collections.sort(requisicaoCompraEstorno.getItensRequisicaoCompraEstorno());
+                Hibernate.initialize(requisicaoCompraEstorno.getItens());
+                Collections.sort(requisicaoCompraEstorno.getItens());
             }
             return resultado;
         } catch (NoResultException e) {
@@ -144,10 +128,6 @@ public class RequisicaoCompraEstornoFacade extends AbstractFacade<RequisicaoComp
 
     public SistemaFacade getSistemaFacade() {
         return sistemaFacade;
-    }
-
-    public ContratoFacade getContratoFacade() {
-        return contratoFacade;
     }
 
     public HierarquiaOrganizacionalFacade getHierarquiaOrganizacionalFacade() {

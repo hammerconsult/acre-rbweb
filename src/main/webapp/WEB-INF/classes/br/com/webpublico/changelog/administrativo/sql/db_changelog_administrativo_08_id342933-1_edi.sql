@@ -1,0 +1,31 @@
+update AJUSTECONTRATODADOSCAD obj
+set obj.TIPOAJUSTE    = 'CONTRATO_ALTERACAO',
+    ajustecontrato_id = (select aj.id
+                         from AJUSTECONTRATO aj
+                         where aj.AJUSTEDADOSCADASTRAIS_ID = obj.id);
+
+insert into AJUSTECONTRATODADOSCAD (ID, EXERCICIO_ID, TIPOAJUSTE, NUMERO, DATAAPROVACAO, DATADEFERIMENTO,
+                                    INICIOVIGENCIA, TERMINOVIGENCIA, TERMINOVIGENCIAATUAL, INICIOEXECUCAO,
+                                    TERMINOEXECUCAO, TERMINOEXECUCAOATUAL, DATAASSINATURA, OBJETO, OBSERVACAO,
+                                    SITUACAOCONTRATO, AJUSTECONTRATO_ID)
+select HIBERNATE_SEQUENCE.nextval,
+       c.EXERCICIOCONTRATO_ID,
+       'CONTRATO_ORIGINAL',
+       c.NUMEROTERMO,
+       c.DATAAPROVACAO,
+       c.DATADEFERIMENTO,
+       c.INICIOVIGENCIA,
+       c.TERMINOVIGENCIA,
+       c.TERMINOVIGENCIAATUAL,
+       c.INICIOEXECUCAO,
+       c.TERMINOEXECUCAO,
+       c.TERMINOEXECUCAOATUAL,
+       c.DATAASSINATURA,
+       c.OBJETO,
+       c.OBSERVACOES,
+       c.SITUACAOCONTRATO,
+       aj.id
+from contrato c
+         inner join ajustecontrato aj on aj.CONTRATO_ID = c.id;
+
+alter table AJUSTECONTRATO drop column AJUSTEDADOSCADASTRAIS_ID;

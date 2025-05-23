@@ -730,6 +730,20 @@ public class PaginaPortalControlador extends PrettyControlador<PaginaPrefeituraP
         private Object valorPadrao;
         private TipoMultiSelect tipoMultiSelect;
 
+        public FieldPesquisavelPortal() {
+        }
+
+        public FieldPesquisavelPortal(String descricao, String columnName, String columnValue, TipoCampo tipo, Operador operacaoPadrao, String tipoEnum, Object valorPadrao, TipoMultiSelect tipoMultiSelect) {
+            this.descricao = descricao;
+            this.columnName = columnName;
+            this.columnValue = columnValue;
+            this.tipo = tipo;
+            this.operacaoPadrao = operacaoPadrao;
+            this.tipoEnum = tipoEnum;
+            this.valorPadrao = valorPadrao;
+            this.tipoMultiSelect = tipoMultiSelect;
+        }
+
         public String getDescricao() {
             return descricao;
         }
@@ -753,7 +767,6 @@ public class PaginaPortalControlador extends PrettyControlador<PaginaPrefeituraP
         public void setTipo(TipoCampo tipo) {
             this.tipo = tipo;
         }
-
 
         public Operador getOperacaoPadrao() {
             return operacaoPadrao;
@@ -1086,12 +1099,14 @@ public class PaginaPortalControlador extends PrettyControlador<PaginaPrefeituraP
                 consultaPortal.setConsulta(getSelectAnexoGeral());
                 consultaPortal.setCount(getCountAnexoGeral());
                 atualizarCamposTabelaAnexoGeral();
+                atualizarCamposPesquisaveisAnexoGeral();
             } else {
                 selecionado.setTipoPaginaPortal(null);
                 selecionado.setTipoComponente(null);
                 consultaPortal.setConsulta("");
                 consultaPortal.setCount("");
                 consultaPortal.getFields().clear();
+                consultaPortal.getPesquisaveis().clear();
             }
         } catch (ValidacaoException ve) {
             selecionado.setAnexoGeral(Boolean.FALSE);
@@ -1117,6 +1132,12 @@ public class PaginaPortalControlador extends PrettyControlador<PaginaPrefeituraP
         consultaPortal.getFields().add(new FieldConsultaPortal(4, "Unidade", "UNIDADE", "UNIDADE", TipoAlinhamento.ESQUERDA, TipoCampo.STRING, null));
         consultaPortal.getFields().add(new FieldConsultaPortal(5, "Observações", "OBSERVACOES", "OBSERVACOES", TipoAlinhamento.ESQUERDA, TipoCampo.STRING, null));
         consultaPortal.getFields().add(new FieldConsultaPortal(6, "Anexo", "IDARQUIVO", "IDARQUIVO", TipoAlinhamento.CENTRO, TipoCampo.ARQUIVO, null));
+    }
+
+    private void atualizarCamposPesquisaveisAnexoGeral() {
+        consultaPortal.getPesquisaveis().add(new FieldPesquisavelPortal("Nome", "NOME", "NOME", TipoCampo.STRING, Operador.LIKE, null, null, null));
+        consultaPortal.getPesquisaveis().add(new FieldPesquisavelPortal("Ano", "ANO", "ANO", TipoCampo.INTEGER, Operador.IGUAL, null, null, null));
+        consultaPortal.getPesquisaveis().add(new FieldPesquisavelPortal("Mês", "MES", "MES", TipoCampo.ENUM, Operador.IGUAL, "Mes", null, null));
     }
 
     private String getSelectAnexoGeral() {

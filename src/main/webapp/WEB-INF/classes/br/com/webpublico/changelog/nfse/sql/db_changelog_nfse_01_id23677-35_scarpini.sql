@@ -1,0 +1,150 @@
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'NFS-E',
+                         NULL, -126757915, 100);
+
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'ASSUNTO (PERGUNTAS E RESPOSTAS)',
+                         '/tributario/nfse/perguntasrespostas/assunto/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 1);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'PERGUNTAS E RESPOSTAS',
+                         '/tributario/nfse/perguntasrespostas/perguntas-respostas/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 2);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'TIPO DE LEGISLAÇÃO',
+                         '/tributario/nfse/tipo-legislacao/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 3);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'LEGISLAÇÃO',
+                         '/tributario/nfse/legislacao/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 4);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'TIPO DE MANUAL',
+                         '/tributario/nfse/tipomanual/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 5);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'MANUAL',
+                         '/tributario/nfse/manual/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 6);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'TEMPLATES',
+                         '/tributario/nfse/template-nfse/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 7);
+
+INSERT INTO menu VALUES (HIBERNATE_SEQUENCE.nextval, 'USUÁRIOS',
+                         '/tributario/nfse/usuario/lista.xhtml', (select ID from menu where LABEL = 'NFS-E'), 8);
+
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > ASSUNTO (PERGUNTAS E RESPOSTAS) > LISTA',
+     '/tributario/nfse/perguntasrespostas/assunto/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > ASSUNTO (PERGUNTAS E RESPOSTAS) > EDITA',
+     '/tributario/nfse/perguntasrespostas/assunto/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > ASSUNTO (PERGUNTAS E RESPOSTAS) > VISUALIZAR',
+     '/tributario/nfse/perguntasrespostas/assunto/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > PERGUNTAS E RESPOSTAS > LISTAR',
+     '/tributario/nfse/perguntasrespostas/perguntas-respostas/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > PERGUNTAS E RESPOSTAS > EDITA',
+     '/tributario/nfse/perguntasrespostas/perguntas-respostas/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > PERGUNTAS E RESPOSTAS > VISUALIZAR',
+     '/tributario/nfse/perguntasrespostas/perguntas-respostas/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TIPO DE LEGISLAÇÃO > LISTAR',
+     '/tributario/nfse/tipo-legislacao/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TIPO DE LEGISLAÇÃO > EDITA',
+     '/tributario/nfse/tipo-legislacao/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TIPO DE LEGISLAÇÃO > VISUALIZAR',
+     '/tributario/nfse/tipo-legislacao/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > LEGISLAÇÃO > LISTAR',
+     '/tributario/nfse/legislacao/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > LEGISLAÇÃO > EDITA',
+     '/tributario/nfse/legislacao/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > LEGISLAÇÃO > VISUALIZAR',
+     '/tributario/nfse/legislacao/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TIPO DE MANUAL > LISTAR',
+     '/tributario/nfse/tipomanual/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TIPO DE MANUAL > EDITA',
+     '/tributario/nfse/tipomanual/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TIPO DE MANUAL > VISUALIZAR',
+     '/tributario/nfse/tipomanual/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > MANUAL > LISTAR',
+     '/tributario/nfse/manual/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > MANUAL > EDITA',
+     '/tributario/nfse/manual/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > MANUAL > VISUALIZAR',
+     '/tributario/nfse/manual/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TEMPLATE > LISTAR',
+     '/tributario/nfse/template-nfse/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TEMPLATE > EDITA',
+     '/tributario/nfse/template-nfse/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > TEMPLATE > VISUALIZAR',
+     '/tributario/nfse/template-nfse/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > USUÁRIOS > LISTAR',
+     '/tributario/nfse/usuario/lista.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > USUÁRIOS > EDITA',
+     '/tributario/nfse/usuario/edita.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+INSERT INTO RECURSOSISTEMA VALUES
+    (HIBERNATE_SEQUENCE.nextval, 'NFS-E > USUÁRIOS > VISUALIZAR',
+     '/tributario/nfse/usuario/visualizar.xhtml', 0, 'TRIBUTARIO');
+INSERT INTO GRUPORECURSOSISTEMA VALUES (HIBERNATE_SEQUENCE.currval, 622038399);
+
+

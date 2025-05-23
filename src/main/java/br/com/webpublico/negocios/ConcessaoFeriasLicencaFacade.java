@@ -22,10 +22,10 @@ import br.com.webpublico.enums.rh.TipoInformacaoEnvioRBPonto;
 import br.com.webpublico.enums.tributario.TipoWebService;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.negocios.rh.cadastrofuncional.ReprocessamentoSituacaoFuncionalFacade;
+import br.com.webpublico.negocios.rh.configuracao.ConfiguracaoRHFacade;
 import br.com.webpublico.negocios.rh.configuracao.ConfiguracaoWSRHFacade;
 import br.com.webpublico.negocios.rh.integracaoponto.AtualizacaoDadosRBPontoFacade;
 import br.com.webpublico.negocios.rh.integracaoponto.EnvioDadosRBPontoFacade;
-import br.com.webpublico.negocios.rh.configuracao.ConfiguracaoRHFacade;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.util.Util;
@@ -37,8 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
-import javax.faces.application.FacesMessage;
-import javax.faces.context.FacesContext;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
@@ -153,12 +151,12 @@ public class ConcessaoFeriasLicencaFacade extends AbstractFacade<ConcessaoFerias
 
             em.merge(entity.getPeriodoAquisitivoFL());
 
-//            if (validaSaldo(entity)) {
             if (arquivo.getId() != null && arquivoFacade.verificaSeExisteArquivo(arquivo)) {
                 if (entity.getArquivo() == null) {
                     arquivoFacade.removerArquivo(arquivo);
                 }
             }
+
             if (fileUploadEvent != null) {
                 entity.setArquivo(arquivo);
                 arquivoFacade.salvar(arquivo, fileUploadEvent);
@@ -413,70 +411,11 @@ public class ConcessaoFeriasLicencaFacade extends AbstractFacade<ConcessaoFerias
         }
     }
 
-    private void feriasParcialmenteComAbono(ConcessaoFeriasLicenca cfl, Long diferenca) {
-        if (cfl.getPeriodoAquisitivoFL().getSaldoDeDireito() > diferenca && cfl.getDiasAbonoPecuniario() > 0) {
-            cfl.getPeriodoAquisitivoFL().setSaldo(cfl.getPeriodoAquisitivoFL().getSaldo() - diferenca.intValue() - cfl.getDiasAbonoPecuniario());
-            cfl.getPeriodoAquisitivoFL().setStatus(StatusPeriodoAquisitivo.PARCIAL);
-            PeriodoAquisitivoFL fl = cfl.getPeriodoAquisitivoFL();
-            if (validaSaldo(cfl)) {
-                em.merge(fl);
-            } else {
-                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_WARN, "Atenção", "Não é possível conceder férias a um funcionário que já gozou deste benefício no mesmo período aquisitivo"));
-            }
-
-        }
-    }
-
     private Boolean validaSaldo(ConcessaoFeriasLicenca concessao) {
         if (concessao.getPeriodoAquisitivoFL().getSaldo() < 0) {
             return false;
         } else {
             return true;
-        }
-    }
-
-    private void feriasParcialmenteSemAbono(ConcessaoFeriasLicenca cfl, Long diferenca) {
-        if (cfl.getPeriodoAquisitivoFL().getSaldoDeDireito() > diferenca && cfl.getDiasAbonoPecuniario() == 0) {
-            cfl.getPeriodoAquisitivoFL().setSaldo(((cfl.getPeriodoAquisitivoFL().getSaldo() - diferenca.intValue())));
-            cfl.getPeriodoAquisitivoFL().setStatus(StatusPeriodoAquisitivo.PARCIAL);
-            PeriodoAquisitivoFL fl = cfl.getPeriodoAquisitivoFL();
-            //System.out.println(cfl.getPeriodoAquisitivoFL().getSaldo());
-            if (validaSaldo(cfl)) {
-                em.merge(fl);
-            } else {
-                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_WARN, "Atenção", "Não é possível conceder férias a um funcionário que já gozou deste benefício no mesmo período aquisitivo"));
-            }
-
-        }
-    }
-
-    private void feriasIntegralmenteComAbono(ConcessaoFeriasLicenca cfl, Long diferenca) {
-        if ((cfl.getPeriodoAquisitivoFL().getSaldoDeDireito() + cfl.getDiasAbonoPecuniario()) == diferenca) {
-            cfl.getPeriodoAquisitivoFL().setSaldo(0);
-            cfl.getPeriodoAquisitivoFL().setStatus(StatusPeriodoAquisitivo.CONCEDIDO);
-            PeriodoAquisitivoFL fl = cfl.getPeriodoAquisitivoFL();
-            //System.out.println(cfl.getPeriodoAquisitivoFL().getSaldo());
-            if (validaSaldo(cfl)) {
-                em.merge(fl);
-            } else {
-                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_WARN, "Atenção", "Não é possível conceder férias a um funcionário que já gozou deste benefício no mesmo período aquisitivo"));
-            }
-
-        }
-    }
-
-    private void feriasIntegralmenteSemAbono(ConcessaoFeriasLicenca cfl, Long diferenca) {
-        if (cfl.getPeriodoAquisitivoFL().getSaldoDeDireito() == diferenca.intValue() && cfl.getDiasAbonoPecuniario() == 0) {
-            cfl.getPeriodoAquisitivoFL().setSaldo(0);
-            cfl.getPeriodoAquisitivoFL().setStatus(StatusPeriodoAquisitivo.CONCEDIDO);
-            PeriodoAquisitivoFL fl = cfl.getPeriodoAquisitivoFL();
-            //System.out.println(cfl.getPeriodoAquisitivoFL().getSaldo());
-            if (validaSaldo(cfl)) {
-                em.merge(fl);
-            } else {
-                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_WARN, "Atenção", "Não é possível conceder férias a um funcionário que já gozou deste benefício no mesmo período aquisitivo"));
-            }
-
         }
     }
 

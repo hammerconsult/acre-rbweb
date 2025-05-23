@@ -1,0 +1,1 @@
+update RelatoriosItemDemonst set grupos = 1 where grupos is null

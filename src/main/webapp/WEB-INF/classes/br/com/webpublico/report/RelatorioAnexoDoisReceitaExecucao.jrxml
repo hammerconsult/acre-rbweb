@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelatorioAnexoDoisReceitaExecucao" pageWidth="842" pageHeight="595" orientation="Landscape" whenNoDataType="NoDataSection" columnWidth="672" leftMargin="85" rightMargin="85" topMargin="70" bottomMargin="70" isFloatColumnFooter="true">
+	<property name="ireport.zoom" value="1.2100000000000133"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="EXERCICIO_ID" class="java.lang.Long"/>
+	<parameter name="ANO_EXERCICIO" class="java.lang.String"/>
+	<parameter name="MUNICIPIO" class="java.lang.String"/>
+	<parameter name="IMAGEM" class="java.lang.String"/>
+	<parameter name="USER" class="java.lang.String"/>
+	<parameter name="SQL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" "]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FILTRO_RELATORIO" class="java.lang.String"/>
+	<parameter name="DATAINICIAL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DATAFINAL" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FILTROS" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT
+     CONTA_CODIGO,
+     TRIM(CONTA_DESCRICAO) AS CONTA_DESCRICAO,
+     SUM(COALESCE(RECEITA_VALOR_REP, 0)) AS RECEITA_VALOR_REP,
+     NIVEL
+FROM
+(WITH FILHO(ID_CONTA,
+            CONTA_SUP,
+            CONTA_CODIGO,
+            CONTA_DESCRICAO,
+            ORG_CODIGO,
+            ORG_DESCRICAO,
+            RECEITA_ID,
+            RECEITA_LOA,
+            RECEITA_ENTIDADE,
+            RECEITA_VALOR_REP) AS
+             ( SELECT CONTAS.ID,
+               CONTAS.SUPERIOR_ID,
+               CONTAS.CODIGO,
+               CONTAS.DESCRICAO,
+               CONTAS.ORG_CODIGO,
+               CONTAS.ORG_DESCRICAO,
+               CONTAS.REC_ID,
+               CONTAS.LOA_ID,
+               CONTAS.ENTIDADE_ID,
+               SUM(CONTAS.VALOR) AS VALOR
+               FROM
+               (SELECT C.ID,
+               C.SUPERIOR_ID,
+               C.CODIGO,
+               C.DESCRICAO,
+               VWORG.CODIGO AS ORG_CODIGO,
+               VWORG.DESCRICAO AS ORG_DESCRICAO,
+               RECEITA.ID AS REC_ID,
+               RECEITA.LOA_ID,
+               RECEITA.ENTIDADE_ID,
+               SUM(LANC.VALOR) AS VALOR
+               FROM CONTA C
+               INNER JOIN RECEITALOA RECEITA ON RECEITA.CONTADERECEITA_ID = C.ID
+               INNER JOIN LANCAMENTORECEITAORC LANC ON LANC.RECEITALOA_ID = RECEITA.ID
+               INNER JOIN LOA LO ON LO.ID = RECEITA.LOA_ID
+               INNER JOIN LDO LD ON LD.ID = LO.LDO_ID
+               INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = RECEITA.ENTIDADE_ID AND LANC.DATALANCAMENTO BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, LANC.DATALANCAMENTO)
+               INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND LANC.DATALANCAMENTO BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, LANC.DATALANCAMENTO)
+               WHERE LANC.DATALANCAMENTO BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+	    $P!{SQL}
+               GROUP BY C.ID,
+               C.SUPERIOR_ID,
+               C.CODIGO,
+               C.DESCRICAO,
+               VWORG.CODIGO,
+               VWORG.DESCRICAO,
+               RECEITA.ID,
+               RECEITA.LOA_ID,
+               RECEITA.ENTIDADE_ID
+          UNION ALL
+               SELECT
+               C.ID,
+               C.SUPERIOR_ID,
+               C.CODIGO,
+               C.DESCRICAO,
+               VWORG.CODIGO AS ORG_CODIGO,
+               VWORG.DESCRICAO AS ORG_DESCRICAO,
+               RECEITA.ID AS REC_ID,
+               RECEITA.LOA_ID,
+               RECEITA.ENTIDADE_ID,
+               SUM(RLEST.VALOR) * -1 AS VALOR
+               FROM CONTA C
+               INNER JOIN RECEITALOA RECEITA ON RECEITA.CONTADERECEITA_ID = C.ID
+               INNER JOIN RECEITAORCESTORNO RLEST ON  RECEITA.ID = RLEST.RECEITALOA_ID
+               INNER JOIN VWHIERARQUIAORCAMENTARIA VW ON VW.SUBORDINADA_ID = RECEITA.ENTIDADE_ID AND RLEST.DATAESTORNO BETWEEN VW.INICIOVIGENCIA AND COALESCE(VW.FIMVIGENCIA, RLEST.DATAESTORNO)
+               INNER JOIN VWHIERARQUIAORCAMENTARIA VWORG ON VWORG.SUBORDINADA_ID = VW.SUPERIOR_ID AND RLEST.DATAESTORNO BETWEEN VWORG.INICIOVIGENCIA AND COALESCE(VWORG.FIMVIGENCIA, RLEST.DATAESTORNO)
+               WHERE RLEST.DATAESTORNO BETWEEN TO_DATE($P{DATAINICIAL}, 'DD/MM/YYYY') AND TO_DATE($P{DATAFINAL}, 'DD/MM/YYYY')
+	    $P!{SQL}
+               GROUP BY C.ID,
+               C.SUPERIOR_ID,
+               C.CODIGO,
+               C.DESCRICAO,
+               VWORG.CODIGO,
+               VWORG.DESCRICAO,
+               RECEITA.ID,
+               RECEITA.LOA_ID,
+               RECEITA.ENTIDADE_ID
+               ) CONTAS
+               GROUP BY
+               CONTAS.ID,
+               CONTAS.SUPERIOR_ID,
+               CONTAS.CODIGO,
+               CONTAS.DESCRICAO,
+               CONTAS.ORG_CODIGO,
+               CONTAS.ORG_DESCRICAO,
+               CONTAS.REC_ID,
+               CONTAS.LOA_ID,
+               CONTAS.ENTIDADE_ID
+          UNION ALL
+               SELECT SUP.ID,
+               SUP.SUPERIOR_ID,
+               SUP.CODIGO,
+               SUP.DESCRICAO,F.ORG_CODIGO,F.ORG_DESCRICAO,RECEITA.ID,RECEITA.LOA_ID,COALESCE(RECEITA.ENTIDADE_ID, F.RECEITA_ENTIDADE),
+               F.RECEITA_VALOR_REP
+               FROM FILHO F
+               INNER JOIN CONTA SUP ON F.CONTA_SUP = SUP.ID
+               LEFT JOIN RECEITALOA RECEITA ON SUP.ID =RECEITA.CONTADERECEITA_ID
+               LEFT JOIN LANCAMENTORECEITAORC LANC ON LANC.RECEITALOA_ID = RECEITA.ID
+               )
+          SELECT (ID_CONTA),
+                  CONTA_SUP,
+                  CONTA_CODIGO,
+                  CONTA_DESCRICAO,
+                  ORG_CODIGO,
+                  ORG_DESCRICAO,
+                  RECEITA_ID,
+                  RECEITA_LOA,
+                  RECEITA_ENTIDADE,
+                  RECEITA_VALOR_REP,
+                  NIVELESTRUTURA(CONTA_CODIGO,'.') AS NIVEL
+                  FROM FILHO
+          ORDER BY FILHO.CONTA_CODIGO)REG
+          GROUP BY
+               CONTA_CODIGO,
+               CONTA_DESCRICAO,
+               NIVEL
+          ORDER BY
+                CONTA_CODIGO,
+                CONTA_DESCRICAO,
+                NIVEL]]>
+	</queryString>
+	<field name="CONTA_CODIGO" class="java.lang.String"/>
+	<field name="CONTA_DESCRICAO" class="java.lang.String"/>
+	<field name="RECEITA_VALOR_REP" class="java.math.BigDecimal"/>
+	<field name="NIVEL" class="java.math.BigDecimal"/>
+	<variable name="TOTAL" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{NIVEL}.intValue()==1 ? $F{RECEITA_VALOR_REP}.multiply($F{CONTA_CODIGO}.substring(0,1).equals("9") ? new BigDecimal( -1 ) : new BigDecimal (1)) : BigDecimal.ZERO]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<columnHeader>
+		<band height="55" splitType="Stretch">
+			<staticText>
+				<reportElement positionType="FixRelativeToBottom" x="504" y="44" width="76" height="10"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Espécie]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="FixRelativeToBottom" x="582" y="44" width="87" height="10"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Cat. Econômica]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="FixRelativeToBottom" x="415" y="44" width="87" height="10"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Desdobramento]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="FixRelativeToBottom" x="82" y="44" width="332" height="10"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Especificação]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="FixRelativeToBottom" x="2" y="44" width="78" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Código]]></text>
+			</staticText>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="54" width="672" height="1"/>
+			</line>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="43" width="672" height="1"/>
+			</line>
+			<textField>
+				<reportElement x="504" y="11" width="167" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Referente " + $P{FILTRO_RELATORIO} + " de " + $P{ANO_EXERCICIO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="504" y="22" width="167" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Anexo 2 - Geral, da Lei 4.320/64]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="19" width="441" height="12"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Receita Segundo as Categorias Econômicas]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="1" y="1" width="441" height="12"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{MUNICIPIO}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="43" width="1" height="12"/>
+			</line>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="671" y="43" width="1" height="12"/>
+			</line>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="80" y="44" width="1" height="10"/>
+			</line>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="414" y="43" width="1" height="12"/>
+			</line>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="503" y="44" width="1" height="10"/>
+			</line>
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="581" y="43" width="1" height="11"/>
+			</line>
+			<textField pattern="dd/MM/yyyy HH:mm:ss">
+				<reportElement x="504" y="1" width="167" height="10"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="FixRelativeToBottom" x="636" y="32" width="35" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[R$ 1,00]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true">
+				<reportElement x="2" y="32" width="634" height="10" isPrintWhenDetailOverflows="true"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{FILTROS}]]></textFieldExpression>
+			</textField>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="10" splitType="Stretch">
+			<textField>
+				<reportElement x="2" y="0" width="78" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTA_CODIGO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="82" y="0" width="332" height="10"/>
+				<textElement>
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTA_DESCRICAO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00">
+				<reportElement x="504" y="0" width="76" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()==3]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{RECEITA_VALOR_REP}.multiply($F{CONTA_CODIGO}.substring(0,1).equals("9") ? new BigDecimal( -1 ) : new BigDecimal (1))]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="415" y="0" width="87" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()>3]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{RECEITA_VALOR_REP}.multiply($F{CONTA_CODIGO}.substring(0,1).equals("9") ? new BigDecimal( -1 ) : new BigDecimal (1))]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00">
+				<reportElement x="582" y="0" width="87" height="10">
+					<printWhenExpression><![CDATA[$F{NIVEL}.intValue()==1 || $F{NIVEL}.intValue()==2]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{RECEITA_VALOR_REP}.multiply($F{CONTA_CODIGO}.substring(0,1).equals("9") ? new BigDecimal( -1 ) : new BigDecimal (1))]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="671" y="0" width="1" height="10"/>
+			</line>
+			<line>
+				<reportElement x="0" y="0" width="1" height="10"/>
+			</line>
+			<line>
+				<reportElement x="80" y="-1" width="1" height="11"/>
+			</line>
+			<line>
+				<reportElement x="414" y="0" width="1" height="10"/>
+			</line>
+			<line>
+				<reportElement x="503" y="0" width="1" height="10"/>
+			</line>
+			<line>
+				<reportElement x="581" y="-1" width="1" height="11"/>
+			</line>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="6">
+			<line>
+				<reportElement positionType="Float" stretchType="RelativeToBandHeight" x="0" y="0" width="672" height="1"/>
+			</line>
+		</band>
+	</columnFooter>
+	<pageFooter>
+		<band height="13">
+			<textField isBlankWhenNull="true">
+				<reportElement x="44" y="1" width="371" height="12"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{USER}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="606" y="1" width="52" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false" isStrikeThrough="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Página "+$V{PAGE_NUMBER}+" de"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="658" y="1" width="10" height="11"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false" isStrikeThrough="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="0" y="1" width="44" height="12"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Emitido por:]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="0" width="672" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="12" width="672" height="1"/>
+			</line>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="12">
+			<line>
+				<reportElement x="0" y="0" width="672" height="1"/>
+			</line>
+			<line>
+				<reportElement x="0" y="11" width="672" height="1"/>
+			</line>
+			<staticText>
+				<reportElement x="528" y="1" width="52" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<text><![CDATA[TOTAL ]]></text>
+			</staticText>
+			<textField pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="582" y="1" width="88" height="10"/>
+				<textElement textAlignment="Right">
+					<font fontName="Arial" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{TOTAL}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="671" y="0" width="1" height="12"/>
+			</line>
+			<line>
+				<reportElement x="581" y="0" width="1" height="12"/>
+			</line>
+			<line>
+				<reportElement x="0" y="0" width="1" height="12"/>
+			</line>
+		</band>
+	</summary>
+	<noData>
+		<band height="20">
+			<staticText>
+				<reportElement x="0" y="0" width="672" height="20"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[NÃO FORAM LOCALIZADOS REGISTROS PARA SEREM APRESENTADOS]]></text>
+			</staticText>
+		</band>
+	</noData>
+</jasperReport>

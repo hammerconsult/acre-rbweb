@@ -1,0 +1,3 @@
+insert into SubPaginaMenuHorizontal values (HIBERNATE_SEQUENCE.NEXTVAL, (select p.id from PAGINAMENUHPAGINAPREF p where p.nome = 'Convênios e Transferências'), 'Repasses e Transferências de recursos financeiros', 'liberacao-financeira', 1);
+insert into SubPaginaMenuHorizontal values (HIBERNATE_SEQUENCE.NEXTVAL, (select p.id from PAGINAMENUHPAGINAPREF p where p.nome = 'Convênios e Transferências'), 'Acordos firmados sem transferência de recursos', '#', 2);
+insert into SubPaginaMenuHorizontal values (HIBERNATE_SEQUENCE.NEXTVAL, (select p.id from PAGINAMENUHPAGINAPREF p where p.nome = 'Convênios e Transferências'), 'Emendas Parlamentares', 'emenda', 3);

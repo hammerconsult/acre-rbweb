@@ -1,0 +1,1 @@
+delete from autorizacaotribusuario where autorizacao = 'IMPRIMIR_ALVARA_NAO_PAGO'

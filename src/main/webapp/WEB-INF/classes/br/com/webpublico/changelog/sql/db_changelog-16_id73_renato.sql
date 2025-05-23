@@ -1,0 +1,1 @@
+update BORDEROTRANSFMESMAUNIDADE set id = hibernate_sequence.nextval where id is null

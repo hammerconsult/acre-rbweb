@@ -94,9 +94,11 @@ public class EventoContabilFacade extends AbstractFacade<EventoContabil> {
     }
 
     public List<EventoContabil> listaEventoContabilPorTipoEvento(String parte, TipoEventoContabil tec) {
-        String hql = "from EventoContabil where tipoEventoContabil = :param and (lower (descricao) like :parte)";
+        String hql = "from EventoContabil where (lower (descricao) like :parte) and " + (tec != null ? " tipoEventoContabil = :param " : " tipoEventoContabil is not null ");
         Query q = em.createQuery(hql);
-        q.setParameter("param", tec);
+        if (tec != null) {
+            q.setParameter("param", tec);
+        }
         q.setParameter("parte", "%" + parte.toLowerCase().trim() + "%");
         List lista = q.getResultList();
         if (lista.isEmpty()) {

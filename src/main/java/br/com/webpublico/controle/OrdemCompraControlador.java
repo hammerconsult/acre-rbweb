@@ -5,13 +5,13 @@ import br.com.webpublico.entidadesauxiliares.OrdemCompraServicoVo;
 import br.com.webpublico.entidadesauxiliares.administrativo.FiltroOrdemCompraServicoContratoVO;
 import br.com.webpublico.negocios.OrdemCompraFacade;
 import br.com.webpublico.util.FacesUtil;
-import br.com.webpublico.util.Util;
 
 import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
 @ManagedBean
@@ -36,14 +36,11 @@ public class OrdemCompraControlador implements Serializable {
 
     public void preencherOrdensCompraServico() {
         ordensCompra = facade.buscarOrdemCompraAndServicoPorContrato(filtro.getContrato());
+        ordensCompra.forEach(oc -> Collections.sort(oc.getExecucoes()));
         if (filtro.getOrdemServico()) {
             ordensServico = facade.buscarOrdemServicoContrato(filtro.getContrato());
         }
         FacesUtil.executaJavaScript("atualizarTabelaOC()");
-    }
-
-    private boolean hasOrdemServicoContrato() {
-        return !Util.isListNullOrEmpty(ordensServico);
     }
 
     public boolean hasOrdensCompra() {

@@ -905,8 +905,9 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
     }
 
     private void variaveisReconhecimentoDivida(SolicitacaoEmpenho se, Empenho e) {
-        if (se.getReconhecimentoDivida() != null) {
-            e.setReconhecimentoDivida(se.getReconhecimentoDivida());
+        SolicitacaoEmpenhoReconhecimentoDivida solEmpRecDiv = facade.getReconhecimentoDividaFacade().recuperarSolicitacaoEmpReconhecimentoDividaSolicitacaoEm(se);
+        if (solEmpRecDiv != null) {
+            e.setReconhecimentoDivida(solEmpRecDiv.getReconhecimentoDivida());
         }
     }
 

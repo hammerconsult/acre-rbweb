@@ -161,7 +161,7 @@ public class OperadoraTransporteDetentorArquivo extends SuperEntidade implements
     }
 
     public void popularDadosDocumentoCredenciamento(AnexoCredenciamentoOttDTO anexoDto) {
-        descricaoDocumento = anexoDto.getDescricao();
+        descricaoDocumento = anexoDto.getDescricaoDocumento();
         extensoesPermitidas = anexoDto.getExtensoesPermitidas();
         obrigatorio = anexoDto.getObrigatorio();
         renovacao = anexoDto.getRenovacao();

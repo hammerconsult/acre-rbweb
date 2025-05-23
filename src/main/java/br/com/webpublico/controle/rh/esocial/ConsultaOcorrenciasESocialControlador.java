@@ -1503,7 +1503,7 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(itemContratoFPS2190);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarlS2190(config, itemContratoFPS2190);
+//            configuracaoEmpregadorESocialFacade.enviarlS2190(config, itemContratoFPS2190);
             FacesUtil.addAtencao("Evento Enviado com sucesso, aguarde o retorno da validação do evento.");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemContratoFPS2190,
@@ -1591,7 +1591,7 @@ public class ConsultaOcorrenciasESocialControlador {
             contratos.forEach(contrato -> {
                 contrato.setTipoOperacaoESocial(tipoOperacaoESocialS2200);
             });
-            future = configuracaoEmpregadorESocialFacade.enviarS2200(config, contratos, assistenteBarraProgresso, sistemaFacade.getDataOperacao());
+//            future = configuracaoEmpregadorESocialFacade.enviarS2200(config, contratos, assistenteBarraProgresso, sistemaFacade.getDataOperacao());
             FacesUtil.executaJavaScript("acompanhaEnvioEvento()");
             FacesUtil.executaJavaScript("aguarde.show()");
 
@@ -1641,7 +1641,7 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(itemAposentadoriaS2405);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarS2405(config, itemAposentadoriaS2405);
+//            configuracaoEmpregadorESocialFacade.enviarS2405(config, itemAposentadoriaS2405);
             FacesUtil.addAtencao("Evento Enviado com sucesso, aguarde o retorno da validação do evento.");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemAposentadoriaS2405,
@@ -1682,7 +1682,7 @@ public class ConsultaOcorrenciasESocialControlador {
             validarEnvioEvento(Lists.newArrayList(itemCedenciaS2231Selecionados));
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
             ArrayList<CedenciaContratoFP> cedencias = Lists.newArrayList(itemCedenciaS2231Selecionados);
-            configuracaoEmpregadorESocialFacade.enviarS2231(config, cedencias, tipoCessao2231);
+//            configuracaoEmpregadorESocialFacade.enviarS2231(config, cedencias, tipoCessao2231);
             FacesUtil.addAtencao("Evento Enviado com sucesso, aguarde o retorno da validação do evento.");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(cedencias,
@@ -1720,7 +1720,7 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(itemTermBeneficioS2420);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarS2420(config, itemTermBeneficioS2420);
+//            configuracaoEmpregadorESocialFacade.enviarS2420(config, itemTermBeneficioS2420);
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemTermBeneficioS2420,
                 config, TipoClasseESocial.S2420, new Date(), sistemaFacade.getUsuarioCorrente(), ClasseWP.VINCULOFP, null, null);
@@ -1742,7 +1742,7 @@ public class ConsultaOcorrenciasESocialControlador {
             validarEnvioEvento(itemContratoFPS2205);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
             assistenteBarraProgresso = new AssistenteBarraProgresso();
-            future = configuracaoEmpregadorESocialFacade.enviarS2205(config, itemContratoFPS2205, assistenteBarraProgresso, sistemaFacade.getDataOperacao());
+//            future = configuracaoEmpregadorESocialFacade.enviarS2205(config, itemContratoFPS2205, assistenteBarraProgresso, sistemaFacade.getDataOperacao());
             FacesUtil.executaJavaScript("acompanhaEnvioEvento()");
             FacesUtil.executaJavaScript("aguarde.show()");
 
@@ -1762,7 +1762,7 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(Lists.newArrayList(mapItemContratoFPS2206));
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarS2206(config, mapItemContratoFPS2206);
+//            configuracaoEmpregadorESocialFacade.enviarS2206(config, mapItemContratoFPS2206);
 
             ArrayList<ContratoFP> contratos = Lists.newArrayList(mapItemContratoFPS2206.keySet());
 
@@ -1783,8 +1783,8 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(itemContratoFPS2220);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarS2220(config, itemContratoFPS2220
-            );
+//            configuracaoEmpregadorESocialFacade.enviarS2220(config, itemContratoFPS2220
+//            );
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemContratoFPS2220,
                 config, TipoClasseESocial.S2200, new Date(), sistemaFacade.getUsuarioCorrente(), ClasseWP.ASO, null, null);
@@ -1819,7 +1819,7 @@ public class ConsultaOcorrenciasESocialControlador {
             });
 
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarS2299(config, exoneracoes);
+//            configuracaoEmpregadorESocialFacade.enviarS2299(config, exoneracoes);
 
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(exoneracoes,
@@ -1842,7 +1842,7 @@ public class ConsultaOcorrenciasESocialControlador {
             itemPrestadorServico2300.forEach(prestador -> {
                 prestador.setTipoOperacaoESocial(tipoOperacaoESocialS2300);
             });
-            configuracaoEmpregadorESocialFacade.enviarS2300(config, itemPrestadorServico2300);
+//            configuracaoEmpregadorESocialFacade.enviarS2300(config, itemPrestadorServico2300);
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemPrestadorServico2300,
                 config, TipoClasseESocial.S2300, new Date(), sistemaFacade.getUsuarioCorrente(), ClasseWP.PRESTADORSERVICOS, null, null);
@@ -1862,7 +1862,7 @@ public class ConsultaOcorrenciasESocialControlador {
             validarEnvioEvento(itemEventoS2400);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
             itemEventoS2400.forEach(beneficiario -> beneficiario.setTipoOperacaoESocial(tipoOperacaoESocialS2400));
-            configuracaoEmpregadorESocialFacade.enviarS2400(config, itemEventoS2400);
+//            configuracaoEmpregadorESocialFacade.enviarS2400(config, itemEventoS2400);
             FacesUtil.addAtencao("Evento Enviado com sucesso, aguarde o retorno da validação do evento.");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemEventoS2400,
@@ -1897,7 +1897,7 @@ public class ConsultaOcorrenciasESocialControlador {
             assistenteBarraProgresso.setTotal(registroEventoEsocialS1200.getItemVinculoFPSelecionados().length);
 
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            future = configuracaoEmpregadorESocialFacade.enviarS1200(registroEventoEsocialS1200, empregador, config, assistenteBarraProgresso);
+//            future = configuracaoEmpregadorESocialFacade.enviarS1200(registroEventoEsocialS1200, empregador, config, assistenteBarraProgresso);
 
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEventosPagamento(registroEventoEsocialS1200, config, TipoClasseESocial.S1200,
@@ -1930,7 +1930,7 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(Lists.newArrayList(registroEventoEsocialS1202.getItemVinculoFPSelecionados()));
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            future = configuracaoEmpregadorESocialFacade.enviarS1202(registroEventoEsocialS1202, empregador, config, assistenteBarraProgresso);
+//            future = configuracaoEmpregadorESocialFacade.enviarS1202(registroEventoEsocialS1202, empregador, config, assistenteBarraProgresso);
             FacesUtil.executaJavaScript("enviarEventoEsocial()");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEventosPagamento(registroEventoEsocialS1202, config, TipoClasseESocial.S1202,
@@ -1954,7 +1954,7 @@ public class ConsultaOcorrenciasESocialControlador {
             assistenteBarraProgresso.zerarContadoresProcesso();
             assistenteBarraProgresso.setTotal(registroEventoEsocialS1207.getItemVinculoFP().size());
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            future = configuracaoEmpregadorESocialFacade.enviarS1207(registroEventoEsocialS1207, empregador, config, assistenteBarraProgresso);
+//            future = configuracaoEmpregadorESocialFacade.enviarS1207(registroEventoEsocialS1207, empregador, config, assistenteBarraProgresso);
             FacesUtil.executaJavaScript("enviarEventoEsocial()");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEventosPagamento(registroEventoEsocialS1207, config, TipoClasseESocial.S1207,
@@ -1978,7 +1978,7 @@ public class ConsultaOcorrenciasESocialControlador {
             assistenteBarraProgresso.setDescricaoProcesso("Enviando Evento E-social S-1210");
             assistenteBarraProgresso.zerarContadoresProcesso();
             assistenteBarraProgresso.setTotal(registroEventoEsocialS1210.getItemVinculoFPSelecionados().length);
-            future = configuracaoEmpregadorESocialFacade.enviarS1210(registroEventoEsocialS1210, empregador, config, assistenteBarraProgresso, tipoRegimePrevidenciarioS1210);
+//            future = configuracaoEmpregadorESocialFacade.enviarS1210(registroEventoEsocialS1210, empregador, config, assistenteBarraProgresso, tipoRegimePrevidenciarioS1210);
             FacesUtil.executaJavaScript("enviarEventoEsocial()");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEventosPagamento(registroEventoEsocialS1210, config, TipoClasseESocial.S1210,
@@ -2004,7 +2004,7 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(itemReativacaoBeneficioS2418);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarS2418(config, itemReativacaoBeneficioS2418);
+//            configuracaoEmpregadorESocialFacade.enviarS2418(config, itemReativacaoBeneficioS2418);
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemReativacaoBeneficioS2418,
                 config, TipoClasseESocial.S2418, new Date(), sistemaFacade.getUsuarioCorrente(), ClasseWP.REATIVACAOBENEFICIO, null, null);
@@ -2065,12 +2065,12 @@ public class ConsultaOcorrenciasESocialControlador {
         if (empregador != null) {
             itemEventoFPS1010.clear();
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            List<EventoFP> eventos = registroESocialFacade.buscarEventoFPParaEnvioEsocial(config, codigoEventoFP, apenasNaoEnviados, sistemaFacade.getDataOperacao());
-            if (eventos == null || eventos.isEmpty()) {
-                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
-            } else {
-                itemEventoFPS1010.addAll(eventos);
-            }
+//            List<EventoFP> eventos = registroESocialFacade.buscarEventoFPParaEnvioEsocial(config, codigoEventoFP, apenasNaoEnviados, sistemaFacade.getDataOperacao());
+//            if (eventos == null || eventos.isEmpty()) {
+//                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
+//            } else {
+//                itemEventoFPS1010.addAll(eventos);
+//            }
         }
     }
 
@@ -2160,13 +2160,13 @@ public class ConsultaOcorrenciasESocialControlador {
             itemContratoFPS2190.clear();
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
             config = configuracaoEmpregadorESocialFacade.recuperar(config.getId());
-            List<ContratoFP> contratos = registroESocialFacade.buscarContratoFPPorTipoArquivo(config, apenasNaoEnviados, TipoArquivoESocial.S2190,
-                null, null, null, UtilRH.getDataOperacao());
-            if (contratos == null || contratos.isEmpty()) {
-                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
-            } else {
-                itemContratoFPS2190.addAll(contratos);
-            }
+//            List<ContratoFP> contratos = registroESocialFacade.buscarContratoFPPorTipoArquivo(config, apenasNaoEnviados, TipoArquivoESocial.S2190,
+//                null, null, null, UtilRH.getDataOperacao());
+//            if (contratos == null || contratos.isEmpty()) {
+//                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
+//            } else {
+//                itemContratoFPS2190.addAll(contratos);
+//            }
         }
     }
 
@@ -2176,13 +2176,13 @@ public class ConsultaOcorrenciasESocialControlador {
             itemContratoFPS2200.clear();
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
             config = configuracaoEmpregadorESocialFacade.recuperar(config.getId());
-            List<ContratoFP> contratos = registroESocialFacade.buscarContratoFPPorTipoArquivo(config, apenasNaoEnviados, TipoArquivoESocial.S2200,
-                dataInicialContrato, dataFinalContrato, hierarquiaOrganizacional, UtilRH.getDataOperacao());
-            if (contratos == null || contratos.isEmpty()) {
-                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
-            } else {
-                itemContratoFPS2200.addAll(contratos);
-            }
+//            List<ContratoFP> contratos = registroESocialFacade.buscarContratoFPPorTipoArquivo(config, apenasNaoEnviados, TipoArquivoESocial.S2200,
+//                dataInicialContrato, dataFinalContrato, hierarquiaOrganizacional, UtilRH.getDataOperacao());
+//            if (contratos == null || contratos.isEmpty()) {
+//                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
+//            } else {
+//                itemContratoFPS2200.addAll(contratos);
+//            }
         }
     }
 
@@ -2229,13 +2229,13 @@ public class ConsultaOcorrenciasESocialControlador {
             itemContratoFPS2205.clear();
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
             config = configuracaoEmpregadorESocialFacade.recuperar(config.getId());
-            List<ContratoFP> contratos = registroESocialFacade.buscarContratoFPPorTipoArquivo(config, apenasNaoEnviados, TipoArquivoESocial.S2205,
-                null, null, null, UtilRH.getDataOperacao());
-            if (contratos == null || contratos.isEmpty()) {
-                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
-            } else {
-                itemContratoFPS2205.addAll(contratos);
-            }
+//            List<ContratoFP> contratos = registroESocialFacade.buscarContratoFPPorTipoArquivo(config, apenasNaoEnviados, TipoArquivoESocial.S2205,
+//                null, null, null, UtilRH.getDataOperacao());
+//            if (contratos == null || contratos.isEmpty()) {
+//                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
+//            } else {
+//                itemContratoFPS2205.addAll(contratos);
+//            }
         }
     }
 
@@ -2347,9 +2347,9 @@ public class ConsultaOcorrenciasESocialControlador {
             validarEnvioEvento(itemEventoS2410);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
             itemEventoS2410.forEach(beneficiario -> beneficiario.setTipoOperacaoESocial(tipoOperacaoESocialS2410));
-            for (VinculoFP vinculo : itemEventoS2410) {
-                vinculoFPFacade.enviarS2410ESocial(config, vinculo);
-            }
+//            for (VinculoFP vinculo : itemEventoS2410) {
+//                vinculoFPFacade.enviarS2410ESocial(config, vinculo);
+//            }
             FacesUtil.addAtencao("Evento Enviado com sucesso, aguarde o retorno da validação do evento.");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemEventoS2410,
@@ -2946,7 +2946,8 @@ public class ConsultaOcorrenciasESocialControlador {
                 (registroExclusaoS3000.getPrestadorServicos() != null ? registroExclusaoS3000.getPrestadorServicos().getId().toString() : null);
             String cpfVinculo = registroExclusaoS3000.getVinculoFP() != null ? StringUtil.retornaApenasNumeros(registroExclusaoS3000.getVinculoFP().getMatriculaFP().getPessoa().getCpf()) :
                 (registroExclusaoS3000.getPrestadorServicos() != null ? StringUtil.retornaApenasNumeros(registroExclusaoS3000.getPrestadorServicos().getPrestador().getCpf_Cnpj()) : "");
-            List<EventoESocialDTO> eventos = configuracaoEmpregadorESocialFacade.getEventosFolhaByEmpregador(configuracaoEmpregadorESocial.getEntidade().getPessoaJuridica().getCnpj(), registroExclusaoS3000.getTipoArquivoESocial(), mes, ano, registroExclusaoS3000.getRecibo(), idVinculo, registroExclusaoS3000.getIdXML(), cpfVinculo);
+            List<EventoESocialDTO> eventos = new ArrayList<>();
+//                    configuracaoEmpregadorESocialFacade.getEventosFolhaByEmpregador(configuracaoEmpregadorESocial.getEntidade().getPessoaJuridica().getCnpj(), registroExclusaoS3000.getTipoArquivoESocial(), mes, ano, registroExclusaoS3000.getRecibo(), idVinculo, registroExclusaoS3000.getIdXML(), cpfVinculo);
             if (Util.isListNullOrEmpty(eventos)) {
                 FacesUtil.addWarn("Atenção!", "Não foi encontrado nenhum evento para os filtros informados.");
             } else {
@@ -2956,22 +2957,22 @@ public class ConsultaOcorrenciasESocialControlador {
                     idsXml.add(item.getIdXML().trim());
                 });
                 for (EventoESocialDTO evento : eventos) {
-                    if (!idsXml.contains(evento.getIdXMLEvento().trim())) {
-                        RegistroExclusaoS3000 newRegistroExclusaoS3000 = new RegistroExclusaoS3000(
-                            registroExclusaoS3000.getTipoArquivoESocial(),
-                            evento.getIdXMLEvento(),
-                            registroExclusaoS3000.getVinculoFP(),
-                            registroExclusaoS3000.getTipoExclusaoEventoFolha(),
-                            registroExclusaoS3000.getCompetencia(),
-                            registroExclusaoS3000.getExercicio(),
-                            registroExclusaoS3000.getExclusaoEventoEsocial(),
-                            registroExclusaoS3000.getEntidade(),
-                            evento.getReciboEntrega(),
-                            registroExclusaoS3000.getPrestadorServicos());
-                        Util.adicionarObjetoEmLista(itemExclusao, newRegistroExclusaoS3000);
-                    } else {
-                        ve.adicionarMensagemWarn(SummaryMessages.ATENCAO, "O evento com o ID Xml " + evento.getIdXMLEvento().trim() + " já se encontra adicionado.");
-                    }
+//                    if (!idsXml.contains(evento.getIdXMLEvento().trim())) {
+//                        RegistroExclusaoS3000 newRegistroExclusaoS3000 = new RegistroExclusaoS3000(
+//                            registroExclusaoS3000.getTipoArquivoESocial(),
+//                            evento.getIdXMLEvento(),
+//                            registroExclusaoS3000.getVinculoFP(),
+//                            registroExclusaoS3000.getTipoExclusaoEventoFolha(),
+//                            registroExclusaoS3000.getCompetencia(),
+//                            registroExclusaoS3000.getExercicio(),
+//                            registroExclusaoS3000.getExclusaoEventoEsocial(),
+//                            registroExclusaoS3000.getEntidade(),
+//                            evento.getReciboEntrega(),
+//                            registroExclusaoS3000.getPrestadorServicos());
+//                        Util.adicionarObjetoEmLista(itemExclusao, newRegistroExclusaoS3000);
+//                    } else {
+//                        ve.adicionarMensagemWarn(SummaryMessages.ATENCAO, "O evento com o ID Xml " + evento.getIdXMLEvento().trim() + " já se encontra adicionado.");
+//                    }
                 }
                 ve.lancarException();
             }
@@ -2997,7 +2998,7 @@ public class ConsultaOcorrenciasESocialControlador {
         try {
             validarEnvioEvento(itemRegistroEventoEsocial2306);
             ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-            configuracaoEmpregadorESocialFacade.enviarS2306(config, itemRegistroEventoEsocial2306);
+//            configuracaoEmpregadorESocialFacade.enviarS2306(config, itemRegistroEventoEsocial2306);
             FacesUtil.addAtencao("Evento Enviado com sucesso, aguarde o retorno da validação do evento.");
 
             configuracaoEmpregadorESocialFacade.criarHistoricoEsocial(itemRegistroEventoEsocial2306,

@@ -1500,7 +1500,8 @@ public class FuncoesFolhaFacade extends AbstractFacade<FolhaDePagamento> {
             + " inner join concessao.periodoAquisitivoFL periodo "
             + " inner join periodo.contratoFP contratofp "
             + " inner join periodo.baseCargo.basePeriodoAquisitivo base "
-            + " where contratofp.id = :parametro and "
+            + " where concessao.mes is not null and concessao.ano is not null "
+            + " and contratofp.id = :parametro and "
             + " base.tipoPeriodoAquisitivo = :tipo and "
             //+ " concessao.dataInicial >= :primeiroDiaConcessao and concessao.dataInicial <= :primeiroDiaProxMesConcessao");
             + "  concessao.mes = :mes and concessao.ano = :ano ");
@@ -1528,7 +1529,6 @@ public class FuncoesFolhaFacade extends AbstractFacade<FolhaDePagamento> {
             q.setParameter("mes", ep.getMes());
             q.setParameter("ano", ep.getAno());
         }
-        List<ConcessaoFeriasLicenca> lista = new ArrayList<>();
         Integer qtdDias = 0;
 
         for (ConcessaoFeriasLicenca concessao : (List<ConcessaoFeriasLicenca>) q.getResultList()) {

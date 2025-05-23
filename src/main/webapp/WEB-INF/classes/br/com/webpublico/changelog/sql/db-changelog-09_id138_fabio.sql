@@ -1,0 +1,1 @@
+update AUTOINFRACAOFISCALIZACAO a set a.usuariosistema_id = (select u.usuariosistema_id from usuariofiscal u where u.id = a.usuariofiscal_id);

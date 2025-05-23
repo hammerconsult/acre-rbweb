@@ -1,0 +1,17 @@
+insert into EVENTOFP(ID, CODIGO, COMPLEMENTOREFERENCIA, DESCRICAO, FORMULA, FORMULAVALORINTEGRAL, REFERENCIA, REGRA,
+                     TIPOEVENTOFP, AUTOMATICO, UNIDADEREFERENCIA, TIPOEXECUCAOEP, VALORBASEDECALCULO, DESCRICAOREDUZIDA,
+                     ATIVO, QUANTIFICACAO, CALCULORETROATIVO, VERBAFIXA, NAOPERMITELANCAMENTO, TIPOCALCULO13,
+                     ESTORNOFERIAS,
+                     ORDEMPROCESSAMENTO, CONSIGNACAO, DATAREGISTRO, ARREDONDARVALOR, PROPORCIONALIZADIASTRAB,
+                     VALORMAXIMOLANCAMENTO)
+values (HIBERNATE_SEQUENCE.nextval, 4199, 'Dep', 'VALOR DEPENDENTES IRRF PRESTAÇÃO SERVIÇO',
+        '//(VDedDepenIR * Refer) - TotEveCalc(852) - TotEveCalc(4199)
+return Number(0);',
+        '//(VDedDepenIR * Refer) - TotEveCalc(852) - TotEveCalc(4199)
+return 0;',
+        '//NumDep(2)
+return Number(0);',
+        '//(RetIRRF>0)
+  return false;',
+        'INFORMATIVO', 1, null, 'RPA', 'return Number(0);', 'VR DEP IRRF PRE SERV', 1, null, 0, 0, 0, 'NAO', 0, 4199, 0,
+        sysdate, 1, 1, null)

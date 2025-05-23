@@ -1,6 +1,7 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
+import org.apache.log4j.Logger;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -10,6 +11,7 @@ import java.util.List;
 @Stateless
 public class GeraValorDividaRBTrans extends ValorDividaFacade {
 
+    private static final Logger log = Logger.getLogger(GeraValorDividaRBTrans.class);
     @EJB
     private ParametrosTransitoRBTransFacade parametrosTransitoRBTransFacade;
     @EJB
@@ -43,11 +45,8 @@ public class GeraValorDividaRBTrans extends ValorDividaFacade {
 
     @Override
     public void salvaValorDivida(ValorDivida valordivida) throws Exception {
-        valordivida = em.merge(valordivida);
+        em.merge(valordivida);
         em.flush();
-//        ApplicationContext ap = ContextLoader.getCurrentWebApplicationContext();
-//        ServiceIntegracaoTributarioContabil service = (ServiceIntegracaoTributarioContabil) ap.getBean("serviceIntegracaoTributarioContabil");
-//        service.criarItemIntegracaoValorDivida(valordivida, TipoIntegracao.INSCRICAO);
     }
 
     public void geraDam(CalculoRBTrans calculo) {
@@ -58,7 +57,7 @@ public class GeraValorDividaRBTrans extends ValorDividaFacade {
             try {
                 damFacade.geraDAM(valorDivida);
             } catch (Exception e) {
-                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                log.error("Erro ao gerar DAM do RBTRANS: idValorDivida: " + valorDivida.getId());
             }
         }
 

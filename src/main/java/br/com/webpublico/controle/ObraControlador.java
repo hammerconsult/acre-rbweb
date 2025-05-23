@@ -2,6 +2,7 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.controlerelatorio.AbstractReport;
 import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidades.ObraAtribuicao;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;

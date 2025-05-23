@@ -1,0 +1,1 @@
+update DoctoHabilitacao doc set doc.inicioVigencia = (select rev.datahora from DoctoHabilitacao_aud docAud inner join revisaoauditoria rev on docAud.rev  = rev.id where docAud.revtype = 0 and docAud.ID = doc.ID)

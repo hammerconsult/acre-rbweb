@@ -1,0 +1,1 @@
+update itemcalculoiss set tributo_id = (select tributoiss_id from configuracaotributario)

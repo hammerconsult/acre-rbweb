@@ -1,0 +1,7 @@
+delete from adquirentessolicitacaoitbionline;
+delete from transmitentessolicitacaoitbionline;
+delete from itemcalculoitbionline;
+delete from propriedadesimulacaoitbionline;
+delete from calculosolicitacaoitbionline;
+delete from solicitacaoitbionlinedocumento;
+delete from solicitacaoitbionline;

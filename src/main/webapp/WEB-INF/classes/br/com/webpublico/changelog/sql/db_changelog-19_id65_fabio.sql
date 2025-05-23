@@ -1,0 +1,1 @@
+update SolicitacaoDoctoOficial set sequencia = 0

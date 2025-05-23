@@ -1,0 +1,1 @@
+update borderopagamento_aud set id = hibernate_sequence.nextval where id is null

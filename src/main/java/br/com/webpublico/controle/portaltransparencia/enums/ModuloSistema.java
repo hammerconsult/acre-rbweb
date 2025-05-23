@@ -28,8 +28,9 @@ public enum ModuloSistema {
     INSTITUCIONAL("Institucional"),
     EMENDA("Emendas Parlamentares"),
     ORIENTACOES("Orientações"),
-    ENCONTRE_EM_RB("ENCONTRE_EM_RB"),
-    DADOS_ABERTOS("Dados Abertos");
+    DADOS_ABERTOS("Dados Abertos"),
+    ENCONTRE_EM_RB("Encontre em Rio Branco");
+
     private String descricao;
 
     ModuloSistema(String descricao) {

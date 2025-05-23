@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="RelatorioBoletimFrequencia" pageWidth="595" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+	<property name="ireport.zoom" value="1.9965000000000042"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="70"/>
+	<parameter name="BRASAO" class="java.lang.String"/>
+	<parameter name="USUARIO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FILTROS" class="java.lang.String">
+		<defaultValueExpression><![CDATA["Nenhum critério selecionado"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="MODULO" class="java.lang.String"/>
+	<parameter name="SECRETARIA" class="java.lang.String"/>
+	<parameter name="NOMERELATORIO" class="java.lang.String"/>
+	<parameter name="MES" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="ANO" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="CODIGOHO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DATAOPERACAO" class="java.util.Date">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="MESANO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["E:\\projeto\\src\\main\\resources\\br\\com\\webpublico\\report\\"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select          contrato.matricula,
+                contrato.numero as cnt,
+                contrato.nome as servidor,
+                contrato.cargo,
+                ho.codigo,
+                ho.descricao as ho_desc,
+                rec.codigogrupo as vinc,
+                case when (vinc.situacaovinculo = 'CARREIRA') then 'Carreira'
+                     when (vinc.situacaovinculo = 'COMISSAO') then 'Comissão'
+                     when (vinc.situacaovinculo = 'CARREIRA_COMISSAO') then 'Carreira/Comissão'
+                     when (vinc.situacaovinculo = 'CONTRATADO') then 'Contratado'
+                     when (vinc.situacaovinculo = 'ELETIVO') then 'Eletivo'
+                     when (vinc.situacaovinculo = 'CONTRATO_TEMPORARIO') then 'Contrato Temporário'
+                else
+                  ''
+                end as situacao,
+                stf.descricao as status,
+                jornada.horassemanal as carga_horaria,
+                (select sum(hora.totalhoras)  from horaextra hora
+                  where hora.contratofp_id = contrato.id_contratofp
+                  and hora.mes = $P{MES} and hora.ano = $P{ANO}) as hora_extra,
+                (select coalesce(sum(f.dias), 0) from faltas f
+                  where f.contratofp_id = contrato.id_contratofp
+                   and f.tipofalta = 'FALTA_INJUSTIFICADA'
+                   and to_char(inicio, 'mm/yyyy') = $P{MESANO} and to_char(fim, 'mm/yyyy') = $P{MESANO}) as faltas,
+                (select coalesce(sum((afa.termino - afa.inicio) + 1),0)  from afastamento afa
+                  join tipoafastamento tipo on tipo.id = afa.tipoafastamento_id
+                  where afa.contratofp_id = contrato.id_contratofp
+                  and tipo.descontardiastrabalhados = 1
+                  and to_char(afa.inicio, 'mm/yyyy') = $P{MESANO} and to_char(afa.termino, 'mm/yyyy') = $P{MESANO}) as afastamento,
+                (select coalesce(max(item_ficha.valorreferencia),0)
+                   from itemfichafinanceirafp item_ficha
+                   inner join fichafinanceirafp ficha on ficha.id = item_ficha.fichafinanceirafp_id
+                   inner join eventofp e on e.id = item_ficha.eventofp_id
+                   inner join folhadepagamento folha on folha.id = ficha.folhadepagamento_id
+                     where ficha.vinculofp_id = contrato.id_vinculo
+                     and item_ficha.mes = $P{MES} and item_ficha.ano  = $P{ANO}
+                     and e.codigo in (101,102,133,163,357,363, 354) group by ficha.vinculofp_id) as diastrabalhados,
+                rec.descricao as rec_desc,
+                rec.codigo as rec_cod,
+                contrato.id_contratofp as id_contratofp
+
+       from vwrhcontrato contrato
+        join vwhierarquiacomorgao orgao on orgao.subordinado_id = contrato.id_unidade_lotada
+        join vwhierarquiaAdministrativa ho on ho.id = orgao.id_orgao
+        join recursodovinculofp rec_vin on rec_vin.vinculofp_id = contrato.id_vinculo
+        join recursofp rec on rec.id = rec_vin.recursofp_id
+        join situacaocontratofp situacao on situacao.contratofp_id = contrato.id_contratofp
+        join situacaofuncional stf on stf.id = situacao.situacaofuncional_id
+        left join faltas f on f.contratofp_id = contrato.id_contratofp
+        join contratofp cont on cont.id = contrato.id_contratofp
+        join vinculofp vinc on vinc.id = contrato.id_vinculo
+        left join jornadadetrabalho jornada on cont.jornadadetrabalho_id = jornada.id
+
+          where $P{DATAOPERACAO} between contrato.iniciolotacao and coalesce(contrato.finalotacao, $P{DATAOPERACAO})
+            and $P{DATAOPERACAO} between contrato.iniciovinculo and coalesce(contrato.finalvinculo, $P{DATAOPERACAO})
+            and $P{DATAOPERACAO} between ho.iniciovigencia and coalesce(ho.fimvigencia, $P{DATAOPERACAO})
+            and $P{DATAOPERACAO} between rec_vin.iniciovigencia and coalesce(rec_vin.finalvigencia, $P{DATAOPERACAO})
+            and $P{DATAOPERACAO} between rec.iniciovigencia and coalesce(rec.finalvigencia, $P{DATAOPERACAO})
+            and $P{DATAOPERACAO} between situacao.iniciovigencia and coalesce(situacao.finalvigencia, $P{DATAOPERACAO})
+	  and ho.codigo like $P{CODIGOHO}
+
+            group by  contrato.matricula,
+                      contrato.numero,
+                      contrato.nome,
+                      rec.codigogrupo,
+                      vinc.situacaovinculo,
+                      contrato.cargo,
+                      ho.codigo,
+                      jornada.horassemanal,
+                      stf.descricao,
+                      rec.descricao,
+                      rec.codigo,
+                      ho.descricao,
+                      contrato.id_contratofp,
+  		 contrato.id_vinculo
+
+            order by rec.descricao, contrato.nome]]>
+	</queryString>
+	<field name="MATRICULA" class="java.lang.String"/>
+	<field name="CNT" class="java.lang.String"/>
+	<field name="SERVIDOR" class="java.lang.String"/>
+	<field name="CARGO" class="java.lang.String"/>
+	<field name="CODIGO" class="java.lang.String"/>
+	<field name="HO_DESC" class="java.lang.String"/>
+	<field name="VINC" class="java.lang.String"/>
+	<field name="SITUACAO" class="java.lang.String"/>
+	<field name="STATUS" class="java.lang.String"/>
+	<field name="CARGA_HORARIA" class="java.math.BigDecimal"/>
+	<field name="HORA_EXTRA" class="java.math.BigDecimal"/>
+	<field name="FALTAS" class="java.math.BigDecimal"/>
+	<field name="AFASTAMENTO" class="java.math.BigDecimal"/>
+	<field name="DIASTRABALHADOS" class="java.math.BigDecimal"/>
+	<field name="REC_DESC" class="java.lang.String"/>
+	<field name="REC_COD" class="java.lang.String"/>
+	<field name="ID_CONTRATOFP" class="java.lang.Long"/>
+	<group name="Group" isReprintHeaderOnEachPage="true">
+		<groupExpression><![CDATA[$F{REC_DESC}]]></groupExpression>
+		<groupHeader>
+			<band height="47">
+				<staticText>
+					<reportElement x="1" y="13" width="45" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="10" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Lotação:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="46" y="13" width="367" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="10" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{REC_COD} +" - "+ $F{REC_DESC}]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement x="0" y="31" width="555" height="1"/>
+					<graphicElement>
+						<pen lineWidth="0.5"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement x="0" y="46" width="555" height="1"/>
+					<graphicElement>
+						<pen lineWidth="0.5"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement x="0" y="32" width="1" height="14"/>
+				</line>
+				<staticText>
+					<reportElement x="343" y="33" width="70" height="12"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Situação]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="414" y="33" width="34" height="12"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Carga H.]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="449" y="33" width="34" height="12"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Dias T.]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="484" y="33" width="35" height="12"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Hora Ex.]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="520" y="33" width="34" height="12"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Faltas]]></text>
+				</staticText>
+				<line>
+					<reportElement x="60" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="225" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="320" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="342" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="413" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="448" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="483" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="519" y="32" width="1" height="14"/>
+				</line>
+				<line>
+					<reportElement x="554" y="32" width="1" height="14"/>
+				</line>
+				<staticText>
+					<reportElement x="2" y="33" width="58" height="12"/>
+					<textElement>
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Matrícula/CNT]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="62" y="33" width="163" height="12"/>
+					<textElement>
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Nome do Servidor]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="226" y="33" width="94" height="12"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Cargo]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="321" y="33" width="21" height="12"/>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Vinc.]]></text>
+				</staticText>
+				<line>
+					<reportElement x="0" y="26" width="555" height="1"/>
+				</line>
+				<staticText>
+					<reportElement x="2" y="0" width="45" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="10" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Órgão: ]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="47" y="0" width="382" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="10" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{HO_DESC}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="32">
+				<textField>
+					<reportElement x="333" y="6" width="30" height="12"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{Group_COUNT}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="363" y="6" width="100" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Servidores da Lotação]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="463" y="6" width="92" height="12"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{REC_COD}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupFooter>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<pageHeader>
+		<band height="57" splitType="Stretch">
+			<image>
+				<reportElement x="2" y="2" width="45" height="50"/>
+				<imageExpression><![CDATA[$P{BRASAO}+"Brasao_de_Rio_Branco.gif"]]></imageExpression>
+			</image>
+			<staticText>
+				<reportElement x="58" y="3" width="300" height="18"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PREFEITURA MUNICIPAL DE RIO BRANCO]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="54" width="555" height="1"/>
+			</line>
+			<textField isStretchWithOverflow="true">
+				<reportElement x="58" y="21" width="351" height="16"/>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<font fontName="Arial" size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{SECRETARIA}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true">
+				<reportElement x="58" y="37" width="351" height="12"/>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<font fontName="Arial" size="10" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{NOMERELATORIO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="483" y="37" width="72" height="12"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Página: " + $V{PAGE_NUMBER} + " de " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="22" splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="29" splitType="Stretch">
+			<line>
+				<reportElement positionType="Float" x="0" y="28" width="555" height="1"/>
+			</line>
+			<textField>
+				<reportElement x="1" y="2" width="45" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{MATRICULA}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="62" y="2" width="163" height="12"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SERVIDOR}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="226" y="2" width="94" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CARGO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="321" y="2" width="21" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VINC}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="342" y="2" width="71" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SITUACAO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="414" y="2" width="34" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CARGA_HORARIA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="484" y="2" width="35" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{HORA_EXTRA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="520" y="2" width="34" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FALTAS}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="46" y="2" width="13" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT}]]></textFieldExpression>
+			</textField>
+			<subreport>
+				<reportElement positionType="Float" x="1" y="16" width="553" height="2" isPrintWhenDetailOverflows="true"/>
+				<subreportParameter name="id_contratofp">
+					<subreportParameterExpression><![CDATA[$F{ID_CONTRATOFP}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="MESANO">
+					<subreportParameterExpression><![CDATA[$P{MESANO}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelatorioBoletimFrequencia_subreport1.jasper"]]></subreportExpression>
+			</subreport>
+			<subreport>
+				<reportElement positionType="Float" x="1" y="26" width="553" height="2" isPrintWhenDetailOverflows="true"/>
+				<subreportParameter name="id_contratofp">
+					<subreportParameterExpression><![CDATA[$F{ID_CONTRATOFP}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="MESANO">
+					<subreportParameterExpression><![CDATA[$P{MESANO}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "RelatorioBoletimFrequencia_subreport2.jasper"]]></subreportExpression>
+			</subreport>
+			<line>
+				<reportElement x="0" y="0" width="555" height="1"/>
+			</line>
+			<line>
+				<reportElement stretchType="RelativeToBandHeight" x="0" y="1" width="1" height="27" isPrintWhenDetailOverflows="true"/>
+			</line>
+			<line>
+				<reportElement stretchType="RelativeToBandHeight" x="554" y="1" width="1" height="28" isPrintWhenDetailOverflows="true"/>
+			</line>
+			<line>
+				<reportElement x="413" y="1" width="1" height="14"/>
+			</line>
+			<line>
+				<reportElement x="0" y="14" width="554" height="1"/>
+			</line>
+			<line>
+				<reportElement x="448" y="0" width="1" height="14"/>
+			</line>
+			<line>
+				<reportElement x="483" y="0" width="1" height="14"/>
+			</line>
+			<line>
+				<reportElement x="519" y="0" width="1" height="14"/>
+			</line>
+			<line>
+				<reportElement x="342" y="0" width="1" height="14"/>
+			</line>
+			<line>
+				<reportElement x="320" y="1" width="1" height="14"/>
+			</line>
+			<line>
+				<reportElement x="225" y="1" width="1" height="14"/>
+			</line>
+			<line>
+				<reportElement x="60" y="1" width="1" height="14"/>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="449" y="1" width="34" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DIASTRABALHADOS}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="9" splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="20" splitType="Stretch">
+			<line>
+				<reportElement x="0" y="2" width="555" height="1"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<textField>
+				<reportElement x="178" y="3" width="374" height="11"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Usuário: " + $P{USUARIO} + " - Emitido em " + new SimpleDateFormat("dd/MM/yyyy").format(new Date())]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="2" y="3" width="166" height="11"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true" isStrikeThrough="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["WebPúblico - Módulo: " + $P{MODULO}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="7" splitType="Stretch"/>
+	</summary>
+	<noData>
+		<band height="20">
+			<staticText>
+				<reportElement x="2" y="4" width="553" height="12"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Nenhum registro encontrado, de acordo com os critérios utilizados.]]></text>
+			</staticText>
+		</band>
+	</noData>
+</jasperReport>

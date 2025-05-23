@@ -101,22 +101,6 @@ public class EntidadePortalTransparenciaControlador extends PrettyControlador<Pr
         return Util.getListSelectItem(EsferaDoPoder.values());
     }
 
-    public void uploadLogoTopo(FileUploadEvent event) {
-        try {
-            UploadedFile file = event.getFile();
-            Arquivo arquivo = new Arquivo();
-            arquivo = facade.getArquivoFacade().novoArquivoMemoria(arquivo, file.getInputstream());
-            arquivo.setNome(file.getFileName());
-            arquivo.setMimeType(facade.getArquivoFacade().getMimeType(file.getFileName()));
-            arquivo.setDescricao("Logo");
-            arquivo.setTamanho(file.getSize());
-
-            selecionado.setLogoTopo(arquivo);
-        } catch (Exception ex) {
-            FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
-        }
-    }
-
     public List<HierarquiaOrganizacional> completaHierarquiaOrganizacional(String parte) {
         return facade.getHierarquiaOrganizacionalFacade().filtraPorNivel(parte, "3", TipoHierarquiaOrganizacional.ORCAMENTARIA.name(), UtilRH.getDataOperacao());
     }
@@ -300,5 +284,40 @@ public class EntidadePortalTransparenciaControlador extends PrettyControlador<Pr
 
     public Date getDataOperacao(){
         return facade.getSistemaFacade().getDataOperacao();
+    }
+
+    public void limparArquivoLogoTopo() {
+        selecionado.setLogoTopo(null);
+    }
+
+    public void limparArquivoOrganograma() {
+        selecionado.setOrganograma(null);
+    }
+
+    public void uploadLogoTopo(FileUploadEvent event) {
+        try {
+            selecionado.setLogoTopo(criarNovoArquivo(event, "Logo"));
+        } catch (Exception ex) {
+            FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
+        }
+    }
+
+    public void uploadOrganograma(FileUploadEvent event) {
+        try {
+            selecionado.setOrganograma(criarNovoArquivo(event, "Organograma"));
+        } catch (Exception ex) {
+            FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
+        }
+    }
+
+    private Arquivo criarNovoArquivo(FileUploadEvent event, String descricaoArquivo) throws Exception {
+        UploadedFile file = event.getFile();
+        Arquivo arquivo = new Arquivo();
+        arquivo = facade.getArquivoFacade().novoArquivoMemoria(arquivo, file.getInputstream());
+        arquivo.setNome(file.getFileName());
+        arquivo.setMimeType(facade.getArquivoFacade().getMimeType(file.getFileName()));
+        arquivo.setDescricao(descricaoArquivo);
+        arquivo.setTamanho(file.getSize());
+        return arquivo;
     }
 }

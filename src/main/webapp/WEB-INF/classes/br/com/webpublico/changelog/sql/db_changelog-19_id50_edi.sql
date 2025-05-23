@@ -1,0 +1,1 @@
+update estornolibcotafinanceira set recebida = dataconciliacao

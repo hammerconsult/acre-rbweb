@@ -1,0 +1,9 @@
+update parametrosfuncionarios set funcaoparametrositbi_id = (select id from funcaoparametrositbi
+                                                             where funcao = 'RESPONSAVEL_COMISSAO_AVALIADORA')
+where funcao = 'RESPONSAVEL_COMISSAO_AVALIADORA';
+update parametrosfuncionarios set funcaoparametrositbi_id = (select id from funcaoparametrositbi
+                                                             where funcao = 'DIRETOR_CHEFE_DEPARTAMENTO_TRIBUTO')
+where funcao = 'DIRETOR_CHEFE_DEPARTAMENTO_TRIBUTO';
+update parametrosfuncionarios set funcaoparametrositbi_id = (select id from funcaoparametrositbi
+                                                             where funcao = 'SUPORTE_TECNICO')
+where funcao = 'SUPORTE_TECNICO';

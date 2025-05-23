@@ -1,0 +1,1 @@
+update  PERIODOAQUISITIVOFL set SALDO = 90 where id = 639707769;

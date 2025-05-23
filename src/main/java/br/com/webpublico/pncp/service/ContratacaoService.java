@@ -33,15 +33,15 @@ public class ContratacaoService extends PncpService {
         }
     }
 
-    public List<AtaRegistroDTO> buscarAtas(FiltroAtaRegistroPrecoDto filtroAtaRegistroPrecoDto) {
-       return ataRegistroPrecoFacade.buscarAtasPncpPorData(filtroAtaRegistroPrecoDto);
-    }
-
-    public List<ContratacaoDTO> buscarContratacoes(FiltroContratacaoDTO filtroContratacaoDTO) {
-        return licitacaoFacade.buscarLicitacoesPncpPorLeiEData(filtroContratacaoDTO);
-    }
-
-    public List<ResultadoItemDTO> obterResultadosItensContratacao(ContratacaoDTO contratacao) {
-        return processoDeCompraFacade.buscarResultadosItensContratacao(contratacao);
-    }
+//    public List<AtaRegistroDTO> buscarAtas(FiltroAtaRegistroPrecoDto filtroAtaRegistroPrecoDto) {
+//       return ataRegistroPrecoFacade.buscarAtasPncpPorData(filtroAtaRegistroPrecoDto);
+//    }
+//
+//    public List<ContratacaoDTO> buscarContratacoes(FiltroContratacaoDTO filtroContratacaoDTO) {
+//        return licitacaoFacade.buscarLicitacoesPncpPorLeiEData(filtroContratacaoDTO);
+//    }
+//
+//    public List<ResultadoItemDTO> obterResultadosItensContratacao(ContratacaoDTO contratacao) {
+//        return processoDeCompraFacade.buscarResultadosItensContratacao(contratacao);
+//    }
 }

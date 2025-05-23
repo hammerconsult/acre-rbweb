@@ -92,7 +92,7 @@ public class ParametrosTransitoTransporte extends ParametrosTransitoConfiguracao
 
     public void carregarListaTaxas(TipoPermissaoRBTrans tipoPermissao) {
         if (this.getTaxasTransito() == null) {
-            this.setTaxasTransito(new ArrayList<TaxaTransito>());
+            this.setTaxasTransito(Lists.newArrayList());
         }
         for (TipoCalculoRBTRans tipo : TipoCalculoRBTRans.values()) {
             if (tipo.contains(tipoPermissao)) {
@@ -102,10 +102,18 @@ public class ParametrosTransitoTransporte extends ParametrosTransitoConfiguracao
     }
 
     public void carregarListaTermos(TipoPermissaoRBTrans tipoPermissao) {
-        this.setParametrosTermos(new ArrayList<ParametrosTransitoTermos>());
-        for (TipoTermoRBTrans termo : TipoTermoRBTrans.values()) {
-            if (termo.contains(tipoPermissao)) {
-                adicionarTermo(termo);
+        if (getParametrosTermos() == null || getParametrosTermos().isEmpty()) {
+            this.setParametrosTermos(Lists.newArrayList());
+            for (TipoTermoRBTrans termo : TipoTermoRBTrans.values()) {
+                if (termo.contains(tipoPermissao)) {
+                    adicionarTermo(termo);
+                }
+            }
+        } else {
+            for (TipoTermoRBTrans termo : TipoTermoRBTrans.values()) {
+                if (getParametrosTermos().stream().noneMatch(param -> param.getTipoTermoRBTrans().equals(termo)) && termo.contains(tipoPermissao)) {
+                    adicionarTermo(termo);
+                }
             }
         }
     }

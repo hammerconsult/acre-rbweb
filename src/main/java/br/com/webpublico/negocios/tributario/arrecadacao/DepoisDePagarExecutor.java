@@ -111,41 +111,41 @@ public class DepoisDePagarExecutor implements Runnable {
         Calculo.TipoCalculo tipo = calculo.getTipoCalculo();
         switch (tipo) {
             case ITBI:
-                calculoITBIFacade.depoisDePagarITBI(calculo);
+                calculoITBIFacade.depoisDePagar(calculo);
                 break;
             case RB_TRANS:
-                permissaoTransporteFacade.depoisDePagarRBTrans(calculo);
+                permissaoTransporteFacade.depoisDePagar(calculo);
                 break;
             case NFS_AVULSA:
-                nfsAvulsaFacade.liberaNotaFiscalAvulsa(calculo);
+                nfsAvulsaFacade.depoisDePagar(calculo);
                 break;
             case FISCALIZACAO_RBTRANS:
-                fiscalizacaoRBTransFacade.executaQndoPagar(calculo);
+                fiscalizacaoRBTransFacade.depoisDePagar(calculo);
                 break;
             case PROC_FISCALIZACAO:
-                processoFiscalizacaoFacade.alteraSituacaoProcessoFiscalizacaoSecretaria(calculo);
+                processoFiscalizacaoFacade.depoisDePagar(calculo);
                 break;
             case PARCELAMENTO:
-                processoParcelamentoFacade.pagarParcelamento(calculo);
+                processoParcelamentoFacade.depoisDePagar(calculo);
                 break;
             case TAXAS_DIVERSAS:
-                calculoTaxasDiversasFacade.executaQndoPagar(calculo);
+                calculoTaxasDiversasFacade.depoisDePagar(calculo);
                 break;
             case INSCRICAO_DA:
-                dividaAtivaFacade.pagaCDA(calculo);
+                dividaAtivaFacade.depoisDePagar(calculo);
                 Calculo calculoOriginal = loteBaixaFacade.getArrecadacaoFacade().buscarCalculoOriginalDaDividaAtiva(calculo);
                 if (calculoOriginal != null) {
                     depoisDePagar(calculoOriginal);
                 }
                 break;
             case ISS:
-                declaracaoMensalServicoFacade.pagarNotasDoCalculo(calculo);
+                declaracaoMensalServicoFacade.depoisDePagar(calculo);
                 break;
             case ALVARA:
                 calculoAlvaraFacade.enviarPdfsRedeSim(calculo, calculoAlvaraFacade.buscarConfiguracaoTriutarioVigente());
                 break;
             case ALVARA_CONSTRUCAO_HABITESE:
-                alvaraConstrucaoFacade.depoisDePagarAlvaraConstrucao(calculo);
+                alvaraConstrucaoFacade.depoisDePagar(calculo);
                 break;
         }
 

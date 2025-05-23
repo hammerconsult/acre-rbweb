@@ -1,0 +1,1 @@
+update caracfuncionamento set descricao = descricaoCompleta where descricao is null;

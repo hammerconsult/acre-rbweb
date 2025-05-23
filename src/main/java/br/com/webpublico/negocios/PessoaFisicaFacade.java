@@ -224,32 +224,32 @@ public class PessoaFisicaFacade extends AbstractFacade<PessoaFisica> {
         Query q = em.createNativeQuery(sql);
         q.setParameter("idNutricionista", idNutricionista);
         List<Object[]> resultado = q.getResultList();
-        String retorno = "";
+        StringBuilder retorno = new StringBuilder();
         if (!resultado.isEmpty()) {
             for (Object[] obj : resultado) {
-                retorno += (String) obj[0];
-                retorno += " ";
-                retorno += (String) obj[1];
+                retorno.append((String) obj[0]);
+                retorno.append(" ");
+                retorno.append((String) obj[1]);
             }
         }
-        return retorno;
+        return retorno.toString();
     }
 
     @Override
     public PessoaFisica recuperar(Object id) {
         PessoaFisica pf = em.find(PessoaFisica.class, id);
-        pf.getTelefones().size();
-        pf.getDependentes().size();
-        pf.getDocumentosPessoais().size();
-        pf.getEnderecoscorreio().size();
-        pf.getContaCorrenteBancPessoas().size();
-        pf.getFormacoes().size();
-        pf.getHabilidades().size();
-        pf.getPerfis().size();
-        pf.getItemTempoContratoFPPessoa().size();
-        pf.getDependentes().size();
+        Hibernate.initialize(pf.getTelefones());
+        Hibernate.initialize(pf.getDependentes());
+        Hibernate.initialize(pf.getDocumentosPessoais());
+        Hibernate.initialize(pf.getEnderecoscorreio());
+        Hibernate.initialize(pf.getContaCorrenteBancPessoas());
+        Hibernate.initialize(pf.getFormacoes());
+        Hibernate.initialize(pf.getHabilidades());
+        Hibernate.initialize(pf.getPerfis());
+        Hibernate.initialize(pf.getItemTempoContratoFPPessoa());
+        Hibernate.initialize(pf.getDependentes());
         for (Dependente dependente : pf.getDependentes()) {
-            dependente.getDependentesVinculosFPs().size();
+            Hibernate.initialize(dependente.getDependentesVinculosFPs());
         }
         Hibernate.initialize(pf.getConselhoClasseContratos());
         return pf;

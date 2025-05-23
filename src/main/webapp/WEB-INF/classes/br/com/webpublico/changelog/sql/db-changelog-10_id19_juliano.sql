@@ -1,0 +1,1 @@
+update categoriadividapublica set NATUREZADIVIDAPUBLICA = null;

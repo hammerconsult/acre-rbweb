@@ -1,0 +1,11 @@
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'TESTE RÁPIDO', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'INSUMO LABORATORIAL', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'MÁSCARA N95', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'MÁSCARA CIRÚRGICA DESCARTÁVEL', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'ÁLCOOL GEL 70%', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'ÁLCOOL 70%', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'MÉDICO', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'TÉCNICO', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'AVENTAL', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'TOUCA', 0);
+insert into CALAMIDADEPUBLICABEMSERV (id, CALAMIDADEPUBLICA_ID, descricao, quantidade) values (hibernate_sequence.nextval, (select id from calamidadepublica where ABREVIACAO = 'COVID'), 'SAPATILHA', 0);

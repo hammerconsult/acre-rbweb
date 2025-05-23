@@ -6,11 +6,12 @@ import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.exception.WebReportRelatorioExistenteException;
 import br.com.webpublico.negocios.FiscalDesignadoFacade;
 import br.com.webpublico.negocios.SistemaFacade;
-import br.com.webpublico.webreportdto.dto.comum.TipoRelatorioDTO;
 import br.com.webpublico.report.ReportService;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.webreportdto.dto.comum.RelatorioDTO;
+import br.com.webpublico.webreportdto.dto.comum.TipoRelatorioDTO;
+import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
@@ -79,18 +80,19 @@ public class RelatorioAcompanhamentoFiscalizacaoControlador implements Serializa
     public void gerarRelatorio(String tipoRelatorioExtensao) {
         try {
             validarCampos();
-            String nomeRelatorio = "ACOMPANHAMENTO DAS FISCALIZAÇÕES";
+            String nomeRelatorio = "Relatório de acompanhamento das fiscalizações";
             RelatorioDTO dto = new RelatorioDTO();
             dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
             dto.adicionarParametro("USUARIO", sistemaFacade.getUsuarioCorrente().getNome(), false);
             dto.setNomeParametroBrasao("BRASAO");
             dto.adicionarParametro("NOME_PREFEITURA", "Município de Rio Branco");
+            dto.adicionarParametro("NOME_SECRETARIA", "Secretaria Municipal de Finanças");
             dto.adicionarParametro("NOME_RELATORIO", nomeRelatorio);
             dto.adicionarParametro("TIPO_RELATORIO", tipoRelatorio.name());
-            dto.adicionarParametro("condicao", montarCondicao());
-            dto.adicionarParametro("isAnalitico", TipoRelatorio.ANALITICO.equals(tipoRelatorio));
+            dto.adicionarParametro("CONDICAO", montarCondicao());
+            dto.adicionarParametro("ISANALITICO", TipoRelatorio.ANALITICO.equals(tipoRelatorio));
             dto.setNomeRelatorio(nomeRelatorio);
-            dto.setApi("tributario/acompanhamento-fiscalizacoes/");
+            dto.setApi("tributario/acompanhamento-fiscalizacoes/" + (TipoRelatorioDTO.XLS.equals(dto.getTipoRelatorio()) ? "excel/" : ""));
             ReportService.getInstance().gerarRelatorio(sistemaFacade.getUsuarioCorrente(), dto);
             FacesUtil.addMensagemRelatorioSegundoPlano();
         } catch (WebReportRelatorioExistenteException e) {
@@ -115,11 +117,11 @@ public class RelatorioAcompanhamentoFiscalizacaoControlador implements Serializa
         StringBuilder filtro = new StringBuilder();
         String juncao = " where ";
         if (dataInicial != null) {
-            filtro.append(juncao).append("acao.dataInicial >= ").append(" to_date('" + DataUtil.getDataFormatada(dataInicial) + "', 'dd/MM/yyyy')");
+            filtro.append(juncao).append("acao.dataInicial >= ").append(" to_date('").append(DataUtil.getDataFormatada(dataInicial)).append("', 'dd/MM/yyyy')");
             juncao = " and ";
         }
         if (dataFinal != null) {
-            filtro.append(juncao).append("acao.dataFinal <= ").append(" to_date('" + DataUtil.getDataFormatada(dataFinal) + "', 'dd/MM/yyyy')");
+            filtro.append(juncao).append("acao.dataFinal <= ").append(" to_date('").append(DataUtil.getDataFormatada(dataFinal)).append("', 'dd/MM/yyyy')");
             juncao = " and ";
         }
         if (inscricaoInicial != null && !inscricaoInicial.isEmpty()) {
@@ -159,7 +161,7 @@ public class RelatorioAcompanhamentoFiscalizacaoControlador implements Serializa
             juncao = " and ";
         }
         if (situacaoAcaoFiscal != null) {
-            filtro.append(juncao).append("acao.situacaoAcaoFiscal = ").append("'" + situacaoAcaoFiscal.name() + "'");
+            filtro.append(juncao).append("acao.situacaoAcaoFiscal = ").append("'").append(situacaoAcaoFiscal.name()).append("'");
             juncao = " and ";
         }
         if (fiscalDesignado != null) {
@@ -173,7 +175,7 @@ public class RelatorioAcompanhamentoFiscalizacaoControlador implements Serializa
     }
 
     public List<SelectItem> getSituacoesAcaoFiscal() {
-        List<SelectItem> toReturn = new ArrayList<>();
+        List<SelectItem> toReturn = Lists.newArrayList();
         toReturn.add(new SelectItem(null, "Todas..."));
         for (SituacaoAcaoFiscal obj : SituacaoAcaoFiscal.values()) {
             toReturn.add(new SelectItem(obj, obj.getDescricao()));

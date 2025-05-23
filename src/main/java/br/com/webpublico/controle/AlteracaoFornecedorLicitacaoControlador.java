@@ -186,7 +186,7 @@ public class AlteracaoFornecedorLicitacaoControlador extends PrettyControlador<A
     }
 
     public List<PropostaFornecedor> completarPropostaFornecedor(String parte) {
-        return facade.getPropostaFornecedorFacade().buscarPorLicitacao(licitacao, parte.trim());
+        return facade.getPropostaFornecedorFacade().buscarPorLicitacao(licitacao.getId(), parte.trim());
     }
 
     public List<Licitacao> completarLicitacao(String parte) {
@@ -194,7 +194,7 @@ public class AlteracaoFornecedorLicitacaoControlador extends PrettyControlador<A
     }
 
     public List<LicitacaoFornecedor> completarParticipantesLicitacao(String parte) {
-        return facade.getParticipanteLicitacaoFacade().buscarPorLicitacao(licitacao, parte.trim());
+        return facade.getParticipanteLicitacaoFacade().buscarPorLicitacao(licitacao.getId(), parte.trim());
     }
 
     public List<DispensaDeLicitacao> completarDispensaLicitacao(String parte) {
@@ -314,11 +314,11 @@ public class AlteracaoFornecedorLicitacaoControlador extends PrettyControlador<A
     }
 
     private void buscarParticipantesLicitacao() {
-        participantes = facade.getParticipanteLicitacaoFacade().buscarPorLicitacao(licitacao, "");
+        participantes = facade.getParticipanteLicitacaoFacade().buscarPorLicitacao(licitacao.getId(), "");
     }
 
     private void buscarPropostasFornecedor() {
-        propostas = facade.getPropostaFornecedorFacade().buscarPorLicitacao(licitacao, "");
+        propostas = facade.getPropostaFornecedorFacade().buscarPorLicitacao(licitacao.getId(), "");
     }
 
     public void selecionarProposta(PropostaFornecedor proposta) {

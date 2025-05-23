@@ -67,9 +67,7 @@ public class ParametrosTransitoTransporteControlador extends PrettyControlador<P
                     param = new ParametrosTransitoTransporte(tipo);
                 } else {
                     param.carregarListaTaxas(tipo);
-                    if (param.getParametrosTermos().isEmpty()) {
-                        param.carregarListaTermos(tipo);
-                    }
+                    param.carregarListaTermos(tipo);
                     if (param.getVencimentosLicenciamento().isEmpty()) {
                         param.carregarVencimentosLicenciamento();
                     }

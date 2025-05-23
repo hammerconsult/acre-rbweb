@@ -1,0 +1,2 @@
+insert into memorando
+    select hibernate_sequence.nextval, 367370529, id, 'Novidade!', 'Agora você pode mandar mensagens ou memorandos para outros usuários do sistema, ou para uma unidade inteira, basta informar o titulo da mensagem ou memorando, os usuários destinatários ou a unidade e o conteúdo da mensagem.<br/><br/>Você também pode anexar fotos e arquivos.<br/><br/>Att. Webpublico<br/>', current_date, null, 0, null  from usuariosistema;

@@ -1,0 +1,1 @@
+update subvencaoparcela sp set sp.emissao = (select calc.DATACALCULO from calculo calc inner join valordivida vd on vd.calculo_id = calc.id inner join parcelavalordivida pvd on pvd.valordivida_id = vd.id where pvd.id = sp.PARCELAVALORDIVIDA_ID) where sp.emissao is null

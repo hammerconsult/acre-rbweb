@@ -1,0 +1,1 @@
+update eventocontabil set tipoeventocontabil = 'CREDITO_INICIAL' where codigo = '15111'

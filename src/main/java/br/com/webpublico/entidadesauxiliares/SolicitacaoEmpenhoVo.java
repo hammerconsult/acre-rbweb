@@ -36,14 +36,6 @@ public class SolicitacaoEmpenhoVo {
         this.contrato = contrato;
     }
 
-    public OrigemSolicitacaoEmpenho getOrigemSolicitacaoEmpenho() {
-        return origemSolicitacaoEmpenho;
-    }
-
-    public void setOrigemSolicitacaoEmpenho(OrigemSolicitacaoEmpenho origemSolicitacaoEmpenho) {
-        this.origemSolicitacaoEmpenho = origemSolicitacaoEmpenho;
-    }
-
     public ClasseCredor getClasseCredor() {
         return classeCredor;
     }
@@ -154,14 +146,6 @@ public class SolicitacaoEmpenhoVo {
 
     public void setOrigemSocilicitacao(OrigemSolicitacaoEmpenho origemSocilicitacao) {
         this.origemSocilicitacao = origemSocilicitacao;
-    }
-
-    public ReconhecimentoDivida getReconhecimentoDivida() {
-        return reconhecimentoDivida;
-    }
-
-    public void setReconhecimentoDivida(ReconhecimentoDivida reconhecimentoDivida) {
-        this.reconhecimentoDivida = reconhecimentoDivida;
     }
 }
 

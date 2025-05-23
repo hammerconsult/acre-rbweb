@@ -1,0 +1,25 @@
+INSERT INTO RECURSOSISTEMA
+VALUES (HIBERNATE_SEQUENCE.nextval, 'COMPRAS E LICITAÇÕES > ESTORNO EXECUÇÃO ATA REGISTRO DE PREÇOS > EDITA',
+        '/administrativo/licitacao/execucao-ata-estorno/edita.xhtml', 0, 'LICITACAO');
+
+INSERT INTO GRUPORECURSOSISTEMA
+VALUES (HIBERNATE_SEQUENCE.currval, 75756874);
+
+INSERT INTO RECURSOSISTEMA
+VALUES (HIBERNATE_SEQUENCE.nextval, 'COMPRAS E LICITAÇÕES > ESTORNO EXECUÇÃO ATA REGISTRO DE PREÇOS > VISUALIZA',
+        '/administrativo/licitacao/execucao-ata-estorno/visualizar.xhtml', 0, 'LICITACAO');
+
+INSERT INTO GRUPORECURSOSISTEMA
+VALUES (HIBERNATE_SEQUENCE.currval, 75756874);
+
+INSERT INTO RECURSOSISTEMA
+VALUES (HIBERNATE_SEQUENCE.nextval, 'COMPRAS E LICITAÇÕES > ESTORNO EXECUÇÃO ATA REGISTRO DE PREÇOS > LISTA',
+        '/administrativo/licitacao/execucao-ata-estorno/lista.xhtml', 0, 'LICITACAO');
+
+INSERT INTO GRUPORECURSOSISTEMA
+VALUES (HIBERNATE_SEQUENCE.currval, 75756874);
+
+INSERT INTO menu
+VALUES (HIBERNATE_SEQUENCE.nextval, 'ESTORNO EXECUÇÃO ATA REGISTRO DE PREÇOS',
+        '/administrativo/licitacao/execucao-ata-estorno/lista.xhtml',
+        (select ID from menu where LABEL = 'COMPRAS E LICITAÇÕES'), 490, null);

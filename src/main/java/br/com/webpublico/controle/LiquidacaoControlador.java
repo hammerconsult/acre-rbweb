@@ -1370,6 +1370,8 @@ public class LiquidacaoControlador extends PrettyControlador<Liquidacao> impleme
             buscarGrupoIntegracaoDocumentoFiscal();
             setIntegracaoDocumentoFiscal(hasDocumentosFiscaisIntegracao());
             validarIntegracaoDocumentoFiscal();
+        } catch (ExcecaoNegocioGenerica ex) {
+            FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }

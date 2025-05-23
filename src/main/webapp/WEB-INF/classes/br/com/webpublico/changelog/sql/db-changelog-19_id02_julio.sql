@@ -1,0 +1,1 @@
+update nfsavulsaitem_aud set   descricao_aud  = descricao

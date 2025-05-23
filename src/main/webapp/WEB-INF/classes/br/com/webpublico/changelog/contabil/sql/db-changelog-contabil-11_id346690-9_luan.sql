@@ -1,0 +1,1 @@
+insert into obrasituacao select hibernate_sequence.nextval, ob.id, c.iniciovigencia, null, 'EM_ANDAMENTO', 'Gerado automaticamente ao iniciar a obra.' from obra ob inner join contrato c on c.id = ob.contrato_id;

@@ -1,0 +1,1 @@
+update servico set descricaocurta = substr(nome, 1, 70) where descricaocurta is null;

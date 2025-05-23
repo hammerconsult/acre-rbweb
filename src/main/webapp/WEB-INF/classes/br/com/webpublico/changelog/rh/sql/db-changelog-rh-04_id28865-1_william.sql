@@ -1,0 +1,1 @@
+insert into EXONERACAORESCISAO values (hibernate_sequence.nextval, '30/04/96',639334288, null, 880926317, null, null, null, null, 638923288, null, null, 'RESCISAO_SEM_JUSTA_CAUSA_INICIATIVA_EMPREGADOR',null );

@@ -1,6 +1,8 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidades.DocumentoCondutorOtt;
+import br.com.webpublico.entidades.DocumentoVeiculoOtt;
 import br.com.webpublico.entidades.comum.UsuarioWeb;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
@@ -11,10 +13,7 @@ import br.com.webpublico.nfse.util.RandomUtil;
 import br.com.webpublico.ott.RenovacaoOperadoraOttDTO;
 import br.com.webpublico.seguranca.NotificacaoService;
 import br.com.webpublico.tributario.dto.EventoRedeSimDTO;
-import br.com.webpublico.util.AnexoEmailDTO;
-import br.com.webpublico.util.DataUtil;
-import br.com.webpublico.util.EmailService;
-import br.com.webpublico.util.StringUtil;
+import br.com.webpublico.util.*;
 import com.google.common.collect.Lists;
 import org.hibernate.Hibernate;
 
@@ -92,13 +91,19 @@ public class OperadoraTecnologiaTransporteFacade extends AbstractFacade<Operador
             operadora.setPessoaJuridica(pessoaJuridicaFacade.recuperar(operadora.getPessoaJuridica().getId()));
             usuarioWeb = usuarioWebFacade.buscarUsuarioWebByIdPessoa(operadora.getPessoaJuridica().getId());
         }
-        if (usuarioWeb != null) return;
+        if (usuarioWeb != null) {
+            enviarEmailUsuarioWebOTT(usuarioWeb, null);
+            return;
+        }
         PessoaJuridica pessoa = pessoaJuridicaFacade.recuperaPessoaJuridicaPorCNPJ(operadora.getCnpj());
         if (pessoa == null) {
             pessoa = criarPessoaJuridicaDaOTT(operadora);
             usuarioWeb = usuarioWebFacade.buscarUsuarioWebByIdPessoa(pessoa.getId());
         }
-        if (usuarioWeb != null) return;
+        if (usuarioWeb != null) {
+            enviarEmailUsuarioWebOTT(usuarioWeb, null);
+            return;
+        }
         String senha = RandomUtil.generatePassword();
         if (pessoa.getUsuariosWeb().isEmpty()) {
             usuarioWeb = new UsuarioWeb();
@@ -111,7 +116,7 @@ public class OperadoraTecnologiaTransporteFacade extends AbstractFacade<Operador
         }
         usuarioWeb.setPassword(usuarioWebFacade.encripitografarSenha(senha));
         pessoa = em.merge(pessoa);
-        pessoaJuridicaFacade.getPessoaFacade().getPortalContribunteFacade().enviarEmailOTTComSenhaCriada(usuarioWeb, senha);
+        enviarEmailUsuarioWebOTT(usuarioWeb, senha);
         operadora.setPessoaJuridica(pessoa);
         em.merge(operadora);
     }
@@ -269,7 +274,6 @@ public class OperadoraTecnologiaTransporteFacade extends AbstractFacade<Operador
         return null;
     }
 
-
     public String enviarEmailIndeferimentoOtt(OperadoraTecnologiaTransporte operadora) {
         String corpoEmail = montarEmailIndeferimentoOtt(operadora);
         enviarEmail(operadora.getEmailResponsavel(), corpoEmail, "OTT - " + operadora.getNome() +
@@ -294,7 +298,7 @@ public class OperadoraTecnologiaTransporteFacade extends AbstractFacade<Operador
 
     @Asynchronous
     @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-    public void enviarEmail(String email, String corpoEmail, String assunto) {
+    private void enviarEmail(String email, String corpoEmail, String assunto) {
         EmailService.getInstance().enviarEmail(email, assunto, corpoEmail);
     }
 
@@ -468,6 +472,46 @@ public class OperadoraTecnologiaTransporteFacade extends AbstractFacade<Operador
         } else {
             aprovarOTT(operadora);
         }
+    }
+
+    private void enviarEmailUsuarioWebOTT(UsuarioWeb usuarioWeb, String novaSenha) {
+        String corpoEmail = criarEmailUsuarioOTT(usuarioWeb.getPessoa(), novaSenha);
+        enviarEmail(usuarioWeb.getEmail(), corpoEmail, "Acesso à Área do Contribuinte");
+    }
+
+    public String montarEmailOTT(String nome, String cpfCnpj, String corpo) {
+        StringBuilder sb = new StringBuilder();
+        String cnpj = Util.formatarCnpj(cpfCnpj);
+        if (nome != null) {
+            sb.append("Olá ").append("<b>").append(nome).append(" (").append(cnpj).append(")").append("</b>").append("<br/><br/>");
+        }
+        sb.append(corpo);
+        sb.append(getParteFinalDoEmailOTT());
+        return sb.toString();
+    }
+
+    public String getParteFinalDoEmailOTT() {
+        String rodapeRbTrans = configuracaoTributarioFacade.recuperarRodapeEmailPortal(true);
+        return "<br/><br/>" + rodapeRbTrans;
+    }
+
+    private String criarEmailUsuarioOTT(Pessoa pessoa, String novaSenha) {
+        String corpo = "Recebemos sua solicitação para acesso no <b>Portal do Cidadão</b> da Prefeitura Municipal de Rio Branco, no serviço de <b>Cadastro de OTT.</b>" + "<br/>" +
+            "Para a sua segurança, <b>Acesse à Área do Contribuinte</b> do sistema no endereço <a href=\"" + configuracaoTributarioFacade.recuperarUrlPortal() + "\">" + configuracaoTributarioFacade.recuperarUrlPortal() + "</a>,";
+        if (novaSenha != null && !novaSenha.isEmpty()) {
+            corpo +=
+                " efetue seu login com os dados informados abaixo." + "<br/>" +
+                    "<br/>" +
+                    "Login: " + StringUtil.retornaApenasNumeros(pessoa.getCpf_Cnpj()) + "<br/>" +
+                    "Senha temporária: " + novaSenha + "<br/>" +
+                    "<br/>" +
+                    "Altere sua senha de acesso por uma combinação de sua preferência.";
+        } else {
+            corpo += " efetue seu login com o cpf/cnpj " + StringUtil.retornaApenasNumeros(pessoa.getCpf_Cnpj()) + " e sua senha já cadastrada.";
+        }
+        corpo += "<br/>" + "<br/>" +
+            "Caso você não tenha solicitado estas informações, por favor entre em contato com o suporte." + "<br/>";
+        return montarEmailOTT(pessoa.getNome(), pessoa.getCpf_Cnpj(), corpo);
     }
 
     private void rejeitarOTT(OperadoraTecnologiaTransporte operadora, List<OperadoraTransporteDetentorArquivo> documentosRejeitados) {

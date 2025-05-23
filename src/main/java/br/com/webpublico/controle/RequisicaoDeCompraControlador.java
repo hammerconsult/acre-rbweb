@@ -13,10 +13,10 @@ import br.com.webpublico.enums.administrativo.OpcaoRelatorioReqCompra;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.exception.WebReportRelatorioExistenteException;
 import br.com.webpublico.interfaces.CRUD;
+import br.com.webpublico.interfaces.ItemLicitatorioContrato;
 import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.RequisicaoDeCompraFacade;
-import br.com.webpublico.negocios.SolicitacaoAquisicaoFacade;
 import br.com.webpublico.report.ReportService;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.FacesUtil;
@@ -40,6 +40,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @ManagedBean(name = "requisicaoDeCompraControlador")
 @ViewScoped
@@ -53,35 +54,38 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     @EJB
     private RequisicaoDeCompraFacade facade;
-    @EJB
-    private SolicitacaoAquisicaoFacade solicitacaoAquisicaoFacade;
-    private String filtroParte;
-    private FiltroContratoRequisicaoCompra filtroContrato;
-    private List<Contrato> contratos;
-    private List<RequisicaoCompraEstorno> estornosRequisicaoCompra;
-    private List<ItemRequisicaoCompraDesdobravel> itensDesdobraveis;
-    private List<ItemProcessoLicitacao> itensProcesso;
-    private List<RequisicaoExecucaoExecucaoVO> execucoesRequisicao;
-    private List<DescontoItemRequisicaoCompra> descontosItemRequisicao;
-    private ItemRequisicaoCompraDesdobravel itemDesdobravel;
-    private ItemRequisicaoDeCompra itemRequisicao;
-    private Integer indiceAba;
-    private List<EntradaCompraMaterial> entradasComprasMateriais;
-    private DoctoFiscalEntradaCompra doctoFiscalEntradaCompra;
-    private List<SolicitacaoAquisicao> solicitacoesAquisicoes;
+    private ItemRequisicaoCompraVO itemRequisicaoDesdobravel;
+    private ItemRequisicaoCompraVO itemRequisicao;
+    private ItemRequisicaoCompraExecucaoVO itemRequisicaoExecucao;
     private HierarquiaOrganizacional hierarquiaAdm;
-    private DoctoFiscalSolicitacaoAquisicao doctoFiscalSolicitacaoAquisicao;
-    private ItemDoctoItemAquisicao itemDoctoSolicitacaoAquisicao;
-    private List<LiquidacaoVO> liquidacoesVO;
-    private OpcaoRelatorioReqCompra opcaoRelatorioReqCompra;
-    private Boolean hasPermissaoDesdobrarSemGrupo;
-    private List<FiscalContratoDTO> fiscais;
-    private List<GestorContrato> gestores;
-    private List<TipoContaDespesa> tiposContaDespesa;
+    private Contrato contrato;
     private AtaRegistroPreco ataRegistroPreco;
     private DispensaDeLicitacao dispensaDeLicitacao;
+    private ReconhecimentoDivida reconhecimentoDivida;
+    private List<TipoContaDespesa> tiposContaDespesa;
     private List<ItemRequisicaoCompraDerivacao> itensDerivacao;
+    private List<RequisicaoCompraExecucaoVO> execucoesVO;
+    private List<ItemRequisicaoCompraVO> itensRequisicaoVO;
+    private List<ItemRequisicaoCompraVO> itensRequisicaoDesdobradoVO;
+    private List<ItemRequisicaoProcessoLicitatorio> itensProcesso;
+    private List<DescontoItemRequisicaoCompra> descontosItemRequisicao;
+    private Set<Pessoa> fornecedorSet;
+
+    private DoctoFiscalEntradaCompra doctoFiscalEntradaCompra;
+    private DoctoFiscalSolicitacaoAquisicao doctoFiscalSolicitacaoAquisicao;
+    private ItemDoctoItemAquisicao itemDoctoSolicitacaoAquisicao;
+    private List<SolicitacaoAquisicao> solicitacoesAquisicoes;
+    private List<EntradaCompraMaterial> entradasComprasMateriais;
+    private List<RequisicaoCompraEstorno> estornosRequisicaoCompra;
+    private List<LiquidacaoVO> liquidacoesVO;
+    private List<Contrato> contratos;
+
+    private OpcaoRelatorioReqCompra opcaoRelatorioReqCompra;
+    private Boolean hasPermissaoDesdobrarSemGrupo;
+    private FiltroContratoRequisicaoCompra filtroContrato;
     private String origemContrato;
+    private List<GestorContrato> gestores;
+    private List<FiscalContratoDTO> fiscais;
 
     public RequisicaoDeCompraControlador() {
         super(RequisicaoDeCompra.class);
@@ -110,10 +114,13 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         selecionado.setCriadoPor(facade.getSistemaFacade().getUsuarioCorrente().getPessoaFisica());
         selecionado.setTipoContaDespesa(TipoContaDespesa.NAO_APLICAVEL);
         hasPermissaoDesdobrarSemGrupo = false;
-        indiceAba = 0;
         fiscais = Lists.newArrayList();
         gestores = Lists.newArrayList();
         itensDerivacao = Lists.newArrayList();
+        itensRequisicaoVO = Lists.newArrayList();
+        execucoesVO = Lists.newArrayList();
+        fornecedorSet = Sets.newHashSet();
+        novaPesquisaContratos();
     }
 
     @Override
@@ -121,22 +128,21 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     public void editar() {
         try {
             super.editar();
+            itensRequisicaoVO = Lists.newArrayList();
+            liquidacoesVO = Lists.newArrayList();
             validarDisponibilidadeMovimentacao();
-            definirAtaOrDispensaExecucaoProcesso();
+            atribuirVariavelProcesso();
             buscarExecucoesEmpenhadas();
             selecionarRequisicaoExecucaoSalva();
             buscarItensProcesso();
-            if (!permiteDesdobrarItens()) {
-                selecionado.setItens(Lists.newArrayList());
-                buscarTiposContaDespesaEmpenho();
-                criarItensRequisicaoCompraSemDesdobrar(itensProcesso);
-                separarItensPorTipoContaDespesaEmpenho();
-            }
-            preencherItemDesdobravel();
+            buscarTiposContaDespesaEmpenho();
+            criarItemRequisicaoCompraVOAndItemRequisicaoExecucaoVO(itensProcesso);
+            separarItensPorTipoContaDespesaEmpenho();
+            preencherItemDesdobradoEdicao();
             preecherItemRequisicaoDerivacaoEdicao();
             hasPermissaoDesdobrarSemGrupo = facade.getConfiguracaoLicitacaoFacade().verificarUnidadeGrupoObjetoCompra(getUnidadeAdministrativa());
-            Collections.sort(selecionado.getItens());
-            liquidacoesVO = Lists.newArrayList();
+            Collections.sort(itensRequisicaoVO);
+            fornecedorSet = Sets.newHashSet();
         } catch (ValidacaoException ve) {
             redirecionarParaRequisicaoCompra(selecionado);
             FacesUtil.printAllFacesMessages(ve.getMensagens());
@@ -148,30 +154,69 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     public void ver() {
         operacao = Operacoes.VER;
         recuperarObjeto();
-        buscarItensProcessoVisualizar();
-        preencherItemDesdobravel();
-        estornosRequisicaoCompra = facade.getRequisicaoCompraEstornoFacade().buscarPorRequisicaoCompra(selecionado);
+        atribuirVariavelProcesso();
+        preencherItemDesdobradoVisualizacao();
+        preecherItemRequisicaoVOVisualizacao();
         buscarRecuperandoEntradasComprasMateriais();
         buscarRecuperandoSolicitacoesAquisicoes();
-        Collections.sort(selecionado.getItens());
-        for (ItemRequisicaoDeCompra item : selecionado.getItens()) {
-            Collections.sort(item.getItensRequisicaoExecucao());
-        }
         setOpcaoRelatorioReqCompra(OpcaoRelatorioReqCompra.COM_DESCRICAO);
+        estornosRequisicaoCompra = facade.getRequisicaoCompraEstornoFacade().buscarPorRequisicaoCompra(selecionado);
         liquidacoesVO = Lists.newArrayList();
         if (selecionado.isTipoContrato()) {
-            origemContrato = facade.getContratoFacade().getOrigemContrato(selecionado.getContrato());
+            origemContrato = facade.getContratoFacade().getOrigemContrato(contrato);
         }
     }
 
+    private void preecherItemRequisicaoVOVisualizacao() {
+        itensRequisicaoVO = Lists.newArrayList();
+
+        for (ItemRequisicaoDeCompra itemReq : selecionado.getItens()) {
+            ItemRequisicaoCompraVO itemReqVO = ItemRequisicaoCompraVO.toObjeto(itemReq);
+            facade.recuperarGrupoContaDespesa(itemReq.getObjetoCompra());
+
+            for (ItemRequisicaoCompraExecucao itemReqEx : itemReq.getItensRequisicaoExecucao()) {
+                ItemRequisicaoCompraExecucaoVO itemReqExVO = ItemRequisicaoCompraExecucaoVO.toObjeto(itemReqEx, itemReqVO);
+                boolean isAjusteValor = false;
+                if (selecionado.isTipoContrato()) {
+                    isAjusteValor = isItemExecucaoContratoAjusteValor(itemReqEx.getExecucaoContratoItem());
+                } else if (selecionado.isTipoExecucaoProcesso()) {
+                    isAjusteValor = isItemExecucaoProcessoAjusteValor(itemReqEx.getExecucaoProcessoItem());
+                }
+                itemReqExVO.setAjusteValor(isAjusteValor);
+
+                RequisicaoCompraEmpenhoVO novoReqEmpVO = facade.novoEmpenhoVO(itemReqEx.getEmpenho(), selecionado.getTipoObjetoCompra());
+                itemReqExVO.setRequisicaoEmpenhoVO(novoReqEmpVO);
+                itemReqVO.getItensRequisicaoExecucao().add(itemReqExVO);
+            }
+            Collections.sort(itemReqVO.getItensRequisicaoExecucao());
+            itensRequisicaoVO.add(itemReqVO);
+        }
+        Collections.sort(itensRequisicaoVO);
+    }
+
+    private void atribuirVariavelProcesso() {
+        if (selecionado.isTipoContrato()) {
+            contrato = selecionado.getContrato();
+        }
+        if (selecionado.isTipoAtaRegistroPreco()) {
+            ataRegistroPreco = selecionado.getExecucaoProcesso().getAtaRegistroPreco();
+        }
+        if (selecionado.isTipoDispensaInexigibilidade()) {
+            ExecucaoProcesso execucaoProcesso = selecionado.getExecucaoProcesso();
+            dispensaDeLicitacao = execucaoProcesso.getDispensaLicitacao();
+        }
+        if (selecionado.isTipoReconhecimentoDivida()) {
+            reconhecimentoDivida = selecionado.getReconhecimentoDivida();
+        }
+    }
 
     @Override
     public void salvar() {
         try {
             validarRegrasDeNegocio();
-            removerItemComValorZerado();
-            criarRequisicaoCompraExecucao();
-            atribuirDerivacaoComponenteNaEspecificacaoItemRequisicao();
+            atribuirDerivacaoComponenteNaEspecificacaoItemRequisicaoVO();
+            criarItemRequisicaoCompraAoSalvar();
+            criarRequisicaoCompraExecucaoAoSalvar();
             selecionado = facade.salvarRequisicao(selecionado);
             FacesUtil.addOperacaoRealizada(getMensagemSucessoAoSalvar());
             redirecionarParaRequisicaoCompra(selecionado);
@@ -179,7 +224,7 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception ex) {
             FacesUtil.addErrorGenerico(ex);
-            logger.error(" erro ao salvar selecionado.: {} cause.: {} ", selecionado, ex.getCause());
+            logger.error("Erro ao salvar selecionado.: {} cause.: {} ", selecionado, ex.getCause());
         }
     }
 
@@ -193,47 +238,35 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception ex) {
             FacesUtil.addErrorGenerico(ex);
-            logger.error(" erro ao concluir requisição de compra.: {} cause.: {} ", selecionado, ex.getCause());
+            logger.error("Erro ao efetivar a requisição de compra.: {} cause.: {} ", selecionado, ex.getCause());
         }
     }
 
-    private void definirAtaOrDispensaExecucaoProcesso() {
-        if (selecionado.isTipoAtaRegistroPreco()) {
-            ataRegistroPreco = selecionado.getExecucaoProcesso().getAtaRegistroPreco();
-        }
-        if (selecionado.isTipoDispensaInexigibilidade()) {
-            dispensaDeLicitacao = selecionado.getExecucaoProcesso().getDispensaLicitacao();
-        }
-    }
-
-    private void atribuirDerivacaoComponenteNaEspecificacaoItemRequisicao() {
-        selecionado.getItens().stream()
-            .filter(ItemRequisicaoDeCompra::isDerivacaoObjetoCompra)
+    private void atribuirDerivacaoComponenteNaEspecificacaoItemRequisicaoVO() {
+        itensRequisicaoVO.stream()
+            .filter(ItemRequisicaoCompraVO::isDerivacaoObjetoCompra)
             .forEach(item -> item.setDescricaoComplementar(item.getDescricaoComplementar() + " " + item.getDerivacaoComponente().getDescricao()));
     }
 
     public boolean existeDescricaoPrazoEntrega() {
-        if (selecionado.getDescricaoPrazoEntrega() == null) {
-            return false;
-        }
-        return true;
+        return selecionado.getDescricaoPrazoEntrega() != null;
     }
 
     public void redirecionaOrigemContrato() {
-        if (selecionado.getContrato().isDeLicitacao() || selecionado.getContrato().isDeAdesaoAtaRegistroPrecoInterna() || selecionado.getContrato().isDeIrp()) {
-            FacesUtil.redirecionamentoInterno("/licitacao/ver/" + selecionado.getContrato().getLicitacao().getId() + "/");
+        if (contrato.isDeLicitacao() || contrato.isDeAdesaoAtaRegistroPrecoInterna() || contrato.isDeIrp()) {
+            FacesUtil.redirecionamentoInterno("/licitacao/ver/" + contrato.getLicitacao().getId() + "/");
             return;
         }
-        if (selecionado.getContrato().isDeDispensaDeLicitacao()) {
-            FacesUtil.redirecionamentoInterno("/dispensa-licitacao/ver/" + selecionado.getContrato().getDispensaDeLicitacao().getId() + "/");
+        if (contrato.isDeDispensaDeLicitacao()) {
+            FacesUtil.redirecionamentoInterno("/dispensa-licitacao/ver/" + contrato.getDispensaDeLicitacao().getId() + "/");
             return;
         }
-        if (selecionado.getContrato().isDeRegistroDePrecoExterno()) {
-            FacesUtil.redirecionamentoInterno("/adesao-a-ata-de-registro-de-preco-externo/ver/" + selecionado.getContrato().getContratoRegistroPrecoExterno().getRegistroSolicitacaoMaterialExterno().getId() + "/");
+        if (contrato.isDeRegistroDePrecoExterno()) {
+            FacesUtil.redirecionamentoInterno("/adesao-a-ata-de-registro-de-preco-externo/ver/" + contrato.getContratoRegistroPrecoExterno().getRegistroSolicitacaoMaterialExterno().getId() + "/");
             return;
         }
-        if (selecionado.getContrato().isDeProcedimentosAuxiliares()) {
-            FacesUtil.redirecionamentoInterno("/credenciamento/ver/" + selecionado.getContrato().getLicitacao().getId() + "/");
+        if (contrato.isDeProcedimentosAuxiliares()) {
+            FacesUtil.redirecionamentoInterno("/credenciamento/ver/" + contrato.getLicitacao().getId() + "/");
         }
     }
 
@@ -263,8 +296,8 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     private void buscarRecuperandoSolicitacoesAquisicoes() {
         solicitacoesAquisicoes = Lists.newArrayList();
-        solicitacaoAquisicaoFacade.buscarSolicitacoesPorRequisicao(selecionado).forEach(
-            sol -> solicitacoesAquisicoes.add(solicitacaoAquisicaoFacade.recuperarSolicitacaoAquisicaoComItensSolicitacaoPorItemDocto(sol))
+        List<SolicitacaoAquisicao> solicitacoesAquisicao = facade.getSolicitacaoAquisicaoFacade().buscarSolicitacoesPorRequisicao(selecionado);
+        solicitacoesAquisicao.forEach(sol -> solicitacoesAquisicoes.add(facade.getSolicitacaoAquisicaoFacade().recuperarSolicitacaoAquisicaoComItensSolicitacaoPorItemDocto(sol))
         );
     }
 
@@ -277,17 +310,6 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
             ve.adicionarMensagemDeOperacaoNaoPermitida("A requisição de compra de número " + selecionado.getNumero() + " já está sendo utilizada, portanto não é possível realizar alterações.");
         }
         ve.lancarException();
-    }
-
-
-    private void removerItemComValorZerado() {
-        Iterator<ItemRequisicaoDeCompra> iterator = selecionado.getItens().iterator();
-        while (iterator.hasNext()) {
-            ItemRequisicaoDeCompra next = iterator.next();
-            if (!next.hasQuantidade()) {
-                iterator.remove();
-            }
-        }
     }
 
     @Override
@@ -303,22 +325,51 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         }
     }
 
-    private void criarRequisicaoCompraExecucao() {
-        if (!selecionado.getTipoRequisicao().isReconhecimentoDivida()) {
-            selecionado.setExecucoes(Lists.<RequisicaoCompraExecucao>newArrayList());
-            for (RequisicaoExecucaoExecucaoVO exec : execucoesRequisicao) {
-                if (exec.getSelecionado()) {
-                    RequisicaoCompraExecucao reqExec = new RequisicaoCompraExecucao();
-                    reqExec.setRequisicaoCompra(selecionado);
-                    if (selecionado.isTipoContrato()) {
-                        reqExec.setExecucaoContrato(exec.getExecucaoContrato());
-                    } else {
-                        reqExec.setExecucaoProcesso(exec.getExecucaoProcesso());
-                    }
-                    Util.adicionarObjetoEmLista(selecionado.getExecucoes(), reqExec);
+    private void criarRequisicaoCompraExecucaoAoSalvar() {
+        Set<Empenho> empenhosSet = selecionado.getItens()
+            .stream()
+            .flatMap(item -> item.getItensRequisicaoExecucao().stream())
+            .map(ItemRequisicaoCompraExecucao::getEmpenho).collect(Collectors.toSet());
+
+        selecionado.setExecucoes(Lists.<RequisicaoCompraExecucao>newArrayList());
+        execucoesVO.stream().filter(RequisicaoCompraExecucaoVO::getSelecionado).forEach(exec -> {
+            exec.getEmpenhosVO().stream().filter(RequisicaoCompraEmpenhoVO::getSelecionado).forEach(emp -> {
+                if (empenhosSet.contains(emp.getEmpenho())) {
+                    RequisicaoCompraExecucao novoReqExec = new RequisicaoCompraExecucao();
+                    novoReqExec.setRequisicaoCompra(selecionado);
+                    novoReqExec.setExecucaoContratoEmpenho(emp.getExecucaoContratoEmpenho());
+                    novoReqExec.setExecucaoProcessoEmpenho(emp.getExecucaoProcessoEmpenho());
+                    novoReqExec.setExecucaoReconhecimentoDiv(emp.getExecucaoReconhecimentoDivida());
+                    Util.adicionarObjetoEmLista(selecionado.getExecucoes(), novoReqExec);
                 }
+            });
+        });
+    }
+
+    private void criarItemRequisicaoCompraAoSalvar() {
+        selecionado.setItens(Lists.<ItemRequisicaoDeCompra>newArrayList());
+        itensRequisicaoVO.stream().filter(ItemRequisicaoCompraVO::hasQuantidade).forEach(itemVO -> {
+            ItemRequisicaoDeCompra novoItemReq = ItemRequisicaoDeCompra.toVO(itemVO);
+            criarEstruturaItensRequisicao(itemVO, novoItemReq);
+        });
+
+        itensRequisicaoVO.stream()
+            .filter(ItemRequisicaoCompraVO::hasItensDesdobrados)
+            .flatMap(itemReqVO -> itemReqVO.getItensDesdobrados().stream())
+            .forEach(itemReqDesdVO -> {
+                ItemRequisicaoDeCompra novoItemReq = ItemRequisicaoDeCompra.toVO(itemReqDesdVO);
+                criarEstruturaItensRequisicao(itemReqDesdVO, novoItemReq);
+            });
+    }
+
+    private void criarEstruturaItensRequisicao(ItemRequisicaoCompraVO itemVO, ItemRequisicaoDeCompra novoItemReq) {
+        itemVO.getItensRequisicaoExecucao().forEach(itemReqExecVO -> {
+            if (itemReqExecVO.hasQuantidade()) {
+                ItemRequisicaoCompraExecucao novoItemReqProc = ItemRequisicaoCompraExecucao.toVO(itemReqExecVO, novoItemReq);
+                Util.adicionarObjetoEmLista(novoItemReq.getItensRequisicaoExecucao(), novoItemReqProc);
             }
-        }
+        });
+        Util.adicionarObjetoEmLista(selecionado.getItens(), novoItemReq);
     }
 
     public void selecionarEspecificacao(ActionEvent evento) {
@@ -342,7 +393,7 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     private void validarRegrasDeNegocio() {
         ValidacaoException ex = new ValidacaoException();
         validarCamposObrigatorio();
-        validarItensDaRequisicaoVazia(ex);
+        validarItensRequisicao(ex);
         validarQuantidadeRequisitada(ex);
         validarDataRequisicao(ex);
         ex.lancarException();
@@ -351,63 +402,51 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     private void validarCamposObrigatorio() {
         Util.validarCampos(selecionado);
         ValidacaoException ve = new ValidacaoException();
-        switch (selecionado.getTipoRequisicao()) {
-            case CONTRATO:
-                if (selecionado.getContrato() == null) {
-                    ve.adicionarMensagemDeCampoObrigatorio("O campo contrato deve ser informado.");
-                }
-                if (!hasExecucaoSelecionada()) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida("Selecione uma execução para continuar.");
-                }
-                break;
-            case ATA_REGISTRO_PRECO:
-                if (ataRegistroPreco == null) {
-                    ve.adicionarMensagemDeCampoObrigatorio("O campo ata registro de preço deve ser informado.");
-                }
-                break;
-            case DISPENSA_LICITACAO_INEXIGIBILIDADE:
-                if (dispensaDeLicitacao == null) {
-                    ve.adicionarMensagemDeCampoObrigatorio("O campo dispensa/inexigibilidade deve ser informado.");
-                }
-                break;
-            case RECONHECIMENTO_DIVIDA:
-                if (selecionado.getReconhecimentoDivida() == null) {
-                    ve.adicionarMensagemDeCampoObrigatorio("O campo reconhecimento de dívida deve ser informado.");
-                }
-                break;
+        if (isProcessoNulo()) {
+            ve.adicionarMensagemDeCampoObrigatorio("O campo " + selecionado.getTipoRequisicao().getDescricao() + " deve ser informado.");
+
+        } else if (!hasExecucaoSelecionada()) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("Para continuar, é necessário selecionar pelo menos uma execução para a requisição de compra.");
+        }
+        if (fornecedorSet.size() > 1) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("É permitido selecionar execuções de um único fornecedor.");
         }
         ve.lancarException();
     }
 
-    private void validarItensDaRequisicaoVazia(ValidacaoException ex) {
-        if (!selecionado.hasItens()) {
-            ex.adicionarMensagemDeOperacaoNaoRealizada("A requisição de compra não possui itens adicionados.");
+    private boolean isProcessoNulo() {
+        return contrato == null && ataRegistroPreco == null && dispensaDeLicitacao == null && reconhecimentoDivida == null;
+    }
+
+    private void validarItensRequisicao(ValidacaoException ex) {
+        if (!hasItensRequisicao()) {
+            ex.adicionarMensagemDeOperacaoNaoRealizada("A requisição de compra não encontrou itens de " + selecionado.getTipoObjetoCompra().getDescricao() + " disponíveis para continuar.");
         }
-        if (indiceAba == 2) {
-            ex.adicionarMensagemDeOperacaoNaoPermitida("Existem itens desdobrados que ainda não foram adicionados a requisição de compra. Clique no botão 'Confirmar Itens' para concluir a operação.");
+        if (!permiteDesdobrarItens() && !hasItemRequisicaoSelecionado()) {
+            ex.adicionarMensagemDeOperacaoNaoPermitida("Informe a quantidade desejada para ao menos um item para continuar.");
         }
-        if (!hasItemRequisicaoSelecionado()) {
-            ex.adicionarMensagemDeOperacaoNaoPermitida("Informe a quantidade desejada para ao menos um item antes de continuar.");
+        if (permiteDesdobrarItens() && itensRequisicaoVO.stream().noneMatch(ItemRequisicaoCompraVO::hasItensDesdobrados)) {
+            ex.adicionarMensagemDeOperacaoNaoPermitida("Informe o desdobramento para ao menos um item para continuar.");
         }
         ex.lancarException();
     }
 
     private void validarQuantidadeRequisitada(ValidacaoException ex) {
-        for (ItemRequisicaoDeCompra itemRequisicao : selecionado.getItens()) {
+        for (ItemRequisicaoCompraVO itemRequisicao : itensRequisicaoVO) {
             if (!itemRequisicao.isDerivacaoObjetoCompra()) {
-                for (ItemRequisicaoCompraExecucao item : itemRequisicao.getItensRequisicaoExecucao()) {
+                for (ItemRequisicaoCompraExecucaoVO item : itemRequisicao.getItensRequisicaoExecucao()) {
                     if (item.getQuantidade() == null) {
-                        ex.adicionarMensagemDeOperacaoNaoPermitida("Deve ser informada a quantidade do item " + item.getItemRequisicaoCompra().getDescricao() + ".");
+                        ex.adicionarMensagemDeOperacaoNaoPermitida("Deve ser informada a quantidade do item " + item.getItemRequisicaoCompraVO().getDescricao() + ".");
                     }
                     if (item.getQuantidade() != null && item.getQuantidade().compareTo(BigDecimal.ZERO) < 0) {
-                        ex.adicionarMensagemDeOperacaoNaoPermitida("A quantidade informada para o item " + item.getItemRequisicaoCompra().getDescricao() + " deve ser maior que 0 (zero).");
+                        ex.adicionarMensagemDeOperacaoNaoPermitida("A quantidade informada para o item " + item.getItemRequisicaoCompraVO().getDescricao() + " deve ser maior que 0 (zero).");
                     }
                     if (!permiteDesdobrarItens()) {
                         if (item.getQuantidade() != null
                             && item.getQuantidadeDisponivel() != null
                             && itemRequisicao.isControleQuantidade()
                             && item.getQuantidade().compareTo(item.getQuantidadeDisponivel()) > 0) {
-                            ex.adicionarMensagemDeOperacaoNaoPermitida("A quantidade informada para o item " + item.getItemRequisicaoCompra().getDescricao() + " não pode ser maior que " + Util.formataValorSemCifrao(item.getQuantidadeDisponivel()) + ".");
+                            ex.adicionarMensagemDeOperacaoNaoPermitida("A quantidade informada para o item " + item.getItemRequisicaoCompraVO().getDescricao() + " não pode ser maior que " + Util.formataValorSemCifrao(item.getQuantidadeDisponivel()) + ".");
                         }
                     }
                 }
@@ -419,7 +458,22 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     private void validarDataRequisicao(ValidacaoException ex) {
         Date menorData = facade.getEmpenhoFacade().buscarMenorDataEmpenhosPorRequisicaoDeCompra(getIdsEmpenhos());
         if (menorData == null) {
-            menorData = selecionado.getDataProcesso();
+            switch (selecionado.getTipoRequisicao()) {
+                case CONTRATO:
+                    menorData = contrato.getDataAprovacao();
+                    break;
+                case RECONHECIMENTO_DIVIDA:
+                    menorData = reconhecimentoDivida.getDataReconhecimento();
+                    break;
+                case ATA_REGISTRO_PRECO:
+                    menorData = ataRegistroPreco.getDataInicio();
+                    break;
+                case DISPENSA_LICITACAO_INEXIGIBILIDADE:
+                    menorData = dispensaDeLicitacao.getDataDaDispensa();
+                    break;
+                default:
+                    menorData = new Date();
+            }
         }
         if (DataUtil.dataSemHorario(menorData).after(DataUtil.dataSemHorario(selecionado.getDataRequisicao()))) {
             ex.adicionarMensagemDeOperacaoNaoPermitida("A data da requisição " + DataUtil.getDataFormatada(selecionado.getDataRequisicao()) + " não pode ser anterior a data do empenho " + DataUtil.getDataFormatada(menorData) + ".");
@@ -427,27 +481,17 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     }
 
     public List<Long> getIdsEmpenhos() {
-        List<Long> ids = Lists.newArrayList();
-        List<Empenho> empenhos = Lists.newArrayList();
-        if (selecionado.isTipoContrato()) {
-            execucoesRequisicao.forEach(reqExec -> {
-                empenhos.addAll(facade.getExecucaoContratoFacade().buscarEmpenhosExecucao(reqExec.getExecucaoContrato()));
-            });
-        } else if (selecionado.isTipoExecucaoProcesso()) {
-            execucoesRequisicao.forEach(reqExec -> {
-                empenhos.addAll(facade.getExecucaoProcessoFacade().buscarEmpenhosExecucao(reqExec.getExecucaoProcesso()));
-            });
-        } else {
-            empenhos.addAll(facade.getReconhecimentoDividaFacade().buscarEmpenhosPorReconhecimentoDivida(selecionado.getReconhecimentoDivida()));
-        }
-        empenhos.forEach(emp -> {
-            ids.add(emp.getId());
+        List<Long> idsEmpenho = Lists.newArrayList();
+        execucoesVO.forEach(exec -> {
+            exec.getEmpenhosVO().stream().filter(RequisicaoCompraEmpenhoVO::getSelecionado).forEach(emp -> idsEmpenho.add(emp.getEmpenho().getId()));
         });
-        return ids;
+        return idsEmpenho;
     }
 
     public TipoMascaraUnidadeMedida getMascaraQuantidadeItemDesdobrado() {
-        if (selecionado.getTipoObjetoCompra().isMaterialConsumo() && itemRequisicao != null) {
+        if (selecionado.getTipoObjetoCompra() != null
+            && selecionado.getTipoObjetoCompra().isMaterialConsumo()
+            && itemRequisicao != null) {
             return itemRequisicao.getUnidadeMedida() != null
                 ? itemRequisicao.getUnidadeMedida().getMascaraQuantidade()
                 : TipoMascaraUnidadeMedida.DUAS_CASAS_DECIMAL;
@@ -456,7 +500,9 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     }
 
     public TipoMascaraUnidadeMedida getMascaraValorUnitarioItemDesdobrado() {
-        if (selecionado.getTipoObjetoCompra().isMaterialConsumo() && itemRequisicao != null) {
+        if (selecionado.getTipoObjetoCompra() != null
+            && selecionado.getTipoObjetoCompra().isMaterialConsumo()
+            && itemRequisicao != null) {
             return itemRequisicao.getUnidadeMedida() != null
                 ? itemRequisicao.getUnidadeMedida().getMascaraValorUnitario()
                 : TipoMascaraUnidadeMedida.DUAS_CASAS_DECIMAL;
@@ -464,86 +510,81 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         return TipoMascaraUnidadeMedida.DUAS_CASAS_DECIMAL;
     }
 
-    public void calcularValoresItemRequisicao(ItemRequisicaoDeCompra itemRequisicao) {
+    public void listenerCalcularValoresItemRequisicaoExecucao(ItemRequisicaoCompraExecucaoVO itemReqProcVO, int linhaItemReq, int linhaItemEx) {
+        linhaItemEx = linhaItemEx + 1;
+        ItemRequisicaoCompraVO itemReqVO = itemReqProcVO.getItemRequisicaoCompraVO();
         try {
-            validarQuantidadeItemRequisicao(itemRequisicao);
-            itemRequisicao.calcularValoresItemRequisicaoAndItemExecucao();
+            validarQuantidadeItemRequisicaoExecucao(itemReqProcVO);
+            atribuirQuantidadeItemAjusteValor(itemReqVO, itemReqProcVO.getQuantidade());
+            itemReqProcVO.calcularValorTotal();
+
+            itemReqVO.setQuantidade(itemReqVO.getQuantidadeTotalItemExecucao());
+            itemReqVO.calcularValoresItemRequisicaoAndItemExecucao();
+            FacesUtil.executaJavaScript("setaFoco('Formulario:tabelaItensReq:" + linhaItemReq + ":tabelaItemReqExec:" + linhaItemEx + ":qtdeItemExec')");
         } catch (ValidacaoException ve) {
-            itemRequisicao.setQuantidade(itemRequisicao.isDerivacaoObjetoCompra() ? BigDecimal.ZERO : itemRequisicao.getQuantidadeDisponivel());
-            itemRequisicao.calcularValoresItemRequisicaoAndItemExecucao();
+            itemReqProcVO.setQuantidade(BigDecimal.ZERO);
+            atribuirQuantidadeItemAjusteValor(itemReqVO, BigDecimal.ZERO);
+            itemReqVO.setQuantidade(itemReqVO.getQuantidadeTotalItemExecucao());
+            itemReqVO.calcularValoresItemRequisicaoAndItemExecucao();
             FacesUtil.atualizarComponente("Formulario:panelItens");
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
     }
 
-    public void validarQuantidadeItemRequisicao(ItemRequisicaoDeCompra itemRequisicao) {
-        ValidacaoException ve = new ValidacaoException();
-        if (itemRequisicao.getQuantidade() != null && itemRequisicao.getQuantidade().compareTo(BigDecimal.ZERO) < 0) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("O campo quantidade deve ser um valor maior que zero(0).");
-        }
-        ve.lancarException();
-        BigDecimal qtdeDisponivel = itemRequisicao.getQuantidadeDisponivel();
-        if (itemRequisicao.isDerivacaoObjetoCompra()) {
-            ItemRequisicaoCompraDerivacao itemReqDerivado = getItemRequisicaoCompraDerivado(itemRequisicao);
-            qtdeDisponivel = itemReqDerivado.getItemRequisicaoOriginal().getQuantidadeDisponivel().subtract(itemReqDerivado.getQuantidadeUtilizadaOutrosItens(itemRequisicao));
-        }
-        if (itemRequisicao.isControleQuantidade() && itemRequisicao.getQuantidade().compareTo(qtdeDisponivel) > 0) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("A quantidade informada para o item " + itemRequisicao.getDescricao() + " não pode ser maior que " + qtdeDisponivel + ".");
-        }
-        ve.lancarException();
-    }
-
-
-    public void calcularValoresItemRequisicaoExecucao(ItemRequisicaoCompraExecucao itemReqExec) {
-        if (itemReqExec.hasQuantidade() && itemReqExec.hasValorUnitario()) {
-            ItemRequisicaoDeCompra itemRequisicao = itemReqExec.getItemRequisicaoCompra();
-            try {
-                validarQuantidadeItemRequisicaoExecucao(itemReqExec);
-                atribuirQuantidadeItemAjusteValor(itemRequisicao, itemReqExec.getQuantidade());
-                itemReqExec.calcularValorTotal();
-                itemRequisicao.setQuantidade(itemRequisicao.getQuantidadeTotalItemExecucao());
-                itemRequisicao.setValorUnitario(itemRequisicao.getValorUnitarioTotalItemExecucao());
-                itemRequisicao.calcularValoresItemRequisicaoAndItemExecucao();
-            } catch (ValidacaoException ve) {
-                itemReqExec.setQuantidade(BigDecimal.ZERO);
-                atribuirQuantidadeItemAjusteValor(itemRequisicao, BigDecimal.ZERO);
-                itemRequisicao.setQuantidade(itemRequisicao.getQuantidadeTotalItemExecucao());
-                itemRequisicao.calcularValoresItemRequisicaoAndItemExecucao();
-                FacesUtil.atualizarComponente("Formulario:panelItens");
-                FacesUtil.printAllFacesMessages(ve.getMensagens());
+    private static void atribuirQuantidadeItemAjusteValor(ItemRequisicaoCompraVO itemReqVO, BigDecimal quantidade) {
+        for (ItemRequisicaoCompraExecucaoVO itemReqExecVO : itemReqVO.getItensRequisicaoExecucao()) {
+            if (itemReqExecVO.getAjusteValor()) {
+                itemReqExecVO.setQuantidade(itemReqVO.getQuantidadeTotalItemExecucao());
+                itemReqExecVO.calcularValorTotal();
             }
         }
     }
 
-    private static void atribuirQuantidadeItemAjusteValor(ItemRequisicaoDeCompra itemRequisicao, BigDecimal itemReqExec) {
-        for (ItemRequisicaoCompraExecucao itemReqExAjusteValor : itemRequisicao.getItensRequisicaoExecucao()) {
-            if (itemReqExAjusteValor.getAjusteValor()) {
-                itemReqExAjusteValor.setQuantidade(itemReqExec);
-                itemReqExAjusteValor.calcularValorTotal();
+    public void validarQuantidadeItemRequisicaoExecucao(ItemRequisicaoCompraExecucaoVO itemReqExec) {
+        ValidacaoException ve = new ValidacaoException();
+        if (itemReqExec.hasQuantidade()) {
+            if (itemReqExec.getQuantidade().compareTo(BigDecimal.ZERO) < 0) {
+                ve.adicionarMensagemDeOperacaoNaoPermitida("O campo quantidade deve ser um valor maior que zero(0).");
+            }
+            ve.lancarException();
+            ItemRequisicaoCompraVO itemReqVO = itemReqExec.getItemRequisicaoCompraVO();
+            BigDecimal qtdeDisponivel = itemReqExec.getQuantidadeDisponivel();
+            if (itemReqVO.isDerivacaoObjetoCompra()) {
+                ItemRequisicaoCompraDerivacao itemReqDerivado = getItemRequisicaoCompraDerivado(itemReqVO);
+                qtdeDisponivel = itemReqDerivado.getQuantidadeDisponivel().subtract(itemReqDerivado.getQuantidadeUtilizadaOutrosItens(itemReqVO));
+            }
+
+            if (itemReqExec.getItemRequisicaoCompraVO().isControleQuantidade()
+                && itemReqExec.getQuantidade().compareTo(qtdeDisponivel) > 0) {
+                ve.adicionarMensagemDeOperacaoNaoPermitida("A quantidade informada para o item: "
+                    + itemReqExec.getItemRequisicaoCompraVO().getDescricao() + " deve ser menor que a quantidade disponível de " + qtdeDisponivel + ".");
             }
         }
-    }
-
-    public void validarQuantidadeItemRequisicaoExecucao(ItemRequisicaoCompraExecucao itemReqExec) {
-        ValidacaoException ve = new ValidacaoException();
-        if (itemReqExec.getQuantidade().compareTo(BigDecimal.ZERO) < 0) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("O campo quantidade deve ser um valor maior que zero(0).");
-        }
-        ve.lancarException();
-        if (itemReqExec.getItemRequisicaoCompra().isControleQuantidade() && itemReqExec.getQuantidade().compareTo(itemReqExec.getQuantidadeDisponivel()) > 0) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("A quantidade informada para o item " + itemReqExec.getItemRequisicaoCompra().getDescricao() + " não pode ser maior que " + itemReqExec.getQuantidadeDisponivel() + ".");
-        }
         ve.lancarException();
     }
 
-    public boolean isItemExecucaoAjusteValor(ItemRequisicaoCompraExecucao itemReqExec) {
-        if (itemReqExec.getExecucaoContratoItem().getExecucaoContrato().getOrigem().isAditivo()) {
-            return facade.getAlteracaoContratualFacade().isMovimentoAjusteValor(itemReqExec.getExecucaoContratoItem().getItemContrato(), itemReqExec.getExecucaoContratoItem().getExecucaoContrato().getIdOrigem());
+    public boolean isItemExecucaoContratoAjusteValor(ExecucaoContratoItem itemExecCont) {
+        if (itemExecCont.getExecucaoContrato().getOrigem().isAditivo()) {
+            return facade.getAlteracaoContratualFacade().isMovimentoAjusteValor(itemExecCont.getItemContrato().getId(), itemExecCont.getExecucaoContrato().getIdOrigem());
         }
-        if (itemReqExec.getExecucaoContratoItem().getExecucaoContrato().getOrigem().isApostilamento()) {
-            return facade.getAlteracaoContratualFacade().isMovimentoApostilamentoReajusteValorPreExecucao(itemReqExec.getExecucaoContratoItem().getItemContrato(), itemReqExec.getExecucaoContratoItem().getExecucaoContrato().getIdOrigem());
+        if (itemExecCont.getExecucaoContrato().getOrigem().isApostilamento()) {
+            return facade.getAlteracaoContratualFacade().isMovimentoApostilamentoReajusteValorPreExecucao(itemExecCont.getItemContrato().getId(), itemExecCont.getExecucaoContrato().getIdOrigem());
         }
         return false;
+    }
+
+    public boolean isItemExecucaoProcessoAjusteValor(ExecucaoProcessoItem itemExecProc) {
+        if (itemExecProc.getExecucaoProcesso().getOrigem().isAditivo()) {
+            return facade.getAlteracaoContratualFacade().isMovimentoAjusteValor(itemExecProc.getItemProcessoCompra().getId(), itemExecProc.getExecucaoProcesso().getIdOrigem());
+        }
+        if (itemExecProc.getExecucaoProcesso().getOrigem().isApostilamento()) {
+            return facade.getAlteracaoContratualFacade().isMovimentoApostilamentoReajusteValorPreExecucao(itemExecProc.getItemProcessoCompra().getId(), itemExecProc.getExecucaoProcesso().getIdOrigem());
+        }
+        return false;
+    }
+
+    public boolean hasItensRequisicao() {
+        return !Util.isListNullOrEmpty(itensRequisicaoVO);
     }
 
     public boolean hasItensProcesso() {
@@ -555,18 +596,11 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     }
 
     public boolean hasExecucaoSelecionada() {
-        if (hasExecucoes()) {
-            for (RequisicaoExecucaoExecucaoVO requisicaoExecucaoExecucaoVO : execucoesRequisicao) {
-                if (requisicaoExecucaoExecucaoVO.getSelecionado()) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return hasExecucoes() && execucoesVO.stream().anyMatch(RequisicaoCompraExecucaoVO::getSelecionado);
     }
 
     private boolean hasItemRequisicaoSelecionado() {
-        return selecionado.getItens().stream().anyMatch(ItemRequisicaoDeCompra::hasQuantidade);
+        return itensRequisicaoVO.stream().anyMatch(ItemRequisicaoCompraVO::hasQuantidade);
     }
 
     public boolean desabilitaAutocompleProcesso() {
@@ -581,49 +615,31 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     }
 
     public void limparListaItensRequisicao() {
-        selecionado.getItens().clear();
+        itensRequisicaoVO.clear();
         itensProcesso = Lists.newArrayList();
-        itensDesdobraveis = Lists.newArrayList();
         itensDerivacao = Lists.newArrayList();
-    }
-
-    public void limparListaItensRequisicaoExecucao() {
-        for (ItemRequisicaoDeCompra itemRequisicao : itemDesdobravel.getItensRequisicao()) {
-            itemRequisicao.getItensRequisicaoExecucao().clear();
-        }
     }
 
     public void separarItensPorTipoContaDespesaEmpenho() {
         if (selecionado.getTipoObjetoCompra().isPermanenteOrConsumo() && hasMaisDeUmTipoContaDespesa()) {
             selecionado.setItens(Lists.newArrayList());
-            List<ItemProcessoLicitacao> itensSeparados = Lists.newArrayList();
+            List<ItemRequisicaoProcessoLicitatorio> itensSeparados = Lists.newArrayList();
             itensProcesso.stream()
                 .filter(item -> item.getTipoContaDespesa().equals(selecionado.getTipoContaDespesa()))
                 .forEach(itensSeparados::add);
 
-            criarItensRequisicaoCompraSemDesdobrar(itensSeparados);
-            Collections.sort(selecionado.getItens());
+            criarItemRequisicaoCompraVOAndItemRequisicaoExecucaoVO(itensSeparados);
+            Collections.sort(itensRequisicaoVO);
         }
     }
 
-    public void carregarItens() {
+    public void buscarItens() {
         try {
+            itensRequisicaoVO = Lists.newArrayList();
             validarCamposObrigatorio();
-            validarRequisicaoExecucao();
             buscarTiposContaDespesaEmpenho();
             buscarItensProcesso();
-            if (permiteDesdobrarItens()) {
-                preencherItemDesdobravel();
-                indiceAba = 1;
-                hasPermissaoDesdobrarSemGrupo = facade.getConfiguracaoLicitacaoFacade().verificarUnidadeGrupoObjetoCompra(getUnidadeAdministrativa());
-                FacesUtil.atualizarComponente("Formulario:panelItens");
-            } else {
-                selecionado.setItens(Lists.<ItemRequisicaoDeCompra>newArrayList());
-                itensDesdobraveis = Lists.newArrayList();
-                criarItensRequisicaoCompraSemDesdobrar(itensProcesso);
-                validarListaItensVazia();
-            }
-            Collections.sort(selecionado.getItens());
+            criarItemRequisicaoCompraVOAndItemRequisicaoExecucaoVO(itensProcesso);
             FacesUtil.executaJavaScript("aguarde.hide()");
         } catch (ValidacaoException ve) {
             FacesUtil.executaJavaScript("aguarde.hide()");
@@ -633,15 +649,11 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     private void buscarTiposContaDespesaEmpenho() {
         Set<TipoContaDespesa> tiposContaDespesaSet = Sets.newHashSet();
-
         selecionado.setTipoContaDespesa(null);
-        if (selecionado.getTipoRequisicao().isReconhecimentoDivida()) {
-            tiposContaDespesaSet.addAll(facade.getEmpenhoFacade().buscarTiposContaDespesaExecucaoEmpenho(selecionado.getReconhecimentoDivida().getId()));
-        } else {
-            execucoesRequisicao.stream()
-                .filter(RequisicaoExecucaoExecucaoVO::getSelecionado)
-                .forEach(exReq -> tiposContaDespesaSet.addAll(facade.getEmpenhoFacade().buscarTiposContaDespesaExecucaoEmpenho(getIdExecucao(exReq))));
-        }
+        execucoesVO.stream()
+            .filter(RequisicaoCompraExecucaoVO::getSelecionado)
+            .forEach(exReq -> tiposContaDespesaSet.addAll(facade.getEmpenhoFacade().buscarTiposContaDespesaExecucaoEmpenho(exReq.getId())));
+
         List<TipoContaDespesa> tiposPermititdos = TipoContaDespesa.getTiposContaDespesaPorTipoObjetoCompra(selecionado.getTipoObjetoCompra());
         tiposContaDespesa = Lists.newArrayList(tiposContaDespesaSet);
         tiposContaDespesa.removeIf(tipo -> !tiposPermititdos.contains(tipo));
@@ -653,162 +665,298 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     public void buscarItensProcesso() {
         itensProcesso = Lists.newArrayList();
-        if (selecionado.getTipoRequisicao().isReconhecimentoDivida()) {
-            itensProcesso.addAll(facade.buscarItensProcesso(selecionado.getReconhecimentoDivida().getId()));
-        } else {
-            if (hasExecucoes()) {
-                for (RequisicaoExecucaoExecucaoVO reqExec : execucoesRequisicao) {
-                    if (reqExec.getSelecionado()) {
-                        itensProcesso.addAll(facade.buscarItensProcesso(getIdExecucao(reqExec)));
-                    }
-                }
-            }
+        if (hasExecucoes()) {
+            execucoesVO
+                .stream()
+                .filter(RequisicaoCompraExecucaoVO::getSelecionado)
+                .forEach(reqExVO -> itensProcesso.addAll(facade.buscarItensProcessoLicitatorio(reqExVO.getId())));
         }
     }
 
-    private void buscarItensProcessoVisualizar() {
-        itensProcesso = Lists.newArrayList();
-        for (RequisicaoCompraExecucao ex : selecionado.getExecucoes()) {
-            Long idProcesso;
-            if (selecionado.isTipoContrato()) {
-                idProcesso = ex.getExecucaoContrato().getId();
-            } else if (selecionado.isTipoExecucaoProcesso()) {
-                idProcesso = ex.getExecucaoProcesso().getId();
-            } else {
-                idProcesso = selecionado.getReconhecimentoDivida().getId();
-            }
-            itensProcesso.addAll(facade.buscarItensProcesso(idProcesso));
-        }
-    }
-
-    private Long getIdExecucao(RequisicaoExecucaoExecucaoVO reqExec) {
-        Long idProcesso;
-        if (selecionado.isTipoContrato()) {
-            idProcesso = reqExec.getExecucaoContrato().getId();
-        } else if (selecionado.isTipoExecucaoProcesso()) {
-            idProcesso = reqExec.getExecucaoProcesso().getId();
-        } else {
-            idProcesso = selecionado.getReconhecimentoDivida().getId();
-        }
-        return idProcesso;
-    }
-
-    public void preencherItemDesdobravel() {
+    public void preencherItemDesdobradoVisualizacao() {
         if (permiteDesdobrarItens()) {
-            itensDesdobraveis = Lists.newArrayList();
-            for (ItemProcessoLicitacao item : itensProcesso) {
-                if (item.getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
-                    ItemRequisicaoCompraDesdobravel itemDesdobravel;
-                    if (selecionado.isTipoContrato()) {
-                        itemDesdobravel = new ItemRequisicaoCompraDesdobravel(item.getItemExecucaoContrato());
-                    } else {
-                        itemDesdobravel = new ItemRequisicaoCompraDesdobravel(item.getItemExecucaoProcesso());
-                    }
-                    if (!isOperacaoNovo()) {
-                        atribuirItensRequisicaoAoItemDesdobravelReferente(itemDesdobravel);
-                    }
-                    itemDesdobravel.setValorDisponivel(getValorDisponivelProcessoItemDesdobrado(itemDesdobravel));
-                    Util.adicionarObjetoEmLista(itensDesdobraveis, itemDesdobravel);
+            execucoesVO = Lists.newArrayList();
+            itensRequisicaoDesdobradoVO = Lists.newArrayList();
+            itensRequisicaoVO = Lists.newArrayList();
+
+            for (RequisicaoCompraExecucao reqEx : selecionado.getExecucoes()) {
+
+                RequisicaoCompraExecucaoVO reqExecVO = new RequisicaoCompraExecucaoVO();
+                reqExecVO.setId(reqEx.getIdExecucao());
+                reqExecVO.setSelecionado(true);
+                reqExecVO.setTipoProcesso(selecionado.getTipoRequisicao());
+
+                facade.buscarEmpenhoExecucao(reqExecVO, selecionado.getTipoObjetoCompra());
+                reqExecVO.getEmpenhosVO().forEach(empVO -> empVO.setSelecionado(true));
+                if (reqEx.getExecucaoContratoEmpenho() != null) {
+                    reqExecVO.getEmpenhosVO().removeIf(empVO -> !empVO.getEmpenho().equals(reqEx.getExecucaoContratoEmpenho().getEmpenho()));
                 }
+                if (reqEx.getExecucaoProcessoEmpenho() != null) {
+                    reqExecVO.getEmpenhosVO().removeIf(empVO -> !empVO.getEmpenho().equals(reqEx.getExecucaoProcessoEmpenho().getEmpenho()));
+                }
+                if (reqEx.getExecucaoReconhecimentoDiv() != null) {
+                    reqExecVO.getEmpenhosVO().removeIf(empVO -> !empVO.getEmpenho().equals(reqEx.getExecucaoReconhecimentoDiv().getSolicitacaoEmpenho().getEmpenho()));
+                }
+                execucoesVO.add(reqExecVO);
             }
-            Collections.sort(itensDesdobraveis);
-            itensDesdobraveis.stream().map(ItemRequisicaoCompraDesdobravel::getItensRequisicao).forEach(Collections::sort);
+            buscarItensProcesso();
+            criarItemRequisicaoCompraVOAndItemRequisicaoExecucaoVO(itensProcesso);
+            preencherItemDesdobradoEdicao();
+            itensRequisicaoDesdobradoVO = itensRequisicaoVO;
+            Collections.sort(itensRequisicaoDesdobradoVO);
         }
     }
 
-    private void atribuirItensRequisicaoAoItemDesdobravelReferente(ItemRequisicaoCompraDesdobravel itemDesdobravel) {
-        for (ItemRequisicaoDeCompra itemRequisicao : selecionado.getItens()) {
-            if (selecionado.isTipoContrato()) {
-                if (itemRequisicao.getItemContrato().equals(itemDesdobravel.getExecucaoContratoItem().getItemContrato())) {
-                    itemDesdobravel.getItensRequisicao().add(itemRequisicao);
-                }
-            } else {
-                if (itemRequisicao.getExecucaoProcessoItem().equals(itemDesdobravel.getExecucaoProcessoItem())) {
-                    itemDesdobravel.getItensRequisicao().add(itemRequisicao);
-                }
-            }
+    public void preencherItemDesdobradoEdicao() {
+        if (permiteDesdobrarItens()) {
+            itensRequisicaoVO.forEach(itemReqVO -> {
+                List<ItemRequisicaoDeCompra> itensDesdobrados = facade.buscarItensDesdobrado(itemReqVO.getItemContrato(), selecionado, itemReqVO.getNumeroItemProcesso());
+
+                itensDesdobrados.forEach(itemReqDesd -> {
+                    ItemRequisicaoCompraVO novoItemReqVO = ItemRequisicaoCompraVO.toObjeto(itemReqDesd);
+                    novoItemReqVO.setRequisicaoDeCompra(selecionado);
+                    facade.recuperarGrupoContaDespesa(novoItemReqVO.getObjetoCompra());
+
+                    itemReqDesd.getItensRequisicaoExecucao().forEach(itemReqExecDesd -> {
+                        ItemRequisicaoCompraExecucaoVO novoItemReqProcVO = ItemRequisicaoCompraExecucaoVO.toObjeto(itemReqExecDesd, novoItemReqVO);
+                        RequisicaoCompraEmpenhoVO novoReqEmpVO = facade.novoEmpenhoVO(itemReqExecDesd.getEmpenho(), selecionado.getTipoObjetoCompra());
+                        novoItemReqProcVO.setRequisicaoEmpenhoVO(novoReqEmpVO);
+
+                        if (selecionado.isTipoContrato()) {
+                            ExecucaoContratoItemDotacao itemDotExec = facade.getExecucaoContratoFacade().buscarItemDotacaoPorItemExecucao(
+                                itemReqExecDesd.getExecucaoContratoItem(),
+                                itemReqExecDesd.getEmpenho().getFonteDespesaORC());
+                            if (itemDotExec != null) {
+                                novoItemReqProcVO.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoContrato(itemReqExecDesd.getExecucaoContratoItem(), itemDotExec, itemReqExecDesd));
+                            }
+                        }
+                        if (selecionado.isTipoExecucaoProcesso()) {
+                            ExecucaoProcessoFonteItem itemDotExec = facade.getExecucaoProcessoFacade().buscarItemFonte(
+                                itemReqExecDesd.getExecucaoProcessoItem().getExecucaoProcesso(),
+                                itemReqExecDesd.getEmpenho().getFonteDespesaORC(),
+                                itemReqExecDesd.getExecucaoProcessoItem());
+                            if (itemDotExec != null) {
+                                novoItemReqProcVO.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoSemContrato(itemReqExecDesd.getExecucaoProcessoItem(), itemDotExec, itemReqExecDesd));
+                            }
+                        }
+                        novoItemReqVO.getItensRequisicaoExecucao().add(novoItemReqProcVO);
+                    });
+                    itemReqVO.getItensDesdobrados().add(novoItemReqVO);
+                    itemReqVO.ordenarItensDesdobradosPorNumero();
+                });
+            });
         }
+        itensRequisicaoDesdobradoVO = itensRequisicaoVO;
     }
 
-    public void criarItensRequisicaoCompraSemDesdobrar(List<ItemProcessoLicitacao> itensProcesso) {
+    public void criarItemRequisicaoCompraVOAndItemRequisicaoExecucaoVO(List<ItemRequisicaoProcessoLicitatorio> itensProcesso) {
         if (selecionado.isTipoContrato()) {
             Map<ItemContrato, List<ExecucaoContratoItem>> map = criarMapItemContratoItemExecucao(itensProcesso);
-            for (Map.Entry<ItemContrato, List<ExecucaoContratoItem>> entry : map.entrySet()) {
-                ItemRequisicaoDeCompra novoItemReq = criarItemRequisicaoCompraPorContrato(entry.getKey(), BigDecimal.ZERO);
 
-                BigDecimal quantidadeTotal = BigDecimal.ZERO;
+            for (Map.Entry<ItemContrato, List<ExecucaoContratoItem>> entry : map.entrySet()) {
+                ItemLicitatorioContrato itemAdequado = entry.getKey().getItemAdequado();
+
+                ItemRequisicaoCompraVO novoItemReqVO = criarItemRequisicaoCompraVO(
+                    itemAdequado.getItemProcessoCompra(), itemAdequado.getObjetoCompra(), itemAdequado.getNumeroItem(),
+                    itemAdequado.getUnidadeMedida(), itemAdequado.getDescricaoComplementar(), entry.getKey().getTipoControle());
+
                 for (ExecucaoContratoItem itemExecucao : entry.getValue()) {
-                    if (itemExecucao.getItemContrato().getItemAdequado().getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
-                        ItemRequisicaoCompraExecucao novoItemReqExecucao = criarItemRequisicaoCompraExecucao(itemExecucao, novoItemReq);
-                        Util.adicionarObjetoEmLista(novoItemReq.getItensRequisicaoExecucao(), novoItemReqExecucao);
-                        quantidadeTotal = quantidadeTotal.add(itemExecucao.getQuantidadeUtilizada());
+                    List<ExecucaoContratoItemDotacao> itensDotExec = facade.getExecucaoContratoFacade().buscarItensDotacaoPorItemExecucao(itemExecucao);
+                    for (ExecucaoContratoItemDotacao itemDot : itensDotExec) {
+                        ItemRequisicaoCompraExecucaoVO novoItemReqExecVO = new ItemRequisicaoCompraExecucaoVO();
+                        novoItemReqExecVO.setExecucaoContratoItem(itemExecucao);
+                        novoItemReqExecVO.setExecucaoContratoItemDotacao(itemDot);
+                        novoItemReqExecVO.setItemRequisicaoCompraVO(novoItemReqVO);
+                        novoItemReqExecVO.setValorUnitario(itemExecucao.getValorUnitario());
+                        novoItemReqExecVO.setAjusteValor(isItemExecucaoContratoAjusteValor(itemExecucao));
+
+                        novoItemReqExecVO.setRequisicaoEmpenhoVO(getRequisicaoCompraEmpenhoVO(
+                            novoItemReqVO.getObjetoCompra().getGrupoContaDespesa().getIdGrupo(),
+                            itemDot.getExecucaoContratoTipoFonte().getFonteDespesaORC().getId(),
+                            itemExecucao.getExecucaoContrato().getId()));
+
+                        if (novoItemReqVO.isControleValor() || isLicitacaoMaiorDesconto()) {
+                            atribuirValorDisponivelItemExecucaoDesdobrado(novoItemReqVO, novoItemReqExecVO);
+                            novoItemReqExecVO.setValorTotal(novoItemReqExecVO.getValorTotalItemExecucao());
+
+                        } else {
+                            ItemRequisicaoCompraExecucao itemExecReqSalvo = facade.getItemRequisicaoExecucaoPorItemExecucao(itemExecucao.getId(), itemDot.getExecucaoContratoTipoFonte().getFonteDespesaORC().getId(), selecionado);
+                            if (itemExecReqSalvo != null) {
+                                novoItemReqExecVO.setQuantidade(itemExecReqSalvo.getQuantidade());
+                            }
+                            novoItemReqExecVO.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoContrato(itemExecucao, itemDot, itemExecReqSalvo));
+                            novoItemReqExecVO.calcularValorTotal();
+                        }
+                        if (novoItemReqExecVO.getRequisicaoEmpenhoVO() != null) {
+                            Util.adicionarObjetoEmLista(novoItemReqVO.getItensRequisicaoExecucao(), novoItemReqExecVO);
+                        }
                     }
                 }
-                if (!novoItemReq.hasMaisDeUmItemRequisicaoExecucao()) {
-                    ItemRequisicaoCompraExecucao itemReqExecucao = novoItemReq.getItensRequisicaoExecucao().get(0);
-                    novoItemReq.setValorUnitario(itemReqExecucao.getValorUnitario());
+                novoItemReqVO.setValorUnitario(novoItemReqVO.getValorUnitarioTotalItemExecucao());
+                novoItemReqVO.setQuantidade(isOperacaoEditar() ? novoItemReqVO.getQuantidadeTotalItemExecucao() : BigDecimal.ZERO);
+                novoItemReqVO.setQuantidadeDisponivel(novoItemReqVO.getQuantidadeDisponivelItemExecucao());
+                novoItemReqVO.calcularValorTotal();
+
+                if (!Util.isListNullOrEmpty(novoItemReqVO.getItensRequisicaoExecucao())) {
+                    Util.adicionarObjetoEmLista(itensRequisicaoVO, novoItemReqVO);
                 }
-                novoItemReq.setQuantidadeDisponivel(novoItemReq.getQuantidadeDisponivelItemExecucao());
-                Util.adicionarObjetoEmLista(selecionado.getItens(), novoItemReq);
             }
         } else if (selecionado.isTipoExecucaoProcesso()) {
-            for (ItemProcessoLicitacao item : itensProcesso) {
-                ExecucaoProcessoItem itemExecProc = item.getItemExecucaoProcesso();
-                if (itemExecProc.getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
-                    ItemRequisicaoDeCompra novoItemReq = criarItemRequisicaoCompraPorExecucaoProcesso(itemExecProc, itemExecProc.getValorUnitario());
+            Map<ItemProcessoDeCompra, List<ExecucaoProcessoItem>> map = criarMapItemProcessoCompraItemExecucao(itensProcesso);
 
-                    ItemRequisicaoDeCompra itemReqJaAdicionado = getItemRequisicaoJaAdicionado(itemExecProc);
-                    if (itemReqJaAdicionado != null) {
-                        itemReqJaAdicionado.setQuantidadeDisponivel(itemReqJaAdicionado.getQuantidadeDisponivel().add(novoItemReq.getQuantidadeDisponivel()));
-                        novoItemReq = itemReqJaAdicionado;
+            for (Map.Entry<ItemProcessoDeCompra, List<ExecucaoProcessoItem>> entry : map.entrySet()) {
+                ItemProcessoDeCompra itemProcComp = entry.getKey();
+                ItemRequisicaoCompraVO novoItemReqVO = criarItemRequisicaoCompraVO(
+                    itemProcComp, itemProcComp.getObjetoCompra(), itemProcComp.getNumero(), itemProcComp.getUnidadeMedida(),
+                    itemProcComp.getDescricaoComplementar(), itemProcComp.getTipoControle());
+
+                for (ExecucaoProcessoItem itemExec : entry.getValue()) {
+                    List<ExecucaoProcessoFonteItem> itensDotExec = facade.getExecucaoProcessoFacade().buscarItensDotacaoPorItemExecucao(itemExec);
+                    for (ExecucaoProcessoFonteItem itemDot : itensDotExec) {
+                        ItemRequisicaoCompraExecucaoVO novoItemReqExecVO = new ItemRequisicaoCompraExecucaoVO();
+                        novoItemReqExecVO.setExecucaoProcessoItem(itemExec);
+                        novoItemReqExecVO.setExecucaoProcessoFonteItem(itemDot);
+                        novoItemReqExecVO.setItemRequisicaoCompraVO(novoItemReqVO);
+                        novoItemReqExecVO.setValorUnitario(itemExec.getValorUnitario());
+                        novoItemReqExecVO.setAjusteValor(isItemExecucaoProcessoAjusteValor(itemExec));
+
+                        novoItemReqExecVO.setRequisicaoEmpenhoVO(getRequisicaoCompraEmpenhoVO(
+                            novoItemReqVO.getObjetoCompra().getGrupoContaDespesa().getIdGrupo(),
+                            itemDot.getExecucaoProcessoFonte().getFonteDespesaORC().getId(),
+                            itemExec.getExecucaoProcesso().getId()));
+
+                        if (novoItemReqVO.isControleValor() || isLicitacaoMaiorDesconto()) {
+                            atribuirValorDisponivelItemExecucaoDesdobrado(novoItemReqVO, novoItemReqExecVO);
+                            novoItemReqExecVO.setValorTotal(novoItemReqExecVO.getValorTotalItemExecucao());
+
+                        } else {
+                            ItemRequisicaoCompraExecucao itemExecReqSalvo = facade.getItemRequisicaoExecucaoPorItemExecucao(itemExec.getId(), itemDot.getExecucaoProcessoFonte().getFonteDespesaORC().getId(), selecionado);
+                            if (itemExecReqSalvo != null) {
+                                novoItemReqExecVO.setQuantidade(itemExecReqSalvo.getQuantidade());
+                            }
+                            novoItemReqExecVO.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoSemContrato(itemExec, itemDot, itemExecReqSalvo));
+                            novoItemReqExecVO.calcularValorTotal();
+                        }
+                        if (novoItemReqExecVO.getRequisicaoEmpenhoVO() != null) {
+                            Util.adicionarObjetoEmLista(novoItemReqVO.getItensRequisicaoExecucao(), novoItemReqExecVO);
+                        }
                     }
-                    Util.adicionarObjetoEmLista(selecionado.getItens(), novoItemReq);
+                }
+                novoItemReqVO.setValorUnitario(novoItemReqVO.getValorUnitarioTotalItemExecucao());
+                novoItemReqVO.setQuantidade(isOperacaoEditar() ? novoItemReqVO.getQuantidadeTotalItemExecucao() : BigDecimal.ZERO);
+                novoItemReqVO.setQuantidadeDisponivel(novoItemReqVO.getQuantidadeDisponivelItemExecucao());
+                novoItemReqVO.calcularValorTotal();
+
+                if (!Util.isListNullOrEmpty(novoItemReqVO.getItensRequisicaoExecucao())) {
+                    Util.adicionarObjetoEmLista(itensRequisicaoVO, novoItemReqVO);
                 }
             }
         } else {
-            for (ItemProcessoLicitacao item : itensProcesso) {
-                ItemReconhecimentoDivida itemRecDivida = item.getItemReconhecimentoDivida();
-                if (itemRecDivida.getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
-                    ItemRequisicaoDeCompra itemRequisicao = criarItemRequisicaoCompraReconhecimentoDivida(itemRecDivida);
-                    Util.adicionarObjetoEmLista(selecionado.getItens(), itemRequisicao);
+            for (ItemRequisicaoProcessoLicitatorio itemProcVO : itensProcesso) {
+                ItemReconhecimentoDivida itemRecDiv = itemProcVO.getItemReconhecimentoDivida();
+                if (itemRecDiv.getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
+
+                    ItemRequisicaoCompraVO novoItemReqVO = criarItemRequisicaoCompraVO(
+                        null, itemRecDiv.getObjetoCompra(), null, itemRecDiv.getUnidadeMedida(),
+                        itemRecDiv.getDescricaoItem(), TipoControleLicitacao.QUANTIDADE);
+
+                    List<ItemReconhecimentoDividaDotacao> itensDotExec = facade.getReconhecimentoDividaFacade().buscarItensDotacaoPorItemReconhecimento(itemRecDiv);
+                    for (ItemReconhecimentoDividaDotacao itemDot : itensDotExec) {
+                        ItemRequisicaoCompraExecucaoVO novoItemReqExecVO = new ItemRequisicaoCompraExecucaoVO();
+                        novoItemReqExecVO.setItemReconhecimentoDivida(itemRecDiv);
+                        novoItemReqExecVO.setItemReconhecimentoDividaDotacao(itemDot);
+                        novoItemReqExecVO.setItemRequisicaoCompraVO(novoItemReqVO);
+                        novoItemReqExecVO.setValorUnitario(itemRecDiv.getValorUnitario());
+
+                        novoItemReqExecVO.setRequisicaoEmpenhoVO(getRequisicaoCompraEmpenhoVO(
+                            novoItemReqVO.getObjetoCompra().getGrupoContaDespesa().getIdGrupo(),
+                            itemDot.getFonteDespesaORC().getId(),
+                            itemRecDiv.getReconhecimentoDivida().getId()));
+
+                        ItemRequisicaoCompraExecucao itemExecReqSalvo = facade.getItemRequisicaoExecucaoPorItemExecucao(itemRecDiv.getId(), itemDot.getFonteDespesaORC().getId(), selecionado);
+                        if (itemExecReqSalvo != null) {
+                            novoItemReqExecVO.setQuantidade(itemExecReqSalvo.getQuantidade());
+                        }
+                        novoItemReqExecVO.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoReconhecimentoDivida(itemRecDiv, itemDot, itemExecReqSalvo));
+                        novoItemReqExecVO.calcularValorTotal();
+
+                        if (novoItemReqExecVO.getRequisicaoEmpenhoVO() != null) {
+                            Util.adicionarObjetoEmLista(novoItemReqVO.getItensRequisicaoExecucao(), novoItemReqExecVO);
+                        }
+                    }
+                    novoItemReqVO.setValorUnitario(itemRecDiv.getValorUnitario());
+                    novoItemReqVO.setQuantidade(isOperacaoEditar() ? novoItemReqVO.getQuantidadeTotalItemExecucao() : BigDecimal.ZERO);
+                    novoItemReqVO.setQuantidadeDisponivel(novoItemReqVO.getQuantidadeDisponivelItemExecucao());
+                    novoItemReqVO.calcularValorTotal();
+
+                    if (!Util.isListNullOrEmpty(novoItemReqVO.getItensRequisicaoExecucao())) {
+                        Util.adicionarObjetoEmLista(itensRequisicaoVO, novoItemReqVO);
+                    }
                 }
             }
         }
+        Collections.sort(itensRequisicaoVO);
     }
 
-    private ItemRequisicaoDeCompra getItemRequisicaoJaAdicionado(ExecucaoProcessoItem itemExecProc) {
-        for (ItemRequisicaoDeCompra itemReqAdicionado : selecionado.getItens()) {
-            if (itemReqAdicionado.getExecucaoProcessoItem().getItemProcessoCompra().equals(itemExecProc.getItemProcessoCompra())) {
-                return itemReqAdicionado;
-            }
+    private RequisicaoCompraEmpenhoVO getRequisicaoCompraEmpenhoVO(Long idGrupo, Long idFonteDespesaOrc, Long idExecucao) {
+        if (selecionado.getTipoObjetoCompra().isPermanenteOrConsumo()) {
+            return execucoesVO
+                .stream().filter(RequisicaoCompraExecucaoVO::getSelecionado)
+                .flatMap(empVO -> empVO.getEmpenhosVO().stream())
+                .filter(RequisicaoCompraEmpenhoVO::getSelecionado)
+                .filter(empVO -> empVO.getIdExecucao().equals(idExecucao))
+                .filter(empVO -> empVO.getEmpenho().getFonteDespesaORC().getId().equals(idFonteDespesaOrc))
+                .filter(empVO -> empVO.getIdGrupo().equals(idGrupo))
+                .findAny().orElse(null);
         }
-        return null;
-
+        return execucoesVO
+            .stream().filter(RequisicaoCompraExecucaoVO::getSelecionado)
+            .flatMap(empVO -> empVO.getEmpenhosVO().stream())
+            .filter(empVO -> empVO.getIdExecucao().equals(idExecucao))
+            .filter(RequisicaoCompraEmpenhoVO::getSelecionado)
+            .findAny().orElse(null);
     }
 
-    public Map<ItemContrato, List<ExecucaoContratoItem>> criarMapItemContratoItemExecucao(List<ItemProcessoLicitacao> itensProcesso) {
+    public Map<ItemContrato, List<ExecucaoContratoItem>> criarMapItemContratoItemExecucao(List<ItemRequisicaoProcessoLicitatorio> itensProcesso) {
         Map<ItemContrato, List<ExecucaoContratoItem>> map = new HashMap<>();
-        for (ItemProcessoLicitacao item : itensProcesso) {
+        itensProcesso.forEach(item -> {
             ExecucaoContratoItem itemExecucao = item.getItemExecucaoContrato();
-            if (itemExecucao.getItemContrato().getItemAdequado().getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
-                if (!map.containsKey(itemExecucao.getItemContrato())) {
-                    map.put(itemExecucao.getItemContrato(), Lists.<ExecucaoContratoItem>newArrayList(itemExecucao));
+            ItemContrato itemCont = itemExecucao.getItemContrato();
+            if (itemCont.getItemAdequado().getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
+                if (!map.containsKey(itemCont)) {
+                    itemCont.getItemAdequado().getObjetoCompra().setGrupoContaDespesa(item.getObjetoCompra().getGrupoContaDespesa());
+                    map.put(itemCont, Lists.newArrayList(itemExecucao));
                 } else {
-                    List<ExecucaoContratoItem> itensMap = map.get(itemExecucao.getItemContrato());
+                    List<ExecucaoContratoItem> itensMap = map.get(itemCont);
                     itensMap.add(itemExecucao);
-                    map.put(itemExecucao.getItemContrato(), itensMap);
+                    map.put(itemCont, itensMap);
                 }
             }
-        }
+        });
+        return map;
+    }
+
+    public Map<ItemProcessoDeCompra, List<ExecucaoProcessoItem>> criarMapItemProcessoCompraItemExecucao(List<ItemRequisicaoProcessoLicitatorio> itensProcesso) {
+        Map<ItemProcessoDeCompra, List<ExecucaoProcessoItem>> map = new HashMap<>();
+        itensProcesso.forEach(item -> {
+            ExecucaoProcessoItem itemExec = item.getItemExecucaoProcesso();
+            ItemProcessoDeCompra itemProc = itemExec.getItemProcessoCompra();
+            if (itemProc.getObjetoCompra().getTipoObjetoCompra().equals(selecionado.getTipoObjetoCompra())) {
+                if (!map.containsKey(itemProc)) {
+                    itemProc.getObjetoCompra().setGrupoContaDespesa(item.getObjetoCompra().getGrupoContaDespesa());
+                    map.put(itemProc, Lists.newArrayList(itemExec));
+                } else {
+                    List<ExecucaoProcessoItem> itensMap = map.get(itemProc);
+                    itensMap.add(itemExec);
+                    map.put(itemProc, itensMap);
+                }
+            }
+        });
         return map;
     }
 
     public boolean permiteDesdobrarItens() {
-        return isMaiorDesconto() || isControlePorValor();
-    }
-
-    public String getTituloTabelaItensDesdobrado() {
-        return isMaiorDesconto() ? "Itens Maior Desconto" : "Itens Controle por Valor";
+        return isLicitacaoMaiorDesconto() || isControlePorValor();
     }
 
     public void ajustarValorTotal(DescontoItemRequisicaoCompra item) {
@@ -839,13 +987,13 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     }
 
     private void updateItemRequisicaoDesdobravel() {
-        FacesUtil.atualizarComponente("Formulario:tabView:valorTotalDesdobrado");
-        FacesUtil.atualizarComponente("Formulario:tabView:gridAplicacaoDesconto");
-        FacesUtil.atualizarComponente("Formulario:tabView:valorDesconto");
-        FacesUtil.atualizarComponente("Formulario:tabView:valorDescontoTotal");
-        FacesUtil.atualizarComponente("Formulario:tabView:panelEntradaCompra");
-        FacesUtil.atualizarComponente("Formulario:tabView:panelDescontoNota");
-        FacesUtil.atualizarComponente("Formulario:tabView:msgDiferencaoEntrada");
+        FacesUtil.atualizarComponente("formDesdobrarItem:valorTotalDesdobrado");
+        FacesUtil.atualizarComponente("formDesdobrarItem:gridAplicacaoDesconto");
+        FacesUtil.atualizarComponente("formDesdobrarItem:valorDesconto");
+        FacesUtil.atualizarComponente("formDesdobrarItem:valorDescontoTotal");
+        FacesUtil.atualizarComponente("formDesdobrarItem:panelEntradaCompra");
+        FacesUtil.atualizarComponente("formDesdobrarItem:panelDescontoNota");
+        FacesUtil.atualizarComponente("formDesdobrarItem:msgDiferencaoEntrada");
     }
 
     public void selecionarDesconto(DescontoItemRequisicaoCompra item) {
@@ -877,6 +1025,7 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
                 selecionarDesconto(itemDesc);
             }
         }
+        calcularValoresItemDesdobrado();
     }
 
     public void gerarTabelaValorDescontoItem() {
@@ -907,184 +1056,173 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         return valor.stripTrailingZeros();
     }
 
-    private void validarListaItensVazia() {
-        ValidacaoException ve = new ValidacaoException();
-        if (!selecionado.hasItens()) {
-            ve.adicionarMensagemWarn(SummaryMessages.ATENCAO, "A requisição não carregou os itens para o tipo de objeto de compra: " + selecionado.getTipoObjetoCompra().getDescricao() + ".");
-        }
-        ve.lancarException();
-    }
-
-    public ItemRequisicaoDeCompra criarItemRequisicaoCompraReconhecimentoDivida(ItemReconhecimentoDivida item) {
-        ItemRequisicaoDeCompra itemRequisicaoDeCompra = new ItemRequisicaoDeCompra();
-        itemRequisicaoDeCompra.setRequisicaoDeCompra(selecionado);
-        itemRequisicaoDeCompra.setItemReconhecimentoDivida(item);
-        itemRequisicaoDeCompra.setNumero(getProximoNumeroItemRequisicao());
-        itemRequisicaoDeCompra.setObjetoCompra(item.getObjetoCompra());
-        itemRequisicaoDeCompra.setUnidadeMedida(item.getUnidadeMedida());
-        itemRequisicaoDeCompra.setValorUnitario(item.getValorUnitario());
-        itemRequisicaoDeCompra.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoReconhecimentoDivida(itemRequisicaoDeCompra));
-        itemRequisicaoDeCompra.setQuantidade(itemRequisicaoDeCompra.getQuantidadeDisponivel());
-        itemRequisicaoDeCompra.calcularValorTotal();
-        return itemRequisicaoDeCompra;
-    }
-
-    public ItemRequisicaoDeCompra criarItemRequisicaoCompraPorExecucaoProcesso(ExecucaoProcessoItem itemExecProc, BigDecimal valorUnitario) {
-        ItemRequisicaoDeCompra novoItemReq = new ItemRequisicaoDeCompra();
+    public ItemRequisicaoCompraVO criarItemRequisicaoCompraVO(ItemProcessoDeCompra itemProcComp, ObjetoCompra objetoCompra, Integer numeroItem,
+                                                              UnidadeMedida unidMed, String descricaoComp, TipoControleLicitacao tipoControle) {
+        ItemRequisicaoCompraVO novoItemReq = new ItemRequisicaoCompraVO();
         novoItemReq.setRequisicaoDeCompra(selecionado);
-        novoItemReq.setExecucaoProcessoItem(itemExecProc);
-        novoItemReq.setNumero(itemExecProc.getItemProcessoCompra().getNumero());
-        if (!permiteDesdobrarItens()) {
-            novoItemReq.setObjetoCompra(itemExecProc.getObjetoCompra());
+        novoItemReq.setNumero(getProximoNumeroItemRequisicao());
+        novoItemReq.setNumeroItemProcesso(numeroItem != null ? numeroItem : novoItemReq.getNumero());
+        novoItemReq.setObjetoCompra(objetoCompra);
+        novoItemReq.setUnidadeMedida(unidMed);
+        novoItemReq.setDescricaoComplementar(descricaoComp);
+        novoItemReq.setTipoControle(tipoControle);
+        if (itemProcComp != null) {
+            novoItemReq.setPercentualDesconto(facade.getItemPregaoFacade().getPercentualDescontoLanceVencedor(itemProcComp));
         }
-        novoItemReq.setUnidadeMedida(itemExecProc.getItemProcessoCompra().getItemSolicitacaoMaterial().getUnidadeMedida());
-        novoItemReq.setDescricaoComplementar(itemExecProc.getItemProcessoCompra().getDescricaoComplementar());
-        novoItemReq.setValorUnitario(permiteDesdobrarItens() ? BigDecimal.ZERO : valorUnitario);
-
-        BigDecimal percentualDesconto = selecionado.isTipoAtaRegistroPreco()
-            ? facade.getItemPregaoFacade().getPercentualDescontoLanceVencedor(itemExecProc.getItemProcessoCompra())
-            : BigDecimal.ZERO;
-        novoItemReq.setPercentualDesconto(percentualDesconto);
-
-        if (isOperacaoEditar()) {
-            ItemRequisicaoDeCompra itemReqSalvo = facade.getItemRequisicaoPorItemExecucaoProcesso(itemExecProc, selecionado);
-            novoItemReq.setQuantidade(itemReqSalvo != null ? itemReqSalvo.getQuantidade() : BigDecimal.ZERO);
-            novoItemReq.setValorUnitario(itemReqSalvo != null ? itemReqSalvo.getValorUnitario() : BigDecimal.ZERO);
-        }
-
-        novoItemReq.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoAta(itemExecProc, novoItemReq));
-        novoItemReq.calcularValorTotal();
         return novoItemReq;
     }
 
-    public ItemRequisicaoDeCompra criarItemRequisicaoCompraPorContrato(ItemContrato itemContrato, BigDecimal valorUnitario) {
-        ItemRequisicaoDeCompra novoItemReq = new ItemRequisicaoDeCompra();
-        novoItemReq.setRequisicaoDeCompra(selecionado);
-        novoItemReq.setItemContrato(itemContrato);
-        novoItemReq.setNumero(itemContrato.getItemAdequado().getNumeroItem());
-        if (!permiteDesdobrarItens()) {
-            novoItemReq.setObjetoCompra(itemContrato.getItemAdequado().getObjetoCompra());
-        }
-        novoItemReq.setUnidadeMedida(itemContrato.getItemAdequado().getUnidadeMedida());
-        novoItemReq.setDescricaoComplementar(itemContrato.getItemAdequado().getDescricaoComplementar());
-        novoItemReq.setValorUnitario(permiteDesdobrarItens() ? BigDecimal.ZERO : valorUnitario);
-
-        BigDecimal percentualDesconto = selecionado.getContrato().isProcessoLicitatorio()
-            ? facade.getItemPregaoFacade().getPercentualDescontoLanceVencedor(itemContrato.getItemAdequado().getItemProcessoCompra())
-            : BigDecimal.ZERO;
-        novoItemReq.setPercentualDesconto(percentualDesconto);
-
-        if (isOperacaoEditar()) {
-            ItemRequisicaoDeCompra itemReqSalvo = facade.getItemRequisicaoPorItemContrato(itemContrato, selecionado);
-            novoItemReq.setQuantidade(itemReqSalvo != null ? itemReqSalvo.getQuantidade() : BigDecimal.ZERO);
-            novoItemReq.setValorUnitario(itemReqSalvo != null ? itemReqSalvo.getValorUnitario() : BigDecimal.ZERO);
-        }
-        novoItemReq.calcularValorTotal();
-        return novoItemReq;
+    public void desdobrarItem(ItemRequisicaoCompraExecucaoVO itemReqProcVO, ItemRequisicaoCompraVO itemReqVO) {
+        itemRequisicaoDesdobravel = (ItemRequisicaoCompraVO) Util.clonarEmNiveis(itemReqVO, 1);
+        itemRequisicaoExecucao = itemReqProcVO;
+        novoItemRequisicaoCompraDesdobrado();
+        FacesUtil.executaJavaScript("dlgDesdobrarItem.show()");
     }
 
-    public ItemRequisicaoCompraExecucao criarItemRequisicaoCompraExecucao(ExecucaoContratoItem itemExecucao, ItemRequisicaoDeCompra itemRequisicao) {
-        ItemRequisicaoCompraExecucao novoItemReqExecucao = new ItemRequisicaoCompraExecucao();
-        novoItemReqExecucao.setExecucaoContratoItem(itemExecucao);
-        novoItemReqExecucao.setItemRequisicaoCompra(itemRequisicao);
-        novoItemReqExecucao.setValorUnitario(permiteDesdobrarItens() ? itemRequisicao.getValorUnitario() : itemExecucao.getValorUnitario());
-        novoItemReqExecucao.setQuantidade(permiteDesdobrarItens() ? itemRequisicao.getQuantidade() : BigDecimal.ZERO);
-        novoItemReqExecucao.setAjusteValor(isItemExecucaoAjusteValor(novoItemReqExecucao));
+    public void novoItemRequisicaoCompraDesdobrado() {
+        if (selecionado.isTipoContrato()) {
+            ItemLicitatorioContrato itemAdequado = itemRequisicaoDesdobravel.getItemContrato().getItemAdequado();
+            itemRequisicao = criarItemRequisicaoCompraVO(
+                itemAdequado.getItemProcessoCompra(), itemAdequado.getObjetoCompra(), itemAdequado.getNumeroItem(),
+                itemAdequado.getUnidadeMedida(), itemAdequado.getDescricaoComplementar(), itemRequisicaoDesdobravel.getTipoControle());
 
-        if (!novoItemReqExecucao.getAjusteValor()) {
-            novoItemReqExecucao.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoContrato(itemExecucao, novoItemReqExecucao));
-        }
-        if (isOperacaoEditar()) {
-            ItemRequisicaoCompraExecucao itemExecReqSalvo = facade.getItemRequisicaoExecucaoPorItemExecucao(itemExecucao, selecionado);
-            if (itemExecReqSalvo != null) {
-                novoItemReqExecucao.setQuantidade(permiteDesdobrarItens() ? itemRequisicao.getQuantidade() : itemExecReqSalvo.getQuantidade());
-                if (!novoItemReqExecucao.getAjusteValor()) {
-                    novoItemReqExecucao.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoContrato(itemExecucao, itemExecReqSalvo));
-                }
-            }
+        } else if (selecionado.isTipoExecucaoProcesso()) {
+            ItemProcessoDeCompra itemProcComp = itemRequisicaoDesdobravel.getExecucaoProcessoItem().getItemProcessoCompra();
+            itemRequisicao = criarItemRequisicaoCompraVO(
+                itemProcComp, itemProcComp.getObjetoCompra(), itemProcComp.getNumero(), itemProcComp.getUnidadeMedida(),
+                itemProcComp.getDescricaoComplementar(), itemProcComp.getTipoControle());
         }
 
-        novoItemReqExecucao.calcularValorTotal();
-        return novoItemReqExecucao;
+        ItemRequisicaoCompraExecucaoVO novoItemReqProc = (ItemRequisicaoCompraExecucaoVO) Util.clonarObjeto(itemRequisicaoExecucao);
+        novoItemReqProc.setItemRequisicaoCompraVO(itemRequisicao);
+        itemRequisicao.getItensRequisicaoExecucao().add(novoItemReqProc);
+
+        itemRequisicao.setObjetoCompra(null);
+        itemRequisicao.setNumero(null);
+        itemRequisicao.setValorUnitario(itemRequisicaoDesdobravel.isControleQuantidade() ? itemRequisicaoDesdobravel.getValorUnitario() : BigDecimal.ZERO);
+        itemRequisicao.setNumero(getProximoNumeroItemDesdobrado());
+        itemRequisicao.setValorUnitarioDesdobrado(itemRequisicaoDesdobravel.isControleQuantidade() ? itemRequisicaoDesdobravel.getValorUnitario() : BigDecimal.ZERO);
+        atribuirGrupoObjetoCompra();
+    }
+
+    private int getProximoNumeroItemDesdobrado() {
+        int numero = itensRequisicaoVO.stream().mapToInt(item -> item.getItensDesdobrados().size()).sum();
+        return numero + 1;
     }
 
     private int getProximoNumeroItemRequisicao() {
-        return selecionado.getItens().size() + 1;
-    }
-
-    public void desdobrarItem(ItemRequisicaoCompraDesdobravel item) {
-        itemDesdobravel = item;
-        novoItemRequisicaoCompraDesdobravel();
-    }
-
-    public void novoItemRequisicaoCompraDesdobravel() {
-        if (selecionado.isTipoContrato()) {
-            ExecucaoContratoItem itemExecucaoContrato = itemDesdobravel.getExecucaoContratoItem();
-            itemRequisicao = criarItemRequisicaoCompraPorContrato(itemExecucaoContrato.getItemContrato(), itemExecucaoContrato.getValorUnitario());
-        }
-        if (selecionado.isTipoExecucaoProcesso()) {
-            ExecucaoProcessoItem itemExecucao = itemDesdobravel.getExecucaoProcessoItem();
-            itemRequisicao = criarItemRequisicaoCompraPorExecucaoProcesso(itemExecucao, itemExecucao.getValorUnitario());
-        }
-        itemRequisicao.setNumero(getProximoNumeroItemRequisicao());
-        itemRequisicao.setValorUnitarioDesdobrado(itemDesdobravel.getTipoControle().isTipoControlePorQuantidade() ? itemDesdobravel.getValorUnitario() : BigDecimal.ZERO);
-        itemDesdobravel.setValorDisponivel(getValorDisponivelProcessoItemDesdobrado(itemDesdobravel));
-        atribuirGrupoObjetoCompra();
+        return itensRequisicaoVO.size() + 1;
     }
 
     private void atribuirGrupoObjetoCompra() {
         try {
-            itemDesdobravel.setObjetoCompra(facade.getObjetoCompraFacade().recuperar(itemDesdobravel.getObjetoCompra().getId()));
-            ObjetoCompra objetoCompraPai = itemDesdobravel.getObjetoCompra();
+            itemRequisicaoDesdobravel.setObjetoCompra(facade.getObjetoCompraFacade().recuperar(itemRequisicaoDesdobravel.getObjetoCompra().getId()));
+            ObjetoCompra objetoCompraPai = itemRequisicaoDesdobravel.getObjetoCompra();
             objetoCompraPai.setGrupoContaDespesa(facade.getObjetoCompraFacade().criarGrupoContaDespesa(selecionado.getTipoObjetoCompra(), objetoCompraPai.getGrupoObjetoCompra()));
-            indiceAba = 2;
         } catch (ExcecaoNegocioGenerica e) {
-            indiceAba = 1;
             FacesUtil.addOperacaoNaoPermitida(e.getMessage());
         }
     }
 
-    private BigDecimal getQuantidadeDisponivelProcessoAta(ExecucaoProcessoItem exItemProc, ItemRequisicaoDeCompra
-        itemRequisicao) {
-        BigDecimal quantidadeOutrasRequisicoes = facade.getQuantidadeEmRequisicaoItemExecucaoProcesso(exItemProc, itemRequisicao);
-        BigDecimal qtdeEstornadaExec = facade.getExecucaoProcessoEstornoFacade().getQuantidadeEstornada(exItemProc);
-        return exItemProc.getQuantidade().subtract(qtdeEstornadaExec).subtract(quantidadeOutrasRequisicoes);
-    }
-
-    private BigDecimal getQuantidadeDisponivelProcessoContrato(ExecucaoContratoItem itemExecucao, ItemRequisicaoCompraExecucao itemRequisicaoExecucao) {
-        BigDecimal quantidadeUtilizada = facade.getQuantidadeUtilizadaItemExecucaoContrato(itemExecucao, itemRequisicaoExecucao);
-        BigDecimal qtdeEstornadaExec = facade.getExecucaoContratoEstornoFacade().getQuantidadeEstornada(itemExecucao);
-        return itemExecucao.getQuantidadeUtilizada().subtract(qtdeEstornadaExec).subtract(quantidadeUtilizada);
-    }
-
-    public BigDecimal getQuantidadeDisponivelProcessoReconhecimentoDivida(ItemRequisicaoDeCompra itemRequisicao) {
-        BigDecimal quantidadeUtilizada = facade.getQuantidadeUtilizadaItemReconhecimentoDivida(itemRequisicao.getItemReconhecimentoDivida(), itemRequisicao);
-        return itemRequisicao.getItemReconhecimentoDivida().getQuantidade().subtract(quantidadeUtilizada);
-    }
-
-    private BigDecimal getValorDisponivelProcessoItemDesdobrado(ItemRequisicaoCompraDesdobravel itemDesdobravel) {
-        if (selecionado.isTipoContrato()) {
-            ExecucaoContratoItem itemExec = itemDesdobravel.getExecucaoContratoItem();
-
-            BigDecimal valorOutrasRequisicoes = facade.getValorUtilizadoItemExecucaoContrato(itemExec, getIdsItemRequisicaoDesdobrados(itemDesdobravel));
-            BigDecimal valorDestaRequisicao = itemDesdobravel.getValorTotalItemDesdobravel();
-            itemDesdobravel.setValorUtilizado(valorOutrasRequisicoes.add(valorDestaRequisicao));
-
-            itemDesdobravel.setValorEstornadoExecucao(facade.getExecucaoContratoEstornoFacade().getValorEstornado(itemExec));
-            return itemExec.getValorTotal().subtract(itemDesdobravel.getValorEstornado()).subtract(itemDesdobravel.getValorUtilizado());
+    private BigDecimal getQuantidadeDisponivelProcessoContrato(ExecucaoContratoItem itemExecucao, ExecucaoContratoItemDotacao itemExecDot, ItemRequisicaoCompraExecucao itemReqEx) {
+        if (itemExecucao.isExecucaoPorQuantidade() && !isLicitacaoMaiorDesconto()) {
+            BigDecimal qtdeOutrasRequisicoes = facade.getQuantidadeUtilizadaItemExecucaoContrato(itemExecucao, itemExecDot.getExecucaoContratoTipoFonte().getFonteDespesaORC(), itemReqEx);
+            BigDecimal qtdeEstornadaExec = facade.getExecucaoContratoEstornoFacade().getQuantidadeEstornadaItemPorFonte(itemExecucao, itemExecDot.getExecucaoContratoTipoFonte().getFonteDespesaORC());
+            BigDecimal qtdeExecucao = itemExecDot.getQuantidade();
+            return qtdeExecucao.subtract(qtdeEstornadaExec).subtract(qtdeOutrasRequisicoes);
         }
-        ExecucaoProcessoItem itemExecProc = itemDesdobravel.getExecucaoProcessoItem();
-
-        BigDecimal valorOutrasRequisicoes = facade.getValorUtilizadoItemExecucaoProcesso(itemExecProc, getIdsItemRequisicaoDesdobrados(itemDesdobravel));
-        BigDecimal valorDestaRequisicao = itemDesdobravel.getValorTotalItemDesdobravel();
-        itemDesdobravel.setValorUtilizado(valorOutrasRequisicoes.add(valorDestaRequisicao));
-        itemDesdobravel.setValorEstornadoExecucao(facade.getExecucaoProcessoEstornoFacade().getValorEstornado(itemExecProc));
-        return itemExecProc.getValorTotal().subtract(itemDesdobravel.getValorEstornado()).subtract(itemDesdobravel.getValorUtilizado());
+        return BigDecimal.ZERO;
     }
 
-    public List<Long> getIdsItemRequisicaoDesdobrados(ItemRequisicaoCompraDesdobravel itemDesdobrado) {
+    private BigDecimal getQuantidadeDisponivelProcessoSemContrato(ExecucaoProcessoItem itemExecucao, ExecucaoProcessoFonteItem itemExecDot, ItemRequisicaoCompraExecucao itemReqEx) {
+        if (itemExecucao.isExecucaoPorQuantidade() && !isLicitacaoMaiorDesconto()) {
+            BigDecimal qtdeOutrasRequisicoes = facade.getQuantidadeUtilizadaItemExecucaoProcesso(itemExecucao, itemExecDot.getExecucaoProcessoFonte().getFonteDespesaORC(), itemReqEx);
+            BigDecimal qtdeEstornadaExec = facade.getExecucaoProcessoEstornoFacade().getQuantidadeEstornadaItemPorFonte(itemExecucao, itemExecDot.getExecucaoProcessoFonte().getFonteDespesaORC());
+            BigDecimal qtdeExecucao = itemExecDot.getQuantidade();
+            return qtdeExecucao.subtract(qtdeEstornadaExec).subtract(qtdeOutrasRequisicoes);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal getQuantidadeDisponivelProcessoReconhecimentoDivida(ItemReconhecimentoDivida itemRecDiv, ItemReconhecimentoDividaDotacao itemDot, ItemRequisicaoCompraExecucao itemReqEx) {
+        BigDecimal qtdeOutrasRequisicoes = facade.getQuantidadeUtilizadaItemReconhecimentoDivida(itemRecDiv, itemDot.getFonteDespesaORC(), itemReqEx);
+        BigDecimal qtdeExecucao = itemDot.getValorReservado().divide(itemDot.getItemReconhecimentoDivida().getValorUnitario(), 4, RoundingMode.HALF_EVEN);
+        return qtdeExecucao.subtract(qtdeOutrasRequisicoes);
+    }
+
+
+    private void atribuirValorDisponivelItemExecucaoDesdobrado(ItemRequisicaoCompraVO itemDesdobravel, ItemRequisicaoCompraExecucaoVO itemReqExecVO) {
+        BigDecimal valorExecucao = BigDecimal.ZERO;
+        BigDecimal valorEstornadoExec = BigDecimal.ZERO;
+        BigDecimal valorOutrasRequisicoes;
+        BigDecimal valorDestaRequisicao;
+        BigDecimal valorUtilizado = BigDecimal.ZERO;
+        BigDecimal valorDisponivel;
+
+        if (selecionado.isTipoContrato()) {
+            ExecucaoContratoItem itemExec = itemReqExecVO.getExecucaoContratoItem();
+
+            valorExecucao = itemExec.getValorTotal();
+            FonteDespesaORC fonteDespesaORC = null;
+            if (itemReqExecVO.getExecucaoContratoItemDotacao() != null) {
+                fonteDespesaORC = itemReqExecVO.getExecucaoContratoItemDotacao().getExecucaoContratoTipoFonte().getFonteDespesaORC();
+                valorExecucao = itemReqExecVO.getExecucaoContratoItemDotacao().getValorTotal();
+            }
+
+            valorOutrasRequisicoes = fonteDespesaORC != null
+                ? facade.getValorUtilizadoItemExecucaoContrato(itemExec, itemReqExecVO.getExecucaoContratoItemDotacao().getExecucaoContratoTipoFonte().getFonteDespesaORC(), getIdsItemRequisicaoDesdobrados(itemDesdobravel))
+                : facade.getValorUtilizadoItemExecucaoContrato(itemExec, null, getIdsItemRequisicaoDesdobrados(itemDesdobravel));
+
+            valorDestaRequisicao = itemDesdobravel.getValorTotalItemDesdobrado();
+            valorUtilizado = valorOutrasRequisicoes.add(valorDestaRequisicao);
+
+            valorEstornadoExec = fonteDespesaORC != null
+                ? facade.getExecucaoContratoEstornoFacade().getValorEstornadoItemPorFonte(itemExec, fonteDespesaORC)
+                : facade.getExecucaoContratoEstornoFacade().getValorEstornadoItemPorFonte(itemExec, null);
+
+        } else if (selecionado.isTipoExecucaoProcesso()) {
+            ExecucaoProcessoItem itemExec = itemReqExecVO.getExecucaoProcessoItem();
+
+            valorExecucao = itemExec.getValorTotal();
+            FonteDespesaORC fonteDespesaORC = null;
+            if (itemReqExecVO.getExecucaoProcessoFonteItem() != null) {
+                fonteDespesaORC = itemReqExecVO.getExecucaoProcessoFonteItem().getExecucaoProcessoFonte().getFonteDespesaORC();
+                valorExecucao = itemReqExecVO.getExecucaoProcessoFonteItem().getValorTotal();
+            }
+
+            valorOutrasRequisicoes = fonteDespesaORC != null
+                ? facade.getValorUtilizadoItemExecucaoProcesso(itemExec, itemReqExecVO.getExecucaoProcessoFonteItem().getExecucaoProcessoFonte().getFonteDespesaORC(), getIdsItemRequisicaoDesdobrados(itemDesdobravel))
+                : facade.getValorUtilizadoItemExecucaoProcesso(itemExec, null, getIdsItemRequisicaoDesdobrados(itemDesdobravel));
+
+            valorDestaRequisicao = itemDesdobravel.getValorTotalItemDesdobrado();
+            valorUtilizado = valorOutrasRequisicoes.add(valorDestaRequisicao);
+
+            valorEstornadoExec = fonteDespesaORC != null
+                ? facade.getExecucaoProcessoEstornoFacade().getValorEstornadoItemPorFonte(itemExec, fonteDespesaORC)
+                : facade.getExecucaoProcessoEstornoFacade().getValorEstornadoItemPorFonte(itemExec, null);
+        }
+        valorDisponivel = valorExecucao.subtract(valorEstornadoExec).subtract(valorUtilizado);
+        itemReqExecVO.setValorEstornado(valorEstornadoExec);
+        itemReqExecVO.setValorUtilizado(valorUtilizado);
+        itemReqExecVO.setValorDisponivel(valorDisponivel);
+    }
+
+    public BigDecimal getValorTotalRequisicao() {
+        BigDecimal total = BigDecimal.ZERO;
+        if (hasItensRequisicao()) {
+            for (ItemRequisicaoCompraVO item : itensRequisicaoVO) {
+                if (item.hasItensDesdobrados()) {
+                    item.setValorTotal(item.getValorTotalItemDesdobrado());
+                }
+                total = total.add(item.getValorTotal());
+            }
+        }
+        return total;
+    }
+
+    public List<Long> getIdsItemRequisicaoDesdobrados(ItemRequisicaoCompraVO itemDesdobrado) {
         List<Long> ids = Lists.newArrayList();
-        itemDesdobrado.getItensRequisicao().forEach(item -> {
+        itemDesdobrado.getItensDesdobrados().forEach(item -> {
             if (item.getId() != null) {
                 ids.add(item.getId());
             }
@@ -1097,22 +1235,22 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
             if (hasPermissaoDesdobrarSemGrupo) {
                 return facade.getObjetoCompraFacade().buscarObjetoCompraNaoReferenciaPorTipoObjetoCompra(codigoOrDescricao.trim(), TipoObjetoCompra.CONSUMO);
             }
-            if (itemDesdobravel.getObjetoCompra().getGrupoContaDespesa() != null && itemDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo() != null) {
+            if (itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa() != null && itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo() != null) {
                 return facade.getObjetoCompraFacade().buscarObjetoCompraConsumoPorGrupoMaterial(
-                        codigoOrDescricao.trim(),
-                        itemDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo(),
-                        selecionado.getDataRequisicao());
+                    codigoOrDescricao.trim(),
+                    itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo(),
+                    selecionado.getDataRequisicao());
             }
         }
         if (selecionado.getTipoObjetoCompra().isMaterialPermanente()) {
             if (hasPermissaoDesdobrarSemGrupo) {
                 return facade.getObjetoCompraFacade().buscarObjetoCompraNaoReferenciaPorTipoObjetoCompra(codigoOrDescricao.trim(), TipoObjetoCompra.PERMANENTE_MOVEL);
             }
-            if (itemDesdobravel.getObjetoCompra().getGrupoContaDespesa() != null && itemDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo() != null) {
+            if (itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa() != null && itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo() != null) {
                 return facade.getObjetoCompraFacade().buscarObjetoCompraPermanentePorGrupoPatrimonial(
-                        codigoOrDescricao.trim(),
-                        itemDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo(),
-                        selecionado.getDataRequisicao());
+                    codigoOrDescricao.trim(),
+                    itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo(),
+                    selecionado.getDataRequisicao());
             }
         }
         return Lists.newArrayList();
@@ -1120,41 +1258,21 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     public UnidadeOrganizacional getUnidadeAdministrativa() {
         if (selecionado.isTipoContrato()) {
-            return facade.getContratoFacade().buscarUnidadeVigenteContrato(selecionado.getContrato()).getUnidadeAdministrativa();
+            return facade.getContratoFacade().buscarUnidadeVigenteContrato(contrato).getUnidadeAdministrativa();
         } else if (selecionado.isTipoAtaRegistroPreco()) {
             return ataRegistroPreco.getUnidadeOrganizacional();
         } else if (selecionado.isTipoDispensaInexigibilidade()) {
             return dispensaDeLicitacao.getProcessoDeCompra().getUnidadeOrganizacional();
         }
-        return selecionado.getReconhecimentoDivida().getUnidadeAdministrativa();
+        return reconhecimentoDivida.getUnidadeAdministrativa();
     }
 
-    public boolean isMaiorDescontoPorQuantidade() {
-        if (isMaiorDesconto() && hasItensDesdobraveis()) {
-            for (ItemRequisicaoCompraDesdobravel item : itensDesdobraveis) {
-                return item.getTipoControle().isTipoControlePorQuantidade();
-            }
-        }
-        return false;
-    }
-
-    public boolean hasItensDesdobraveis(){
-        return !Util.isListNullOrEmpty(itensDesdobraveis);
-    }
-
-    public boolean isMaiorDesconto() {
-        return selecionado.isLicitacaoMaiorDesconto();
+    public boolean isLicitacaoMaiorDesconto() {
+        return selecionado.isLicitacaoMaiorDesconto(contrato, ataRegistroPreco);
     }
 
     public boolean isControlePorValor() {
-        if (hasItensProcesso()) {
-            for (ItemProcessoLicitacao item : itensProcesso) {
-                if (item.isControleValor()) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return hasItensProcesso() && itensProcesso.stream().anyMatch(ItemRequisicaoProcessoLicitatorio::isControleValor);
     }
 
     public void listenerObjetoCompra() {
@@ -1175,7 +1293,7 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     public void copiarObjetoCompraDesdobrado() {
         try {
             validarCopiaObjetoCompraDesdobrado();
-            itemRequisicao.setObjetoCompra(itemDesdobravel.getObjetoCompra());
+            itemRequisicao.setObjetoCompra(itemRequisicaoDesdobravel.getObjetoCompra());
             listenerObjetoCompra();
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
@@ -1184,10 +1302,10 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     private void validarCopiaObjetoCompraDesdobrado() {
         ValidacaoException ve = new ValidacaoException();
-        if (itemDesdobravel.getObjetoCompra().getReferencial()) {
+        if (itemRequisicaoDesdobravel.getObjetoCompra().getReferencial()) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("Não é permitido adicionar um objeto de compra do tipo referencial.");
         }
-        if (!itemDesdobravel.getObjetoCompra().getAtivo()) {
+        if (!itemRequisicaoDesdobravel.getObjetoCompra().getAtivo()) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("Não é permitido adicionar um objeto de compra inativo.");
         }
         ve.lancarException();
@@ -1197,20 +1315,26 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         itemRequisicao.getObjetoCompra().setGrupoContaDespesa(facade.getObjetoCompraFacade().criarGrupoContaDespesa(selecionado.getTipoObjetoCompra(), itemRequisicao.getObjetoCompra().getGrupoObjetoCompra()));
     }
 
-    public void removerItemDesdobravel(ItemRequisicaoDeCompra itemRequisicao) {
-        selecionado.getItens().remove(itemRequisicao);
-        itemDesdobravel.setValorDisponivel(itemDesdobravel.getValorDisponivel().add(itemRequisicao.getValorTotal()));
-        itemDesdobravel.getItensRequisicao().remove(itemRequisicao);
-        renumerarItensDesdobraveis();
-        indiceAba = 2;
+    public void removerItemDesdobravel(ItemRequisicaoCompraVO itemReqVO) {
+        itemRequisicao = itemReqVO;
+        atribuirSaldoItemDesdobrado(true);
+        itemRequisicaoDesdobravel.getItensDesdobrados().remove(itemReqVO);
     }
 
-    public void editarItemDesdobrado(ItemRequisicaoDeCompra item) {
-        itemRequisicao = (ItemRequisicaoDeCompra) Util.clonarObjeto(item);
-        itemDesdobravel.setValorDisponivel(itemDesdobravel.getValorDisponivel().add(item.getValorTotal()));
+    private void atribuirSaldoItemDesdobrado(boolean isAdd) {
+        BigDecimal valorCalculado = isAdd
+            ? itemRequisicaoExecucao.getValorDisponivel().add(itemRequisicao.getValorTotal())
+            : itemRequisicaoExecucao.getValorDisponivel().subtract(itemRequisicao.getValorTotal());
+        itemRequisicaoExecucao.setValorDisponivel(valorCalculado);
+    }
+
+    public void editarItemDesdobrado(ItemRequisicaoCompraVO itemReqVO) {
+        itemRequisicao = itemReqVO;
+        atribuirSaldoItemDesdobrado(true);
         atribuirGrupoAoItemRequisicao();
-        itemDesdobravel.setEditando(true);
+        itemRequisicaoDesdobravel.setEditando(true);
         gerarTabelaValorDescontoItem();
+        calcularValoresItemDesdobrado();
 
         for (DescontoItemRequisicaoCompra itemDesc : descontosItemRequisicao) {
             if (itemDesc.getTipoDesconto().equals(itemRequisicao.getTipoDesconto())) {
@@ -1227,51 +1351,50 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
                 itemDesc.setSelecionado(true);
             }
         }
-
-        indiceAba = 2;
     }
 
     public void adicionarItemDesdobravel() {
         try {
             validarItensDesdobraveis();
             validarEspecificacao();
-            Util.adicionarObjetoEmLista(itemDesdobravel.getItensRequisicao(), itemRequisicao);
-            limparListaItensRequisicaoExecucao();
-            for (ItemRequisicaoDeCompra itemRequisicao : itemDesdobravel.getItensRequisicao()) {
-                if (selecionado.isTipoContrato()) {
-                    ItemRequisicaoCompraExecucao itemReqExecucao = criarItemRequisicaoCompraExecucao(itemDesdobravel.getExecucaoContratoItem(), itemRequisicao);
-                    Util.adicionarObjetoEmLista(itemRequisicao.getItensRequisicaoExecucao(), itemReqExecucao);
-                }
-                if (!itemRequisicao.isControleQuantidade()) {
-                    itemRequisicao.setQuantidadeDisponivel(itemRequisicao.getQuantidade());
-                }
-                Util.adicionarObjetoEmLista(selecionado.getItens(), itemRequisicao);
+
+            for (ItemRequisicaoCompraExecucaoVO itemReqExec : itemRequisicao.getItensRequisicaoExecucao()) {
+                itemReqExec.setQuantidade(itemRequisicao.getQuantidade());
+                itemReqExec.setValorUnitario(itemRequisicao.getValorUnitario());
+                itemReqExec.setValorTotal(itemRequisicao.getValorTotal());
             }
-            novoItemRequisicaoCompraDesdobravel();
-            itemDesdobravel.setEditando(false);
+            Util.adicionarObjetoEmLista(itemRequisicaoDesdobravel.getItensDesdobrados(), itemRequisicao);
+            itemRequisicaoExecucao.setValorUtilizado(itemRequisicaoExecucao.getValorUtilizado().add(itemRequisicao.getValorTotal()));
+            atribuirSaldoItemDesdobrado(false);
+            novoItemRequisicaoCompraDesdobrado();
+
+            itemRequisicaoDesdobravel.setEditando(false);
             descontosItemRequisicao = Lists.newArrayList();
-            FacesUtil.executaJavaScript("setaFoco('Formulario:tabView:objetoDeCompra_input')");
-            FacesUtil.atualizarComponente("Formulario:tabView:formulario-item");
+            FacesUtil.executaJavaScript("setaFoco('formDesdobrarItem:objetoDeCompra_input')");
+            FacesUtil.atualizarComponente("formDesdobrarItem:formulario-item");
             FacesUtil.atualizarComponente("Formulario:gridGeral");
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
     }
 
-    public void cancelarItemDesdobravel() {
+    public void confirmarItensDesdobrados() {
         itemRequisicao = null;
-        indiceAba = 1;
-        itemDesdobravel.setEditando(false);
+        itemRequisicaoDesdobravel.setEditando(false);
         descontosItemRequisicao = Lists.newArrayList();
+        renumerarItensDesdobrados();
+        FacesUtil.executaJavaScript("dlgDesdobrarItem.hide()");
+        FacesUtil.atualizarComponente("Formulario:vl-total-requisicao");
     }
 
-    public void renumerarItensDesdobraveis() {
-        Iterator<ItemRequisicaoDeCompra> itens = selecionado.getItens().iterator();
+    public void renumerarItensDesdobrados() {
+        itemRequisicaoDesdobravel.ordernarItensDesdobradosPorEmpenho();
+        Iterator<ItemRequisicaoCompraVO> itens = itemRequisicaoDesdobravel.getItensDesdobrados().iterator();
         while (itens.hasNext()) {
-            ItemRequisicaoDeCompra proximo = itens.next();
-            int i = selecionado.getItens().indexOf(proximo);
+            ItemRequisicaoCompraVO proximo = itens.next();
+            int i = itemRequisicaoDesdobravel.getItensDesdobrados().indexOf(proximo);
             proximo.setNumero(i + 1);
-            Util.adicionarObjetoEmLista(selecionado.getItens(), proximo);
+            Util.adicionarObjetoEmLista(itemRequisicaoDesdobravel.getItensDesdobrados(), proximo);
         }
     }
 
@@ -1279,12 +1402,12 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         ValidacaoException ex = new ValidacaoException();
         validarCamposObrigatoriosItemDesdobravel(ex);
         validarAssociacaoComObjetoCompraItemDesdobravel(ex);
-        validarMesmoObjetoCompraItemDesdobravel(ex);
+        validarMesmoObjetoCompraItemDesdobravel();
         ex.lancarException();
     }
 
-    private void validarMesmoObjetoCompraItemDesdobravel(ValidacaoException ex) {
-        for (ItemRequisicaoDeCompra item : selecionado.getItens()) {
+    private void validarMesmoObjetoCompraItemDesdobravel() {
+        for (ItemRequisicaoCompraVO item : itensRequisicaoVO) {
             if (!item.equals(itemRequisicao)) {
                 ValidacaoObjetoCompraEspecificacao validacaoObjetoCompraEspecificacao = new ValidacaoObjetoCompraEspecificacao();
                 validacaoObjetoCompraEspecificacao.setObjetoCompraSelecionado(itemRequisicao.getObjetoCompra());
@@ -1300,7 +1423,7 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     private void validarAssociacaoComObjetoCompraItemDesdobravel(ValidacaoException ex) {
         ObjetoCompra objetoCompra = itemRequisicao.getObjetoCompra();
         if (objetoCompra.getTipoObjetoCompra().isMaterialConsumo()) {
-            AssociacaoGrupoObjetoCompraGrupoMaterial associacao = facade.getAssocicaoGrupoMaterial().buscarAssociacaoPorGrupoObjetoCompraVigente(
+            AssociacaoGrupoObjetoCompraGrupoMaterial associacao = facade.getAssocicaoGrupoMaterialFacade().buscarAssociacaoPorGrupoObjetoCompraVigente(
                 objetoCompra.getGrupoObjetoCompra(),
                 facade.getSistemaFacade().getDataOperacao());
             if (associacao == null) {
@@ -1308,7 +1431,7 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
             }
         }
         if (objetoCompra.getTipoObjetoCompra().isMaterialPermanente()) {
-            GrupoObjetoCompraGrupoBem associacao = facade.getAssocicaoGrupoBem().recuperarAssociacaoDoGrupoObjetoCompra(objetoCompra.getGrupoObjetoCompra(), facade.getSistemaFacade().getDataOperacao());
+            GrupoObjetoCompraGrupoBem associacao = facade.getAssocicaoGrupoBemFacade().recuperarAssociacaoDoGrupoObjetoCompra(objetoCompra.getGrupoObjetoCompra(), facade.getSistemaFacade().getDataOperacao());
             if (associacao == null) {
                 ex.adicionarMensagemDeOperacaoNaoPermitida("Nenhuma associação encontrada com grupo de objeto de compra: " + objetoCompra.getGrupoObjetoCompra() + ".");
             }
@@ -1329,25 +1452,17 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
             ex.adicionarMensagemDeCampoObrigatorio("O campo valor unitário com desconto deve ser informado com um valor maior que 0(zero).");
         }
         ex.lancarException();
-        if (itemRequisicao.getValorTotal().compareTo(itemDesdobravel.getValorDisponivel()) > 0) {
-            ex.adicionarMensagemDeOperacaoNaoPermitida("O valor total deve ser menor que o valor disponível de " + Util.formataValor(itemDesdobravel.getValorDisponivel()) + ".");
+        if (itemRequisicao.getValorTotal().compareTo(itemRequisicaoExecucao.getValorDisponivel()) > 0) {
+            ex.adicionarMensagemDeOperacaoNaoPermitida("O valor total deve ser menor ou igual ao valor disponível de " + Util.formataValor(itemRequisicaoExecucao.getValorDisponivel()) + ".");
         }
         if (selecionado.getTipoObjetoCompra().isMaterialConsumo() && itemRequisicao.hasDiferencaRequisicaoComEntrada()) {
             ex.adicionarMensagemDeOperacaoNaoPermitida("Divergência com Entrada por Compra", "O valor total da simulação da entrada por compra deve ser igual ao valor total com desconto do item requisição.");
         }
     }
 
-    public void validarRequisicaoExecucao() {
-        ValidacaoException ve = new ValidacaoException();
-        if ((selecionado.isTipoContrato() || selecionado.isTipoExecucaoProcesso()) && !hasExecucaoSelecionada()) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("Para continuar, é necessário selecionar pelo menos uma execução a requisição de compra.");
-        }
-        ve.lancarException();
-    }
-
     public void selecionarContrato(Contrato obj) {
         if (obj != null) {
-            selecionado.setContrato(obj);
+            setContrato(obj);
             executarDependenciasAoSelecionarProcesso();
         }
     }
@@ -1355,21 +1470,19 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     public void executarDependenciasAoSelecionarProcesso() {
         try {
             registrarPrazoEstipuladoDeEntrega();
-            execucoesRequisicao = Lists.newArrayList();
             validarContratoObras();
-
-
             buscarExecucoesEmpenhadas();
             hasPermissaoDesdobrarSemGrupo = facade.getConfiguracaoLicitacaoFacade().verificarUnidadeGrupoObjetoCompra(getUnidadeAdministrativa());
-            if (execucoesRequisicao.size() == 1) {
-                marcarExecucao(execucoesRequisicao.get(0));
-                FacesUtil.executaJavaScript("carregarItens()");
+            if (execucoesVO.size() == 1) {
+                RequisicaoCompraExecucaoVO reqExecVO = execucoesVO.get(0);
+                if (reqExecVO != null) {
+                    marcarExecucao(reqExecVO);
+                    if (reqExecVO.getEmpenhosVO().size() == 1 && selecionado.getPrazoEntrega() != null)
+                        FacesUtil.executaJavaScript("buscarItens()");
+                }
             }
-            selecionado.getItens().clear();
-            if (selecionado.isTipoContrato()) {
-                fiscais = facade.getContratoFacade().buscarFiscaisContrato(selecionado.getContrato().getId());
-                gestores = facade.getContratoFacade().buscarGestoresContrato(selecionado.getContrato().getId());
-            }
+            itensRequisicaoVO.clear();
+            buscarFiscaisAndGestorContrato();
             FacesUtil.executaJavaScript("aguarde.hide()");
         } catch (ValidacaoException ve) {
             FacesUtil.executaJavaScript("aguarde.hide()");
@@ -1377,10 +1490,17 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         }
     }
 
+    private void buscarFiscaisAndGestorContrato() {
+        if (selecionado.isTipoContrato()) {
+            fiscais = facade.getContratoFacade().buscarFiscaisContrato(contrato.getId());
+            gestores = facade.getContratoFacade().buscarGestoresContrato(contrato.getId());
+        }
+    }
+
     public void registrarPrazoEstipuladoDeEntrega() {
-        if (selecionado.getContrato() != null && selecionado.getContrato().getObjetoAdequado().getSolicitacaoMaterial() != null) {
-            selecionado.setPrazoEntrega(selecionado.getContrato().getObjetoAdequado().getSolicitacaoMaterial().getPrazoDeEntrega());
-            selecionado.setTipoPrazoEntrega(selecionado.getContrato().getObjetoAdequado().getSolicitacaoMaterial().getTipoPrazoEntrega());
+        if (contrato != null && contrato.getObjetoAdequado().getSolicitacaoMaterial() != null) {
+            selecionado.setPrazoEntrega(contrato.getObjetoAdequado().getSolicitacaoMaterial().getPrazoDeEntrega());
+            selecionado.setTipoPrazoEntrega(contrato.getObjetoAdequado().getSolicitacaoMaterial().getTipoPrazoEntrega());
 
         } else if (selecionado.isTipoAtaRegistroPreco() && ataRegistroPreco != null) {
             selecionado.setPrazoEntrega(ataRegistroPreco.getLicitacao().getProcessoDeCompra().getSolicitacaoMaterial().getPrazoDeEntrega());
@@ -1393,28 +1513,63 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     }
 
     public boolean hasExecucoes() {
-        return execucoesRequisicao != null && !execucoesRequisicao.isEmpty();
+        return execucoesVO != null && !execucoesVO.isEmpty();
     }
 
     public void buscarExecucoesEmpenhadas() {
-        if (!selecionado.getTipoRequisicao().isReconhecimentoDivida()) {
-            Long idProcesso = selecionado.isTipoContrato() ? selecionado.getContrato().getId()
-                : selecionado.isTipoAtaRegistroPreco() ? ataRegistroPreco.getId() : dispensaDeLicitacao.getId();
-            execucoesRequisicao = facade.buscarExecucoesEmpenhadas(idProcesso);
+        try {
+            execucoesVO = Lists.newArrayList();
+            if (!isProcessoNulo()) {
+                Long idProcesso;
+                switch (selecionado.getTipoRequisicao()) {
+                    case CONTRATO:
+                        idProcesso = contrato.getId();
+                        break;
+                    case ATA_REGISTRO_PRECO:
+                        idProcesso = ataRegistroPreco.getId();
+                        break;
+                    case DISPENSA_LICITACAO_INEXIGIBILIDADE:
+                        idProcesso = dispensaDeLicitacao.getId();
+                        break;
+                    default:
+                        idProcesso = reconhecimentoDivida.getId();
+                        break;
+                }
+                execucoesVO = facade.buscarExecucoesEmpenhadas(idProcesso, selecionado.getTipoObjetoCompra());
+                Collections.sort(execucoesVO);
+            }
+        } catch (ExcecaoNegocioGenerica ex) {
+            FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
         }
     }
 
     public void selecionarRequisicaoExecucaoSalva() {
-        if (isOperacaoEditar() && !selecionado.getTipoRequisicao().isReconhecimentoDivida()) {
-            execucoesRequisicao.forEach(execDisponivel -> selecionado.getExecucoes().forEach(execSalva -> {
-                if (selecionado.isTipoContrato() && execSalva.getExecucaoContrato().getId().equals(execDisponivel.getExecucaoContrato().getId())) {
-                    execDisponivel.setSelecionado(true);
-                }
-                if (selecionado.isTipoExecucaoProcesso() && execSalva.getExecucaoProcesso().getId().equals(execDisponivel.getExecucaoProcesso().getId())) {
-                    execDisponivel.setSelecionado(true);
-                }
-            }));
-        }
+        execucoesVO.forEach(reqExecVO -> selecionado.getExecucoes().forEach(reqExecSalva -> {
+            if (selecionado.isTipoContrato()
+                && reqExecSalva.getExecucaoContratoEmpenho() != null
+                && reqExecSalva.getExecucaoContrato().getId().equals(reqExecVO.getId())) {
+                reqExecVO.setSelecionado(true);
+                selecionarEmpenho(reqExecVO, reqExecSalva.getExecucaoContratoEmpenho().getEmpenho());
+            }
+            if (selecionado.isTipoExecucaoProcesso()
+                && reqExecSalva.getExecucaoProcessoEmpenho() != null
+                && reqExecSalva.getExecucaoProcesso().getId().equals(reqExecVO.getId())) {
+                reqExecVO.setSelecionado(true);
+                selecionarEmpenho(reqExecVO, reqExecSalva.getExecucaoProcessoEmpenho().getEmpenho());
+            }
+            if (selecionado.isTipoReconhecimentoDivida()
+                && reqExecSalva.getExecucaoReconhecimentoDiv() != null
+                && reqExecSalva.getReconhecimentoDivida().getId().equals(reqExecVO.getId())) {
+                reqExecVO.setSelecionado(true);
+                selecionarEmpenho(reqExecVO, reqExecSalva.getExecucaoReconhecimentoDiv().getSolicitacaoEmpenho().getEmpenho());
+            }
+        }));
+    }
+
+    private static void selecionarEmpenho(RequisicaoCompraExecucaoVO reqProcVO, Empenho empenho) {
+        reqProcVO.getEmpenhosVO().stream()
+            .filter(reqEmpVO -> reqEmpVO.getEmpenho().equals(empenho))
+            .forEach(reqEmpVO -> reqEmpVO.setSelecionado(true));
     }
 
     public List<SelectItem> getTiposRequisicao() {
@@ -1426,12 +1581,12 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     }
 
     public void limparCamposProcesso() {
-        selecionado.setContrato(null);
-        selecionado.setReconhecimentoDivida(null);
+        setContrato(null);
+        setReconhecimentoDivida(null);
         setAtaRegistroPreco(null);
         setDispensaDeLicitacao(null);
-        execucoesRequisicao = null;
-        selecionado.getItens().clear();
+        execucoesVO = null;
+        itensRequisicaoVO.clear();
         if (selecionado.isTipoContrato()) {
             FacesUtil.executaJavaScript("setaFoco('Formulario:autoComplete-contrato_input')");
         } else if (selecionado.isTipoAtaRegistroPreco()) {
@@ -1445,33 +1600,31 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     private void validarContratoObras() {
         ValidacaoException ve = new ValidacaoException();
-        if (selecionado.isTipoContrato() && selecionado.getContrato().getObjetoAdequado().isObras()) {
-            selecionado.setContrato(facade.getContratoFacade().recuperar(selecionado.getContrato().getId()));
-            if (selecionado.getContrato().isDeRegistroDePrecoExterno()) {
-                selecionado.getContrato().getRegistroSolicitacaoMaterialExterno().setSolicitacaoMaterialExterno(facade.getSolicitacaoMaterialExternoFacade().recuperar(selecionado.getContrato().getRegistroSolicitacaoMaterialExterno().getSolicitacaoMaterialExterno().getId()));
+        if (selecionado.isTipoContrato() && getContrato().getObjetoAdequado().isObras()) {
+            setContrato(facade.getContratoFacade().recuperar(contrato.getId()));
+            if (contrato.isDeRegistroDePrecoExterno()) {
+                contrato.getRegistroSolicitacaoMaterialExterno().setSolicitacaoMaterialExterno(facade.getSolicitacaoMaterialExternoFacade().recuperar(contrato.getRegistroSolicitacaoMaterialExterno().getSolicitacaoMaterialExterno().getId()));
             }
-            if (!SubTipoObjetoCompra.CONSTRUCAO.equals(selecionado.getContrato().getObjetoAdequado().getSubTipoObjetoCompra())) {
+            if (!SubTipoObjetoCompra.CONSTRUCAO.equals(contrato.getObjetoAdequado().getSubTipoObjetoCompra())) {
                 ve.adicionarMensagemDeOperacaoNaoPermitida("Somente contratos de Obra e Serviço de Engenharia do tipo da obra: Construção poderão realizar a requisição de compra.");
             }
             ve.lancarException();
-            BigDecimal valorTotalEmpenhadoDaObra = facade.valorTotalEmpenhadoDaObraPorContrato(selecionado.getContrato());
-            if (valorTotalEmpenhadoDaObra.compareTo(selecionado.getContrato().getValorTotalExecucao()) < 0 ||
-                valorTotalEmpenhadoDaObra.compareTo(selecionado.getContrato().getValorTotalExecucao()) > 0) {
+            BigDecimal valorTotalEmpenhadoDaObra = facade.valorTotalEmpenhadoDaObraPorContrato(contrato);
+            if (valorTotalEmpenhadoDaObra.compareTo(contrato.getValorTotalExecucao()) < 0 ||
+                valorTotalEmpenhadoDaObra.compareTo(contrato.getValorTotalExecucao()) > 0) {
                 ve.adicionarMensagemDeOperacaoNaoPermitida("A Obra não foi totalmente empenhada, por favor empenhe todas as medições antes de fazer a requisição de compra");
             }
         }
         if (ve.temMensagens()) {
-            selecionado.setContrato(null);
-            setAtaRegistroPreco(null);
-            setDispensaDeLicitacao(null);
-            execucoesRequisicao = null;
-            selecionado.getItens().clear();
+            setContrato(null);
+            execucoesVO = null;
+            itensRequisicaoVO.clear();
             throw ve;
         }
     }
 
     public void gerarRelatorioRequisicao(Long idRequisicao) {
-        selecionado = facade.recuperarSemDependencias(idRequisicao);
+        selecionado = facade.recuperarComDependenciasRequisicaoExecucao(idRequisicao);
         setOpcaoRelatorioReqCompra(OpcaoRelatorioReqCompra.COM_DESCRICAO);
         gerarRelatorio("PDF");
     }
@@ -1511,7 +1664,6 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
             contratos = Lists.newArrayList();
         }
         contratos = facade.getContratoFacade().buscarFiltrandoOndeUsuarioGestorLicitacao(
-            filtroParte.trim(),
             filtroContrato,
             selecionado.getTipoObjetoCompra(),
             301);
@@ -1529,9 +1681,9 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         if (selecionado.getTipoObjetoCompra() == null) {
             contratos = Lists.newArrayList();
         }
+        filtroContrato.setParte(parte);
         return facade.getContratoFacade().buscarFiltrandoOndeUsuarioGestorLicitacao(
-            parte.trim(),
-            null,
+            filtroContrato,
             selecionado.getTipoObjetoCompra(),
             50);
     }
@@ -1542,7 +1694,6 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     public void novaPesquisaContratos() {
         contratos = Lists.newArrayList();
-        filtroParte = "";
         filtroContrato = new FiltroContratoRequisicaoCompra();
     }
 
@@ -1550,24 +1701,32 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + requisicaoDeCompra.getId() + "/");
     }
 
-    public void marcarExecucao(RequisicaoExecucaoExecucaoVO requisicaoExecucaoExecucaoVO) {
+    public void addFornecedorSet(RequisicaoCompraEmpenhoVO empVO) {
+        if (empVO.getSelecionado()) {
+            fornecedorSet.add(empVO.getEmpenho().getFornecedor());
+        } else {
+            fornecedorSet.remove(empVO.getEmpenho().getFornecedor());
+        }
+    }
+
+    public void marcarExecucao(RequisicaoCompraExecucaoVO reqProcVO) {
         try {
-            if (!hasItensProcesso()){
-                buscarItensProcesso();
+            reqProcVO.setSelecionado(true);
+            if (reqProcVO.getEmpenhosVO().size() == 1) {
+                reqProcVO.getEmpenhosVO().forEach(emp -> emp.setSelecionado(reqProcVO.getSelecionado()));
+                fornecedorSet.add(reqProcVO.getEmpenhosVO().get(0).getEmpenho().getFornecedor());
             }
-            if (permiteDesdobrarItens() || selecionado.getTipoRequisicao().isAtaRegistroPreco()) {
-                for (RequisicaoExecucaoExecucaoVO execucao : execucoesRequisicao) {
-                    execucao.setSelecionado(false);
-                }
-            }
-            requisicaoExecucaoExecucaoVO.setSelecionado(true);
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
     }
 
-    public void desmarcarExecucao(RequisicaoExecucaoExecucaoVO reqExecucao) {
+    public void desmarcarExecucao(RequisicaoCompraExecucaoVO reqExecucao) {
         reqExecucao.setSelecionado(false);
+        reqExecucao.getEmpenhosVO().forEach(empVO -> {
+            empVO.setSelecionado(false);
+            fornecedorSet.remove(empVO.getEmpenho().getFornecedor());
+        });
     }
 
     public List<Contrato> getContratos() {
@@ -1576,14 +1735,6 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     public void setContratos(List<Contrato> contratos) {
         this.contratos = contratos;
-    }
-
-    public String getFiltroParte() {
-        return filtroParte;
-    }
-
-    public void setFiltroParte(String filtroParte) {
-        this.filtroParte = filtroParte;
     }
 
     public FiltroContratoRequisicaoCompra getFiltroContrato() {
@@ -1602,44 +1753,28 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         this.estornosRequisicaoCompra = estornosRequisicaoCompra;
     }
 
-    public ItemRequisicaoDeCompra getItemRequisicao() {
+    public ItemRequisicaoCompraVO getItemRequisicao() {
         return itemRequisicao;
     }
 
-    public void setItemRequisicao(ItemRequisicaoDeCompra itemRequisicao) {
+    public void setItemRequisicao(ItemRequisicaoCompraVO itemRequisicao) {
         this.itemRequisicao = itemRequisicao;
     }
 
-    public Integer getIndiceAba() {
-        return indiceAba;
+    public ItemRequisicaoCompraVO getItemRequisicaoDesdobravel() {
+        return itemRequisicaoDesdobravel;
     }
 
-    public void setIndiceAba(Integer indiceAba) {
-        this.indiceAba = indiceAba;
+    public void setItemRequisicaoDesdobravel(ItemRequisicaoCompraVO itemRequisicaoDesdobravel) {
+        this.itemRequisicaoDesdobravel = itemRequisicaoDesdobravel;
     }
 
-    public List<ItemRequisicaoCompraDesdobravel> getItensDesdobraveis() {
-        return itensDesdobraveis;
+    public List<RequisicaoCompraExecucaoVO> getExecucoesVO() {
+        return execucoesVO;
     }
 
-    public void setItensDesdobraveis(List<ItemRequisicaoCompraDesdobravel> itensDesdobraveis) {
-        this.itensDesdobraveis = itensDesdobraveis;
-    }
-
-    public ItemRequisicaoCompraDesdobravel getItemDesdobravel() {
-        return itemDesdobravel;
-    }
-
-    public void setItemDesdobravel(ItemRequisicaoCompraDesdobravel itemDesdobravel) {
-        this.itemDesdobravel = itemDesdobravel;
-    }
-
-    public List<RequisicaoExecucaoExecucaoVO> getExecucoesRequisicao() {
-        return execucoesRequisicao;
-    }
-
-    public void setExecucoesRequisicao(List<RequisicaoExecucaoExecucaoVO> execucoesRequisicao) {
-        this.execucoesRequisicao = execucoesRequisicao;
+    public void setExecucoesVO(List<RequisicaoCompraExecucaoVO> execucoesVO) {
+        this.execucoesVO = execucoesVO;
     }
 
     public List<DescontoItemRequisicaoCompra> getDescontosItemRequisicao() {
@@ -1807,7 +1942,7 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     public void redirecionarContrato() {
         String requestContext = FacesContext.getCurrentInstance().getExternalContext().getRequestContextPath();
-        String url = "window.open('" + requestContext + "/contrato-adm/ver/" + selecionado.getContrato().getId() + "/', '_blank');";
+        String url = "window.open('" + requestContext + "/contrato-adm/ver/" + contrato.getId() + "/', '_blank');";
         RequestContext.getCurrentInstance().execute(url);
     }
 
@@ -1822,72 +1957,84 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
     private void preecherItemRequisicaoDerivacaoEdicao() {
         itensDerivacao = Lists.newArrayList();
         if (selecionado.getTipoRequisicao().isContrato()) {
-            selecionado.getItens().forEach(itemReqOriginal -> {
-                DerivacaoObjetoCompra derivacaoObjComp = facade.buscarDerivacaoObjetoCompraItemRequisicao(itemReqOriginal.getItemContrato(), selecionado);
-                if (derivacaoObjComp != null) {
-                    ItemRequisicaoCompraDerivacao novoItemDerivacao = novoItemRequisicaoCompraDerivacao(itemReqOriginal);
-                    novoItemDerivacao.setDerivacaoObjetoCompra(derivacaoObjComp);
-                    itensDerivacao.add(novoItemDerivacao);
-                }
-            });
+            buscarItensRequisicaoDerivacao();
 
-            itensDerivacao.forEach(itemDeriv -> {
-                List<ItemRequisicaoDeCompra> itensReqComponente = facade.buscarItemRequisicaoDerivacaoComponente(itemDeriv.getItemRequisicaoOriginal().getItemContrato(), selecionado, itemDeriv.getDerivacaoObjetoCompra());
-                itensReqComponente.forEach(itemReqComp -> itemReqComp.setDescricaoComplementar(itemReqComp.getItemContrato().getItemAdequado().getDescricaoComplementar()));
+            itensDerivacao.forEach(itemReqDeriv -> {
+                List<ItemRequisicaoDeCompra> itensReqComponente = facade.buscarItemRequisicaoDerivacaoComponente(itemReqDeriv.getItemRequisicaoOriginal().getItemContrato(), selecionado, itemReqDeriv.getDerivacaoObjetoCompra());
 
-                itemDeriv.setItensRequisicaoComponente(itensReqComponente);
-                selecionado.getItens().remove(itemDeriv.getItemRequisicaoOriginal());
-            });
+                itensReqComponente.forEach(itemReqComp -> {
+                    ItemRequisicaoCompraVO novoItemReqCompVO = ItemRequisicaoCompraVO.toObjeto(itemReqComp);
+                    novoItemReqCompVO.setRequisicaoDeCompra(selecionado);
 
-            itensDerivacao.forEach(itemDeriv -> itemDeriv.setQuantidadDisponivel(itemDeriv.getQuantidadeUtilizada()));
-            itensDerivacao.forEach(itemDeriv -> itemDeriv.getItemRequisicaoOriginal().setQuantidadeDisponivel(itemDeriv.getQuantidadeDisponivel()));
-
-            itensDerivacao.forEach(itemDeriv -> {
-                itemDeriv.getItensRequisicaoComponente().forEach(itemComp -> {
-                    itemComp.setQuantidadeDisponivel(itemDeriv.getQuantidadeDisponivel());
-                    itemComp.getItensRequisicaoExecucao().forEach(itemEx -> itemEx.setQuantidadeDisponivel(itemComp.getQuantidadeDisponivel()));
+                    itemReqComp.getItensRequisicaoExecucao().forEach(itemReqEx -> {
+                        ItemRequisicaoCompraExecucaoVO novoItemReqProcVO = ItemRequisicaoCompraExecucaoVO.toObjeto(itemReqEx, novoItemReqCompVO);
+                        RequisicaoCompraEmpenhoVO novoReqEmpVO = facade.novoEmpenhoVO(itemReqEx.getEmpenho(), selecionado.getTipoObjetoCompra());
+                        novoItemReqProcVO.setRequisicaoEmpenhoVO(novoReqEmpVO);
+                        ExecucaoContratoItemDotacao itemDotExec = facade.getExecucaoContratoFacade().buscarItemDotacaoPorItemExecucao(itemReqEx.getExecucaoContratoItem(), itemReqEx.getEmpenho().getFonteDespesaORC());
+                        if (itemDotExec != null) {
+                            novoItemReqProcVO.setQuantidadeDisponivel(getQuantidadeDisponivelProcessoContrato(itemReqEx.getExecucaoContratoItem(), itemDotExec, itemReqEx));
+                        }
+                        novoItemReqCompVO.getItensRequisicaoExecucao().add(novoItemReqProcVO);
+                    });
+                    itemReqDeriv.getItensRequisicaoComponente().add(novoItemReqCompVO);
                 });
+                itemReqDeriv.setQuantidadDisponivel(itemReqDeriv.getQuantidadeUtilizada());
+                itensRequisicaoVO.remove(itemReqDeriv.getItemRequisicaoOriginal());
+
+                itemReqDeriv.getItensRequisicaoComponente()
+                    .stream()
+                    .flatMap(itemD -> itemD.getItensRequisicaoExecucao().stream())
+                    .forEach(itemC -> itemC.setQuantidadeDisponivel(itemReqDeriv.getQuantidadeDisponivel()));
             });
-            itensDerivacao.forEach(itemDeriv -> selecionado.getItens().addAll(itemDeriv.getItensRequisicaoComponente()));
+            itensDerivacao.forEach(itemDeriv -> itensRequisicaoVO.addAll(itemDeriv.getItensRequisicaoComponente()));
         }
-        Collections.sort(selecionado.getItens());
+        Collections.sort(itensRequisicaoVO);
     }
 
-    public void preecherItemRequisicaoDerivacaoNovo(ItemRequisicaoDeCompra itemReqList) {
-        if (selecionado.getTipoRequisicao().isContrato()) {
-            List<DerivacaoObjetoCompraComponente> componentes = facade.getDerivacaoObjetoCompraComponenteFacade().buscarComponentesPorDerivacao(itemReqList.getObjetoCompra().getDerivacaoObjetoCompra());
-            if (!Util.isListNullOrEmpty(componentes)) {
-                ItemRequisicaoCompraDerivacao novoItemDerivacao = novoItemRequisicaoCompraDerivacao(itemReqList);
-
-                for (DerivacaoObjetoCompraComponente compDeriv : componentes) {
-                    novoItemRequisicaoDerivacaoComponente(compDeriv, itemReqList, novoItemDerivacao);
-                }
+    private void buscarItensRequisicaoDerivacao() {
+        for (ItemRequisicaoCompraVO itemReqOriginal : itensRequisicaoVO) {
+            DerivacaoObjetoCompra derivacaoObjComp = facade.buscarDerivacaoObjetoCompraItemRequisicao(itemReqOriginal.getItemContrato(), selecionado);
+            if (derivacaoObjComp != null) {
+                ItemRequisicaoCompraDerivacao novoItemDerivacao = novoItemRequisicaoCompraDerivacao(itemReqOriginal);
+                novoItemDerivacao.setDerivacaoObjetoCompra(derivacaoObjComp);
                 itensDerivacao.add(novoItemDerivacao);
-                selecionado.getItens().addAll(novoItemDerivacao.getItensRequisicaoComponente());
             }
-            selecionado.getItens().remove(itemReqList);
         }
-        Collections.sort(selecionado.getItens());
     }
 
-    private void novoItemRequisicaoDerivacaoComponente(DerivacaoObjetoCompraComponente compDeriv, ItemRequisicaoDeCompra itemReqParam, ItemRequisicaoCompraDerivacao novoItemDerivacao) {
-        ItemRequisicaoDeCompra novoItemReq = new ItemRequisicaoDeCompra();
+    public void derivarObjeto(ItemRequisicaoCompraVO itemReqList) {
+        List<DerivacaoObjetoCompraComponente> componentes = facade.getDerivacaoObjetoCompraComponenteFacade().buscarComponentesPorDerivacao(itemReqList.getObjetoCompra().getDerivacaoObjetoCompra());
+        if (!Util.isListNullOrEmpty(componentes)) {
+            ItemRequisicaoCompraDerivacao novoItemDerivacao = novoItemRequisicaoCompraDerivacao(itemReqList);
+
+            for (DerivacaoObjetoCompraComponente compDeriv : componentes) {
+                novoItemRequisicaoDerivacaoComponente(compDeriv, itemReqList, novoItemDerivacao);
+            }
+            itensDerivacao.add(novoItemDerivacao);
+            itensRequisicaoVO.addAll(novoItemDerivacao.getItensRequisicaoComponente());
+        }
+        itensRequisicaoVO.remove(itemReqList);
+        Collections.sort(itensRequisicaoVO);
+    }
+
+    private void novoItemRequisicaoDerivacaoComponente(DerivacaoObjetoCompraComponente compDeriv, ItemRequisicaoCompraVO itemReqParam, ItemRequisicaoCompraDerivacao novoItemDerivacao) {
+        ItemRequisicaoCompraVO novoItemReq = new ItemRequisicaoCompraVO();
         novoItemReq.setRequisicaoDeCompra(selecionado);
-        novoItemReq.setItemContrato(itemReqParam.getItemContrato());
-        novoItemReq.setItemReconhecimentoDivida(itemReqParam.getItemReconhecimentoDivida());
-        novoItemReq.setExecucaoProcessoItem(itemReqParam.getExecucaoProcessoItem());
         novoItemReq.setObjetoCompra(itemReqParam.getObjetoCompra());
         novoItemReq.setUnidadeMedida(itemReqParam.getUnidadeMedida());
         novoItemReq.setNumero(itemReqParam.getNumero());
+        novoItemReq.setNumeroItemProcesso(itemReqParam.getNumeroItemProcesso());
         novoItemReq.setQuantidadeDisponivel(itemReqParam.getQuantidadeDisponivel());
         novoItemReq.setValorUnitario(itemReqParam.getValorUnitario());
         novoItemReq.setDescricaoComplementar(itemReqParam.getDescricaoComplementar());
         novoItemReq.setDerivacaoComponente(compDeriv);
+        novoItemReq.setTipoControle(itemReqParam.getTipoControle());
 
-        for (ItemRequisicaoCompraExecucao itemEx : itemReqParam.getItensRequisicaoExecucao()) {
-            ItemRequisicaoCompraExecucao novoItemReqEx = new ItemRequisicaoCompraExecucao();
+        for (ItemRequisicaoCompraExecucaoVO itemEx : itemReqParam.getItensRequisicaoExecucao()) {
+            ItemRequisicaoCompraExecucaoVO novoItemReqEx = new ItemRequisicaoCompraExecucaoVO();
             novoItemReqEx.setExecucaoContratoItem(itemEx.getExecucaoContratoItem());
-            novoItemReqEx.setItemRequisicaoCompra(novoItemReq);
+            novoItemReqEx.setItemRequisicaoCompraVO(novoItemReq);
+            novoItemReqEx.setRequisicaoEmpenhoVO(itemEx.getRequisicaoEmpenhoVO());
             novoItemReqEx.setQuantidade(itemReqParam.getQuantidade());
             novoItemReqEx.setQuantidadeDisponivel(itemEx.getQuantidadeDisponivel());
             novoItemReqEx.setValorUnitario(novoItemReq.getValorUnitario());
@@ -1897,34 +2044,43 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         novoItemDerivacao.getItensRequisicaoComponente().add(novoItemReq);
     }
 
-    private ItemRequisicaoCompraDerivacao novoItemRequisicaoCompraDerivacao(ItemRequisicaoDeCompra itemReqParam) {
+    private ItemRequisicaoCompraDerivacao novoItemRequisicaoCompraDerivacao(ItemRequisicaoCompraVO itemReqParam) {
         ItemRequisicaoCompraDerivacao novoItemDerivacao = new ItemRequisicaoCompraDerivacao();
         novoItemDerivacao.setItemRequisicaoOriginal(itemReqParam);
         novoItemDerivacao.setQuantidadDisponivel(itemReqParam.getQuantidadeDisponivel());
         return novoItemDerivacao;
     }
 
-    public void removerItemRequisicaoDerivado(ItemRequisicaoDeCompra itemReq) {
-        ItemRequisicaoCompraDerivacao itemReqDerivado = getItemRequisicaoCompraDerivado(itemReq);
+    public void removerItemRequisicaoDerivado(ItemRequisicaoCompraVO itemReqVO) {
+        ItemRequisicaoCompraDerivacao itemReqDerivado = getItemRequisicaoCompraDerivado(itemReqVO);
         if (itemReqDerivado == null) {
-            FacesUtil.addOperacaoNaoRealizada("Erro ao derivar o item requisição " + itemReq);
+            FacesUtil.addOperacaoNaoRealizada("Erro ao derivar o item requisição " + itemReqVO);
             return;
         }
-        selecionado.getItens().remove(itemReq);
-        itemReqDerivado.getItensRequisicaoComponente().remove(itemReq);
+        itensRequisicaoVO.remove(itemReqVO);
+        itemReqDerivado.getItensRequisicaoComponente().remove(itemReqVO);
 
         if (itemReqDerivado.getItensRequisicaoComponente().isEmpty()) {
             itemReqDerivado.getItemRequisicaoOriginal().setQuantidadeDisponivel(itemReqDerivado.getQuantidadeDisponivel());
             itemReqDerivado.getItemRequisicaoOriginal().getItensRequisicaoExecucao().forEach(itemEx -> itemEx.setQuantidadeDisponivel(itemReqDerivado.getQuantidadeDisponivel()));
-            selecionado.getItens().add(itemReqDerivado.getItemRequisicaoOriginal());
+            itensRequisicaoVO.add(itemReqDerivado.getItemRequisicaoOriginal());
             itensDerivacao.remove(itemReqDerivado);
         }
-        Collections.sort(selecionado.getItens());
+        Collections.sort(itensRequisicaoVO);
     }
 
-    public ItemRequisicaoCompraDerivacao getItemRequisicaoCompraDerivado(ItemRequisicaoDeCompra itemReq) {
-        Optional<ItemRequisicaoCompraDerivacao> first = itensDerivacao.stream().filter(itemD -> itemD.getItemRequisicaoOriginal().getIdItemProcesso().equals(itemReq.getIdItemProcesso())).findFirst();
+    public ItemRequisicaoCompraDerivacao getItemRequisicaoCompraDerivado(ItemRequisicaoCompraVO itemReq) {
+        Optional<ItemRequisicaoCompraDerivacao> first = itensDerivacao
+            .stream().filter(itemD -> itemD.getItemRequisicaoOriginal().getItemContrato().getId().equals(itemReq.getItemContrato().getId()))
+            .findFirst();
         return first.orElse(null);
+    }
+
+    public boolean isItemDesdobradoDoItemExecucao(ItemRequisicaoCompraVO itemReqVO) {
+        return itemRequisicaoExecucao != null
+            && itemRequisicaoExecucao.getIdItemExecucao() != null
+            && itemReqVO != null
+            && itemRequisicaoExecucao.getIdItemExecucao().equals(itemReqVO.getIdItemExecucao());
     }
 
     public boolean hasItensDerivacao() {
@@ -1955,23 +2111,15 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
         this.tiposContaDespesa = tiposContaDespesa;
     }
 
-    public Boolean getHasPermissaoDesdobrarSemGrupo() {
-        return hasPermissaoDesdobrarSemGrupo;
-    }
-
-    public void setHasPermissaoDesdobrarSemGrupo(Boolean hasPermissaoDesdobrarSemGrupo) {
-        this.hasPermissaoDesdobrarSemGrupo = hasPermissaoDesdobrarSemGrupo;
-    }
-
     public void selecionarObjetoCompraConsultaEntidade(Long idObjeto) {
         if (idObjeto != null) {
             itemRequisicao.setObjetoCompra(facade.getObjetoCompraFacade().recuperar(idObjeto));
             atribuirGrupoAoItemRequisicao();
 
             if (!hasPermissaoDesdobrarSemGrupo
-                && !itemDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo().equals(itemRequisicao.getObjetoCompra().getGrupoContaDespesa().getIdGrupo())) {
+                && !itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa().getIdGrupo().equals(itemRequisicao.getObjetoCompra().getGrupoContaDespesa().getIdGrupo())) {
                 FacesUtil.addOperacaoNaoPermitida("Não é permitido selecionar um objeto de compra com o grupo diferente do objeto de compra de referência.");
-                FacesUtil.addOperacaoNaoPermitida("Grupo de Referência: " + itemDesdobravel.getObjetoCompra().getGrupoContaDespesa().getGrupo());
+                FacesUtil.addOperacaoNaoPermitida("Grupo de Referência: " + itemRequisicaoDesdobravel.getObjetoCompra().getGrupoContaDespesa().getGrupo());
                 FacesUtil.addOperacaoNaoPermitida("Grupo do Objeto Selecionado: " + itemRequisicao.getObjetoCompra().getGrupoContaDespesa().getGrupo());
                 itemRequisicao.setObjetoCompra(null);
             }
@@ -1980,8 +2128,8 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
                 controlador.recuperarObjetoCompra(itemRequisicao.getObjetoCompra());
             }
             FacesUtil.executaJavaScript("dlgPesquisaObj.hide()");
-            FacesUtil.atualizarComponente("Formulario:tabView:formulario-item");
-            FacesUtil.atualizarComponente("Formulario:tabView:pn-unidade-medida");
+            FacesUtil.atualizarComponente("formDesdobrarItem:formulario-item");
+            FacesUtil.atualizarComponente("formDesdobrarItem:pn-unidade-medida");
         }
     }
 
@@ -1991,5 +2139,49 @@ public class RequisicaoDeCompraControlador extends PrettyControlador<RequisicaoD
 
     public void setOrigemContrato(String origemContrato) {
         this.origemContrato = origemContrato;
+    }
+
+    public Contrato getContrato() {
+        return contrato;
+    }
+
+    public void setContrato(Contrato contrato) {
+        this.contrato = contrato;
+    }
+
+    public ReconhecimentoDivida getReconhecimentoDivida() {
+        return reconhecimentoDivida;
+    }
+
+    public void setReconhecimentoDivida(ReconhecimentoDivida reconhecimentoDivida) {
+        this.reconhecimentoDivida = reconhecimentoDivida;
+    }
+
+    public List<ItemRequisicaoCompraVO> getItensRequisicaoVO() {
+        return itensRequisicaoVO;
+    }
+
+    public void setItensRequisicaoVO(List<ItemRequisicaoCompraVO> itensRequisicaoVO) {
+        this.itensRequisicaoVO = itensRequisicaoVO;
+    }
+
+    public ItemRequisicaoCompraExecucaoVO getItemRequisicaoExecucao() {
+        return itemRequisicaoExecucao;
+    }
+
+    public void setItemRequisicaoExecucao(ItemRequisicaoCompraExecucaoVO itemRequisicaoExecucao) {
+        this.itemRequisicaoExecucao = itemRequisicaoExecucao;
+    }
+
+    public List<ItemRequisicaoCompraVO> getItensRequisicaoDesdobradoVO() {
+        return itensRequisicaoDesdobradoVO;
+    }
+
+    public void setItensRequisicaoDesdobradoVO(List<ItemRequisicaoCompraVO> itensRequisicaoDesdobradoVO) {
+        this.itensRequisicaoDesdobradoVO = itensRequisicaoDesdobradoVO;
+    }
+
+    public void setFiscais(List<FiscalContratoDTO> fiscais) {
+        this.fiscais = fiscais;
     }
 }

@@ -1,0 +1,1 @@
+update tipocadastro set receitasdiversas = null

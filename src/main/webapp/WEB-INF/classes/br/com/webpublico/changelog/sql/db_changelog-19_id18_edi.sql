@@ -1,0 +1,1 @@
+update convenioreceita set entidadeconvenente_id = 8756990

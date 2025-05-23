@@ -878,6 +878,14 @@ public class Empenho extends SuperEntidadeContabilGerarContaAuxiliar implements 
         }
     }
 
+    public String getNumeroAno() {
+        try {
+            return numero + "/" + exercicio.getAno();
+        } catch (NullPointerException e) {
+            return "";
+        }
+    }
+
     public String getNumeroAnoCategoria() {
         try {
             return numero + "/" + exercicio.getAno() + " - " + DataUtil.getDataFormatada(dataEmpenho) + " - " + categoriaOrcamentaria.getDescricao();

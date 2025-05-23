@@ -1,0 +1,30 @@
+update contrato c set c.numerotermo = (select d.numerocontrato from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.dataassinatura = (select d.assinaturadocontrato from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.terminovigencia = (select d.validade from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.exerciciocontrato_id = (select d.exerciciocontrato_id from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.numeroprocesso = (select d.numerodoprocesso from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.anoProcesso = (select d.anodoprocesso from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.tipoAquisicao = (select d.tipodecompra from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.regimeexecucao = (select d.regimedeexecucao from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.objeto = (select d.objeto from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.valortotal = (select d.valortotal from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.valoratualcontrato = (select d.valortotal from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.saldoatualcontrato = 0;
+update contrato c set c.variacaoAtualContrato = 0;
+update contrato c set c.situacaocontrato = 'DEFERIDO' where c.situacaocontrato is null;
+update contrato c set c.iniciovigencia = (select d.iniciovigencia from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.observacoes = (select d.observacoes from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.tipocontrato = (select d.tipocontrato from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.datalancamento = (select d.assinaturadocontrato from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.dataaprovacao = (select d.assinaturadocontrato from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.datadeferimento = (select d.assinaturadocontrato from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.terminovigencia = (select d.validade from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.terminovigenciaatual = (select d.validade from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.inicioexecucao = (select d.iniciovigencia from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.terminoexecucao = (select d.validade from dadosgeraiscontrato d where d.contrato_id = c .id);
+update contrato c set c.terminoexecucaoatual = (select d.validade from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.prazoDeVigencia = (select d.prazoDeVigencia from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.prazoDeExecucao = (select d.prazoDeExecucao from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.tipoPrazoDeVigencia = (select d.tipoPrazoDeVigencia from dadosgeraiscontrato d where d.contrato_id = c.id);
+update contrato c set c.tipoPrazoDeExecucao = (select d.tipoPrazoDeExecucao from dadosgeraiscontrato d where d.contrato_id = c.id)
+

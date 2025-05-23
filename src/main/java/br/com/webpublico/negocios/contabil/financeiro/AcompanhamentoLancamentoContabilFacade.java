@@ -108,7 +108,10 @@ public class AcompanhamentoLancamentoContabilFacade implements Serializable {
 
         SuperFacadeContabil facade = contabilizadorFacade.getFacade(eventosReprocessar);
         if (facade == null) {
-            throw new ExcecaoNegocioGenerica("Tipo de evento contábil não configurado adequadamente.");
+            logger.error("Não foi encontrado facade para o tipo de evento contábil " +
+                eventoContabil.getTipoEventoContabil().name() +
+                " em ContabilizadorFacade, método retornarFacade.");
+            return;
         }
         List<ConsultaMovimentoContabil> consultas = buscarConsultasMovimentosContabeis(selecionado, eventoContabil, filtros, facade);
         montarOrdenacaoQuantidadeRegistro(consultas, selecionado);
@@ -129,7 +132,7 @@ public class AcompanhamentoLancamentoContabilFacade implements Serializable {
 
     private List<ConsultaMovimentoContabil> buscarConsultasMovimentosContabeis(AcompanhamentoLancamentoContabil selecionado, EventoContabil eventoContabil,
                                                                                List<FiltroConsultaMovimentoContabil> filtros, SuperFacadeContabil facade) {
-        if (selecionado.getMostrarContabilizacao()) {
+        if (selecionado.getMostrarContabilizacao() || selecionado.getIdParametroEvento() != null) {
             return Lists.newArrayList(montarConsultaLancamentoContabil(eventoContabil, filtros));
         }
         return facade.criarConsulta(filtros);

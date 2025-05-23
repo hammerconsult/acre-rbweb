@@ -1,0 +1,20 @@
+insert into MENU (ID, LABEL, CAMINHO, PAI_ID, ORDEM, ICONE)
+VALUES (HIBERNATE_SEQUENCE.nextval, 'AGRUPADOR RELATORIO DE CREDITOS',
+        '/tributario/agrupador-relatorio-credito/lista.xhtml',
+        (select ID from menu where LABEL = 'TRIBUTARIO'),
+        20, NULL);
+
+
+INSERT INTO RECURSOSISTEMA
+VALUES (HIBERNATE_SEQUENCE.nextval,
+        'AGRUPADOR RELATORIO DE CREDITOS',
+        '/tributario/agrupador-relatorio-credito/lista.xhtml',
+        0,
+        'ARRECADAÇÃO');
+
+INSERT INTO GRUPORECURSOSISTEMA (GRUPORECURSO_ID, RECURSOSISTEMA_ID)
+VALUES ((SELECT ID FROM GRUPORECURSO WHERE NOME = 'ADMINISTRADOR TRIBUTÁRIO'),
+        (SELECT max(id) FROM RECURSOSISTEMA WHERE NOME = 'AGRUPADOR RELATORIO DE CREDITOS'));
+
+
+

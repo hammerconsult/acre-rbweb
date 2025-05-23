@@ -1,0 +1,1 @@
+update itemdemonstrativo set invertesinal = 0 where invertesinal is null

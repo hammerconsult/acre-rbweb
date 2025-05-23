@@ -17,6 +17,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -345,7 +346,7 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
                         vigentes.add(atual);
                     }
                 }
-            } catch (java.lang.NullPointerException ex) {
+            } catch (java.lang.NullPointerException ignored) {
             }
         }
         return vigentes;
@@ -385,7 +386,7 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
                         vigentes.add(atual);
                     }
                 }
-            } catch (Exception ex) {
+            } catch (Exception ignored) {
             }
         }
         return vigentes;
@@ -416,7 +417,7 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
                         return atual;
                     }
                 }
-            } catch (java.lang.NullPointerException ex) {
+            } catch (java.lang.NullPointerException ignored) {
             }
         }
         return null;
@@ -430,7 +431,7 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
                     vigentes.add(prop);
                 }
             }
-        } catch (java.lang.NullPointerException ex) {
+        } catch (java.lang.NullPointerException ignored) {
         }
         return vigentes;
     }
@@ -459,7 +460,7 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
     }
 
     public void popularAtributos(List<Atributo> atributosPorClasse) {
-        atributos = new HashMap();
+        atributos = Maps.newHashMap();
         if (caracteristicasBci != null) {
             for (CaracteristicasBci carac : caracteristicasBci) {
                 atributos.put(carac.getAtributo(), carac.getValorAtributo());
@@ -602,7 +603,7 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
     }
 
     @Override
-    public int compareTo(CadastroImobiliario o) {
+    public int compareTo(@NotNull CadastroImobiliario o) {
         try {
             int var = this.codigo.compareTo(o.getCodigo());
             if (var == 0) {
@@ -777,15 +778,15 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
     }
 
     public String getDescricaoProprietarios() {
-        String s = "";
+        StringBuilder s = new StringBuilder();
         for (Propriedade p : getPropriedade()) {
             if ((p.getFinalVigencia() == null) || p.getFinalVigencia().getTime() >= new Date().getTime()) {
                 if (p.getPessoa() != null) {
-                    s += p.getPessoa().getNome() + " " + p.getPessoa().getCpf_Cnpj() + "\n";
+                    s.append(p.getPessoa().getNome()).append(" ").append(p.getPessoa().getCpf_Cnpj()).append("\n");
                 }
             }
         }
-        return s;
+        return s.toString();
     }
 
     public String getEnderecoCompleto() {
@@ -990,7 +991,7 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
     public void popularCaracteristicas() {
         if (atributos != null) {
             if (caracteristicasBci == null) {
-                caracteristicasBci = new ArrayList();
+                caracteristicasBci = Lists.newArrayList();
             }
             CaracteristicasBci caracteristica;
             boolean registrado = false;

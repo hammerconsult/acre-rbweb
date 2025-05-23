@@ -1,0 +1,10 @@
+update GRAUDEPARENTESCO set codigosig = 1 where id = 174969694;
+update GRAUDEPARENTESCO set codigosig = 2 where id = 174969696;
+update GRAUDEPARENTESCO set codigosig = 3 where id = 174969695;
+update GRAUDEPARENTESCO set codigosig = 5 where id = 174969697;
+update GRAUDEPARENTESCO set codigosig = 5 where id = 174969698;
+update GRAUDEPARENTESCO set codigosig = 6 where id = 174969703;
+update GRAUDEPARENTESCO set codigosig = 8 where id = 820185550;
+update GRAUDEPARENTESCO set codigosig = 9 where id = 820185550;
+update GRAUDEPARENTESCO set codigosig = 10 where id = 820185552;
+update GRAUDEPARENTESCO set codigosig = 12 where id = 174969702;

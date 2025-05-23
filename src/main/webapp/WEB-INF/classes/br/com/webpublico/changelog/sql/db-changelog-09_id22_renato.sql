@@ -1,0 +1,1 @@
+update dividapublica set naturezadividapublica = null;

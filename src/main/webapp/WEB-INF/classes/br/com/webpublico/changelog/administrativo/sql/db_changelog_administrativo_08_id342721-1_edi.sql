@@ -1,0 +1,13 @@
+INSERT INTO RECURSOSISTEMA (ID, NOME, CAMINHO, CADASTRO, MODULO)
+VALUES (HIBERNATE_SEQUENCE.NEXTVAL, 'ADMINISTRATIVO > DESBLOQUEIO DE BEM AQUISIÇÃO LIQUIDADO > EDITAR',
+        '/administrativo/patrimonio/desbloqueio-bem-aquisicao/edita.xhtml', 0, 'PATRIMONIO');
+
+INSERT INTO GRUPORECURSOSISTEMA (RECURSOSISTEMA_ID, GRUPORECURSO_ID)
+VALUES (HIBERNATE_SEQUENCE.currval, 75756874);
+
+
+INSERT INTO menu
+VALUES (HIBERNATE_SEQUENCE.nextval, 'DESBLOQUEIO DE BEM AQUISIÇÃO LIQUIDADO',
+        '/administrativo/patrimonio/desbloqueio-bem-aquisicao/edita.xhtml',
+        (select ID from menu where LABEL = 'AQUISIÇÃO DE BENS MÓVEIS'),
+        25, null);

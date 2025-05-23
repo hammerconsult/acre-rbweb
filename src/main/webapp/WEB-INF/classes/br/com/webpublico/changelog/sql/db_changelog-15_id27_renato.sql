@@ -1,0 +1,1 @@
+update eventocontabil set tipoeventocontabil = 'PREVISAO_INICIAL_RECEITA' where codigo = '11111' or codigo = '13111'

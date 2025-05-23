@@ -11,8 +11,10 @@ import java.util.Objects;
 
 public class GrupoContaDespesa {
 
-    private String grupo;
     private Long idGrupo;
+    private String codigoGrupo;
+    private String descricaoGrupo;
+    private String grupo;
     private TipoObjetoCompra tipoObjetoCompra;
     private GrupoObjetoCompra grupoObjetoCompra;
     private List<Conta> contasDespesa;
@@ -72,6 +74,22 @@ public class GrupoContaDespesa {
 
     public void setIdGrupo(Long idGrupo) {
         this.idGrupo = idGrupo;
+    }
+
+    public String getCodigoGrupo() {
+        return codigoGrupo;
+    }
+
+    public void setCodigoGrupo(String codigoGrupo) {
+        this.codigoGrupo = codigoGrupo;
+    }
+
+    public String getDescricaoGrupo() {
+        return descricaoGrupo;
+    }
+
+    public void setDescricaoGrupo(String descricaoGrupo) {
+        this.descricaoGrupo = descricaoGrupo;
     }
 
     public boolean hasContasDespesa() {

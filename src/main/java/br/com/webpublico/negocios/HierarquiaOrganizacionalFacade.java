@@ -2805,11 +2805,10 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
     public List<HierarquiaOrganizacional> buscarUnidadesOrcamentariasRequisicaoCompra(RequisicaoDeCompra requisicaoCompra) {
         String sql = " select distinct vw.* from requisicaodecompra req  " +
             " left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
-            " left join execucaocontrato ex on ex.id = reqEx.execucaocontrato_id " +
-            " left join execucaocontratoempenho exEmp on ex.id = exEmp.execucaocontrato_id " +
-            " left join execucaoprocesso exProc on exProc.id = reqEx.execucaoprocesso_id " +
-            " left join execucaoprocessoempenho exEmpProc on exProc.id = exEmpProc.execucaoprocesso_id " +
-            " left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " +
+            " left join execucaocontratoempenho exEmp on exEmp.id = reqEx.execucaocontratoempenho_id " +
+            " left join execucaoprocessoempenho exEmpProc on  exEmpProc.id = reqEx.execucaoprocessoempenho_id " +
+            " left join solicitacaoempenhorecdiv exrd on exrd.id = reqEx.execucaoreconhecimentodiv_id " +
+            " left join reconhecimentodivida rd on rd.id = exrd.reconhecimentodivida_id " +
             " left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
             " inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
             " inner join hierarquiaorganizacional vw on vw.subordinada_id = emp.unidadeorganizacional_id  " +

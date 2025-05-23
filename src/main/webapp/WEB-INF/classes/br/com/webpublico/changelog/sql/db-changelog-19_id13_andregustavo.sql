@@ -1,0 +1,10 @@
+update permissaotransporte p set p.finalvigencia = to_date('30/06/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 0;
+update permissaotransporte p set p.finalvigencia = to_date('27/02/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 1;
+update permissaotransporte p set p.finalvigencia = to_date('27/02/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 2;
+update permissaotransporte p set p.finalvigencia = to_date('31/03/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 3;
+update permissaotransporte p set p.finalvigencia = to_date('31/03/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 4;
+update permissaotransporte p set p.finalvigencia = to_date('30/04/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 5;
+update permissaotransporte p set p.finalvigencia = to_date('30/04/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 6;
+update permissaotransporte p set p.finalvigencia = to_date('29/05/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 7;
+update permissaotransporte p set p.finalvigencia = to_date('29/05/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 8;
+update permissaotransporte p set p.finalvigencia = to_date('30/06/2016') where substr(p.numero,length(p.numero), length(p.numero)-1) = 9;

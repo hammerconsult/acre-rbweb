@@ -2,7 +2,6 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.enums.SituacaoOTT;
-import br.com.webpublico.enums.SituacaoRenovacaoOTT;
 import br.com.webpublico.enums.StatusDocumentoOtt;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
@@ -22,7 +21,6 @@ import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import javax.faces.model.SelectItem;
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -224,7 +222,7 @@ public class OperadoraTecnologiaTransporteControlador extends PrettyControlador<
     public void iniciarAvaliacaoDocumentacao() {
         documentosAvaliacao = selecionado.getDetentorArquivoComposicao()
             .stream()
-            .filter(doc -> doc.getStatus().equals(StatusDocumentoOtt.AGUARDANDO_AVALIACAO))
+            .filter(doc -> StatusDocumentoOtt.AGUARDANDO_AVALIACAO.equals(doc.getStatus()))
             .collect(Collectors.toList());
     }
 
@@ -282,13 +280,13 @@ public class OperadoraTecnologiaTransporteControlador extends PrettyControlador<
         this.renovacaoOperadoraOTT = renovacaoOperadoraOTT;
     }
 
-    public void iniciarRenovacao(){
+    public void iniciarRenovacao() {
         renovacaoOperadoraOTT = new RenovacaoOperadoraOTT();
         renovacaoOperadoraOTT.setExercicioRenovacao(sistemaFacade.getExercicioCorrente());
         operadoraTecnologiaTransporteFacade.atribuirDocumentosObrigatoriosCredenciamento(renovacaoOperadoraOTT);
     }
 
-    public void salvarRenovacaoAutorizacaoOperadora(){
+    public void salvarRenovacaoAutorizacaoOperadora() {
         try {
             renovacaoOperadoraOTT.realizarValidacoes();
             validarRenovacaoPorOperadora();
@@ -415,7 +413,7 @@ public class OperadoraTecnologiaTransporteControlador extends PrettyControlador<
         this.renovacaoOperadoraOTT = renovacaoOperadoraOTT;
         documentosAvaliacaoRenovacao = this.renovacaoOperadoraOTT.getOperadoraRenovacaoDetentorArquivos()
             .stream()
-            .filter(doc -> doc.getStatus().equals(StatusDocumentoOtt.AGUARDANDO_AVALIACAO))
+            .filter(doc -> StatusDocumentoOtt.AGUARDANDO_AVALIACAO.equals(doc.getStatus()))
             .collect(Collectors.toList());
     }
 
