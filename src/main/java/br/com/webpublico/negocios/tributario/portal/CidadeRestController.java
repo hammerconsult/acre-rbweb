@@ -65,7 +65,7 @@ public class CidadeRestController extends PortalRestController {
         method = RequestMethod.GET,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<MunicipioNfseDTO> recuperarCidadePorCodigoIbge(@RequestParam String codigoIbge) {
-        Cidade cidade = getPortalContribunteFacade().getCidadeFacade().buscarPorCodigoIbge(codigoIbge);
+        Cidade cidade = getPortalContribunteFacade().getCidadeFacade().buscarPorCodigoIBGE(codigoIbge);
         return new ResponseEntity(cidade.toNfseDto(), HttpStatus.OK);
     }
 

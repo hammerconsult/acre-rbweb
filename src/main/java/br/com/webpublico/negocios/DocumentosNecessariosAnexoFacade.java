@@ -1,7 +1,7 @@
 package br.com.webpublico.negocios;
 
-import br.com.webpublico.entidades.DocumentosNecessariosAnexo;
-import br.com.webpublico.entidades.ItemDocumentoAnexo;
+import br.com.webpublico.entidades.*;
+import br.com.webpublico.enums.SummaryMessages;
 import br.com.webpublico.enums.TipoFuncionalidadeParaAnexo;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.ITipoDocumentoAnexo;

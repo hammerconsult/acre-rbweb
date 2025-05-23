@@ -7,14 +7,12 @@ import br.com.webpublico.interfaces.IHistoricoEsocial;
 import br.com.webpublico.interfaces.PossuidorArquivo;
 import br.com.webpublico.util.anotacoes.*;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Created by William on 05/06/2018.

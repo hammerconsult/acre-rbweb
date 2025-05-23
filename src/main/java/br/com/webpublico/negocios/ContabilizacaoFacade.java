@@ -5,26 +5,16 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
 import br.com.webpublico.entidadesauxiliares.MapClp;
 import br.com.webpublico.entidadesauxiliares.MapTagOCC;
 import br.com.webpublico.entidadesauxiliares.contabil.ContaAuxiliarDetalhada;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.ItemParametroEventoDTO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.MovimentoContabilDTO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.ObjetoParametroDTO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.ParametroEventoDTO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
-import br.com.webpublico.negocios.contabil.reprocessamento.ReprocessamentoLancamentoContabilSingleton;
-import br.com.webpublico.negocios.contabil.reprocessamento.daos.JdbcLancamentoContabilDAO;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Persistencia;
 import br.com.webpublico.util.Util;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.jetbrains.annotations.NotNull;
-import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,10 +53,6 @@ public class ContabilizacaoFacade implements Serializable {
     private ExercicioFacade exercicioFacade;
     @EJB
     private TipoContaAuxiliarFacade tipoContaAuxiliarFacade;
-    @EJB
-    private ReprocessamentoLancamentoContabilSingleton reprocessamentoLancamentoContabilSingleton;
-    @EJB
-    private ConfiguracaoContabilFacade configuracaoContabilFacade;
     private HashMap<MapClp, CLP> listaCLPs = new HashMap<>();
     private HashMap<MapTagOCC, OrigemContaContabil> listaTagsOCC = new HashMap<>();
 
@@ -91,116 +77,19 @@ public class ContabilizacaoFacade implements Serializable {
     }
 
     public void contabilizar(ParametroEvento parametroEvento, boolean simulacao) throws ExcecaoNegocioGenerica {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("CONTABILIZARMICROSERVICE")) {
-            if (reprocessamentoLancamentoContabilSingleton.isCalculando()) {
-                ParametroEventoDTO parametroEventoDTO = criarParametroEventoDTO(parametroEvento, simulacao);
-                reprocessamentoLancamentoContabilSingleton.adicionarMovimentoContabilizar(parametroEventoDTO);
-
-                if (reprocessamentoLancamentoContabilSingleton.getMovimentoContabilDTO().getContabilizar().size() >=
-                    reprocessamentoLancamentoContabilSingleton.getReprocessamentoContabil().getConfiguracaoContabil().getTamanhoLoteReprocessamentoContabil()) {
-                    MovimentoContabilDTO dto = new MovimentoContabilDTO();
-                    dto.getContabilizar().addAll(reprocessamentoLancamentoContabilSingleton.getMovimentoContabilDTO().getContabilizar());
-                    reprocessamentoLancamentoContabilSingleton.atribuirNullMovimentoContabil();
-                    dto = ApiServiceContabil.getService().movimentarContabil(dto);
-                    if (dto != null) {
-                        for (String msg : dto.getMensagensErro()) {
-                            reprocessamentoLancamentoContabilSingleton.adicionarLogErro(msg);
-                            reprocessamentoLancamentoContabilSingleton.contaComErro();
-                        }
-                    }
-                }
-            } else {
-                ParametroEventoDTO parametroEventoDTO = criarParametroEventoDTO(parametroEvento, simulacao);
-                ApiServiceContabil.getService().contabilizar(parametroEventoDTO);
-            }
-        } else {
-            UnidadeOrganizacional unidadeOrganizacional = parametroEvento.getUnidadeOrganizacional();
-            EventoContabil eventoContabil = parametroEvento.getEventoContabil();
-            try {
-                contabilizarParametroEvento(parametroEvento, simulacao);
-            } catch (ExcecaoNegocioGenerica ex) {
-                tipoContaAuxiliarFacade.limparContasDetalhadas();
-                logger.error("Erro ao contabilizar: ", ex);
-                throw new ExcecaoNegocioGenerica(ex.getMessage());
-            } catch (Exception ex) {
-                tipoContaAuxiliarFacade.limparContasDetalhadas();
-                logger.error("Erro ao contabilizar: ", ex);
-                throw new ExcecaoNegocioGenerica(ex.getMessage());
-            }
+        UnidadeOrganizacional unidadeOrganizacional = parametroEvento.getUnidadeOrganizacional();
+        EventoContabil eventoContabil = parametroEvento.getEventoContabil();
+        try {
+            contabilizarParametroEvento(parametroEvento, simulacao);
+        } catch (ExcecaoNegocioGenerica ex) {
+            tipoContaAuxiliarFacade.limparContasDetalhadas();
+            logger.error("Erro ao contabilizar: ", ex);
+            throw new ExcecaoNegocioGenerica(ex.getMessage());
+        } catch (Exception ex) {
+            tipoContaAuxiliarFacade.limparContasDetalhadas();
+            logger.error("Erro ao contabilizar: ", ex);
+            throw new ExcecaoNegocioGenerica(ex.getMessage());
         }
-    }
-
-    @NotNull
-    private ParametroEventoDTO criarParametroEventoDTO(ParametroEvento parametroEvento, boolean simulacao) {
-        ParametroEventoDTO parametroEventoDTO = new ParametroEventoDTO();
-        parametroEventoDTO.setDataEvento(DataUtil.dateToLocalDate(parametroEvento.getDataEvento()));
-        parametroEventoDTO.setComplementoHistorico(parametroEvento.getComplementoHistorico());
-        parametroEventoDTO.setIdEventoContabil(parametroEvento.getEventoContabil().getId());
-        parametroEventoDTO.setIdUnidadeOrganizacional(parametroEvento.getUnidadeOrganizacional().getId());
-        parametroEventoDTO.setClasseOrigem(parametroEvento.getClasseOrigem());
-        parametroEventoDTO.setIdOrigem(parametroEvento.getIdOrigem());
-        parametroEventoDTO.setComplementoId(parametroEvento.getComplementoId());
-        parametroEventoDTO.setIdExercicio(parametroEvento.getExercicio().getId());
-        parametroEventoDTO.setTipoBalancete(parametroEvento.getTipoBalancete());
-        parametroEventoDTO.setSimulacao(simulacao);
-
-        parametroEventoDTO.setItensParametrosEvento(Lists.<ItemParametroEventoDTO>newArrayList());
-        for (ItemParametroEvento itemParametroEvento : parametroEvento.getItensParametrosEvento()) {
-            ItemParametroEventoDTO item = new ItemParametroEventoDTO();
-            item.setValor(itemParametroEvento.getValor());
-            item.setTagValor(itemParametroEvento.getTagValor());
-            item.setOperacaoClasseCredor(itemParametroEvento.getOperacaoClasseCredor());
-
-            item.setObjetoParametros(Lists.<ObjetoParametroDTO>newArrayList());
-            for (ObjetoParametro objetoParametro : itemParametroEvento.getObjetoParametros()) {
-                ObjetoParametroDTO obj = new ObjetoParametroDTO();
-                obj.setClasseObjeto(objetoParametro.getClasseObjeto());
-                obj.setIdObjeto(objetoParametro.getIdObjeto());
-                obj.setTipoObjetoParametro(objetoParametro.getTipoObjetoParametro() != null ? objetoParametro.getTipoObjetoParametro() : ObjetoParametro.TipoObjetoParametro.AMBOS);
-
-                try {
-                    //Object entidade = tipoContaAuxiliarFacade.localizarEntidade(objetoParametro.getIdObjeto(), objetoParametro.getClasseObjeto());
-                    /*Class c = Class.forName("br.com.webpublico.entidades."+objetoParametro.getClasseObjeto());
-                    Object entidade = c.getDeclaredConstructor().newInstance();*/
-                    Object entidade = objetoParametro.getEntidade();
-
-
-                    if (entidade != null &&
-                        entidade instanceof SuperEntidadeContabilGerarContaAuxiliar) {
-                        if (entidade instanceof TransferenciaContaFinanceira ||
-                            entidade instanceof EstornoTransferencia ||
-                            entidade instanceof LiberacaoCotaFinanceira ||
-                            entidade instanceof EstornoLibCotaFinanceira ||
-                            entidade instanceof TransferenciaMesmaUnidade ||
-                            entidade instanceof EstornoTransfMesmaUnidade ||
-                            entidade instanceof TransfBensMoveis ||
-                            entidade instanceof TransfBensImoveis ||
-                            entidade instanceof TransferenciaBensEstoque ||
-                            entidade instanceof TransfBensIntangiveis) {
-                            obj.setMovimentarContabilidadeRecebido(Boolean.TRUE);
-                        } else {
-                            obj.setMovimentarContabilidadeRecebido(Boolean.FALSE);
-                        }
-                        obj.setGerarContaAuxiliar(Boolean.TRUE);
-                        if (entidade instanceof SuperEntidadeContabilGerarContaAuxiliar) {
-                            //entidade = tipoContaAuxiliarFacade.localizarEntidade(objetoParametro.getIdObjeto(), objetoParametro.getClasseObjeto());
-                            SuperEntidadeContabilGerarContaAuxiliar superEntidadeContabilGerarContaAuxiliar = (SuperEntidadeContabilGerarContaAuxiliar) entidade;
-                            parametroEventoDTO.setGeradorContaAuxiliar(superEntidadeContabilGerarContaAuxiliar.gerarContaAuxiliarDTO(parametroEvento.getComplementoId()));
-                        }
-                    } else {
-                        obj.setMovimentarContabilidadeRecebido(Boolean.FALSE);
-                        obj.setGerarContaAuxiliar(Boolean.FALSE);
-                    }
-                } catch (Exception e) {
-                    obj.setMovimentarContabilidadeRecebido(Boolean.FALSE);
-                    obj.setGerarContaAuxiliar(Boolean.FALSE);
-                }
-                item.getObjetoParametros().add(obj);
-            }
-
-            parametroEventoDTO.getItensParametrosEvento().add(item);
-        }
-        return parametroEventoDTO;
     }
 
     private void contabilizarParametroEvento(ParametroEvento parametroEvento, boolean simulacao) {

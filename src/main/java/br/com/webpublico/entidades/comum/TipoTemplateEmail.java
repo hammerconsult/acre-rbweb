@@ -7,12 +7,11 @@ public enum TipoTemplateEmail {
     REGISTRO_EXIGENCIA_ETR("Portal Contribuinte - Registro de Exigência de ETR"),
     SOLICITACAO_ALVARA_IMEDIATO("Portal Contribuinte - Registro de Solicitação de Alvará Imediato"),
     REGISTRO_EXIGENCIA_ALVARA_IMEDIATO("Portal Contribuinte - Registro de Exigência de Alvará Imediato"),
+    REJEICAO_DOCUMENTACAO_USUARIO_SAUD("Portal Contribuinte - Rejeição de Documentação para Usuário do SAUD"),
     SOLICITACAO_CADASTRO_CREDOR("Portal Contribuinte - Solicitação de Cadastro de Credor"),
     REJEICAO_CADASTRO_CREDOR("Portal Contribuinte - Rejeição do Cadastro de Credor"),
-    REJEICAO_DOCUMENTACAO_USUARIO_SAUD("Portal Contribuinte - Rejeição de Documentação para Usuário do SAUD"),
     REJEICAO_SOLICITACAO_ITBI_ONLINE("Portal Contribuinte - Rejeição da Solicitação de ITBI Online"),
     AVALIACAO_FISCAL_SOLICITACAO_ITBI_ONLINE("Portal Contribuinte - Avaliação do Fiscal sobre a Solicitação de ITBI Online");
-
     private String descricao;
 
     TipoTemplateEmail(String descricao) {

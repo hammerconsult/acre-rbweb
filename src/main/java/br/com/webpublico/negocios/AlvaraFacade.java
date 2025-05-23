@@ -216,7 +216,7 @@ public class AlvaraFacade extends AbstractFacade<Alvara> {
             " and cal.situacaoCalculoAlvara = :situacaoAlvara ";
 
         sql = adicionarSql(sql, " and alv.vencimento >= :dataAtual ", !LOCALIZACAO.equals(filtro.getTipoAlvara()));
-        sql = adicionarSql(sql, " and not exists (select 1 " + processoSuspensaoCassacaoAlvaraFacade.sqlAlvaraCassadoOuSuspenso(TipoProcessoSuspensaoCassacaoAlvara.CASSACAO, SituacaoProcessoSuspensaoCassacaoAlvara.ENCERRADO, "alv.id") + ")", true);
+        sql = adicionarSql(sql, " and not exists (select 1 " + processoSuspensaoCassacaoAlvaraFacade.sqlAlvaraCassado("alv.id") + ")", true);
 
         sql += " )";
         sql = adicionarSql(sql, " and not exists (select 1 " + processoSuspensaoCassacaoAlvaraFacade.sqlEmissaoAlvaraSuspensa("ce.id") + ")", true);

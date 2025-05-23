@@ -3,6 +3,7 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.spc.dto.DadosExclusaoSpcDTO;
 import br.com.webpublico.entidadesauxiliares.spc.dto.DadosInclusaoSpcDTO;
+import br.com.webpublico.entidadesauxiliares.spc.dto.RetornoMensagemDTO;
 import br.com.webpublico.entidadesauxiliares.spc.enums.TipoPessoa;
 import br.com.webpublico.enums.tributario.TipoWebService;
 import br.com.webpublico.exception.ValidacaoException;
@@ -126,10 +127,15 @@ public class ProcessoCobrancaSPCFacade extends AbstractFacade<ProcessoCobrancaSP
             HttpEntity<DadosInclusaoSpcDTO> httpEntity = new HttpEntity<>(dto, headers);
 
             RestTemplate restTemplate = new RestTemplate();
-            restTemplate.exchange(configuracaoWebService.getUrl() + "/inclusao-spc",
-                HttpMethod.POST, httpEntity, String.class);
-            itemProcessoCobrancaSPC.setStatusSPC(ItemProcessoCobrancaSPC.StatusSPC.INCLUIDO);
-            inserirLogEnvioSPC(itemProcessoCobrancaSPC, LogEnvioSPC.TipoLog.INCLUSAO, "Incluído com sucesso.");
+            ResponseEntity<RetornoMensagemDTO> exchange = restTemplate.exchange(configuracaoWebService.getUrl() + "/inclusao-spc",
+                HttpMethod.POST, httpEntity, RetornoMensagemDTO.class);
+            if (exchange.getBody().getOk()) {
+                itemProcessoCobrancaSPC.setStatusSPC(ItemProcessoCobrancaSPC.StatusSPC.INCLUIDO);
+                inserirLogEnvioSPC(itemProcessoCobrancaSPC, LogEnvioSPC.TipoLog.INCLUSAO, "Incluído com sucesso.");
+            } else {
+                itemProcessoCobrancaSPC.setStatusSPC(ItemProcessoCobrancaSPC.StatusSPC.FALHA_INCLUSAO);
+                inserirLogEnvioSPC(itemProcessoCobrancaSPC, LogEnvioSPC.TipoLog.INCLUSAO, exchange.getBody().getMensagem());
+            }
         } catch (Exception e) {
             logger.error("Erro ao comunicar inclusão no spc. Erro: {}", e.getMessage());
             logger.debug("Detalhes do erro ao comunicar inclusão no spc.", e);
@@ -242,11 +248,17 @@ public class ProcessoCobrancaSPCFacade extends AbstractFacade<ProcessoCobrancaSP
             HttpEntity<DadosExclusaoSpcDTO> httpEntity = new HttpEntity<>(dto, headers);
 
             RestTemplate restTemplate = new RestTemplate();
-            restTemplate.exchange(configuracaoWebService.getUrl() + "/exclusao-spc",
-                HttpMethod.POST, httpEntity, String.class);
-            itemProcessoCobrancaSPC.setStatusSPC(ItemProcessoCobrancaSPC.StatusSPC.EXCLUIDO);
-            em.merge(itemProcessoCobrancaSPC);
-            inserirLogEnvioSPC(itemProcessoCobrancaSPC, LogEnvioSPC.TipoLog.EXCLUSAO, "Excluído com sucesso.");
+            ResponseEntity<RetornoMensagemDTO> exchange = restTemplate.exchange(configuracaoWebService.getUrl() + "/exclusao-spc",
+                HttpMethod.POST, httpEntity, RetornoMensagemDTO.class);
+            if (exchange.getBody().getOk()) {
+                itemProcessoCobrancaSPC.setStatusSPC(ItemProcessoCobrancaSPC.StatusSPC.EXCLUIDO);
+                em.merge(itemProcessoCobrancaSPC);
+                inserirLogEnvioSPC(itemProcessoCobrancaSPC, LogEnvioSPC.TipoLog.EXCLUSAO, "Excluído com sucesso.");
+            } else {
+                itemProcessoCobrancaSPC.setStatusSPC(ItemProcessoCobrancaSPC.StatusSPC.FALHA_EXCLUSAO);
+                em.merge(itemProcessoCobrancaSPC);
+                inserirLogEnvioSPC(itemProcessoCobrancaSPC, LogEnvioSPC.TipoLog.EXCLUSAO, exchange.getBody().getMensagem());
+            }
         } catch (Exception e) {
             logger.error("Erro ao comunicar exclusão no spc. Erro: {}", e.getMessage());
             logger.debug("Detalhes do erro ao comunicar exclusão no spc.", e);

@@ -606,24 +606,20 @@ public class IntegradorDocumentoFiscalLiquidacaoFacade implements Serializable {
 
     public DocumentoFiscalIntegracao buscarDadosDocumentoAquisicaoBemMovel(DocumentoFiscalIntegracaoAssistente filtro) {
         String sql =
-            "    select distinct 'Aquisição de Bem Móvel'           as origem, " +
+            "    select 'Aquisição de Bem Móvel'           as origem, " +
                 "       aq.NUMERO || ' - ' || to_char(aq.DATADEAQUISICAO, 'dd/MM/yyyy') || ' - ' || req.DESCRICAO as descricao, " +
                 "       vw.codigo || ' - ' || vw.descricao as unidade," +
                 "       aq.id                              as idOrigem " +
                 " from aquisicao aq " +
                 "         inner join solicitacaoaquisicao sol on sol.id = aq.solicitacaoaquisicao_id " +
-                "         inner join doctofiscalsolicaquisicao dfa on dfa.solicitacaoaquisicao_id = sol.id " +
                 "         inner join requisicaodecompra req on req.id = sol.requisicaodecompra_id " +
-                "         inner join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
-                "         left join execucaocontratoempenho exemp on exemp.id = rce.execucaocontratoempenho_id " +
-                "         left join execucaocontrato excont on excont.id =  exemp.execucaocontrato_id " +
-                "         left join contrato c on c.id = excont.contrato_id " +
+                "         inner join doctofiscalsolicaquisicao dfa on dfa.solicitacaoaquisicao_id = sol.id " +
+                "         left join contrato c on c.id = req.contrato_id " +
                 "         left join unidadecontrato uc on uc.contrato_id = c.id " +
                 "            and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(uc.iniciovigencia) and coalesce(trunc(uc.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " +
-                "         left join solicitacaoempenhorecdiv solrd on solrd.id = rce.execucaoreconhecimentodiv_id " +
-                "         left join reconhecimentodivida rc on rc.id = solrd.reconhecimentodivida_id " +
-                "         left join execucaoprocessoempenho exprocemp on exprocemp.id = rce.execucaoprocessoempenho_id " +
-                "         left join execucaoprocesso exproc on exproc.id = exprocemp.execucaoprocesso_id " +
+                "         left join reconhecimentodivida rc on rc.id = req.reconhecimentodivida_id " +
+                "         left join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
+                "         left join execucaoprocesso exproc on exproc.id = rce.execucaoprocesso_id " +
                 "         left join execucaoprocessoata exata on exata.execucaoprocesso_id = exproc.id " +
                 "         left join ataregistropreco ata on ata.id = exata.ataregistropreco_id " +
                 "         left join execucaoprocessodispensa exdisp on exdisp.execucaoprocesso_id = exproc.id " +
@@ -653,23 +649,19 @@ public class IntegradorDocumentoFiscalLiquidacaoFacade implements Serializable {
     public DocumentoFiscalIntegracao buscarDadosDocumentoEntradaPorCompra(DocumentoFiscalIntegracaoAssistente filtro) {
         String sql =
             "    select 'Entrada por Compra'               as origem, " +
-                "       ent.numero || ' - ' || to_char(ent.dataentrada, 'dd/MM/yyyy') || ' - ' || ent.historico as descricao, " +
+                "       ent.NUMERO || ' - ' || to_char(ent.DATAENTRADA, 'dd/MM/yyyy') || ' - ' || ent.HISTORICO as descricao, " +
                 "       vw.codigo || ' - ' || vw.descricao as unidade, " +
                 "       ent.id                             as idOrigem " +
-                " from entradamaterial ent " +
+                "from entradamaterial ent " +
                 "         inner join entradacompramaterial ecm on ecm.id = ent.id " +
                 "         inner join doctofiscalentradacompra dotEnt on dotEnt.entradaCompraMaterial_id = ecm.id " +
                 "         inner join requisicaodecompra req on req.id = ecm.requisicaodecompra_id " +
-                "         inner join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
-                "         left join execucaocontratoempenho exemp on exemp.id = rce.execucaocontratoempenho_id " +
-                "         left join execucaocontrato excont on excont.id =  exemp.execucaocontrato_id " +
-                "         left join contrato c on c.id = excont.contrato_id " +
+                "         left join contrato c on c.id = req.contrato_id " +
                 "         left join unidadecontrato uc on uc.contrato_id = c.id " +
                 "            and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(uc.iniciovigencia) and coalesce(trunc(uc.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " +
-                "         left join solicitacaoempenhorecdiv solrd on solrd.id = rce.execucaoreconhecimentodiv_id " +
-                "         left join reconhecimentodivida rc on rc.id = solrd.reconhecimentodivida_id " +
-                "         left join execucaoprocessoempenho exproc on exproc.id = rce.execucaoprocessoempenho_id " +
-                "         left join execucaoprocesso exproc on exproc.id = exproc.execucaoprocesso_id " +
+                "         left join reconhecimentodivida rc on rc.id = req.reconhecimentodivida_id " +
+                "         left join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
+                "         left join execucaoprocesso exproc on exproc.id = rce.execucaoprocesso_id " +
                 "         left join execucaoprocessoata exata on exata.execucaoprocesso_id = exproc.id " +
                 "         left join ataregistropreco ata on ata.id = exata.ataregistropreco_id " +
                 "         left join execucaoprocessodispensa exdisp on exdisp.execucaoprocesso_id = exproc.id " +
@@ -677,7 +669,7 @@ public class IntegradorDocumentoFiscalLiquidacaoFacade implements Serializable {
                 "         left join processodecompra pc on pc.id = disp.processodecompra_id " +
                 "         inner join vwhierarquiaadministrativa vw on vw.subordinada_id = coalesce(uc.unidadeadministrativa_id, rc.unidadeadministrativa_id, ata.unidadeorganizacional_id, pc.unidadeorganizacional_id)  " +
                 "  where to_date(:dataOperacao, 'dd/mm/yyyy') between vw.iniciovigencia and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/mm/yyyy')) " +
-                "  and dotEnt.doctofiscalliquidacao_id = :idDocumento ";
+                "  and dotEnt.doctofiscalliquidacao_id = :idDocumento";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idDocumento", filtro.getDoctoFiscalLiquidacao().getId());
         q.setParameter("dataOperacao", DataUtil.getDataFormatada(sistemaFacade.getDataOperacao()));
@@ -698,11 +690,9 @@ public class IntegradorDocumentoFiscalLiquidacaoFacade implements Serializable {
 
     private static String getJoinItemProcessoObjetoCompra() {
         return "" +
-            "   inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
-            "   left join execucaoprocessoitem itemexproc on itemexproc.id = irce.execucaoprocessoitem_id " +
-            "   left join itemreconhecimentodivida itemrd on itemrd.id = irce.itemreconhecimentodivida_id " +
-            "   left join execucaocontratoitem itemex on itemex.id = irce.execucaocontratoitem_id " +
-            "   left join itemcontrato ic on ic.id = itemex.itemcontrato_id " +
+            "   left join itemreconhecimentodivida itemrd on itemrd.id = irc.itemreconhecimentodivida_id " +
+            "   left join execucaoprocessoitem itemexproc on itemexproc.id = irc.execucaoprocessoitem_id " +
+            "   left join itemcontrato ic on ic.id = irc.itemcontrato_id " +
             "   left join itemcontratovigente icv on icv.itemcontrato_id = ic.id " +
             "   left join itemcotacao icot on icot.id = icv.itemcotacao_id " +
             "   left join itemcontratoitempropfornec icpf on icpf.itemcontrato_id = ic.id " +
@@ -960,10 +950,10 @@ public class IntegradorDocumentoFiscalLiquidacaoFacade implements Serializable {
     public List<EmpenhoDocumentoFiscal> buscarEmpenhoDocumentoFiscal(DocumentoFiscalIntegracaoAssistente assistente, DocumentoFiscalIntegracao docIntegracao) {
         String sql =
             "   select distinct " +
-                "      emp.id                                      as id_empenho, " +
-                "      emp.numero || ' / ' || e.ano                as empenho, " +
-                "      emp.categoriaorcamentaria                   as categoria, " +
-                "      emp.tipoempenho                             as tipo, " +
+                "      emp.id                                                           as id_empenho, " +
+                "      emp.numero || ' / ' || e.ano                                       as empenho, " +
+                "      emp.categoriaorcamentaria                                        as categoria, " +
+                "      emp.tipoempenho                                                  as tipo, " +
                 "      coalesce(round(sum(irce.valortotal), 2), 0) as valor " +
                 " from itementradamaterial item " +
                 "         inner join itemcompramaterial icm on icm.itementradamaterial_id = item.id " +
@@ -971,15 +961,18 @@ public class IntegradorDocumentoFiscalLiquidacaoFacade implements Serializable {
                 "         inner join doctofiscalentradacompra docent on docent.id = idie.doctofiscalentradacompra_id " +
                 "         inner join itemrequisicaodecompra irc on irc.id = icm.itemrequisicaodecompra_id " +
                 "         inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
-                "         inner join empenho emp on emp.id = irce.empenho_id " +
+                "         inner join execucaocontratoitem exitem on irce.execucaocontratoitem_id = exitem.id " +
+                "         inner join execucaocontrato ex on ex.id = exitem.execucaocontrato_id " +
+                "         inner join execucaocontratoempenho exemp on exemp.execucaocontrato_id = ex.id " +
+                "         inner join empenho emp on emp.id = exemp.empenho_id " +
                 "         inner join exercicio e on e.id = emp.exercicio_id " +
                 " where docent.doctofiscalliquidacao_id = :idDocumento " +
                 " group by emp.numero, e.ano, emp.id, emp.categoriaorcamentaria, emp.tipoempenho " +
                 " union all " +
-                " select distinct emp.id                                     as id_empenho, " +
-                "                emp.numero || ' / ' || e.ano                as empenho, " +
-                "                emp.categoriaorcamentaria                   as categoria, " +
-                "                emp.tipoempenho                             as tipo, " +
+                " select distinct emp.id                                                           as id_empenho, " +
+                "                emp.numero || ' / ' || e.ano                                     as empenho, " +
+                "                emp.categoriaorcamentaria                                        as categoria, " +
+                "                emp.tipoempenho                                                  as tipo, " +
                 "                coalesce(round(sum(irce.valortotal), 2), 0) as valor " +
                 " from itemaquisicao item " +
                 "         inner join itemsolicitacaoaquisicao isa on isa.id = item.itemsolicitacaoaquisicao_id " +
@@ -987,10 +980,13 @@ public class IntegradorDocumentoFiscalLiquidacaoFacade implements Serializable {
                 "         inner join doctofiscalsolicaquisicao docsol on docsol.id = idia.doctofiscalsolicitacao_id " +
                 "         inner join itemrequisicaodecompra irc on irc.id = idia.itemrequisicaodecompra_id " +
                 "         inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
-                "         inner join empenho emp on emp.id = irce.empenho_id " +
+                "         inner join execucaocontratoitem exitem on irce.execucaocontratoitem_id = exitem.id " +
+                "         inner join execucaocontrato ex on ex.id = exitem.execucaocontrato_id " +
+                "         inner join execucaocontratoempenho exemp on exemp.execucaocontrato_id = ex.id " +
+                "         inner join empenho emp on emp.id = exemp.empenho_id " +
                 "         inner join exercicio e on e.id = emp.exercicio_id " +
                 " where docsol.documentofiscal_id = :idDocumento " +
-                " group by emp.numero, e.ano, emp.id, emp.categoriaorcamentaria, emp.tipoempenho ";
+                " group by emp.numero, e.ano, emp.id, emp.categoriaorcamentaria, emp.tipoempenho";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idDocumento", docIntegracao.getDoctoFiscalLiquidacao().getId());
         List<EmpenhoDocumentoFiscal> empenhos = Lists.newArrayList();

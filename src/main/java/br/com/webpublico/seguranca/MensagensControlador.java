@@ -89,11 +89,12 @@ public class MensagensControlador implements Serializable {
         return getStringJsonDasMensagens(origem, mensagensNaoLidas);
     }
 
-    private ResponseEntity<List<LogSistema>> getStringJsonDasMensagens(String urlAtual, List<LogSistema> mensagensNaoLidas) throws IOException {
+    private ResponseEntity<List<LogSistema>>  getStringJsonDasMensagens(String urlAtual, List<LogSistema> mensagensNaoLidas) throws IOException {
         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
         String json = ow.writeValueAsString(mensagensNaoLidas);
 
         httpRequest.getSession().setAttribute(urlAtual, Lists.<LogSistema>newArrayList());
+
         return new ResponseEntity<>(mensagensNaoLidas, HttpStatus.OK);
     }
 }

@@ -34,9 +34,9 @@ import java.util.Date;
 @Audited
 @Etiqueta("Período de Login")
 @TypeDefs({
-    @TypeDef(name = "diaDaSemana", typeClass = DiaDaSemanaUserType.class),
-    @TypeDef(name = "localTime", typeClass = LocalTimeUserType.class, defaultForType = LocalTime.class)})
-public class Periodo extends SuperEntidade {
+        @TypeDef(name = "diaDaSemana", typeClass = DiaDaSemanaUserType.class),
+        @TypeDef(name = "localTime", typeClass = LocalTimeUserType.class, defaultForType = LocalTime.class)})
+public class Periodo implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id

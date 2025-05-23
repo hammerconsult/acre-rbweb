@@ -11,7 +11,6 @@ import br.com.webpublico.enums.TipoEventoContabil;
 import br.com.webpublico.enums.TipoLancamento;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.interfaces.EntidadeContabil;
 import br.com.webpublico.interfaces.IManadRegistro;
 import br.com.webpublico.negocios.manad.ManadContabilFacade;
 import br.com.webpublico.util.DataUtil;
@@ -30,7 +29,7 @@ import java.util.Date;
 @Audited
 @Entity
 
-public class LancamentoContabil extends SuperEntidade implements Serializable, IManadRegistro, EntidadeContabil {
+public class LancamentoContabil implements Serializable, IManadRegistro, EntidadeContabil {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -257,6 +256,28 @@ public class LancamentoContabil extends SuperEntidade implements Serializable, I
 
     public void setContaAuxDebDetalhadaSiconfi(ContaAuxiliarDetalhada contaAuxDebDetalhadaSiconfi) {
         this.contaAuxDebDetalhadaSiconfi = contaAuxDebDetalhadaSiconfi;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final LancamentoContabil other = (LancamentoContabil) obj;
+        if (this.id != other.id && (this.id == null || !this.id.equals(other.id))) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 13 * hash + (this.id != null ? this.id.hashCode() : 0);
+        return hash;
     }
 
     @Override

@@ -70,16 +70,7 @@ public class TransferenciaMovPessoa extends SuperEntidade implements PossuidorAr
     private Boolean transfereBcrs;
     private Boolean transfereMovimentosTributario;
     private Boolean transfereMovContabeis;
-    private Boolean transferirDocumentosPessoais;
-    private Boolean transferirEnderecos;
-    private Boolean transferirTelefones;
-    private Boolean transferirInformacoesBancarias;
-    private Boolean transferirDependentes;
-    private Boolean transferirPensoesAlimenticias;
     private Boolean inativaPessoaTransferida;
-    private Boolean transferirCadastrosRH;
-    private Boolean transferirRespDependentes;
-    private Boolean transferirRespPensoesAliment;
     @OneToMany(mappedBy = "transferenciaMovPessoa", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TransferenciaMovPessoaBci> bcis;
     @OneToMany(mappedBy = "transferenciaMovPessoa", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -239,78 +230,6 @@ public class TransferenciaMovPessoa extends SuperEntidade implements PossuidorAr
 
     public void setPareceresTransferecia(List<ParecerTransferenciaMovimentoPessoa> pareceresTransferecia) {
         this.pareceresTransferecia = pareceresTransferecia;
-    }
-
-    public Boolean getTransferirDocumentosPessoais() {
-        return transferirDocumentosPessoais != null ? transferirDocumentosPessoais : false;
-    }
-
-    public void setTransferirDocumentosPessoais(Boolean transferirDocumentosPessoais) {
-        this.transferirDocumentosPessoais = transferirDocumentosPessoais;
-    }
-
-    public Boolean getTransferirEnderecos() {
-        return transferirEnderecos != null ? transferirEnderecos : false;
-    }
-
-    public void setTransferirEnderecos(Boolean transferirEnderecos) {
-        this.transferirEnderecos = transferirEnderecos;
-    }
-
-    public Boolean getTransferirTelefones() {
-        return transferirTelefones != null ? transferirTelefones : false;
-    }
-
-    public void setTransferirTelefones(Boolean transferirTelefones) {
-        this.transferirTelefones = transferirTelefones;
-    }
-
-    public Boolean getTransferirInformacoesBancarias() {
-        return transferirInformacoesBancarias != null ? transferirInformacoesBancarias : false;
-    }
-
-    public void setTransferirInformacoesBancarias(Boolean transferirInformacoesBancarias) {
-        this.transferirInformacoesBancarias = transferirInformacoesBancarias;
-    }
-
-    public Boolean getTransferirDependentes() {
-        return transferirDependentes != null ? transferirDependentes : false;
-    }
-
-    public void setTransferirDependentes(Boolean transferirDependentes) {
-        this.transferirDependentes = transferirDependentes;
-    }
-
-    public Boolean getTransferirPensoesAlimenticias() {
-        return transferirPensoesAlimenticias != null ? transferirPensoesAlimenticias : false;
-    }
-
-    public void setTransferirPensoesAlimenticias(Boolean transferirPensoesAlimenticias) {
-        this.transferirPensoesAlimenticias = transferirPensoesAlimenticias;
-    }
-
-    public Boolean getTransferirCadastrosRH() {
-        return transferirCadastrosRH != null ? transferirCadastrosRH : false;
-    }
-
-    public void setTransferirCadastrosRH(Boolean transferirCadastrosRH) {
-        this.transferirCadastrosRH = transferirCadastrosRH;
-    }
-
-    public Boolean getTransferirRespDependentes() {
-        return transferirRespDependentes != null ? transferirRespDependentes : false;
-    }
-
-    public void setTransferirRespDependentes(Boolean transferirRespDependentes) {
-        this.transferirRespDependentes = transferirRespDependentes;
-    }
-
-    public Boolean getTransferirRespPensoesAliment() {
-        return transferirRespPensoesAliment != null ? transferirRespPensoesAliment : false;
-    }
-
-    public void setTransferirRespPensoesAliment(Boolean transferirRespPensoesAliment) {
-        this.transferirRespPensoesAliment = transferirRespPensoesAliment;
     }
 
     public List<Long> buscarListaIdsCadastrosSelecionadosParaClausulaIn(TransferenciaMovPessoa transferenciaMovPessoa) {

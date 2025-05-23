@@ -111,9 +111,6 @@ public class ProcessoDebitoFacade extends AbstractFacade<ProcessoDebito> {
         for (ItemProcessoDebito item : itens) {
             em.merge(item);
         }
-        }
-    public ProcessoDebito salvarProcesso(ProcessoDebito processo) {
-        return em.merge(processo);
     }
 
     public ProcessoDebito salvaRetornando(ProcessoDebito entity) {
@@ -470,8 +467,7 @@ public class ProcessoDebitoFacade extends AbstractFacade<ProcessoDebito> {
             itens.add(itemProcessoDebito);
             resultadoConsulta.remove(resultadoParcelas);
         } else {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("A parcela selecionada: " + resultadoParcelas.getReferencia() + " - " +
-                resultadoParcelas.getDivida() + " - " + resultadoParcelas.getParcela() + " já foi adicionada ao processo!");
+            ve.adicionarMensagemDeOperacaoNaoPermitida("A parcela selecionada: " + resultadoParcelas.getReferencia() + " - " + resultadoParcelas.getDivida() + " - " + resultadoParcelas.getParcela() + " já foi adicionada ao processo!");
             ve.lancarException();
         }
     }
@@ -577,27 +573,6 @@ public class ProcessoDebitoFacade extends AbstractFacade<ProcessoDebito> {
         }
     }
 
-    public ProcessoDebito buscarProcessoPorCadastro(Long idCadastro){
-        String sql = " select proc.* " +
-            " from processodebito proc" +
-            "  inner join itemprocessodebito item on proc.id = item.processodebito_id " +
-            "  inner join parcelavalordivida pvd on item.parcela_id = pvd.id " +
-            "  inner join valordivida vld on pvd.valordivida_id = vld.id " +
-            "  inner join calculo calc on vld.calculo_id = calc.id " +
-            "  inner join cadastro cad on calc.cadastro_id = cad.id " +
-            "   where cad.id = :idCadastro " +
-            "    and proc.situacao = :situacao ";
-        Query q = em.createNativeQuery(sql, ProcessoDebito.class);
-        q.setParameter("idCadastro", idCadastro);
-        q.setParameter("situacao", SituacaoProcessoDebito.EM_ABERTO.name());
-        List resultList = q.getResultList();
-        if (!resultList.isEmpty()) {
-            return (ProcessoDebito) resultList.get(0);
-        }
-        return null;
-    }
-
-
     public int contarItens(ProcessoDebito entity, List<ItemProcessoDebito> itensNotIn) {
         if (entity.getId() == null) {
             return 0;
@@ -643,6 +618,26 @@ public class ProcessoDebitoFacade extends AbstractFacade<ProcessoDebito> {
             }
         }
         return list;
+    }
+
+    public ProcessoDebito buscarProcessoPorCadastro(Long idCadastro) {
+        String sql = " select proc.* " +
+            " from processodebito proc" +
+            "  inner join itemprocessodebito item on proc.id = item.processodebito_id " +
+            "  inner join parcelavalordivida pvd on item.parcela_id = pvd.id " +
+            "  inner join valordivida vld on pvd.valordivida_id = vld.id " +
+            "  inner join calculo calc on vld.calculo_id = calc.id " +
+            "  inner join cadastro cad on calc.cadastro_id = cad.id " +
+            "   where cad.id = :idCadastro " +
+            "    and proc.situacao = :situacao ";
+        Query q = em.createNativeQuery(sql, ProcessoDebito.class);
+        q.setParameter("idCadastro", idCadastro);
+        q.setParameter("situacao", SituacaoProcessoDebito.EM_ABERTO.name());
+        List resultList = q.getResultList();
+        if (!resultList.isEmpty()) {
+            return (ProcessoDebito) resultList.get(0);
+        }
+        return null;
     }
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)

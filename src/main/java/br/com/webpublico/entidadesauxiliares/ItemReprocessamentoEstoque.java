@@ -39,18 +39,6 @@ public class ItemReprocessamentoEstoque {
         setValorTotal(itemEntrada.getValorTotal());
     }
 
-    public ItemReprocessamentoEstoque(ItemEntradaMaterialEstorno itemEntEst) {
-        setIdItem(itemEntEst.getId());
-        setItemEntradaMaterialEstorno(itemEntEst);
-        setTipoMovimento(TipoMovimento.ESTORNO_ENTRADA);
-        setDataMovimento(itemEntEst.getDataMovimento());
-        setMaterial(itemEntEst.getMaterial().toStringAutoComplete());
-        setDescricaoMovimento(itemEntEst.getDescricaoDaOperacao());
-        setQuantidade(itemEntEst.getQuantidade());
-        setValorUnitario(itemEntEst.getValorUnitario());
-        setValorTotal(itemEntEst.getValorTotal());
-    }
-
     public ItemReprocessamentoEstoque(ItemSaidaMaterial itemSaida) {
         setIdItem(itemSaida.getId());
         setItemSaidaMaterial(itemSaida);
@@ -76,6 +64,18 @@ public class ItemReprocessamentoEstoque {
         setQuantidade(tipoMovimento.isConversaoEntrada() ? itemConversao.getQuantidadeEntrada() : itemConversao.getQuantidadeSaida());
         setValorUnitario(tipoMovimento.isConversaoEntrada() ? itemConversao.getValorUnitarioEntrada() : itemConversao.getValorUnitarioSaida());
         setValorTotal(tipoMovimento.isConversaoEntrada() ? itemConversao.getValorTotalEntrada() : itemConversao.getValorTotalSaida());
+    }
+
+    public ItemReprocessamentoEstoque(ItemEntradaMaterialEstorno itemEntEst) {
+        setIdItem(itemEntEst.getId());
+        setItemEntradaMaterialEstorno(itemEntEst);
+        setTipoMovimento(TipoMovimento.ESTORNO_ENTRADA);
+        setDataMovimento(itemEntEst.getDataMovimento());
+        setMaterial(itemEntEst.getMaterial().toStringAutoComplete());
+        setDescricaoMovimento(itemEntEst.getDescricaoDaOperacao());
+        setQuantidade(itemEntEst.getQuantidade());
+        setValorUnitario(itemEntEst.getValorUnitario());
+        setValorTotal(itemEntEst.getValorTotal());
     }
 
     public String getLocalEstoque() {

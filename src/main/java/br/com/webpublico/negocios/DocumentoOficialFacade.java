@@ -152,11 +152,11 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
     @EJB
     private SubvencaoParametroFacade subvencaoParametroFacade;
     @EJB
+    private ConfiguracaoEmailFacade configuracaoEmailFacade;
+    @EJB
     private AlvaraConstrucaoFacade alvaraConstrucaoFacade;
     @EJB
     private CalculoTaxasDiversasFacade calculoTaxasDiversasFacade;
-    @EJB
-    private ConfiguracaoEmailFacade configuracaoEmailFacade;
     @EJB
     private ArquivoFacade arquivoFacade;
     @EJB
@@ -472,9 +472,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
 
         ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
         if (configuracaoTributario != null) {
-            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(),
-                !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ?
-                    gerarQRCode("", solicitacaoDoctoOficial.getId(), configuracaoTributario) : "");
+            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(), !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ? gerarQRCode("", solicitacaoDoctoOficial.getId(), configuracaoTributario) : "");
         }
         if (FacesContext.getCurrentInstance() != null && solicitacaoDoctoOficial.getUsuarioSistema() != null) {
             addTag(context, TipoModeloDoctoOficial.TagsGerais.ASSINATURA_RESPONSAVEL.name(), "<p style=\"text-align: center;\"><span style=\"font-family: arial, helvetica, sans-serif;\">_________________________________________________</span><br /><strong><em><span style=\"font-family: arial, helvetica, sans-serif;\">Servidor Respons&aacute;vel<br /></span></em></strong><span style=\"font-family: arial, helvetica, sans-serif; font-size: small;\">SECRETARIA MUNICIPAL DE FINAN&Ccedil;AS</span></p>");
@@ -884,40 +882,11 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         addTag(context, TipoModeloDoctoOficial.TagsPeticaoDividaAtiva.VALOR_TOTAL_PETICAO_EX.name(), ValorPorExtenso.valorPorExtenso(valorTotalPeticao));
     }
 
-    public String recuperarEnderecoDeCorrespondencia(Pessoa pessoa) {
+    private String recuperarEnderecoDeCorrespondencia(Pessoa pessoa) {
         if (pessoa == null) {
             return "";
         }
-        String sql = "select ec.* " +
-            "        from pessoa_enderecocorreio pe " +
-            "  inner join pessoa p on p.id = pe.pessoa_id " +
-            "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " +
-            "       where p.id = :pessoa_id " +
-            "         and ec.tipoendereco = 'CORRESPONDENCIA' " +
-            "         and ec.principal = 1 " +
-            "       union " +
-            "      select ec.* " +
-            "        from pessoa_enderecocorreio pe " +
-            "  inner join pessoa p on p.id = pe.pessoa_id " +
-            "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " +
-            "       where p.id = :pessoa_id " +
-            "         and ec.tipoendereco = 'CORRESPONDENCIA' " +
-            "         and rownum < 2 " +
-            "       union " +
-            "      select ec.* " +
-            "        from pessoa_enderecocorreio pe " +
-            "  inner join pessoa p on p.id = pe.pessoa_id " +
-            "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " +
-            "       where p.id = :pessoa_id " +
-            "         and ec.principal = 1 " +
-            "         and rownum < 2 " +
-            "      union " +
-            "      select ec.* " +
-            "        from pessoa_enderecocorreio pe " +
-            "  inner join pessoa p on p.id = pe.pessoa_id " +
-            "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " +
-            "       where p.id = :pessoa_id " +
-            "         and rownum < 2";
+        String sql = "select ec.* " + "        from pessoa_enderecocorreio pe " + "  inner join pessoa p on p.id = pe.pessoa_id " + "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " + "       where p.id = :pessoa_id " + "         and ec.tipoendereco = 'CORRESPONDENCIA' " + "         and ec.principal = 1 " + "       union " + "      select ec.* " + "        from pessoa_enderecocorreio pe " + "  inner join pessoa p on p.id = pe.pessoa_id " + "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " + "       where p.id = :pessoa_id " + "         and ec.tipoendereco = 'CORRESPONDENCIA' " + "         and rownum < 2 " + "       union " + "      select ec.* " + "        from pessoa_enderecocorreio pe " + "  inner join pessoa p on p.id = pe.pessoa_id " + "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " + "       where p.id = :pessoa_id " + "         and ec.principal = 1 " + "         and rownum < 2 " + "      union " + "      select ec.* " + "        from pessoa_enderecocorreio pe " + "  inner join pessoa p on p.id = pe.pessoa_id " + "  inner join enderecocorreio ec on ec.id = pe.enderecoscorreio_id " + "       where p.id = :pessoa_id " + "         and rownum < 2";
 
         List retorno = em.createNativeQuery(sql, EnderecoCorreio.class).setParameter("pessoa_id", pessoa.getId()).getResultList();
         EnderecoCorreio ec = null;
@@ -956,8 +925,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             addTag(context, TipoModeloDoctoOficial.TagsRBTrans.NUMERO_PERMISSAO.name(), nomeDoCampo(termo, "permissaoTransporte.numero", null));
             addTag(context, TipoModeloDoctoOficial.TagsRBTrans.NOME_PERMISSIONARIO.name(), nomeDoCampo(termo.getPermissaoTransporte().getPermissionarioVigente().getCadastroEconomico().getPessoa(), "nome", null));
             if (!permissionario.getEnderecos().isEmpty()) {
-                addTag(context, TipoModeloDoctoOficial.TagsRBTrans.LOGRADOURO_PERMISSIONARIO.name(), permissionario.getEnderecos().get(0).getLogradouro()
-                    + ", " + permissionario.getEnderecos().get(0).getNumero());
+                addTag(context, TipoModeloDoctoOficial.TagsRBTrans.LOGRADOURO_PERMISSIONARIO.name(), permissionario.getEnderecos().get(0).getLogradouro() + ", " + permissionario.getEnderecos().get(0).getNumero());
                 addTag(context, TipoModeloDoctoOficial.TagsRBTrans.BAIRRO_PERMISSIONARIO.name(), permissionario.getEnderecos().get(0).getBairro());
             } else {
                 addTag(context, TipoModeloDoctoOficial.TagsRBTrans.LOGRADOURO_PERMISSIONARIO.name(), "");
@@ -998,8 +966,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             try {
                 addTag(context, TipoModeloDoctoOficial.TagsRBTrans.LOGRADOURO_MOTORISTA.name(), "");
                 addTag(context, TipoModeloDoctoOficial.TagsRBTrans.BAIRRO_MOTORISTA.name(), "");
-                addTag(context, TipoModeloDoctoOficial.TagsRBTrans.LOGRADOURO_MOTORISTA.name(), motorista.getCadastroEconomico().getPessoa().getEnderecos().get(0).getLogradouro()
-                    + ", " + permissionario.getEnderecos().get(0).getNumero());
+                addTag(context, TipoModeloDoctoOficial.TagsRBTrans.LOGRADOURO_MOTORISTA.name(), motorista.getCadastroEconomico().getPessoa().getEnderecos().get(0).getLogradouro() + ", " + permissionario.getEnderecos().get(0).getNumero());
                 addTag(context, TipoModeloDoctoOficial.TagsRBTrans.BAIRRO_MOTORISTA.name(), motorista.getCadastroEconomico().getPessoa().getEnderecos().get(0).getBairro());
             } catch (Exception ex) {
                 addTag(context, TipoModeloDoctoOficial.TagsRBTrans.LOGRADOURO_MOTORISTA.name(), "");
@@ -1081,10 +1048,8 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             if (processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getBairro() != null) {
                 addTag(context, TipoModeloDoctoOficial.TagsAutoInfracaoFiscalizacao.BAIRRO.name(), processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getBairro().getDescricao());
             }
-            if (processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro() != null &&
-                processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro().getTipoLogradouro() != null) {
-                addTag(context, TipoModeloDoctoOficial.TagsAutoInfracaoFiscalizacao.ENDERECO.name(), processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro().getTipoLogradouro().getDescricao() + " " +
-                    processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro().getNome());
+            if (processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro() != null && processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro().getTipoLogradouro() != null) {
+                addTag(context, TipoModeloDoctoOficial.TagsAutoInfracaoFiscalizacao.ENDERECO.name(), processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro().getTipoLogradouro().getDescricao() + " " + processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro().getNome());
             } else if (processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro() != null) {
                 addTag(context, TipoModeloDoctoOficial.TagsAutoInfracaoFiscalizacao.ENDERECO.name(), processoFiscalizacao.getLocalOcorrencia().getLogradouroBairro().getLogradouro().getNome());
             }
@@ -1332,11 +1297,11 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.CIDADE.name(), nomeDoCampo(configuracaoTributario.getCidade().getNome(), "cidade", null));
         addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.UF.name(), nomeDoCampo(configuracaoTributario.getCidade().getUf().getNome(), "uf", null));
         addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.TESTADA_PRINCIPAL.name(), nomeDoCampo(testadaPrincipal, "face.codigoFace", null));
-        addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.TESTADA_EM_METROS.name(), testadaPrincipal != null && testadaPrincipal.getTamanho() != null
-            ? testadaPrincipal.getTamanho() : BigDecimal.ZERO);
+        addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.TESTADA_EM_METROS.name(), testadaPrincipal != null && testadaPrincipal.getTamanho() != null ? testadaPrincipal.getTamanho() : BigDecimal.ZERO);
         addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.LADO_FACE.name(), nomeDoCampo(testadaPrincipal, "face.lado", null));
         addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.LARGURA_FACE.name(), nomeDoCampo(testadaPrincipal, "face.largura", null));
         addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.LOGRADOURO_PRINCIPAL.name(), nomeDoCampo(logradouroPrincipal, "nome", null));
+        addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.ENDERECO_CORRESPONDENCIA.name(), recuperarEnderecoDeCorrespondencia(cadastroImobiliarioFacade.recuperarProprietarioPrincipal(cadastroImobiliario).getPessoa()));
         Propriedade propriedade = cadastroImobiliarioFacade.recuperarProprietarioPrincipal(cadastroImobiliario);
         if (propriedade != null) {
             addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.ENDERECO_CORRESPONDENCIA.name(), recuperarEnderecoDeCorrespondencia(propriedade.getPessoa()));
@@ -1583,8 +1548,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
     }
 
     private void addTagProprietario(CadastroImobiliario ci, VelocityContext context) {
-        Propriedade p = ci != null && ci.getPropriedadeVigente() != null &&
-            !ci.getPropriedadeVigente().isEmpty() ? ci.getPropriedadeVigente().get(0) : null;
+        Propriedade p = ci != null && ci.getPropriedadeVigente() != null && !ci.getPropriedadeVigente().isEmpty() ? ci.getPropriedadeVigente().get(0) : null;
         if (p != null) {
             addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.PROPRIETARIO.name(), p.getPessoa().getNome());
             addTag(context, TipoModeloDoctoOficial.TagsCadastroImobiliario.CPF_CNPJ_PROPRIETARIO.name(), p.getPessoa().getCpf_Cnpj());
@@ -1679,7 +1643,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
                 if (entidade instanceof AcaoFiscal) {
                     tagsGeraisFiscalizacao(context, (AcaoFiscal) entidade, (ParametroFiscalizacao) entidadeAux, null);
                 } else if (entidade instanceof AutoInfracaoFiscal) {
-                    tagsGeraisFiscalizacao(context, ((AutoInfracaoFiscal) entidade).getRegistro().getAcaoFiscal(), (ParametroFiscalizacao) entidadeAux, (AutoInfracaoFiscal) entidade);
+                    tagsGeraisFiscalizacao(context, ((AutoInfracaoFiscal) entidade).getRegistro().getAcaoFiscal(), (ParametroFiscalizacao) entidadeAux, ((AutoInfracaoFiscal) entidade));
                     tagsAutoInfracao(context, ((AutoInfracaoFiscal) entidade), (ParametroFiscalizacao) entidadeAux);
                 }
                 break;
@@ -1834,12 +1798,12 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
                 tagsNotaOrcamentaria(context, (NotaExecucaoOrcamentaria) entidade);
                 break;
 
-            case SOLICITACAO_MATERIAL:
-                tagsSolicitacaoMaterial(context, (SolicitacaoMaterial) entidade);
-                break;
-
             case NOTA_OBRIGACAO_A_PAGAR:
                 tagsNotaOrcamentaria(context, (NotaExecucaoOrcamentaria) entidade);
+                break;
+
+            case SOLICITACAO_MATERIAL:
+                tagsSolicitacaoMaterial(context, (SolicitacaoMaterial) entidade);
                 break;
 
             case TR:
@@ -2096,10 +2060,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             int contador = 1;
             BigDecimal valorTotal = BigDecimal.ZERO;
             for (NotaExecucaoOrcamentariaRetencao retencao : notaExecucaoOrcamentaria.getRetencoes()) {
-                retorno += retencao.getNumero() +
-                    "        Data: " + DataUtil.getDataFormatada(retencao.getDataRet()) +
-                    "        " + retencao.getContaExtra() +
-                    "        Valor: " + nomeDoCampo(retencao, "valor", TipoFormato.VALOR_REAIS);
+                retorno += retencao.getNumero() + "        Data: " + DataUtil.getDataFormatada(retencao.getDataRet()) + "        " + retencao.getContaExtra() + "        Valor: " + nomeDoCampo(retencao, "valor", TipoFormato.VALOR_REAIS);
                 if (notaExecucaoOrcamentaria.getRetencoes().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2117,10 +2078,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             int contador = 1;
             BigDecimal valorTotal = BigDecimal.ZERO;
             for (NotaExecucaoOrcamentariaFatura fatura : notaExecucaoOrcamentaria.getFaturas()) {
-                retorno += " Tipo: " + fatura.getTipoGuia() +
-                    "        Venc: " + DataUtil.getDataFormatada(fatura.getDataVencimento()) +
-                    "        Cód. Barras:" + fatura.getCodigoBarra() +
-                    "        Valor: " + nomeDoCampo(fatura, "valor", TipoFormato.VALOR_REAIS);
+                retorno += " Tipo: " + fatura.getTipoGuia() + "        Venc: " + DataUtil.getDataFormatada(fatura.getDataVencimento()) + "        Cód. Barras:" + fatura.getCodigoBarra() + "        Valor: " + nomeDoCampo(fatura, "valor", TipoFormato.VALOR_REAIS);
                 if (notaExecucaoOrcamentaria.getFaturas().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2137,8 +2095,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         if (notaExecucaoOrcamentaria.getConvenios() != null && !notaExecucaoOrcamentaria.getConvenios().isEmpty()) {
             int contador = 1;
             for (NotaExecucaoOrcamentariaConvenio convenio : notaExecucaoOrcamentaria.getConvenios()) {
-                retorno += " Tipo: " + convenio.getTipoGuia() +
-                    "        Cód. Barras: " + convenio.getCodigoBarra();
+                retorno += " Tipo: " + convenio.getTipoGuia() + "        Cód. Barras: " + convenio.getCodigoBarra();
                 if (notaExecucaoOrcamentaria.getConvenios().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2154,10 +2111,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             int contador = 1;
             BigDecimal valorTotal = BigDecimal.ZERO;
             for (NotaExecucaoOrcamentariaGps gps : notaExecucaoOrcamentaria.getGps()) {
-                retorno += " Tipo: " + gps.getTipoGuia() +
-                    "        Compensação: " + DataUtil.getDataFormatada(gps.getPeriodoComp()) +
-                    "        Código da Receita: " + gps.getCodigoTributo() + " - " + gps.getDigitoTributo() +
-                    "        Valor: " + nomeDoCampo(gps, "valor", TipoFormato.VALOR_REAIS);
+                retorno += " Tipo: " + gps.getTipoGuia() + "        Compensação: " + DataUtil.getDataFormatada(gps.getPeriodoComp()) + "        Código da Receita: " + gps.getCodigoTributo() + " - " + gps.getDigitoTributo() + "        Valor: " + nomeDoCampo(gps, "valor", TipoFormato.VALOR_REAIS);
                 if (notaExecucaoOrcamentaria.getGps().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2175,10 +2129,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             int contador = 1;
             BigDecimal valorTotal = BigDecimal.ZERO;
             for (NotaExecucaoOrcamentariaDarf darf : notaExecucaoOrcamentaria.getDarfs()) {
-                retorno += " Tipo: " + darf.getTipoGuia() +
-                    "        Vencimento: " + DataUtil.getDataFormatada(darf.getDataVencimento()) +
-                    "        Código da Receita: " + darf.getCodigoTributo() + " - " + darf.getCodigoIdentificador() +
-                    "        Valor Principal: " + nomeDoCampo(darf, "valorPrincipal", TipoFormato.VALOR_REAIS);
+                retorno += " Tipo: " + darf.getTipoGuia() + "        Vencimento: " + DataUtil.getDataFormatada(darf.getDataVencimento()) + "        Código da Receita: " + darf.getCodigoTributo() + " - " + darf.getCodigoIdentificador() + "        Valor Principal: " + nomeDoCampo(darf, "valorPrincipal", TipoFormato.VALOR_REAIS);
                 if (notaExecucaoOrcamentaria.getDarfs().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2196,10 +2147,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             int contador = 1;
             BigDecimal valorTotal = BigDecimal.ZERO;
             for (NotaExecucaoOrcamentariaDarf darf : notaExecucaoOrcamentaria.getDarfsSimples()) {
-                retorno += " Tipo: " + darf.getTipoGuia() +
-                    "        Apuração: " + DataUtil.getDataFormatada(darf.getPeriodoApuracao()) +
-                    "        Código da Receita: " + darf.getCodigoTributo() + " - " + darf.getCodigoIdentificador() +
-                    "        Valor Principal: " + nomeDoCampo(darf, "valorPrincipal", TipoFormato.VALOR_REAIS);
+                retorno += " Tipo: " + darf.getTipoGuia() + "        Apuração: " + DataUtil.getDataFormatada(darf.getPeriodoApuracao()) + "        Código da Receita: " + darf.getCodigoTributo() + " - " + darf.getCodigoIdentificador() + "        Valor Principal: " + nomeDoCampo(darf, "valorPrincipal", TipoFormato.VALOR_REAIS);
                 if (notaExecucaoOrcamentaria.getDarfsSimples().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2237,11 +2185,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         if (notaExecucaoOrcamentaria.getDocumentosComprobatorios() != null && !notaExecucaoOrcamentaria.getDocumentosComprobatorios().isEmpty()) {
             int contador = 1;
             for (NotaExecucaoOrcamentariaDocumentoComprobatorio documentoComprobatorio : notaExecucaoOrcamentaria.getDocumentosComprobatorios()) {
-                retorno += " Número: " + documentoComprobatorio.getNumero() +
-                    "   Data: " + DataUtil.getDataFormatada(documentoComprobatorio.getData()) +
-                    "   Tipo: " + documentoComprobatorio.getTipo() +
-                    (documentoComprobatorio.getUf() != null ? "   UF: " + documentoComprobatorio.getUf() : "") +
-                    "   Valor: " + nomeDoCampo(documentoComprobatorio, "valor", TipoFormato.VALOR_REAIS);
+                retorno += " Número: " + documentoComprobatorio.getNumero() + "   Data: " + DataUtil.getDataFormatada(documentoComprobatorio.getData()) + "   Tipo: " + documentoComprobatorio.getTipo() + (documentoComprobatorio.getUf() != null ? "   UF: " + documentoComprobatorio.getUf() : "") + "   Valor: " + nomeDoCampo(documentoComprobatorio, "valor", TipoFormato.VALOR_REAIS);
                 if (notaExecucaoOrcamentaria.getDocumentosComprobatorios().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2256,9 +2200,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         if (notaExecucaoOrcamentaria.getDetalhamentos() != null && !notaExecucaoOrcamentaria.getDetalhamentos().isEmpty()) {
             int contador = 1;
             for (NotaExecucaoOrcamentariaDetalhamento detalhamento : notaExecucaoOrcamentaria.getDetalhamentos()) {
-                retorno += " Conta: " + detalhamento.getConta() + " - " + detalhamento.getDescricao() +
-                    "   Evento: " + detalhamento.getEvento() +
-                    "   Valor: " + nomeDoCampo(detalhamento, "valor", TipoFormato.VALOR_REAIS);
+                retorno += " Conta: " + detalhamento.getConta() + " - " + detalhamento.getDescricao() + "   Evento: " + detalhamento.getEvento() + "   Valor: " + nomeDoCampo(detalhamento, "valor", TipoFormato.VALOR_REAIS);
                 if (notaExecucaoOrcamentaria.getDocumentosComprobatorios().size() > contador) {
                     retorno += "</br>";
                     contador++;
@@ -2266,6 +2208,13 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             }
         }
         return retorno;
+    }
+
+    private void tagQrCode(VelocityContext context, DocumentoOficial doc) {
+        ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
+        if (!context.containsKey(TipoModeloDoctoOficial.TagsGerais.QRCODE.name())) {
+            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(), gerarQRCode("validar-documento-oficial", doc.getCodigoVerificacao(), configuracaoTributario));
+        }
     }
 
     private void tagAssinatura(VelocityContext context, DocumentoOficial doc) {
@@ -2326,9 +2275,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         addTag(context, TipoModeloDoctoOficial.TagsHabiteseConstrucao.EXERCICIO_PROCESSO.name(), habitese.getExercicio().getAno());
         ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
         if (configuracaoTributario != null) {
-            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(),
-                !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ?
-                    gerarQRCode("habitese-construcao", habitese.getId(), configuracaoTributario) : "");
+            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(), !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ? gerarQRCode("habitese-construcao", habitese.getId(), configuracaoTributario) : "");
         }
         ParametroRegularizacao parametroRegularizacao = alvaraConstrucaoFacade.getParametroRegularizacaoFacade()
             .buscarParametroRegularizacaoPorExercicio(exercicioFacade.getExercicioCorrente());
@@ -2444,9 +2391,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         addTag(context, TipoModeloDoctoOficial.TagsAlvaraConstrucao.EXERCICIO_PROCESSO.name(), alvaraConstrucao.getExercicio().getAno());
         ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
         if (configuracaoTributario != null) {
-            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(),
-                !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ?
-                    gerarQRCode("alvara-construcao", alvaraConstrucao.getId(), configuracaoTributario) : "");
+            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(), !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ? gerarQRCode("alvara-construcao", alvaraConstrucao.getId(), configuracaoTributario) : "");
         }
         ParametroRegularizacao parametroRegularizacao = alvaraConstrucaoFacade.getParametroRegularizacaoFacade()
             .buscarParametroRegularizacaoPorExercicio(exercicioFacade.getExercicioCorrente());
@@ -2465,13 +2410,6 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             imagemAssinatura = "<img src=\"data:image/png;base64," + Util.getBase64Encode(arquivo.getByteArrayDosDados()) + "\" alt=\"Assinatura\" style=\"width: 150px !important; height: 150px !important;\" />";
         }
         addTag(context, tag, imagemAssinatura);
-    }
-
-    private void tagQrCode(VelocityContext context, DocumentoOficial doc) {
-        ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
-        if (!context.containsKey(TipoModeloDoctoOficial.TagsGerais.QRCODE.name())) {
-            addTag(context, TipoModeloDoctoOficial.TagsGerais.QRCODE.name(), gerarQRCode("validar-documento-oficial", doc.getCodigoVerificacao(), configuracaoTributario));
-        }
     }
 
     public void tagsAuxilioFuneral(VelocityContext context, AuxilioFuneral auxilioFuneral) throws UFMException {
@@ -2507,9 +2445,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
 
         ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
         if (configuracaoTributario != null) {
-            addTag(context, TipoModeloDoctoOficial.TagsCondutorOTTRBTrans.QR_CODE.name(),
-                !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ?
-                    gerarQRCode(caminhoOtt, certificado.getOperadoraTecTransporte().getId(), configuracaoTributario) : "");
+            addTag(context, TipoModeloDoctoOficial.TagsCondutorOTTRBTrans.QR_CODE.name(), !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ? gerarQRCode(caminhoOtt, certificado.getOperadoraTecTransporte().getId(), configuracaoTributario) : "");
         }
     }
 
@@ -2537,9 +2473,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
 
         ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
         if (configuracaoTributario != null) {
-            addTag(context, TipoModeloDoctoOficial.TagsCondutorOTTRBTrans.QR_CODE.name(),
-                !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ?
-                    gerarQRCode(caminhoCondutorOtt, certificado.getCondutorOperaTransporte().getId(), configuracaoTributario) : "");
+            addTag(context, TipoModeloDoctoOficial.TagsCondutorOTTRBTrans.QR_CODE.name(), !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) ? gerarQRCode(caminhoCondutorOtt, certificado.getCondutorOperaTransporte().getId(), configuracaoTributario) : "");
         }
     }
 
@@ -2573,7 +2507,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         try {
             return "<img src='" + "data:image/png;base64," + BarCode.generateBase64QRCodePng(conteudo, 100, 100) + "' alt='QR CODE' width='100' height='100' style='width: 100px !important; height: 100px !important;'/>";
         } catch (IOException e) {
-            logger.error("Erro ao gerar qrcode {}", e);
+            e.printStackTrace();
         }
         return "";
     }
@@ -3168,55 +3102,12 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
     }
 
     public String montarHtml(List<String> conteudos) {
-        String retorno = "<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>"
-            + " <!DOCTYPE HTML PUBLIC \"HTML 4.01 Transitional//PT\" \"http://www.w3.org/TR/html4/loose.dtd\">"
-            + " <html>"
-            + " <head>"
-            + " <title>WebPúblico</title>"
-            + " <style type=\"text/css\">"
-            + " /*webreportcss*/"
-            + " @media print {\n"
-            + " html, body {\n"
-            + "     height: 99%;"
-            + "  }\n"
-            + "    *{-webkit-print-color-adjust:exact}\n"
-            + "    .naoImprime {\n"
-            + "        display:none;\n"
-            + "    }\n"
-            + "}"
-            + " @page{ \n"
-            + "    \n"
-            + "}\n"
-            + " .watermark {\n"
-            + "    -webkit-transform: rotate(-45deg);\n"
-            + "    -moz-transform: rotate(-45deg);\n"
-            + "    -ms-transform: rotate(-45deg);\n"
-            + "    -o-transform: rotate(-90deg);\n"
-            + "    font-size: 92pt;\n"
-            + "    font-weight: bold;\n"
-            + "    position: absolute;\n"
-            + "    opacity: 0.25;\n"
-            + "    width: 100%;\n"
-            + "    text-align: center;\n"
-            + "    z-index: 1000;\n"
-            + "    top: 40%;\n"
-            + "}\n"
-            + "#footer { \n"
-            + "     display: block;"
-            + "     position: running(footer); \n"
-            + "} "
-            + " </style>"
-            + " <style type=\"text/css\">"
-            + " .break { page-break-before: always; }"
-            + " </style>"
-            + " </head>"
-            + " <body>";
+        String retorno = "<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>" + " <!DOCTYPE HTML PUBLIC \"HTML 4.01 Transitional//PT\" \"http://www.w3.org/TR/html4/loose.dtd\">" + " <html>" + " <head>" + " <title>WebPúblico</title>" + " <style type=\"text/css\">" + " /*webreportcss*/" + " @media print {\n" + " html, body {\n" + "     height: 99%;" + "  }\n" + "    *{-webkit-print-color-adjust:exact}\n" + "    .naoImprime {\n" + "        display:none;\n" + "    }\n" + "}" + " @page{ \n" + "    \n" + "}\n" + " .watermark {\n" + "    -webkit-transform: rotate(-45deg);\n" + "    -moz-transform: rotate(-45deg);\n" + "    -ms-transform: rotate(-45deg);\n" + "    -o-transform: rotate(-90deg);\n" + "    font-size: 92pt;\n" + "    font-weight: bold;\n" + "    position: absolute;\n" + "    opacity: 0.25;\n" + "    width: 100%;\n" + "    text-align: center;\n" + "    z-index: 1000;\n" + "    top: 40%;\n" + "}\n" + "#footer { \n" + "     display: block;" + "     position: running(footer); \n" + "} " + " </style>" + " <style type=\"text/css\">" + " .break { page-break-before: always; }" + " </style>" + " </head>" + " <body>";
         int paginaAtual = 1;
         for (String conteudo : conteudos) {
             retorno += conteudo;
             if (paginaAtual != conteudos.size()) {
-                retorno += "<div class=\"centralizado naoImprime\" style=\"color: gray\">" +
-                    "------------------Quebra de Página------------------</div>";
+                retorno += "<div class=\"centralizado naoImprime\" style=\"color: gray\">" + "------------------Quebra de Página------------------</div>";
                 retorno += "<p style=\"page-break-before: always; left:0; right:0;\"><br/></p>";
             }
             paginaAtual++;
@@ -3326,9 +3217,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
     }
 
     private String geraCodigoVerificacaoDoctoOficial(DocumentoOficial documentoOficial) {
-        String chave = documentoOficial.getNumero().toString() +
-            documentoOficial.getExercicio().getAno() +
-            documentoOficial.getModeloDoctoOficial().getId();
+        String chave = documentoOficial.getNumero().toString() + documentoOficial.getExercicio().getAno() + documentoOficial.getModeloDoctoOficial().getId();
         return GeradorChaveAutenticacao.geraChaveDeAutenticacao(chave, GeradorChaveAutenticacao.TipoAutenticacao.DOCUMENTO_OFICIAL);
     }
 
@@ -3699,11 +3588,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         return documentoOficial;
     }
 
-    public DocumentoOficial geraDocumentoRBTrans(TermoRBTrans termo,
-                                                 DocumentoOficial documento,
-                                                 Cadastro cadastro,
-                                                 Pessoa pessoa,
-                                                 TipoDoctoOficial tipo) throws UFMException, AtributosNulosException {
+    public DocumentoOficial geraDocumentoRBTrans(TermoRBTrans termo, DocumentoOficial documento, Cadastro cadastro, Pessoa pessoa, TipoDoctoOficial tipo) throws UFMException, AtributosNulosException {
         ModeloDoctoOficial mod = tipoDoctoOficialFacade.recuperaModeloVigente(tipo);
         DocumentoOficial documentoOficial = new DocumentoOficial();
         if (mod != null) {
@@ -3843,17 +3728,13 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
 
     public Integer geraNumeroDocumentoOficial(TipoDoctoOficial tipo, TipoDoctoOficial tipoDoctoOficial, Exercicio exercicio) {
         if (tipo.getTipoSequencia() == null && TipoSequenciaDoctoOficial.EXERCICIO.equals(tipo.getGrupoDoctoOficial().getTipoSequencia())) {
-            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getGrupoDoctoOficial().getId(), exercicio.getId(),
-                tipoDoctoOficial, TipoNumeroDoctoOficial.EXERCICIO_GRUPO);
+            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getGrupoDoctoOficial().getId(), exercicio.getId(), tipoDoctoOficial, TipoNumeroDoctoOficial.EXERCICIO_GRUPO);
         } else if (tipo.getTipoSequencia() == null && TipoSequenciaDoctoOficial.SEQUENCIA.equals(tipo.getGrupoDoctoOficial().getTipoSequencia())) {
-            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getGrupoDoctoOficial().getId(), tipoDoctoOficial,
-                TipoNumeroDoctoOficial.GRUPO);
+            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getGrupoDoctoOficial().getId(), tipoDoctoOficial, TipoNumeroDoctoOficial.GRUPO);
         } else if (TipoSequenciaDoctoOficial.EXERCICIO.equals(tipo.getTipoSequencia())) {
-            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getId(), exercicio.getId(), tipoDoctoOficial,
-                TipoNumeroDoctoOficial.EXERCICIO_TIPO);
+            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getId(), exercicio.getId(), tipoDoctoOficial, TipoNumeroDoctoOficial.EXERCICIO_TIPO);
         } else if (TipoSequenciaDoctoOficial.SEQUENCIA.equals(tipo.getTipoSequencia())) {
-            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getId(), tipoDoctoOficial,
-                TipoNumeroDoctoOficial.TIPO);
+            return singletonNumeroDoctoOficial.recuperarProximoNumero(tipoDoctoOficial.getId(), tipoDoctoOficial, TipoNumeroDoctoOficial.TIPO);
         } else {
             return 0;
         }
@@ -4110,24 +3991,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
 
     private String montarTabelaDividaAtiva(List<ComposicaoCDA> composicaoCDA) {
 
-        String itens = "<table \" width=\"100%\" style=\"font-size:x-small\">"
-            + "<tr>"
-            + "<th align=\"center\">Ano</th>"
-            + "<th align=\"center\">Dívida</th>"
-            + "<th align=\"center\">Parcela</th>"
-            + "<th align=\"center\">Vencimento</th>"
-            + "<th align=\"center\">Data Inscr.</th>"
-            + "<th align=\"center\">Ano/Livro</th>"
-            + "<th align=\"center\">Seq.</th>"
-            + "<th align=\"center\">Pág.</th>"
-            + "<th align=\"center\">Tipo</th>"
-            + "<th align=\"right\">Valor</th>"
-            + "<th align=\"right\">Multa</th>"
-            + "<th align=\"right\">Juros</th>"
-            + "<th align=\"right\">Correção</th>"
-            + "<th align=\"right\">Honorários</th>"
-            + "<th align=\"right\">Total</th>"
-            + "</tr>";
+        String itens = "<table \" width=\"100%\" style=\"font-size:x-small\">" + "<tr>" + "<th align=\"center\">Ano</th>" + "<th align=\"center\">Dívida</th>" + "<th align=\"center\">Parcela</th>" + "<th align=\"center\">Vencimento</th>" + "<th align=\"center\">Data Inscr.</th>" + "<th align=\"center\">Ano/Livro</th>" + "<th align=\"center\">Seq.</th>" + "<th align=\"center\">Pág.</th>" + "<th align=\"center\">Tipo</th>" + "<th align=\"right\">Valor</th>" + "<th align=\"right\">Multa</th>" + "<th align=\"right\">Juros</th>" + "<th align=\"right\">Correção</th>" + "<th align=\"right\">Honorários</th>" + "<th align=\"right\">Total</th>" + "</tr>";
         BigDecimal totalLancado = BigDecimal.ZERO;
         BigDecimal totalMulta = BigDecimal.ZERO;
         BigDecimal totalJuros = BigDecimal.ZERO;
@@ -4149,106 +4013,59 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             if (inscricao != null) {
                 dataInscricao = inscricao.getDataInscricao();
             }
-            itens += "<tr>"
-                + "<th align=\"center\">" + composicao.getResultadoParcela().getExercicio() + "</th>"
-                + "<th align=\"center\">" + composicao.getResultadoParcela().getDivida() + "</th>"
-                + "<th align=\"center\">" + composicao.getResultadoParcela().getParcela() + "</th>"
-                + "<th align=\"center\">" + formatterData.format(composicao.getResultadoParcela().getVencimento()) + "</th>"
-                + "<th align=\"center\">" + formatterData.format(dataInscricao) + "</th>"
-                + "<th align=\"center\">" + nomeDoCampo(livroDividaAtiva, "exercicio.ano", null) + "/" + nomeDoCampo(livroDividaAtiva, "numero", null) + "</th>"
-                + "<th align=\"center\">" + nomeDoCampo(livroDividaAtiva, "sequencia", null) + "</th>"
-                + "<th align=\"center\">" + nomeDoCampo(linhaDoLivroDividaAtiva, "pagina", null) + "</th>"
-                + "<th align=\"center\">" + composicao.getTipoTributo().getDescricao() + "</th>"
-                + "<th align=\"right\"> " + dfReais.format(composicao.getValorTributo()) + "</th>"
-                + "<th align=\"right\"> " + dfReais.format(composicao.getValorMulta()) + "</th>"
-                + "<th align=\"right\"> " + dfReais.format(composicao.getValorJuros()) + "</th>"
-                + "<th align=\"right\"> " + dfReais.format(composicao.getValorCorrecao()) + "</th>"
-                + "<th align=\"right\"> " + dfReais.format(composicao.getValorHonorarios()) + "</th>"
-                + "<th align=\"right\"> " + dfReais.format(composicao.getValorTotal()) + "</th>"
-                + "</tr>";
+            itens += "<tr>" + "<th align=\"center\">" + composicao.getResultadoParcela().getExercicio() + "</th>" + "<th align=\"center\">" + composicao.getResultadoParcela().getDivida() + "</th>" + "<th align=\"center\">" + composicao.getResultadoParcela().getParcela() + "</th>" + "<th align=\"center\">" + formatterData.format(composicao.getResultadoParcela().getVencimento()) + "</th>" + "<th align=\"center\">" + formatterData.format(dataInscricao) + "</th>" + "<th align=\"center\">" + nomeDoCampo(livroDividaAtiva, "exercicio.ano", null) + "/" + nomeDoCampo(livroDividaAtiva, "numero", null) + "</th>" + "<th align=\"center\">" + nomeDoCampo(livroDividaAtiva, "sequencia", null) + "</th>" + "<th align=\"center\">" + nomeDoCampo(linhaDoLivroDividaAtiva, "pagina", null) + "</th>" + "<th align=\"center\">" + composicao.getTipoTributo().getDescricao() + "</th>" + "<th align=\"right\"> " + dfReais.format(composicao.getValorTributo()) + "</th>" + "<th align=\"right\"> " + dfReais.format(composicao.getValorMulta()) + "</th>" + "<th align=\"right\"> " + dfReais.format(composicao.getValorJuros()) + "</th>" + "<th align=\"right\"> " + dfReais.format(composicao.getValorCorrecao()) + "</th>" + "<th align=\"right\"> " + dfReais.format(composicao.getValorHonorarios()) + "</th>" + "<th align=\"right\"> " + dfReais.format(composicao.getValorTotal()) + "</th>" + "</tr>";
         }
 
         itens += " <tr/><tr/><tr/><tr/>";
-        itens += " <tr><th colspan=\"15\" align=\"right\"> Total Valor Lançado: R$ " + dfReais.format(totalLancado) + " </th></tr>"
-            + "<tr><th colspan=\"15\" align=\"right\"> Total Multa: R$ " + dfReais.format(totalMulta) + " </th></tr>"
-            + "<tr><th colspan=\"15\" align=\"right\"> Total Juros: R$ " + dfReais.format(totalJuros) + " </th></tr>"
-            + "<tr><th colspan=\"15\" align=\"right\"> Total Correção: R$ " + dfReais.format(totalCorrecao) + " </th></tr>"
-            + "<tr><th colspan=\"15\" align=\"right\"> Total Honorários: R$ " + dfReais.format(totalHonorarios) + " </th></tr>"
-            + "<tr><th colspan=\"15\" align=\"right\"> Total: R$ " + dfReais.format(totalTotal) + " </th></tr>"
-            + "</table>";
+        itens += " <tr><th colspan=\"15\" align=\"right\"> Total Valor Lançado: R$ " + dfReais.format(totalLancado) + " </th></tr>" + "<tr><th colspan=\"15\" align=\"right\"> Total Multa: R$ " + dfReais.format(totalMulta) + " </th></tr>" + "<tr><th colspan=\"15\" align=\"right\"> Total Juros: R$ " + dfReais.format(totalJuros) + " </th></tr>" + "<tr><th colspan=\"15\" align=\"right\"> Total Correção: R$ " + dfReais.format(totalCorrecao) + " </th></tr>" + "<tr><th colspan=\"15\" align=\"right\"> Total Honorários: R$ " + dfReais.format(totalHonorarios) + " </th></tr>" + "<tr><th colspan=\"15\" align=\"right\"> Total: R$ " + dfReais.format(totalTotal) + " </th></tr>" + "</table>";
         return itens;
     }
 
     private String montarTabelaDebitosSubvencionados(List<ResultadoParcela> parcelas) {
-        String itens = "<table width=\"100%\" style=\"font-size:x-small; border: 1px solid; border-collapse: collapse\" border=\"1\">"
-            + "<tr>"
-            + "<th align=\"center\"> CADASTRO </th>"
-            + "<th align=\"center\"> REFERÊNCIA </th>"
-            + "<th align=\"center\"> DÍVIDA </th>"
-            + "<th align=\"center\"> EXERCÍCIO </th>"
-            + "<th align=\"center\"> PARC. </th>"
-            + "<th align=\"center\"> VENCIMENTO </th>"
-            + "<th align=\"center\"> VALOR </th>"
-            + "<th align=\"center\"> PROCESSO JUDICIAL </th>"
-            + "</tr>";
+        String itens = "<table width=\"100%\" style=\"font-size:x-small; border: 1px solid; border-collapse: collapse\" border=\"1\">" + "<tr>" + "<th align=\"center\"> CADASTRO </th>" + "<th align=\"center\"> REFERÊNCIA </th>" + "<th align=\"center\"> DÍVIDA </th>" + "<th align=\"center\"> EXERCÍCIO </th>" + "<th align=\"center\"> PARC. </th>" + "<th align=\"center\"> VENCIMENTO </th>" + "<th align=\"center\"> VALOR </th>" + "<th align=\"center\"> PROCESSO JUDICIAL </th>" + "</tr>";
         BigDecimal total = BigDecimal.ZERO;
 
         for (ResultadoParcela resultadoParcela : parcelas) {
             total = total.add(resultadoParcela.getValorTotal());
             String processoJudicial = inscricaoDividaAtivaFacade.numeroProcessoJudicialCda(resultadoParcela.getIdParcela());
-            itens += "<tr>"
-                + "<th align=\"center\">" + resultadoParcela.getCadastro() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getReferencia() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getDivida() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getExercicio() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getParcela() + "</th>"
-                + "<th align=\"center\">" + formatterData.format(resultadoParcela.getVencimento()) + "</th>"
-                + "<th align=\"center\"> " + dfReais.format(resultadoParcela.getValorTotal()) + "</th>"
-                + "<th align=\"center\"> " + processoJudicial + "</th>"
-                + "</tr>";
+            itens += "<tr>" + "<th align=\"center\">" + resultadoParcela.getCadastro() + "</th>" + "<th align=\"center\">" + resultadoParcela.getReferencia() + "</th>" + "<th align=\"center\">" + resultadoParcela.getDivida() + "</th>" + "<th align=\"center\">" + resultadoParcela.getExercicio() + "</th>" + "<th align=\"center\">" + resultadoParcela.getParcela() + "</th>" + "<th align=\"center\">" + formatterData.format(resultadoParcela.getVencimento()) + "</th>" + "<th align=\"center\"> " + dfReais.format(resultadoParcela.getValorTotal()) + "</th>" + "<th align=\"center\"> " + processoJudicial + "</th>" + "</tr>";
         }
-        itens += " <tr><th colspan=\"5\">&nbsp;</th>"
-            + " <th align=\"center\">TOTAL:</th>"
-            + " <th align=\"center\">" + dfReais.format(total) + "</th>"
-            + " <th>&nbsp;</th>"
-            + " </tr>"
-            + "</table>";
+        itens += " <tr><th colspan=\"5\">&nbsp;</th>" + " <th align=\"center\">TOTAL:</th>" + " <th align=\"center\">" + dfReais.format(total) + "</th>" + " <th>&nbsp;</th>" + " </tr>" + "</table>";
         return itens;
     }
 
     private String montarTabelaProcessoDeProtesto(List<ResultadoParcela> parcelas) {
-        String itens = "<table width=\"100%\" style=\"font-size:x-small; border: 1px solid; border-collapse: collapse\" border=\"1\">"
-            + "<tr>"
-            + "<th align=\"center\"> CADASTRO </th>"
-            + "<th align=\"center\"> REFERÊNCIA </th>"
-            + "<th align=\"center\"> DÍVIDA </th>"
-            + "<th align=\"center\"> EXERCÍCIO </th>"
-            + "<th align=\"center\"> PARC. </th>"
-            + "<th align=\"center\"> VENCIMENTO </th>"
-            + "<th align=\"center\"> VALOR </th>"
-            + "</tr>";
+        String itens = "<table width=\"100%\" style=\"font-size:x-small; border: 1px solid; border-collapse: collapse\" border=\"1\">" + "<tr>" + "<th align=\"center\"> CADASTRO </th>" + "<th align=\"center\"> REFERÊNCIA </th>" + "<th align=\"center\"> DÍVIDA </th>" + "<th align=\"center\"> EXERCÍCIO </th>" + "<th align=\"center\"> PARC. </th>" + "<th align=\"center\"> VENCIMENTO </th>" + "<th align=\"center\"> VALOR </th>" + "</tr>";
 
         for (ResultadoParcela resultadoParcela : parcelas) {
-            itens += "<tr>"
-                + "<th align=\"center\">" + resultadoParcela.getCadastro() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getReferencia() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getDivida() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getExercicio() + "</th>"
-                + "<th align=\"center\">" + resultadoParcela.getParcela() + "</th>"
-                + "<th align=\"center\">" + formatterData.format(resultadoParcela.getVencimento()) + "</th>"
-                + "<th align=\"center\"> " + dfReais.format(resultadoParcela.getValorTotal()) + "</th>"
-                + "</tr>";
+            itens += "<tr>" + "<th align=\"center\">" + resultadoParcela.getCadastro() + "</th>" + "<th align=\"center\">" + resultadoParcela.getReferencia() + "</th>" + "<th align=\"center\">" + resultadoParcela.getDivida() + "</th>" + "<th align=\"center\">" + resultadoParcela.getExercicio() + "</th>" + "<th align=\"center\">" + resultadoParcela.getParcela() + "</th>" + "<th align=\"center\">" + formatterData.format(resultadoParcela.getVencimento()) + "</th>" + "<th align=\"center\"> " + dfReais.format(resultadoParcela.getValorTotal()) + "</th>" + "</tr>";
         }
-        itens += " <tr><th colspan=\"5\">&nbsp;</th>"
-            + "</table>";
+        itens += " <tr><th colspan=\"5\">&nbsp;</th>" + "</table>";
         return itens;
     }
 
 
     private String montaTabelaLancamentosContabeisFiscal(RegistroLancamentoContabil registro) {
+        Divida divida = configuracaoTributarioFacade.retornaUltimo().getDividaISSHomologado();
+        ConfiguracaoAcrescimos acrescimo = dividaFacade.configuracaoVigente(divida);
+        int dia = 1;
+        OpcaoPagamento op = null;
+        divida = em.find(Divida.class, divida.getId());
+        if (!divida.getOpcaoPagamentosDivida().isEmpty()) {
+            op = divida.getOpcaoPagamentosDivida().get(0).getOpcaoPagamento();
+        }
+        if (op != null && !op.getParcelas().isEmpty()) {
+            Parcela parcela = op.getParcelas().get(0);
+            if (parcela != null && parcela instanceof ParcelaFixaPeriodica) {
+                dia = ((ParcelaFixaPeriodica) parcela).getDiaVencimento();
+            }
+        }
+        Date hoje = new Date();
         BigDecimal totalValorDeclarado = BigDecimal.ZERO;
         BigDecimal totalValorApurado = BigDecimal.ZERO;
         BigDecimal totalBaseCalculo = BigDecimal.ZERO;
+        BigDecimal totalIssPago = BigDecimal.ZERO;
+        BigDecimal totalIssApurado = BigDecimal.ZERO;
         BigDecimal totalIssDevido = BigDecimal.ZERO;
         BigDecimal totalCorrecao = BigDecimal.ZERO;
         BigDecimal totalCorrigido = BigDecimal.ZERO;
@@ -4256,13 +4073,15 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         BigDecimal totalMulta = BigDecimal.ZERO;
         BigDecimal totalTotal = BigDecimal.ZERO;
 
-        String lancamentosHtml = "<table border=\"0\" width=\"100%\" style=\"font-size:smaller\">";
+        String lancamentosHtml = "<table border=\"0\" width=\"100%\" style=\"font-size:x-small\">";
         lancamentosHtml += "<tr><td align=\"right\"><b>Mês</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>Ano</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>Valor Declarado</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>Valor Apurado</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>Base Cálculo</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>% ISS</b></td>";
+        lancamentosHtml += "<td align=\"right\"><b>ISS Lançado</b></td>";
+        lancamentosHtml += "<td align=\"right\"><b>ISS Apurado</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>Saldo do ISS</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>Correção</b></td>";
         lancamentosHtml += "<td align=\"right\"><b>Valor Corrigido</b></td>";
@@ -4277,6 +4096,8 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getValorApurado()) + "</td>";
             lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getBaseCalculo()) + "</td>";
             lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getAliquotaISS()) + "</td>";
+            lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getIssPago()) + "</td>";
+            lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getIssApurado()) + "</td>";
             lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getIssDevido()) + "</td>";
             lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getCorrecao()) + "</td>";
             lancamentosHtml += "<td align=\"right\">" + dfReais.format(lcf.getValorCorrigido()) + "</td>";
@@ -4287,6 +4108,8 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             totalValorDeclarado = totalValorDeclarado.add(lcf.getValorDeclarado());
             totalValorApurado = totalValorApurado.add(lcf.getValorApurado());
             totalBaseCalculo = totalBaseCalculo.add(lcf.getBaseCalculo());
+            totalIssPago = totalIssPago.add(lcf.getIssPago());
+            totalIssApurado = totalIssApurado.add(lcf.getIssApurado());
             totalIssDevido = totalIssDevido.add(lcf.getIssDevido());
             totalCorrecao = totalCorrecao.add(lcf.getCorrecao());
             totalCorrigido = totalCorrigido.add(lcf.getValorCorrigido());
@@ -4301,6 +4124,8 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         lancamentosHtml += "<td align=\"right\">" + dfReais.format(totalValorApurado) + "</td>";
         lancamentosHtml += "<td align=\"right\">" + dfReais.format(totalBaseCalculo) + "</td>";
         lancamentosHtml += "<td align=\"right\">&nbsp;</td>";
+        lancamentosHtml += "<td align=\"right\">" + dfReais.format(totalIssPago) + "</td>";
+        lancamentosHtml += "<td align=\"right\">" + dfReais.format(totalIssApurado) + "</td>";
         lancamentosHtml += "<td align=\"right\">" + dfReais.format(totalIssDevido) + "</td>";
         lancamentosHtml += "<td align=\"right\">" + dfReais.format(totalCorrecao) + "</td>";
         lancamentosHtml += "<td align=\"right\">" + dfReais.format(totalCorrigido) + "</td>";
@@ -4597,27 +4422,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             Pessoa p = this.pessoaFacade.recuperar(ce.getPessoa().getId());
             //DIV PARA CADASTRO ECONOMICO
 
-            div += "<div style=\"border: 1px solid black\">"
-                + "<table style=\"width: 100%; font-size: 10px\">"
-                + "<tr>"
-                + " <td colspan=\"3\"> CADASTRO ECONOMICO : " + ce.getInscricaoCadastral() + "</td>"
-                + "</tr>"
-                + "<tr>"
-                + " <td colspan=\"2\"> NOME/RAZAO SOCIAL:" + p.getNome() + " </td>"
-                + " <td> CPF/CNPJ:" + p.getCpf_Cnpj() + " </td>"
-                + "</tr>"
-                + "<tr> "
-                + " <td colspan=\"2\"> ENDERECO:" + p.getEnderecos().get(0).getLogradouro() + " </td>"
-                + " <td> BAIRRO: " + p.getEnderecos().get(0).getBairro() + " </td>"
-                + "</tr> "
-                + "<tr>"
-                + " <td> CERTIDAO: " + itemPeticao.getCertidaoDividaAtiva().getNumero() + "/" + itemPeticao.getCertidaoDividaAtiva().getExercicio().getAno() + " </td>"
-                + " <td> DATA: " + formatterData.format(itemPeticao.getCertidaoDividaAtiva().getDocumentoOficial().getDataEmissao()) + "</td>"
-                + " <td> Vlr Total Original: " + dfReais.format(itemPeticao.getValorOriginal()) + " </td>"
-                + " <td> Vlr Total Atualizado: " + dfReais.format(itemPeticao.getAtualizado()) + " </td>"
-                + "</tr>"
-                + "</table>"
-                + "</div>";
+            div += "<div style=\"border: 1px solid black\">" + "<table style=\"width: 100%; font-size: 10px\">" + "<tr>" + " <td colspan=\"3\"> CADASTRO ECONOMICO : " + ce.getInscricaoCadastral() + "</td>" + "</tr>" + "<tr>" + " <td colspan=\"2\"> NOME/RAZAO SOCIAL:" + p.getNome() + " </td>" + " <td> CPF/CNPJ:" + p.getCpf_Cnpj() + " </td>" + "</tr>" + "<tr> " + " <td colspan=\"2\"> ENDERECO:" + p.getEnderecos().get(0).getLogradouro() + " </td>" + " <td> BAIRRO: " + p.getEnderecos().get(0).getBairro() + " </td>" + "</tr> " + "<tr>" + " <td> CERTIDAO: " + itemPeticao.getCertidaoDividaAtiva().getNumero() + "/" + itemPeticao.getCertidaoDividaAtiva().getExercicio().getAno() + " </td>" + " <td> DATA: " + formatterData.format(itemPeticao.getCertidaoDividaAtiva().getDocumentoOficial().getDataEmissao()) + "</td>" + " <td> Vlr Total Original: " + dfReais.format(itemPeticao.getValorOriginal()) + " </td>" + " <td> Vlr Total Atualizado: " + dfReais.format(itemPeticao.getAtualizado()) + " </td>" + "</tr>" + "</table>" + "</div>";
         }
         return div;
     }
@@ -4626,28 +4431,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         if (itemPeticao.getCertidaoDividaAtiva().getCadastro() != null) {
             CadastroRural cr = this.cadastroRuralFacade.recuperar(itemPeticao.getCertidaoDividaAtiva().getCadastro().getId());
             //DIV PARA CADASTRO RURAL
-            div += " <div style=\"border: 1px solid black\">"
-                + "<table style=\"width: 100%; font-size: 10px\">"
-                + "<tr>"
-                + " <td colspan=\"3\"> CODIGO CADASTRO RURAL: " + cr.getCodigo() + " </td>"
-                + "</tr>"
-                + "<tr>"
-                + " <td colspan=\"2\">NOME DA PROPRIEDADE: " + cr.getNomePropriedade() + " </td>"
-                + " <td> LOCALIZACAO: " + cr.getLocalizacaoLote() + " </td>"
-                + "</tr>"
-                + "<tr>"
-                + " <td> AREA: " + dfReais.format(cr.getAreaLote()) + " </td>"
-                + " <td> TIPO DE AREA: " + cr.getTipoAreaRural() + "</td>"
-                + " <td> INCRA:	" + cr.getNumeroIncra() + " </td>"
-                + "</tr>"
-                + "<tr>"
-                + " <td> CERTIDAO: " + itemPeticao.getCertidaoDividaAtiva().getNumero() + "/" + itemPeticao.getCertidaoDividaAtiva().getExercicio().getAno() + " </td>"
-                + " <td> DATA: " + formatterData.format(itemPeticao.getCertidaoDividaAtiva().getDocumentoOficial().getDataEmissao()) + "</td>"
-                + " <td> Vlr Total Original: " + dfReais.format(itemPeticao.getValorOriginal()) + " </td>"
-                + " <td> Vlr Total Atualizado: " + dfReais.format(itemPeticao.getAtualizado()) + " </td>"
-                + "</tr>"
-                + "</table>"
-                + "</div>";
+            div += " <div style=\"border: 1px solid black\">" + "<table style=\"width: 100%; font-size: 10px\">" + "<tr>" + " <td colspan=\"3\"> CODIGO CADASTRO RURAL: " + cr.getCodigo() + " </td>" + "</tr>" + "<tr>" + " <td colspan=\"2\">NOME DA PROPRIEDADE: " + cr.getNomePropriedade() + " </td>" + " <td> LOCALIZACAO: " + cr.getLocalizacaoLote() + " </td>" + "</tr>" + "<tr>" + " <td> AREA: " + dfReais.format(cr.getAreaLote()) + " </td>" + " <td> TIPO DE AREA: " + cr.getTipoAreaRural() + "</td>" + " <td> INCRA:	" + cr.getNumeroIncra() + " </td>" + "</tr>" + "<tr>" + " <td> CERTIDAO: " + itemPeticao.getCertidaoDividaAtiva().getNumero() + "/" + itemPeticao.getCertidaoDividaAtiva().getExercicio().getAno() + " </td>" + " <td> DATA: " + formatterData.format(itemPeticao.getCertidaoDividaAtiva().getDocumentoOficial().getDataEmissao()) + "</td>" + " <td> Vlr Total Original: " + dfReais.format(itemPeticao.getValorOriginal()) + " </td>" + " <td> Vlr Total Atualizado: " + dfReais.format(itemPeticao.getAtualizado()) + " </td>" + "</tr>" + "</table>" + "</div>";
         }
         return div;
     }
@@ -4680,7 +4464,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         }
     }
 
-    public String montaListaTelefones(Pessoa pessoa) {
+    private String montaListaTelefones(Pessoa pessoa) {
         StringBuilder telefones = new StringBuilder();
         List<Telefone> lista = pessoaFacade.telefonePorPessoa(pessoa);
         for (Telefone tel : lista) {
@@ -4898,8 +4682,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             addTag(context, TipoModeloDoctoOficial.TagsProtocolo.SUB_ASSUNTO.name(), processo.getSubAssunto().getDescricao());
         }
         addTag(context, TipoModeloDoctoOficial.TagsProtocolo.DATA_PROCESSO.name(), "Rio Branco, " + new SimpleDateFormat("d' de 'MMMM' ('EEEE') de 'yyyy", new Locale("pt", "BR")).format(processo.getDataRegistro()));
-        HierarquiaOrganizacional hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(processo.getUoCadastro(),
-            TipoHierarquiaOrganizacional.ADMINISTRATIVA, processo.getDataRegistro());
+        HierarquiaOrganizacional hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(processo.getUoCadastro(), TipoHierarquiaOrganizacional.ADMINISTRATIVA, processo.getDataRegistro());
         addTag(context, TipoModeloDoctoOficial.TagsProtocolo.UNIDADE_ORGANIZACIONAL_RESP.name(), hierarquiaOrganizacional != null ? hierarquiaOrganizacional.getDescricao() : processo.getUoCadastro().getDescricao());
         if (processo.getSenha() == null) {
             addTag(context, TipoModeloDoctoOficial.TagsProtocolo.SENHA_CONSULTA.name(), "");
@@ -4926,15 +4709,13 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
                 }
                 if (processo.getProtocolo()) {
                     if (tra.getUnidadeOrganizacional() != null) {
-                        hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(tra.getUnidadeOrganizacional(),
-                            TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
+                        hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(tra.getUnidadeOrganizacional(), TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
                         tramites += "<tr><td style=\"width:95%\">" + (hierarquiaOrganizacional != null ? hierarquiaOrganizacional.getDescricao() : tra.getUnidadeOrganizacional()) + "</td><td style=\"width:5%\">&nbsp;</td></tr>";
                     } else {
                         tramites += "<tr><td style=\"width:95%\">Externo: " + tra.getDestinoExterno() + "</td><td style=\"width:5%\">&nbsp;</td></tr>";
                     }
                 } else {
-                    hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(tra.getUnidadeOrganizacional(),
-                        TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
+                    hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(tra.getUnidadeOrganizacional(), TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
                     tramites += "<tr><td style=\"width:95%\">" + (hierarquiaOrganizacional != null ? hierarquiaOrganizacional.getDescricao() : tra.getUnidadeOrganizacional()) + ", Prazo estimado " + tra.getPrazo() + " " + tipoPrazo + "." + "</td><td style=\"width:5%\">&nbsp;</td></tr>";
                 }
             }
@@ -4952,8 +4733,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             addTag(context, TipoModeloDoctoOficial.TagsProtocolo.RESPONSAVEL_PARECER.name(), tramite.getResponsavelParecer());
             addTag(context, TipoModeloDoctoOficial.TagsProtocolo.TEXTO_PARECER.name(), tramite.getParecer());
             if (tramite.getUnidadeOrganizacional() != null) {
-                hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(tramite.getUnidadeOrganizacional(),
-                    TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
+                hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(tramite.getUnidadeOrganizacional(), TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
                 addTag(context, TipoModeloDoctoOficial.TagsProtocolo.UNIDADE_DESTINO.name(), hierarquiaOrganizacional != null ? hierarquiaOrganizacional.getDescricao() : tramite.getDestinoTramite());
             } else {
                 addTag(context, TipoModeloDoctoOficial.TagsProtocolo.UNIDADE_DESTINO.name(), tramite.getDestinoTramite());
@@ -5019,11 +4799,9 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         if (localizacao != null) {
             UnidadeOrganizacional uo = localizacao.getSecretaria();
             if (uo != null) {
-                HierarquiaOrganizacional hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(uo,
-                    TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
+                HierarquiaOrganizacional hierarquiaOrganizacional = pessoaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalVigentePorUnidade(uo, TipoHierarquiaOrganizacional.ADMINISTRATIVA, sistemaFacade.getDataOperacao());
                 if (hierarquiaOrganizacional != null) {
-                    addTag(context, TipoModeloDoctoOficial.TagsContratoRendasPatrimoniais.DESCRICAO_UNIDADE_ORGANIZACIONAL.name(),
-                        hierarquiaOrganizacional.getDescricao());
+                    addTag(context, TipoModeloDoctoOficial.TagsContratoRendasPatrimoniais.DESCRICAO_UNIDADE_ORGANIZACIONAL.name(), hierarquiaOrganizacional.getDescricao());
                 } else {
                     addTag(context, TipoModeloDoctoOficial.TagsContratoRendasPatrimoniais.DESCRICAO_UNIDADE_ORGANIZACIONAL.name(), "");
                 }
@@ -5201,18 +4979,14 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
                         socios += pessoaSocio.getNome() + ", CPF " + pessoaSocio.getCpf();
 
                         if (pessoaSocio.getRg() != null) {
-                            socios += ", cédula de identidade " + pessoaSocio.getRg().getNumero()
-                                + ", expedida pela " + pessoaSocio.getRg().getOrgaoEmissao();
+                            socios += ", cédula de identidade " + pessoaSocio.getRg().getNumero() + ", expedida pela " + pessoaSocio.getRg().getOrgaoEmissao();
                             if (pessoaSocio.getRg().getUf() != null) {
                                 socios += "/" + pessoaSocio.getRg().getUf().getUf();
                             }
                         }
 
                         if (enderecoSocio != null) {
-                            socios += ", residente à " + enderecoSocio.getLogradouro()
-                                + ", nº " + enderecoSocio.getNumero() + ", Bairro " + enderecoSocio.getBairro()
-                                + ", CEP " + enderecoSocio.getCep() + ", na cidade de " + enderecoSocio.getLocalidade()
-                                + ", Estado do(e) " + enderecoSocio.getUf();
+                            socios += ", residente à " + enderecoSocio.getLogradouro() + ", nº " + enderecoSocio.getNumero() + ", Bairro " + enderecoSocio.getBairro() + ", CEP " + enderecoSocio.getCep() + ", na cidade de " + enderecoSocio.getLocalidade() + ", Estado do(e) " + enderecoSocio.getUf();
                         }
 
 
@@ -5306,7 +5080,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         return tabela;
     }
 
-    public String montaTabelaCnaes(List<EconomicoCNAE> cnaes) {
+    private String montaTabelaCnaes(List<EconomicoCNAE> cnaes) {
         if (cnaes != null && !cnaes.isEmpty()) {
             String tabela = "<table border=\"0\" width=\"100%\" style=\"font-size:x-small\">";
             tabela += "<tr><td align=\"left\"><b>CNAE</b></th>";
@@ -5328,7 +5102,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         return "";
     }
 
-    public String montaTabelaHorariosFuncionamento(List<PessoaHorarioFuncionamento> horarios) {
+    private String montaTabelaHorariosFuncionamento(List<PessoaHorarioFuncionamento> horarios) {
         if (horarios != null && !horarios.isEmpty()) {
             String tabela = "<table border=\"0\" width=\"100%\" style=\"font-size:x-small\">";
             tabela += "<tr><td align=\"left\"><b>Código</b></th>";
@@ -5421,11 +5195,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         }
 
         StringBuilder sql = new StringBuilder();
-        sql.append(" select distinct concat(D.DESCRICAO, ', ') from ITEMPROGRAMACAOCOBRANCA IPC ")
-            .append(" inner join PARCELAVALORDIVIDA PVD ON IPC.PARCELAVALORDIVIDA_ID = PVD.ID ")
-            .append(" inner join VALORDIVIDA V on PVD.VALORDIVIDA_ID = V.ID ")
-            .append(" inner join DIVIDA D on V.DIVIDA_ID = D.ID ")
-            .append(" where pvd.ID in (:ids) ");
+        sql.append(" select distinct concat(D.DESCRICAO, ', ') from ITEMPROGRAMACAOCOBRANCA IPC ").append(" inner join PARCELAVALORDIVIDA PVD ON IPC.PARCELAVALORDIVIDA_ID = PVD.ID ").append(" inner join VALORDIVIDA V on PVD.VALORDIVIDA_ID = V.ID ").append(" inner join DIVIDA D on V.DIVIDA_ID = D.ID ").append(" where pvd.ID in (:ids) ");
 
         Query q = em.createNativeQuery(sql.toString());
         q.setParameter("ids", idsParcelas);
@@ -5441,15 +5211,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
 
     private String montaTabelaDeCDA(Peticao peticao) throws UFMException {
         BigDecimal valorUFMVigente = moedaFacade.recuperaValorVigenteUFM();
-        String conteudo =
-            " <table style=\"width: 100%; font-size: 10px\">"
-                + "<th> Número </th>"
-                + "<th> Vlr Original </th>"
-                + "<th> Vlr Juros </th>"
-                + "<th> Vlr Multa </th>"
-                + "<th> Vlr Atualizado </th>"
-                + "<th> Vlr Total </th>"
-                + "</tr>";
+        String conteudo = " <table style=\"width: 100%; font-size: 10px\">" + "<th> Número </th>" + "<th> Vlr Original </th>" + "<th> Vlr Juros </th>" + "<th> Vlr Multa </th>" + "<th> Vlr Atualizado </th>" + "<th> Vlr Total </th>" + "</tr>";
         peticao = peticaoFacade.recuperar(peticao.getId());
         for (ItemPeticao item : peticao.getItensPeticao()) {
             CertidaoDividaAtiva certidao = item.getCertidaoDividaAtiva();
@@ -5460,17 +5222,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             BigDecimal valorMulta = calculaValorMultaDasParcelas(parcelasDoItem, valorUFMVigente);
             BigDecimal valorAtualizado = item.getAtualizado();
             BigDecimal valorTotal = valorJuros.add(valorMulta).add(valorAtualizado);
-            conteudo += "<tr>"
-                + "<td> " + certidao.getNumero() + "</td>"
-                + "<td> " + dfReais.format(valorOriginal) + " </td>"
-                + "<td> " + dfReais.format(valorJuros) + "</td>"
-                + "<td> " + dfReais.format(valorMulta) + "</td>"
-                + "<td> " + dfReais.format(valorAtualizado) + " </td>"
-                + "<td> " + dfReais.format(valorTotal) + "</td>"
-                + "</tr>"
-                + "<tr>"
-                + "<td colspan=\"7\"> Valor Total : " + ValorPorExtenso.valorPorExtenso(valorTotal) + " </td>"
-                + "</tr>";
+            conteudo += "<tr>" + "<td> " + certidao.getNumero() + "</td>" + "<td> " + dfReais.format(valorOriginal) + " </td>" + "<td> " + dfReais.format(valorJuros) + "</td>" + "<td> " + dfReais.format(valorMulta) + "</td>" + "<td> " + dfReais.format(valorAtualizado) + " </td>" + "<td> " + dfReais.format(valorTotal) + "</td>" + "</tr>" + "<tr>" + "<td colspan=\"7\"> Valor Total : " + ValorPorExtenso.valorPorExtenso(valorTotal) + " </td>" + "</tr>";
         }
         return conteudo += "</table>";
     }
@@ -5507,19 +5259,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         int quantidadeDeCompromissario = 0;
         if (verificaSeExisteCadastroImobiliario(peticao)) {
             peticao = peticaoFacade.recuperar(peticao.getId());
-            String conteudo =
-                "<table style=\"width: 100%; font-size: 10px\">"
-                    + "<th> Nome </th>"
-                    + "<th> CPF/CNPJ </th>"
-                    + "<th> Endereço Proprietário </th>"
-                    + "<th> Endereço Compromissário </th>"
-                    + "<th> Número correspondência </th>"
-                    + "<th> Bairro  </th>"
-                    + "<th> Cidade </th>"
-                    + "<th> Estado </th>"
-                    + "<th> CEP </th>"
-                    + "<th> Complemento </th>"
-                    + "</tr>";
+            String conteudo = "<table style=\"width: 100%; font-size: 10px\">" + "<th> Nome </th>" + "<th> CPF/CNPJ </th>" + "<th> Endereço Proprietário </th>" + "<th> Endereço Compromissário </th>" + "<th> Número correspondência </th>" + "<th> Bairro  </th>" + "<th> Cidade </th>" + "<th> Estado </th>" + "<th> CEP </th>" + "<th> Complemento </th>" + "</tr>";
             for (ItemPeticao item : peticao.getItensPeticao()) {
                 CertidaoDividaAtiva certidao = item.getCertidaoDividaAtiva();
                 if (certidao.getCadastro() instanceof CadastroImobiliario) {
@@ -5535,24 +5275,11 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
                                 proprietario = proprietarios.get(0).getPessoa();
                                 proprietario = pessoaFacade.recuperar(proprietario.getId());
                                 EnderecoCorreio endereoProprietario = proprietario.getEnderecos().get(0);
-                                conteudo += "<tr>"
-                                    + "	<td align=\"center\">" + retornaValor(compromissario.getNome()) + " </td>"
-                                    + "	<td align=\"center\">" + retornaValor(compromissario.getCpf_Cnpj()) + " </td>"
-                                    + "	<td align=\"center\">" + retornaValor(endereoProprietario.getLogradouro()) + " </td>"
-                                    + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getLogradouro()) + " </td>"
-                                    + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getNumero()) + "</td>"
-                                    + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getBairro()) + " </td>"
-                                    + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getLocalidade()) + " </td>"
-                                    + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getUf()) + " </td>"
-                                    + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getCep()) + "</td>"
-                                    + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getComplemento()) + " </td>"
-                                    + "	</tr>";
+                                conteudo += "<tr>" + "	<td align=\"center\">" + retornaValor(compromissario.getNome()) + " </td>" + "	<td align=\"center\">" + retornaValor(compromissario.getCpf_Cnpj()) + " </td>" + "	<td align=\"center\">" + retornaValor(endereoProprietario.getLogradouro()) + " </td>" + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getLogradouro()) + " </td>" + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getNumero()) + "</td>" + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getBairro()) + " </td>" + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getLocalidade()) + " </td>" + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getUf()) + " </td>" + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getCep()) + "</td>" + "	<td align=\"center\">" + retornaValor(enderecoCompromissario.getComplemento()) + " </td>" + "	</tr>";
                             }
                             quantidadeDeCompromissario++;
                         } else {
-                            conteudo += "<tr>"
-                                + "	<td colspan=\"10\" align=\"center\"> Não existe compromissário para o cadastro imobiliário </td>"
-                                + "	</tr>";
+                            conteudo += "<tr>" + "	<td colspan=\"10\" align=\"center\"> Não existe compromissário para o cadastro imobiliário </td>" + "	</tr>";
                         }
                     }
                 }
@@ -5641,36 +5368,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             valorTotal = valorTotal.add(parcela.getValorTotal());
         }
 
-        String html = "<table border=\"1\" width=\"100%\" cellspacing=\"0\" style=\"font-size:x-small\">"
-            + "			<tr>"
-            + "				<td> &nbsp; DISCRIMINAÇÃO DE VALORES INSCRITOS </td>"
-            + "				<td align=\"center\"> EM UFM </td>"
-            + "				<td align=\"center\"> EM REAIS (R$) </td>"
-            + "			</tr>"
-            + "			<tr>"
-            + "				<td> &nbsp; &bull; VALOR PARCELA </td>"
-            + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorSaldo)) + "</td>"
-            + "				<td align=\"center\"> " + dfReais.format(valorSaldo) + "</td>"
-            + "			</tr>"
-            + "			<tr>"
-            + "				<td> &nbsp; &bull; JUROS </td>"
-            + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorJuros)) + " </td>"
-            + "				<td align=\"center\"> " + dfReais.format(valorJuros) + "</td>"
-            + "			</tr>"
-            + "			<tr>"
-            + "				<td> &nbsp; &bull; MULTA </td>"
-            + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorMulta)) + "</td>"
-            + "				<td align=\"center\"> " + dfReais.format(valorMulta) + " </td>"
-            + "			</tr>"
-            + "			<tr>"
-            + "				<td>  &nbsp; &bull;TOTAL </td>"
-            + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorTotal)) + "</td>"
-            + "				<td align=\"center\"> " + dfReais.format(valorTotal) + "</td>"
-            + "			</tr>"
-            + "			<tr>"
-            + "				<td colspan=\"3\"> &nbsp; Valor total por extenso: " + ValorPorExtenso.valorPorExtenso(valorTotal) + "</td>"
-            + "			</tr>"
-            + "		</table>";
+        String html = "<table border=\"1\" width=\"100%\" cellspacing=\"0\" style=\"font-size:x-small\">" + "			<tr>" + "				<td> &nbsp; DISCRIMINAÇÃO DE VALORES INSCRITOS </td>" + "				<td align=\"center\"> EM UFM </td>" + "				<td align=\"center\"> EM REAIS (R$) </td>" + "			</tr>" + "			<tr>" + "				<td> &nbsp; &bull; VALOR PARCELA </td>" + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorSaldo)) + "</td>" + "				<td align=\"center\"> " + dfReais.format(valorSaldo) + "</td>" + "			</tr>" + "			<tr>" + "				<td> &nbsp; &bull; JUROS </td>" + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorJuros)) + " </td>" + "				<td align=\"center\"> " + dfReais.format(valorJuros) + "</td>" + "			</tr>" + "			<tr>" + "				<td> &nbsp; &bull; MULTA </td>" + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorMulta)) + "</td>" + "				<td align=\"center\"> " + dfReais.format(valorMulta) + " </td>" + "			</tr>" + "			<tr>" + "				<td>  &nbsp; &bull;TOTAL </td>" + "				<td align=\"center\"> " + dfUFM.format(moedaFacade.converterToUFMVigente(valorTotal)) + "</td>" + "				<td align=\"center\"> " + dfReais.format(valorTotal) + "</td>" + "			</tr>" + "			<tr>" + "				<td colspan=\"3\"> &nbsp; Valor total por extenso: " + ValorPorExtenso.valorPorExtenso(valorTotal) + "</td>" + "			</tr>" + "		</table>";
         return html;
     }
 
@@ -5844,14 +5542,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         StringBuilder sql = new StringBuilder();
 
         if (TipoCertidao.BAIXA_ATIVIDADE.equals(autenticaCertidao.getTipoCertidao())) {
-            sql.append("select doc.NUMERO, trunc(cer.DATACADASTRO) as dataemissao, ")
-                .append("      'CERTIDÃO DE BAIXA DE ATIVIDADE' as tipoDocumento, 'Cadastro Econômico' as tipoCadastro, ")
-                .append("      ce.INSCRICAOCADASTRAL ")
-                .append(" from DOCUMENTOOFICIAL doc ")
-                .append("inner join CadastroEconomico ce on ce.id = doc.CADASTRO_ID ")
-                .append("inner join CERTIDAOATIVIDADEBCE cer on cer.DOCUMENTOOFICIAL_ID = doc.id ")
-                .append("where doc.CODIGOVERIFICACAO like :codigo ")
-                .append("  and trunc(cer.DATACADASTRO) = :emissao ");
+            sql.append("select doc.NUMERO, trunc(cer.DATACADASTRO) as dataemissao, ").append("      'CERTIDÃO DE BAIXA DE ATIVIDADE' as tipoDocumento, 'Cadastro Econômico' as tipoCadastro, ").append("      ce.INSCRICAOCADASTRAL ").append(" from DOCUMENTOOFICIAL doc ").append("inner join CadastroEconomico ce on ce.id = doc.CADASTRO_ID ").append("inner join CERTIDAOATIVIDADEBCE cer on cer.DOCUMENTOOFICIAL_ID = doc.id ").append("where doc.CODIGOVERIFICACAO like :codigo ").append("  and trunc(cer.DATACADASTRO) = :emissao ");
             Query q = em.createNativeQuery(sql.toString());
             q.setParameter("codigo", StringUtil.removeCaracteresEspeciaisSemEspaco(autenticaCertidao.getCodigoVerificacao()).trim());
             q.setParameter("emissao", DataUtil.getDataFormatada(autenticaCertidao.getDataEmissao()));
@@ -5859,10 +5550,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
                 return new WSSolicitacaoDocumentoOficial((Object[]) q.getResultList().get(0));
             }
         } else {
-            sql.append(" select SOL.* from SOLICITACAODOCTOOFICIAL SOL ")
-                .append(" inner join DOCUMENTOOFICIAL DOC on SOL.DOCUMENTOOFICIAL_ID = DOC.ID  ")
-                .append(" inner join MODELODOCTOOFICIAL MODELO on DOC.MODELODOCTOOFICIAL_ID = MODELO.ID ")
-                .append(" inner join TIPODOCTOOFICIAL TIPO on MODELO.TIPODOCTOOFICIAL_ID = TIPO.ID ");
+            sql.append(" select SOL.* from SOLICITACAODOCTOOFICIAL SOL ").append(" inner join DOCUMENTOOFICIAL DOC on SOL.DOCUMENTOOFICIAL_ID = DOC.ID  ").append(" inner join MODELODOCTOOFICIAL MODELO on DOC.MODELODOCTOOFICIAL_ID = MODELO.ID ").append(" inner join TIPODOCTOOFICIAL TIPO on MODELO.TIPODOCTOOFICIAL_ID = TIPO.ID ");
 
             sql.append(criarComplementoJoin(autenticaCertidao));
 
@@ -5873,13 +5561,10 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
             if (autenticaCertidao.getNumeroDocumento() != null) {
                 sql.append(" and DOC.CODIGOVERIFICACAO = :codigo and DOC.NUMERO = :numero ");
             }
-            sql.append(" and TIPO.TIPOVALIDACAODOCTOOFICIAL = :tipoValidacao ")
-                .append(" and TIPO.TIPOCADASTRODOCTOOFICIAL = :tipoCadastro ")
-                .append(" and SOL.SITUACAOSOLICITACAO <> :situacaoSolicitacao ");
+            sql.append(" and TIPO.TIPOVALIDACAODOCTOOFICIAL = :tipoValidacao ").append(" and TIPO.TIPOCADASTRODOCTOOFICIAL = :tipoCadastro ").append(" and SOL.SITUACAOSOLICITACAO <> :situacaoSolicitacao ");
 
             if (TipoCertidao.CADASTRO_IMOBILIARIO.equals(autenticaCertidao.getTipoCertidao())) {
-                sql.append(" and trunc(PROP.FINALVIGENCIA) is null ")
-                    .append(" and coalesce (replace(replace(PF.CPF,'.',''),'-',''), replace(replace(replace(PJ.CNPJ,'.',''),'-',''),'/','')) = :cpfCnpj ");
+                sql.append(" and trunc(PROP.FINALVIGENCIA) is null ").append(" and coalesce (replace(replace(PF.CPF,'.',''),'-',''), replace(replace(replace(PJ.CNPJ,'.',''),'-',''),'/','')) = :cpfCnpj ");
             }
 
             Query q = em.createNativeQuery(sql.toString(), SolicitacaoDoctoOficial.class);
@@ -5908,11 +5593,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         StringBuilder sql = new StringBuilder();
 
         if (TipoCertidao.CADASTRO_IMOBILIARIO.equals(autenticaCertidao.getTipoCertidao())) {
-            sql.append(" inner join CADASTROIMOBILIARIO CAD on SOL.CADASTROIMOBILIARIO_ID = CAD.ID ")
-                .append(" inner join PROPRIEDADE PROP on CAD.ID = PROP.IMOVEL_ID ")
-                .append(" inner join PESSOA PES on PROP.PESSOA_ID = PES.ID ")
-                .append(" left join PESSOAFISICA PF on PF.ID = PES.ID ")
-                .append(" left join PESSOAJURIDICA PJ on PJ.ID = PES.ID ");
+            sql.append(" inner join CADASTROIMOBILIARIO CAD on SOL.CADASTROIMOBILIARIO_ID = CAD.ID ").append(" inner join PROPRIEDADE PROP on CAD.ID = PROP.IMOVEL_ID ").append(" inner join PESSOA PES on PROP.PESSOA_ID = PES.ID ").append(" left join PESSOAFISICA PF on PF.ID = PES.ID ").append(" left join PESSOAJURIDICA PJ on PJ.ID = PES.ID ");
 
             return sql;
         }
@@ -6037,10 +5718,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         if (id == null || modulo == null) {
             return null;
         }
-        String sql = "select doc.* from execorcdocumentooficial exdoc " +
-            " inner join documentooficial doc on exdoc.documentooficial_id = doc.id " +
-            ExecucaoOrcDocumentoOficial.getSql(modulo) +
-            " order by doc.id desc ";
+        String sql = "select doc.* from execorcdocumentooficial exdoc " + " inner join documentooficial doc on exdoc.documentooficial_id = doc.id " + ExecucaoOrcDocumentoOficial.getSql(modulo) + " order by doc.id desc ";
         Query q = em.createNativeQuery(sql, DocumentoOficial.class);
         q.setMaxResults(1);
         q.setParameter("obj", id);
@@ -6091,12 +5769,8 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
     private void gerarNotificacaoAssinatura(DocumentoOficial documentoOficial, Long idUndiadeOrganizacional) {
         List<ConfiguracaoAssinatura> configuracaoAssinaturas = configuracaoAssinaturaFacade.buscarConfiguracaoVigentePorModuloEUnidade(documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getModuloTipoDoctoOficial(), idUndiadeOrganizacional, documentoOficial.getDataEmissao());
 
-        if (documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getExigirAssinatura()
-            && !documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getPermitirImpressaoSemAssinatura() &&
-            (configuracaoAssinaturas == null || configuracaoAssinaturas.isEmpty())) {
-            throw new ValidacaoException("Não foi encontrado Configuração de Assinatura vigente para nenhum usuário," +
-                " é necessario ter ao menos uma configuração vigente para a " + documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getModuloTipoDoctoOficial().getDescricao() +
-                " e unidade orçamentária " + configuracaoAssinaturaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalPorUnidade(documentoOficial.getDataEmissao(), idUndiadeOrganizacional, TipoHierarquiaOrganizacional.ORCAMENTARIA).toString());
+        if (documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getExigirAssinatura() && !documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getPermitirImpressaoSemAssinatura() && (configuracaoAssinaturas == null || configuracaoAssinaturas.isEmpty())) {
+            throw new ValidacaoException("Não foi encontrado Configuração de Assinatura vigente para nenhum usuário," + " é necessario ter ao menos uma configuração vigente para a " + documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getModuloTipoDoctoOficial().getDescricao() + " e unidade orçamentária " + configuracaoAssinaturaFacade.getHierarquiaOrganizacionalFacade().getHierarquiaOrganizacionalPorUnidade(documentoOficial.getDataEmissao(), idUndiadeOrganizacional, TipoHierarquiaOrganizacional.ORCAMENTARIA).toString());
         }
 
         List<Notificacao> notificacoes = Lists.newArrayList();
@@ -6129,9 +5803,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
     public void assinarDocumento(AssinaturaDocumentoOficial assinaturaDocumentoOficial) {
         assinaturaDocumentoOficial.setDataAssinatura(new Date());
         DocumentoOficial documentoOficial = assinaturaDocumentoOficial.getDocumentoOficial();
-        String hash = documentoOficial.getId() + ""
-            + assinaturaDocumentoOficial.getDataAssinatura() + ""
-            + assinaturaDocumentoOficial.getUsuarioSistema();
+        String hash = documentoOficial.getId() + "" + assinaturaDocumentoOficial.getDataAssinatura() + "" + assinaturaDocumentoOficial.getUsuarioSistema();
         assinaturaDocumentoOficial.setHashAssinatura(Util.stringHexa(Util.gerarHash(hash, "MD5")));
         assinaturaDocumentoOficial.setSituacao(AssinaturaDocumentoOficial.SituacaoAssinatura.ASSINADO);
         configuracaoAssinaturaFacade.salvarNotificacaoAssinatura(assinaturaDocumentoOficial);
@@ -6147,8 +5819,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         String imagemAssinatura = "";
         Arquivo arquivo = null;
         if (assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas() != null && !assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().isEmpty()) {
-            if (assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().get(0).getDetentorArquivoComposicao().getArquivosComposicao() != null &&
-                !assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().get(0).getDetentorArquivoComposicao().getArquivosComposicao().isEmpty()) {
+            if (assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().get(0).getDetentorArquivoComposicao().getArquivosComposicao() != null && !assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().get(0).getDetentorArquivoComposicao().getArquivosComposicao().isEmpty()) {
                 arquivo = assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().get(0).getDetentorArquivoComposicao().getArquivosComposicao().get(0).getArquivo();
             } else if (assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().get(0).getDetentorArquivoComposicao().getArquivoComposicao() != null) {
                 arquivo = assinaturaDocumentoOficial.getUsuarioSistema().getAssinaturas().get(0).getDetentorArquivoComposicao().getArquivoComposicao().getArquivo();
@@ -6170,14 +5841,7 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
 
         if (documentoOficial.getId() != null && documentoOficial.getModeloDoctoOficial().getTipoDoctoOficial().getExigirAssinatura()) {
             List<AssinaturaDocumentoOficial> assinaturas = configuracaoAssinaturaFacade.buscarAssinaturaPorDoctoOficial(documentoOficial);
-            String assinatura = "<br></br>" +
-                " <div style=\"text-align: center!important;\"> Assinaturas </div> " +
-                " <table \" width=\"100%\" style=\"font-size:12px\">"
-                + "<tr>"
-                + "<th align=\"center\"> Servidor </th>"
-                + "<th align=\"center\"> Código de verificação </th>"
-                + "<th align=\"center\"> Data de assinatura </th>"
-                + "</tr>";
+            String assinatura = "<br></br>" + " <div style=\"text-align: center!important;\"> Assinaturas </div> " + " <table \" width=\"100%\" style=\"font-size:12px\">" + "<tr>" + "<th align=\"center\"> Servidor </th>" + "<th align=\"center\"> Código de verificação </th>" + "<th align=\"center\"> Data de assinatura </th>" + "</tr>";
 
             for (AssinaturaDocumentoOficial ass : assinaturas) {
                 if (ass.isAssinado()) {
@@ -6206,23 +5870,6 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         addTag(context, TipoModeloDoctoOficial.TagsReciboReinf.RECIBO.name(), reciboReinfVO.getReciboEntrega());
         addTag(context, TipoModeloDoctoOficial.TagsReciboReinf.MES_ANO.name(), reciboReinfVO.getMesApur() != null ? reciboReinfVO.getMesApur() + "/" + reciboReinfVO.getAnoApur() : "");
         addTag(context, TipoModeloDoctoOficial.TagsReciboReinf.DATA_REGISTRO.name(), DataUtil.getDataFormatadaDiaHora(reciboReinfVO.getDataOperacao()));
-    }
-
-    public DocumentoOficial geraDocumentoLicencaETR(RequerimentoLicenciamentoETR requerimentoLicenciamentoETR, DocumentoOficial documento, CadastroEconomico cadastroEconomico, TipoDoctoOficial tipo, SistemaControlador sistemaControlador) throws AtributosNulosException, UFMException {
-        ModeloDoctoOficial mod = tipoDoctoOficialFacade.recuperaModeloVigente(tipo);
-        DocumentoOficial documentoOficial = new DocumentoOficial();
-        if (mod != null) {
-            if (documento != null) {
-                documentoOficial = recuperaDocumento(documento);
-            } else {
-                documentoOficial = geraNovoDocumento(requerimentoLicenciamentoETR, mod, cadastroEconomico, null);
-            }
-            alteraSituacaoDocumentoOficial(documentoOficial, DocumentoOficial.SituacaoDocumentoOficial.ATIVO);
-            emiteDocumentoOficial(documentoOficial);
-        } else {
-            FacesUtil.addFatal("Não é possível imprimir esse documento!", "O Tipo de Documento não possui o layout de documento cadastrado.");
-        }
-        return documentoOficial;
     }
 
     public void tagsSolicitacaoMaterial(VelocityContext context, SolicitacaoMaterial solicitacaoMaterial) {
@@ -6375,6 +6022,23 @@ public class DocumentoOficialFacade extends AbstractFacade<DocumentoOficial> {
         Query q = em.createNativeQuery(sql);
         q.setParameter("idSolicitacaoMaterial", solicitacaoMaterial.getId());
         return q.getResultList();
+    }
+
+    public DocumentoOficial geraDocumentoLicencaETR(RequerimentoLicenciamentoETR requerimentoLicenciamentoETR, DocumentoOficial documento, CadastroEconomico cadastroEconomico, TipoDoctoOficial tipo, SistemaControlador sistemaControlador) throws AtributosNulosException, UFMException {
+        ModeloDoctoOficial mod = tipoDoctoOficialFacade.recuperaModeloVigente(tipo);
+        DocumentoOficial documentoOficial = new DocumentoOficial();
+        if (mod != null) {
+            if (documento != null) {
+                documentoOficial = recuperaDocumento(documento);
+            } else {
+                documentoOficial = geraNovoDocumento(requerimentoLicenciamentoETR, mod, cadastroEconomico, null);
+            }
+            alteraSituacaoDocumentoOficial(documentoOficial, DocumentoOficial.SituacaoDocumentoOficial.ATIVO);
+            emiteDocumentoOficial(documentoOficial);
+        } else {
+            FacesUtil.addFatal("Não é possível imprimir esse documento!", "O Tipo de Documento não possui o layout de documento cadastrado.");
+        }
+        return documentoOficial;
     }
 
     public byte[] converterDocumentoOficialParaPDF(DocumentoOficial documentoOficial, String nomeArquivo) {

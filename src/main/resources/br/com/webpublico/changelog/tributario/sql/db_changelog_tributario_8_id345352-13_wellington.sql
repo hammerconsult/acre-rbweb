@@ -11,7 +11,7 @@ into v_meses_atividade
 from cadastroeconomico ce
 where ce.id = p_prestador;
 
-select coalesce(sum(dec.basecalculo), 0)
+select coalesce(sum(dec.totalservicos), 0)
 into v_total_servicos
 from notafiscal nf
          inner join declaracaoprestacaoservico dec

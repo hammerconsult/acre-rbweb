@@ -10,7 +10,7 @@ import br.com.webpublico.webreportdto.dto.administrativo.TipoBemDTO;
  * @author Claudio
  */
 public enum TipoBem {
-    ESTOQUE("Estoque", "Estoque", TipoBemDTO.ESTOQUE),
+    ESTOQUE("Estoque", "", TipoBemDTO.ESTOQUE),
     MOVEIS("Móveis", "Móvel", TipoBemDTO.MOVEIS),
     IMOVEIS("Imóveis", "Imóvel", TipoBemDTO.IMOVEIS),
     INTANGIVEIS("Intangíveis", "Intangível", TipoBemDTO.INTANGIVEIS),

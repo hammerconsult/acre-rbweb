@@ -217,9 +217,9 @@ public class TransfBensImoveisFacade extends SuperFacadeContabil<TransfBensImove
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetosParametro = Lists.newArrayList();
-            objetosParametro.add(new ObjetoParametro(entity, item));
-            objetosParametro.add(new ObjetoParametro(entity.getGrupoBemOrigem(), item));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupoOrigem(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getId().toString(), TransfBensImoveis.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getGrupoBemOrigem().getId().toString(), GrupoBem.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupoOrigem().name(), TipoGrupo.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetosParametro);
 
@@ -263,9 +263,9 @@ public class TransfBensImoveisFacade extends SuperFacadeContabil<TransfBensImove
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetosParametro = Lists.newArrayList();
-            objetosParametro.add(new ObjetoParametro(entity, item));
-            objetosParametro.add(new ObjetoParametro(entity.getGrupoBemDestino(), item));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupoDestino(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getId().toString(), TransfBensImoveis.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getGrupoBemDestino().getId().toString(), GrupoBem.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupoDestino().name(), TipoGrupo.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetosParametro);
 

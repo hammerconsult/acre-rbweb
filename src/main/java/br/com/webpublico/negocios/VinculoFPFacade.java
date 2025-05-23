@@ -9,7 +9,6 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidades.rh.esocial.ItemConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidadesauxiliares.BeneficiarioProvaDeVidaDTO;
-import br.com.webpublico.entidadesauxiliares.ConsultaBeneficiarioProvaDeVidaVO;
 import br.com.webpublico.entidadesauxiliares.HoleriteBBAuxiliar;
 import br.com.webpublico.entidadesauxiliares.rh.VwFalta;
 import br.com.webpublico.enums.*;
@@ -58,8 +57,6 @@ public class VinculoFPFacade extends AbstractFacade<VinculoFP> {
     @EJB
     private ReintegracaoFacade reintegracaoFacade;
     @EJB
-    private ProvimentoReversaoFacade provimentoReversaoFacade;
-    @EJB
     PessoaFacade pessoaFacade;
     @EJB
     private RelatorioTempoDeServicoFacade relatorioTempoDeServicoFacade;
@@ -69,8 +66,6 @@ public class VinculoFPFacade extends AbstractFacade<VinculoFP> {
     private FaltasFacade faltasFacade;
     @EJB
     private AfastamentoFacade afastamentoFacade;
-    @EJB
-    private AposentadoriaFacade aposentadoriaFacade;
     @EJB
     private LogErroEnvioEventoFacade logErroEnvioEventoFacade;
 
@@ -577,21 +572,13 @@ public class VinculoFPFacade extends AbstractFacade<VinculoFP> {
                     retorno.add((VinculoFP) o);
                 } else {
                     Reintegracao reintegracao = reintegracaoFacade.recuperarUltimaReintegracao((VinculoFP) o);
-                    ProvimentoReversao provimentoReversao = provimentoReversaoFacade.recuperarUltimoProvimentoReversaoDoContratoFP((ContratoFP) o);
-                    Aposentadoria aposentadoria = null;
-                    if (provimentoReversao != null){
-                        aposentadoria = aposentadoriaFacade.recuperarUltimaAposentadoriaPorContratoFP(provimentoReversao.getContratoFP());
-                    }
-                    if (reintegracao != null && reintegracao.getDataReintegracao().compareTo(exoneracao.getDataRescisao()) >= 0 ||
-                        ((provimentoReversao != null && provimentoReversao.getInicioVigencia().compareTo(exoneracao.getDataRescisao()) >= 0) &&
-                            (aposentadoria == null || (((ContratoFP) o).getFinalVigencia() != null && aposentadoria.getInicioVigencia().compareTo(((ContratoFP) o).getFinalVigencia()) <0)))) {
+                    if (reintegracao != null && reintegracao.getDataReintegracao().compareTo(exoneracao.getDataRescisao()) >= 0) {
                         retorno.add((VinculoFP) o);
                     }
-
                 }
-
             }
         }
+
         return retorno;
     }
 
@@ -1183,10 +1170,10 @@ public class VinculoFPFacade extends AbstractFacade<VinculoFP> {
 
 
         String sql = "select v.id " +
-            " from vinculofp v " +
-                "         left join aposentadoria apo on apo.id = v.ID " +
-                "         left join beneficiario ben on ben.id = v.ID " +
-                "         left join pensionista pen on pen.id = v.id " +
+            "from vinculofp v " +
+            "         left join aposentadoria apo on apo.id = v.ID " +
+            "         left join beneficiario ben on ben.id = v.ID " +
+            "         left join pensionista pen on pen.id = v.id " +
 
             " where (ben.id is not null " +
             "   or pen.id is not null " +
@@ -1222,7 +1209,6 @@ public class VinculoFPFacade extends AbstractFacade<VinculoFP> {
         if (fim != null) {
             q.setParameter("dataFinal", fim);
         }
-
         List resultList = q.getResultList();
         List<VinculoFP> vinculos = Lists.newArrayList();
 
@@ -1446,62 +1432,6 @@ public class VinculoFPFacade extends AbstractFacade<VinculoFP> {
             beneficiarios.add(beneficiario);
         }
 
-        return beneficiarios;
-    }
-
-    public List<ConsultaBeneficiarioProvaDeVidaVO> buscarDadosBeneficiariosProvaDeVida(TipoFolhaDePagamento tipoFolha, String tipoBeneficiario, int ano, int mes, boolean apenasAniversariantes) {
-        String sql = "select servidor, cpf, data_nascimento, tipo_beneficiario from ( " +
-            "    select distinct  " +
-            "        m.matricula || '/' || v.numero || ' - ' || pf.nome AS servidor, " +
-            "        FORMATACPFCNPJ(pf.CPF) as cpf, " +
-            "        to_char(pf.datanascimento, 'dd/mm/yyyy') as data_nascimento, " +
-            "        case  " +
-            "            when exists (select 1 from pensionista pen where pen.id = p.id) then 'Pensionista'  " +
-            "            when exists (select 1 from aposentadoria apose where apose.id = apo.id) then 'Aposentado' " +
-            "        end AS tipo_beneficiario, " +
-            "        pf.nome" +
-            "    from vinculofp v " +
-            "    left join pensionista p on p.id = v.id  " +
-            "    left join aposentadoria apo on apo.id = v.id " +
-            "    join matriculafp m on m.id = v.matriculafp_id " +
-            "    join pessoafisica pf on pf.id = m.pessoa_id " +
-            "    left join registrodeobito ro on ro.pessoafisica_id = pf.id  " +
-            "    left join fichafinanceirafp ficha on ficha.vinculofp_id = v.id  " +
-            "    left join folhadepagamento folha on folha.id = ficha.folhadepagamento_id  " +
-            "    where (ro.datafalecimento is null or not exists (select 1 from registrodeobito reo " +
-            "                                                      where reo.pessoafisica_id = pf.id and reo.datafalecimento <= :dataOperacao)) " +
-            "    and not exists(select 1 " +
-            "                 from vinculofp vinculo " +
-            "                 inner join matriculafp matricula on vinculo.MATRICULAFP_ID = matricula.ID " +
-            "                 where matricula.PESSOA_ID = m.PESSOA_ID " +
-            "                 and (apo.id = vinculo.id or p.id = vinculo.id) " +
-            "                 and :dataOperacao between vinculo.INICIOVIGENCIA and coalesce(vinculo.FINALVIGENCIA, :dataOperacao)) " +
-            "    and (:tipofolha is null or (folha.tipofolhadepagamento = :tipofolha and folha.ano = :ano and folha.mes = :mesFolha)) " +
-            "    and (apo.id = v.id or p.id = v.id)" +
-            "    order by pf.nome " +
-            ") subquery " +
-            "where (:tipobeneficiario is null or tipo_beneficiario = :tipobeneficiario or :tipobeneficiario = 'Aposentados e Pensionistas') " +
-            "and (:apenasaniversariantes = 'false' or (extract(month from TO_DATE(data_nascimento, 'dd/mm/yyyy')) = :mesAniversario))";
-
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("dataOperacao", sistemaFacade.getDataOperacao());
-        q.setParameter("tipofolha", tipoFolha != null ? tipoFolha.name() : null);
-        q.setParameter("tipobeneficiario", tipoBeneficiario);
-        q.setParameter("ano", ano);
-        q.setParameter("mesAniversario", mes);
-        q.setParameter("mesFolha", mes - 1);
-        q.setParameter("apenasaniversariantes", apenasAniversariantes ? "true" : "false");
-
-        List<Object[]> resultList = q.getResultList();
-        List<ConsultaBeneficiarioProvaDeVidaVO> beneficiarios = new ArrayList<>();
-        for (Object[] result : resultList) {
-            ConsultaBeneficiarioProvaDeVidaVO beneficiario = new ConsultaBeneficiarioProvaDeVidaVO();
-            beneficiario.setMatContNome((String) result[0]);
-            beneficiario.setCpf((String) result[1]);
-            beneficiario.setDataNascimento((String) result[2]);
-            beneficiario.setTipoBeneficiario((String) result[3]);
-            beneficiarios.add(beneficiario);
-        }
         return beneficiarios;
     }
 

@@ -6,11 +6,9 @@ package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AssistenteReprocessamento;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCDTO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.OperacaoORC;
 import br.com.webpublico.enums.TipoOperacaoORC;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.base.Preconditions;
@@ -40,8 +38,6 @@ public class SaldoFonteDespesaORCFacade implements Serializable {
     protected static final Logger logger = LoggerFactory.getLogger(SaldoFonteDespesaORCFacade.class);
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
-    @EJB
-    private ConfiguracaoContabilFacade configuracaoContabilFacade;
 
     public MovimentoDespesaORC gerarSaldoOrcamentarioSemRealizarValidacao(SaldoFonteDespesaORCVO saldoFonteDespesaORCVO) {
         preCondicoes(saldoFonteDespesaORCVO);
@@ -55,31 +51,14 @@ public class SaldoFonteDespesaORCFacade implements Serializable {
 
     @Lock(LockType.WRITE)
     private MovimentoDespesaORC gerarSaldo(SaldoFonteDespesaORCVO saldo, Boolean validarSaldo) {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDOFONTEDESPESAORCMICROS")) {
-            SaldoFonteDespesaORCDTO dto = new SaldoFonteDespesaORCDTO();
-            dto.setData(DataUtil.dateToLocalDate(saldo.getData()));
-            dto.setIdFonte(saldo.getFonte().getId());
-            dto.setOperacaoOrc(saldo.getOperacaoOrc());
-            dto.setTipoCredito(saldo.getTipoCredito());
-            dto.setValor(saldo.getValor());
-            dto.setIdUnidade(saldo.getUnidade().getId());
-            dto.setClasseOrigem(saldo.getClasseOrigem());
-            dto.setIdOrigem(saldo.getIdOrigem());
-            dto.setNumeroMovimento(saldo.getNumeroMovimento());
-            dto.setHistorico(saldo.getHistorico());
-            dto.setRealizarValidacoes(validarSaldo);
-            SaldoFonteDespesaORCDTO saldoFonteDespesaORCDTO = ApiServiceContabil.getService().gerarSaldoOrcamentario(dto);
-            return em.find(MovimentoDespesaORC.class, saldoFonteDespesaORCDTO.getId());
-        } else {
-            try {
-                MovimentoDespesaORC movimentoDespesaORC = criarMovimentoDespesaOrc(saldo);
-                gerarSaldoOrcamentario(movimentoDespesaORC, validarSaldo);
-                return movimentoDespesaORC;
-            } catch (OptimisticLockException optex) {
-                throw new ExcecaoNegocioGenerica("Saldo orçamentário está sendo movimentado por outro usuário. Por favor, tente salvar o movimento em alguns instantes.");
-            } catch (Exception ex) {
-                throw new ExcecaoNegocioGenerica(" " + ex.getMessage());
-            }
+        try {
+            MovimentoDespesaORC movimentoDespesaORC = criarMovimentoDespesaOrc(saldo);
+            gerarSaldoOrcamentario(movimentoDespesaORC, validarSaldo);
+            return movimentoDespesaORC;
+        } catch (OptimisticLockException optex) {
+            throw new ExcecaoNegocioGenerica("Saldo orçamentário está sendo movimentado por outro usuário. Por favor, tente salvar o movimento em alguns instantes.");
+        } catch (Exception ex) {
+            throw new ExcecaoNegocioGenerica(" " + ex.getMessage());
         }
     }
 

@@ -6,7 +6,6 @@ import br.com.webpublico.entidades.DAM;
 import br.com.webpublico.entidades.HistoricoImpressaoDAM;
 import br.com.webpublico.entidades.Pessoa;
 import br.com.webpublico.entidadesauxiliares.AssistenteDAM;
-import br.com.webpublico.entidadesauxiliares.AssistenteMalaDiretaGeral;
 import br.com.webpublico.entidadesauxiliares.AssistenteMalaDiretaRBTrans;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.handlers.RestTemplateResponseErrorHandler;
@@ -162,36 +161,6 @@ public class ImprimeDAM extends AbstractReport {
         escreveNoResponse("DAM_COMPOSTO.pdf", bytes);
     }
 
-    public byte[] gerarBytesImpressaoMalaDiretaGeral(String usuario,
-                                                     Long idMala,
-                                                     List<Long> idsItens) {
-        try {
-            AssistenteMalaDiretaGeral assistenteMalaDiretaGeral = new AssistenteMalaDiretaGeral();
-            assistenteMalaDiretaGeral.setIdMala(idMala);
-            assistenteMalaDiretaGeral.setIdsItens(idsItens);
-            assistenteMalaDiretaGeral.setUsuario(usuario);
-
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<AssistenteMalaDiretaGeral> httpEntity = new HttpEntity<>(assistenteMalaDiretaGeral, httpHeaders);
-            ConfiguracaoWebService configWs = damFacade.getConfiguracaoWsDAM();
-            ResponseEntity<byte[]> response = restTemplate.exchange(configWs.getUrl() + "/mala-direta-geral/gerar-dam",
-                HttpMethod.POST, httpEntity, byte[].class);
-            return response.getBody();
-        } catch (ResourceAccessException rae) {
-            logger.error("Erro ao conectar na api de geração do dam", rae);
-            throw new ValidacaoException("Não foi possível se conectar a api de geração do DAM.");
-        }
-    }
-
-    public void imprimirDamMalaDiretaGeral(String usuario,
-                                           Long idMala,
-                                           List<Long> idsItens) throws Exception {
-        byte[] bytes = gerarBytesImpressaoMalaDiretaGeral(usuario, idMala, idsItens);
-        geraNoDialog = true;
-        escreveNoResponse("Mala Direta Geral.pdf", bytes);
-    }
-
     public byte[] gerarBytesImpressaoMalaDiretaRbTrans(String usuario,
                                                        Long idMala,
                                                        List<Long> idsItens) {
@@ -221,4 +190,6 @@ public class ImprimeDAM extends AbstractReport {
         geraNoDialog = true;
         escreveNoResponse("Mala Direta Geral.pdf", bytes);
     }
+
+
 }

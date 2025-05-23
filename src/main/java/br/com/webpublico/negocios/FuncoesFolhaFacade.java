@@ -103,8 +103,6 @@ public class FuncoesFolhaFacade extends AbstractFacade<FolhaDePagamento> {
     private PrevidenciaVinculoFPFacade previdenciaVinculoFPFacade;
     @EJB
     private FuncaoGratificadaFacade funcaoGratificadaFacade;
-    @EJB
-    private ProvimentoReversaoFacade provimentoReversaoFacade;
 
     public FuncoesFolhaFacade() {
         super(FolhaDePagamento.class);
@@ -901,26 +899,6 @@ public class FuncoesFolhaFacade extends AbstractFacade<FolhaDePagamento> {
                     diasDeDireitoNoAfastamento = Double.parseDouble(getDataReferenciaDateTime(ep).lengthOfMonth() + "");
                 }
                 totalDiasTrabalhados = diasDeDireitoNoAfastamento.intValue();
-            }
-        }
-
-        if (vinculo instanceof ContratoFP) {
-            List<Aposentadoria> aposentadorias = provimentoReversaoFacade.buscarAposentadoriaPorIdContratoVigente(vinculo.getId(), varIniMes, varFimMes);
-
-            for (Aposentadoria aposentadoria : aposentadorias) {
-
-                LocalDate varInicio = dateToLocalDate(aposentadoria.getInicioVigencia());
-                LocalDate varFim = dateToLocalDate(aposentadoria.getFinalVigencia() != null ? aposentadoria.getFinalVigencia() : DataUtil.localDateToDate(varFimMes.withDayOfMonth(varFimMes.lengthOfMonth())));
-                if (varInicio.isBefore(varBeginMes)) {
-                    varInicio = varBeginMes;
-                }
-
-                if (varFim.isAfter(varEndMes)) {
-                    varFim = varEndMes;
-                }
-
-                int diasAposentado = diasEntre(varInicio, varFim);
-                totalDiasTrabalhados = totalDiasTrabalhados - diasAposentado;
             }
         }
         return totalDiasTrabalhados.doubleValue();
@@ -3748,7 +3726,6 @@ public class FuncoesFolhaFacade extends AbstractFacade<FolhaDePagamento> {
         retorno = verificarMesesTrabalhadosXMesesAfastados(mesesTrabalhados, mesesAfastados);
         retorno = retorno > MESES_ANO ? MESES_ANO : retorno;
         return retorno;
-
     }
 
     private Integer verificarMesesTrabalhadosXMesesAfastados(List<Mes> mesesTrabalhados, List<Mes> mesesAfastados) {
@@ -6633,42 +6610,6 @@ public class FuncoesFolhaFacade extends AbstractFacade<FolhaDePagamento> {
         q.setParameter("data", localDateToDate(getDataReferencia(ep)));
         q.setParameter("codigo", codigo.trim());
         return !q.getResultList().isEmpty();
-    }
-
-    public String getOrgaoServidor(EntidadePagavelRH ep, Date dataOperacao) {
-        Query q = em.createNativeQuery("SELECT\n" +
-            "  substr(ho.codigo, 4, 2)\n" +
-            "FROM LOTACAOFUNCIONAL lotacao INNER JOIN VWHIERARQUIAADMINISTRATIVA ho\n" +
-            "    ON ho.SUBORDINADA_ID = lotacao.UNIDADEORGANIZACIONAL_ID\n" +
-            "WHERE lotacao.VINCULOFP_ID = :id\n" +
-            "      AND :data BETWEEN lotacao.inicioVigencia AND coalesce(lotacao.finalVigencia, :data)\n" +
-            "      AND :data BETWEEN ho.inicioVigencia AND coalesce(ho.fimVigencia, :data)\n" +
-            "ORDER BY lotacao.id DESC ");
-        q.setParameter("id", ep.getIdCalculo());
-        q.setParameter("data", dataOperacao);
-        if(!q.getResultList().isEmpty()){
-            return (String)q.getResultList().get(0);
-        }
-
-        return "";
-    }
-
-    public String getOrgaoServidorUltimoVigente(EntidadePagavelRH ep, Date dataOperacao) {
-        Query q = em.createNativeQuery("SELECT\n" +
-            "  substr(ho.codigo, 4, 2)\n" +
-            "FROM LOTACAOFUNCIONAL lotacao INNER JOIN VWHIERARQUIAADMINISTRATIVA ho\n" +
-            "    ON ho.SUBORDINADA_ID = lotacao.UNIDADEORGANIZACIONAL_ID\n" +
-            "WHERE lotacao.VINCULOFP_ID = :id\n" +
-            "      and lotacao.INICIOVIGENCIA = (select max(lot.INICIOVIGENCIA) from LOTACAOFUNCIONAL lot where lot.VINCULOFP_ID = lotacao.VINCULOFP_ID) " +
-            "      AND :data BETWEEN ho.inicioVigencia AND coalesce(ho.fimVigencia, :data)\n" +
-            "ORDER BY lotacao.id DESC ");
-        q.setParameter("id", ep.getIdCalculo());
-        q.setParameter("data", dataOperacao);
-        if(!q.getResultList().isEmpty()){
-            return (String)q.getResultList().get(0);
-        }
-
-        return "";
     }
 
     @DescricaoMetodo("obterPrevidenciaComplementar(ep)")

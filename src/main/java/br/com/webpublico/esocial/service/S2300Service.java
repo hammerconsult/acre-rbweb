@@ -68,8 +68,7 @@ public class S2300Service {
         val.lancarException();
     }
 
-    private EventoS2300 criarEventoS2300(ConfiguracaoEmpregadorESocial config, PrestadorServicos prestador,
-                                         ValidacaoException val) {
+    private EventoS2300 criarEventoS2300(ConfiguracaoEmpregadorESocial config, PrestadorServicos prestador, ValidacaoException val) {
         if (prestador.getPrestador() instanceof PessoaJuridica) {
             val.adicionarMensagemDeOperacaoNaoRealizada("As informações referentes do prestador de serviço devem ser para Pessoa Física");
             val.lancarException();

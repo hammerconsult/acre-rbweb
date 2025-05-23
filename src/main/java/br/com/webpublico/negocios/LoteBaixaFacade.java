@@ -114,15 +114,15 @@ public class LoteBaixaFacade extends AbstractFacade<LoteBaixa> {
     @EJB
     private PessoaFacade pessoaFacade;
     @EJB
-    private TributoFacade tributoFacade;
+    private IntegracaoRedeSimFacade integracaoRedeSimFacade;
     @EJB
     private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
     @EJB
     private FaseFacade faseFacade;
     @EJB
-    private DepoisDePagarQueue depoisDePagarQueue;
+    private TributoFacade tributoFacade;
     @EJB
-    private IntegracaoRedeSimFacade integracaoRedeSimFacade;
+    private DepoisDePagarQueue depoisDePagarQueue;
 
     private JdbcCalculoISSDao issDAO;
     private JdbcDividaAtivaDAO dividaAtivaDAO;
@@ -772,26 +772,6 @@ public class LoteBaixaFacade extends AbstractFacade<LoteBaixa> {
             .setParameter("situacao", SituacaoLoteBaixa.ESTORNADO)
             .setParameter("situacaoArquivo", SituacaoArquivo.NAO_PROCESSADO)
             .getResultList().isEmpty();
-    }
-
-
-    public DepoisDePagarResquest buildDepoisDePagar(LoteBaixa loteBaixa) {
-        DepoisDePagarResquest build = DepoisDePagarResquest.build().nome(loteBaixa.getCodigoLote());
-        for (ItemLoteBaixa item : loteBaixa.getItemLoteBaixa()) {
-            try {
-                if (item.getDam() != null) {
-                    DAM dam = damFacade.recuperar(item.getDam().getId());
-                    if (dam != null) {
-                        for (ItemDAM itemDAM : dam.getItens()) {
-                            build.addParcelas(itemDAM.getParcela());
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                logger.error("Erro ao recuperar DAM para pós pagamento", e);
-            }
-        }
-        return build;
     }
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
@@ -2772,6 +2752,24 @@ public class LoteBaixaFacade extends AbstractFacade<LoteBaixa> {
         return estorno;
     }
 
+    public DepoisDePagarResquest buildDepoisDePagar(LoteBaixa loteBaixa) {
+        DepoisDePagarResquest build = DepoisDePagarResquest.build().nome(loteBaixa.getCodigoLote());
+        for (ItemLoteBaixa item : loteBaixa.getItemLoteBaixa()) {
+            try {
+                if (item.getDam() != null) {
+                    DAM dam = damFacade.recuperar(item.getDam().getId());
+                    if (dam != null) {
+                        for (ItemDAM itemDAM : dam.getItens()) {
+                            build.addParcelas(itemDAM.getParcela());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Erro ao recuperar DAM para pós pagamento", e);
+            }
+        }
+        return build;
+    }
 
     public LoteBaixa criarPagamentoInternetBanking(PagamentoDTO pagamentoDTO) {
         Banco banco = bancoFacade.buscarBancoPorCNPJ(pagamentoDTO.getCodigoBanco());
@@ -2814,6 +2812,7 @@ public class LoteBaixaFacade extends AbstractFacade<LoteBaixa> {
             itemLoteBaixa.setDamInformado(retornaDamCodigoBarras(itemPagamentoDTO.getLinhaDigitavel()));
             itemLoteBaixa.setDataPagamento(pagamentoDTO.getDataPagamento());
             itemLoteBaixa.setDataCredito(pagamentoDTO.getDataCredito());
+            itemLoteBaixa.setAutenticacao(itemPagamentoDTO.getAutenticacao());
             valorTotal = valorTotal.add(itemPagamentoDTO.getValorPago());
             itemLoteBaixa.setLoteBaixa(lotebaixa);
             if (dam != null) {

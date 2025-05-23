@@ -1,12 +1,12 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.TipoRestosProcessado;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
+import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
@@ -14,6 +14,7 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.TreeMap;
 
 /**
  * Created with IntelliJ IDEA.
@@ -26,7 +27,7 @@ import java.util.Date;
 @Entity
 @Audited
 @Etiqueta("Abertura de Inscrição de Resto a Pagar")
-public class AberturaInscricaoResto extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil {
+public class AberturaInscricaoResto implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
@@ -180,19 +181,66 @@ public class AberturaInscricaoResto extends SuperEntidadeContabilGerarContaAuxil
     }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
-        AcaoPPA acaoPPA = empenho.getDespesaORC().getProvisaoPPADespesa().getSubAcaoPPA().getAcaoPPA();
-        return new GeradorContaAuxiliarDTO(empenho.getUnidadeOrganizacional(),
-            acaoPPA.getCodigoFuncaoSubFuncao(),
-            empenho.getContaDeDestinacao(),
-            empenho.getContaDespesa(),
-            empenho.getCodigoEs(),
-            empenho.getEmpenho().getExercicio().getAno(),
-            empenho.getContaDespesa(),
-            empenho.getExercicio(),
-            empenho.getEmpenho().getExercicio(),
-            null, 0, null,
-            empenho.getContaDespesa().getCodigoContaSiconf());
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
+    }
 
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        AcaoPPA acaoPPA = empenho.getDespesaORC().getProvisaoPPADespesa().getSubAcaoPPA().getAcaoPPA();
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "99":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada9(getUnidadeOrganizacional(),
+                    acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
+                    empenho.getContaDeDestinacao(),
+                    empenho.getContaDespesa(),
+                    (empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
+                        empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
+                            empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
+                            empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0),
+                    empenho.getEmpenho().getExercicio().getAno(),
+                    empenho.getExercicio(),
+                    empenho.getEmpenho().getExercicio());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        AcaoPPA acaoPPA = empenho.getDespesaORC().getProvisaoPPADespesa().getSubAcaoPPA().getAcaoPPA();
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "99":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar9(empenho.getUnidadeOrganizacional(),
+                    acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
+                    empenho.getContaDeDestinacao(),
+                    empenho.getContaDespesa(),
+                    (empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
+                        empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
+                            empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
+                            empenho.getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0),
+                    empenho.getEmpenho().getExercicio().getAno(),
+                    empenho.getExercicio());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
     }
 }

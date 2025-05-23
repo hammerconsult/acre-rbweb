@@ -77,39 +77,39 @@ public class ReprocessamentoSaldoExtraOrcamentarioFacade implements Serializable
     public void gerarSaldo(AssistenteReprocessamento assistente) {
         assistente.getAssistenteBarraProgresso().setMensagem("<b> <font color='black'>...Gerando Saldo de Receitas Extra...</font> </b>");
         for (ReceitaExtra entity : assistente.getReprocessamentoSaldoExtraOrcamentario().getReceitas()) {
-            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataReceita(), TipoOperacao.CREDITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataReceita(), TipoOperacao.CREDITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional());
         }
         assistente.getAssistenteBarraProgresso().setMensagem("<b> <font color='black'>...Gerando Saldo de Receitas Extra Estorno...</font> </b>");
         for (ReceitaExtraEstorno entity : assistente.getReprocessamentoSaldoExtraOrcamentario().getReceitasEstornos()) {
-            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.DEBITO, entity.getValor(), entity.getReceitaExtra().getContaExtraorcamentaria(), entity.getReceitaExtra().getContaDeDestinacao(), entity.getReceitaExtra().getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.DEBITO, entity.getValor(), entity.getReceitaExtra().getContaExtraorcamentaria(), entity.getReceitaExtra().getContaDeDestinacao(), entity.getReceitaExtra().getUnidadeOrganizacional());
         }
         assistente.getAssistenteBarraProgresso().setMensagem("<b> <font color='black'>...Gerando Saldo de Despesa Extra...</font> </b>");
         for (PagamentoExtra entity : assistente.getReprocessamentoSaldoExtraOrcamentario().getDespesa()) {
-            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataPagto(), TipoOperacao.DEBITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataPagto(), TipoOperacao.DEBITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional());
         }
         assistente.getAssistenteBarraProgresso().setMensagem("<b> <font color='black'>...Gerando Saldo de Despesa Extra Estorno...</font> </b>");
         for (PagamentoExtraEstorno entity : assistente.getReprocessamentoSaldoExtraOrcamentario().getDespesaEstorno()) {
-            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.CREDITO, entity.getValor(), entity.getPagamentoExtra().getContaExtraorcamentaria(), entity.getPagamentoExtra().getContaDeDestinacao(), entity.getPagamentoExtra().getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+            gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.CREDITO, entity.getValor(), entity.getPagamentoExtra().getContaExtraorcamentaria(), entity.getPagamentoExtra().getContaDeDestinacao(), entity.getPagamentoExtra().getUnidadeOrganizacional());
         }
         assistente.getAssistenteBarraProgresso().setMensagem("<b> <font color='black'>...Gerando Saldo De Ajuste em Depósito...</font> </b>");
         for (AjusteDeposito entity : assistente.getReprocessamentoSaldoExtraOrcamentario().getAjusteDeposito()) {
             if (entity.isAjusteDiminutivo()) {
-                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataAjuste(), TipoOperacao.CREDITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataAjuste(), TipoOperacao.CREDITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional());
             } else {
-                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataAjuste(), TipoOperacao.DEBITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataAjuste(), TipoOperacao.DEBITO, entity.getValor(), entity.getContaExtraorcamentaria(), entity.getContaDeDestinacao(), entity.getUnidadeOrganizacional());
             }
         }
         assistente.getAssistenteBarraProgresso().setMensagem("<b> <font color='black'>...Gerando Saldo De Ajuste em Depósito Estorno...</font> </b>");
         for (AjusteDepositoEstorno entity : assistente.getReprocessamentoSaldoExtraOrcamentario().getAjusteDepositoEstorno()) {
             if (entity.getAjusteDeposito().isAjusteDiminutivo()) {
-                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.DEBITO, entity.getValor(), entity.getAjusteDeposito().getContaExtraorcamentaria(), entity.getAjusteDeposito().getContaDeDestinacao(), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.DEBITO, entity.getValor(), entity.getAjusteDeposito().getContaExtraorcamentaria(), entity.getAjusteDeposito().getContaDeDestinacao(), entity.getUnidadeOrganizacional());
             } else {
-                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.CREDITO, entity.getValor(), entity.getAjusteDeposito().getContaExtraorcamentaria(), entity.getAjusteDeposito().getContaDeDestinacao(), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName());
+                gerarSaldoAtualizandoHistorticoEAssistente(assistente, entity, entity.getDataEstorno(), TipoOperacao.CREDITO, entity.getValor(), entity.getAjusteDeposito().getContaExtraorcamentaria(), entity.getAjusteDeposito().getContaDeDestinacao(), entity.getUnidadeOrganizacional());
             }
         }
     }
 
-    private void gerarSaldoAtualizandoHistorticoEAssistente(AssistenteReprocessamento assistente, Object objetoReferencia, Date data, TipoOperacao tipo, BigDecimal valor, Conta contaExtra, ContaDeDestinacao contaDeDestinacao, UnidadeOrganizacional uniOrg, String idOrigem, String classeOrigem) {
+    private void gerarSaldoAtualizandoHistorticoEAssistente(AssistenteReprocessamento assistente, Object objetoReferencia, Date data, TipoOperacao tipo, BigDecimal valor, Conta contaExtra, ContaDeDestinacao contaDeDestinacao, UnidadeOrganizacional uniOrg) {
         String objetosUtilizados = "";
         try {
             objetosUtilizados = "Data: " + DataUtil.getDataFormatada(data) +
@@ -118,7 +118,7 @@ public class ReprocessamentoSaldoExtraOrcamentarioFacade implements Serializable
                 "; Conta Extra: " + contaExtra.toString() +
                 "; Conta Destinação: " + contaDeDestinacao.toString() +
                 "; Unidade: " + uniOrg.toString();
-            saldoExtraorcamentarioFacade.gerarSaldoExtraorcamentario(data, tipo, valor, contaExtra, contaDeDestinacao, uniOrg, false, idOrigem, classeOrigem);
+            saldoExtraorcamentarioFacade.gerarSaldoExtraorcamentario(data, tipo, valor, contaExtra, contaDeDestinacao, uniOrg, false);
             assistente.adicionarHistoricoLogSemErro(objetoReferencia, objetosUtilizados);
             assistente.historicoContaSemErro();
         } catch (OptimisticLockException optex) {

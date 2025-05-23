@@ -324,8 +324,7 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
     private ExoneracaoRescisaoFacade exoneracaoRescisaoFacade;
     @EJB
     private FuncaoGratificadaFacade funcaoGratificadaFacade;
-    @EJB
-    private ProvimentoReversaoFacade provimentoReversaoFacade;
+
     private String xml;
     private TipoArquivoESocial tipoArquivoESocial;
     private ConfiguracaoEmpregadorESocial configuracaoEmpregadorESocial;
@@ -534,52 +533,59 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
         this.tipoArquivoESocial = tipoArquivoESocial;
     }
 
+    public void setaDatas(DateSelectEvent date) {
+        Date e = date.getDate();
+        previdenciaVinculoFP.setInicioVigencia(e);
+        horarioContratoFP.setInicioVigencia(e);
+        lotacaoFuncional.setInicioVigencia(e);
+        sindicatoVinculoFP.setInicioVigencia(e);
+        situacaoContratoFP.setInicioVigencia(e);
+        definirDataInicioVigenciaNaPrevidencia(e, isOperacaoNovo());
+        definirDataInicioVigenciaHorario(e, isOperacaoNovo());
+        if (isOperacaoNovo() && !selecionado.getSituacaoFuncionals().isEmpty()) {
+            SituacaoContratoFP s = selecionado.getSituacaoFuncionals().get(0);
+            if (s != null) {
+                s.setInicioVigencia(e);
+            }
+        }
+    }
+
     public void definirTodasAsDatas() {
         Date e = selecionado.getDataNomeacao();
         if (e != null) {
             selecionado.setDataPosse(e);
             selecionado.setDataExercicio(e);
             selecionado.setInicioVigencia(e);
-            definirDatas(true);
+            definirDatas();
         }
     }
 
-    public void definirDataExercicio() {
-        definirDatas(false);
-    }
-
-    public void definirDatas(boolean mostrarDiaolog) {
+    public void definirDatas() {
         try {
             Date e = selecionado.getInicioVigencia();
-            try {
-                if (e != null) {
-                    ValidacaoException ve = new ValidacaoException();
-                    previdenciaVinculoFP.setInicioVigencia(e);
-                    horarioContratoFP.setInicioVigencia(e);
-                    lotacaoFuncional.setInicioVigencia(e);
-                    sindicatoVinculoFP.setInicioVigencia(e);
-                    situacaoContratoFP.setInicioVigencia(e);
-                    modalidadeContratoFPData.setInicioVigencia(e);
-                    if (pastaGavetaContratoFPSelecionado != null) {
-                        pastaGavetaContratoFPSelecionado.setInicioVigencia(e);
-                    }
-                    contratoVinculoDeContrato.setInicioVigencia(e);
-                    definirDataInicioVigenciaNaPrevidencia(e, isOperacaoNovo(), ve);
-                    definirDataInicioVigenciaHorario(e, isOperacaoNovo(), ve);
-                    definirDataInicioVigenciaSituacaoFuncional(e, isOperacaoNovo(), ve);
-                    definirDataInicioVigenciaCargos(e, isOperacaoNovo(), ve);
-                    definirDataInicioVigenciaSindicato(e, isOperacaoNovo(), ve);
-                    definirDataInicioVigenciaValeTransporte(e, isOperacaoNovo(), ve);
-                    definirDataInicioLotacaoFuncional(e, isOperacaoNovo(), ve);
-                    definirDataInicioLotacaoVinculoEconsig(e, isOperacaoNovo(), ve);
-                    definirDataInicioVigenciaRecursoFP(e, isOperacaoNovo(), ve);
-                    ve.lancarException();
-                    if (mostrarDiaolog) {
-                        carregarDialogAlteracaoData();
-                    }
+            if (e != null) {
+                previdenciaVinculoFP.setInicioVigencia(e);
+                horarioContratoFP.setInicioVigencia(e);
+                lotacaoFuncional.setInicioVigencia(e);
+                sindicatoVinculoFP.setInicioVigencia(e);
+                situacaoContratoFP.setInicioVigencia(e);
+                modalidadeContratoFPData.setInicioVigencia(e);
+                if (pastaGavetaContratoFPSelecionado != null) {
+                    pastaGavetaContratoFPSelecionado.setInicioVigencia(e);
                 }
-            } catch (ValidacaoException ve) {
-                FacesUtil.printAllFacesMessages(ve.getAllMensagens());
+                contratoVinculoDeContrato.setInicioVigencia(e);
+                definirDataInicioVigenciaNaPrevidencia(e, isOperacaoNovo());
+                definirDataInicioVigenciaHorario(e, isOperacaoNovo());
+                definirDataInicioVigenciaSituacaoFuncional(e, isOperacaoNovo());
+                definirDataInicioVigenciaCargos(e, isOperacaoNovo());
+                definirDataInicioVigenciaSituacaoFuncional(e, isOperacaoNovo());
+                definirDataInicioVigenciaSindicato(e, isOperacaoNovo());
+                definirDataInicioVigenciaValeTransporte(e, isOperacaoNovo());
+                definirDataInicioLotacaoFuncional(e, isOperacaoNovo());
+                definirDataInicioLotacaoVinculoEconsig(e, isOperacaoNovo());
+                definirDataInicioVigenciaRecursoFP(e, isOperacaoNovo());
+
+                carregarDialogAlteracaoData();
             }
         } catch (Exception e) {
             logger.error("Não foi possivel definir as datas", e.getMessage());
@@ -597,21 +603,18 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
         try {
             Date data = selecionado.getInicioVigencia();
             if (data != null) {
-                ValidacaoException ve = new ValidacaoException();
-                definirDataInicioVigenciaNaPrevidencia(data, true, ve);
-                definirDataInicioVigenciaHorario(data, true, ve);
-                definirDataInicioVigenciaSituacaoFuncional(data, true, ve);
-                definirDataInicioVigenciaCargos(data, true, ve);
-                definirDataInicioVigenciaRecursoFP(data, true, ve);
-                definirDataInicioVigenciaSindicato(data, true, ve);
-                definirDataInicioVigenciaValeTransporte(data, true, ve);
-                definirDataInicioLotacaoFuncional(data, true, ve);
-                definirDataInicioLotacaoVinculoEconsig(data, true, ve);
+                definirDataInicioVigenciaNaPrevidencia(data, true);
+                definirDataInicioVigenciaHorario(data, true);
+                definirDataInicioVigenciaSituacaoFuncional(data, true);
+                definirDataInicioVigenciaCargos(data, true);
+                definirDataInicioVigenciaSituacaoFuncional(data, true);
+                definirDataInicioVigenciaRecursoFP(data, true);
+                definirDataInicioVigenciaSindicato(data, true);
+                definirDataInicioVigenciaValeTransporte(data, true);
+                definirDataInicioLotacaoFuncional(data, true);
+                definirDataInicioLotacaoVinculoEconsig(data, true);
                 definirDataInicioLotacaoEnquadramentoFuncional(data, true);
-                ve.lancarException();
             }
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve.getAllMensagens());
         } catch (Exception e) {
             logger.error("Não foi possivel definir as datas", e.getMessage());
             FacesUtil.addErrorGenerico(e);
@@ -626,112 +629,68 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
         }
     }
 
-    private void definirDataInicioLotacaoVinculoEconsig(Date data, boolean podeAlterar, ValidacaoException ve) {
+    private void definirDataInicioLotacaoVinculoEconsig(Date data, boolean podeAlterar) {
         if (podeAlterar && data != null && selecionado.getContratoVinculoDeContratos() != null && !selecionado.getContratoVinculoDeContratos().isEmpty() && selecionado.getContratoVinculoDeContratos().size() == 1) {
             ContratoVinculoDeContrato cont = selecionado.getContratoVinculoDeContratos().get(0);
-            if (validarVigenciaAoDefinirDatas(data, cont.getFinalVigencia())) {
-                cont.setInicioVigencia(data);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência da Lotação Econsig é posterior a data de Final de Vigência, não será alterada.");
-            }
+            cont.setInicioVigencia(data);
         }
     }
 
-    private void definirDataInicioLotacaoFuncional(Date data, boolean podeAlterar, ValidacaoException ve) {
+    private void definirDataInicioLotacaoFuncional(Date data, boolean podeAlterar) {
         if (podeAlterar && data != null && selecionado.getLotacaoFuncionals() != null && !selecionado.getLotacaoFuncionals().isEmpty() && selecionado.getLotacaoFuncionals().size() == 1) {
             LotacaoFuncional lotacao = selecionado.getLotacaoFuncionals().get(0);
-            if (validarVigenciaAoDefinirDatas(data, lotacao.getFinalVigencia())) {
-                lotacao.setInicioVigencia(data);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência da Lotação Funcional é posterior a data de Final de Vigência, não será alterada.");
-            }
+            lotacao.setInicioVigencia(data);
         }
     }
 
-    private void definirDataInicioVigenciaValeTransporte(Date data, boolean podeAlterar, ValidacaoException ve) {
+    private void definirDataInicioVigenciaValeTransporte(Date data, boolean podeAlterar) {
         if (podeAlterar && data != null && selecionado.getOpcaoValeTransporteFPs() != null && !selecionado.getOpcaoValeTransporteFPs().isEmpty() && selecionado.getOpcaoValeTransporteFPs().size() == 1) {
             OpcaoValeTransporteFP opcao = selecionado.getOpcaoValeTransporteFPs().get(0);
-            if (validarVigenciaAoDefinirDatas(data, opcao.getFinalVigencia())) {
-                opcao.setInicioVigencia(data);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência da Opção do Vale Transporte é posterior a data de Final de Vigência, não será alterada.");
-            }
+            opcao.setInicioVigencia(data);
         }
     }
 
-    private void definirDataInicioVigenciaSindicato(Date data, boolean podeAlterar, ValidacaoException ve) {
+    private void definirDataInicioVigenciaSindicato(Date data, boolean podeAlterar) {
         if (podeAlterar && data != null && selecionado.getSindicatosVinculosFPs() != null && !selecionado.getSindicatosVinculosFPs().isEmpty() && selecionado.getSindicatosVinculosFPs().size() == 1) {
             SindicatoVinculoFP sind = selecionado.getSindicatosVinculosFPs().get(0);
-            if (validarVigenciaAoDefinirDatas(data, sind.getFinalVigencia())) {
-                sind.setInicioVigencia(data);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência da Sindicato é posterior a data de Final de Vigência, não será alterada.");
-            }
+            sind.setInicioVigencia(data);
         }
     }
 
-    private void definirDataInicioVigenciaRecursoFP(Date data, boolean podeAlterar, ValidacaoException ve) {
+    private void definirDataInicioVigenciaRecursoFP(Date data, boolean podeAlterar) {
         if (podeAlterar && data != null && selecionado.getRecursosDoVinculoFP() != null && !selecionado.getRecursosDoVinculoFP().isEmpty() && selecionado.getRecursosDoVinculoFP().size() == 1) {
             RecursoDoVinculoFP rec = selecionado.getRecursosDoVinculoFP().get(0);
-            if (validarVigenciaAoDefinirDatas(data, rec.getFinalVigencia())) {
-                rec.setInicioVigencia(data);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência do Recurso FP é posterior a data de Final de Vigência, não será alterada.");
-            }
+            rec.setInicioVigencia(data);
             setRecursoDoVinculoFPs(selecionado.getRecursosDoVinculoFP());
         }
     }
 
-    private void definirDataInicioVigenciaSituacaoFuncional(Date data, boolean podeAlterar, ValidacaoException ve) {
+    private void definirDataInicioVigenciaSituacaoFuncional(Date data, boolean podeAlterar) {
         if (podeAlterar && data != null && selecionado.getSituacaoFuncionals() != null && !selecionado.getSituacaoFuncionals().isEmpty() && selecionado.getSituacaoFuncionals().size() == 1) {
             SituacaoContratoFP situacao = selecionado.getSituacaoFuncionals().get(0);
-            if (validarVigenciaAoDefinirDatas(data, situacao.getFinalVigencia())) {
-                situacao.setInicioVigencia(data);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência da Situação é posterior a data de Final de Vigência, não será alterada.");
-            }
+            situacao.setInicioVigencia(data);
         }
     }
 
-    private void definirDataInicioVigenciaCargos(Date data, boolean podeAlterar, ValidacaoException ve) {
+    private void definirDataInicioVigenciaCargos(Date data, boolean podeAlterar) {
         if (podeAlterar && data != null && selecionado.getCargos() != null && !selecionado.getCargos().isEmpty() && selecionado.getCargos().size() == 1) {
             ContratoFPCargo cargo = selecionado.getCargos().get(0);
-            if (validarVigenciaAoDefinirDatas(data, cargo.getFimVigencia())) {
-                cargo.setInicioVigencia(data);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência do Cargo é posterior a data de Final de Vigência, não será alterada.");
-            }
+            cargo.setInicioVigencia(data);
         }
     }
 
-    public void definirDataInicioVigenciaNaPrevidencia(Date date, boolean podeAlterarData, ValidacaoException ve) {
+    public void definirDataInicioVigenciaNaPrevidencia(Date date, boolean podeAlterarData) {
         if (podeAlterarData && date != null && selecionado.getPrevidenciaVinculoFPs() != null && !selecionado.getPrevidenciaVinculoFPs().isEmpty() && selecionado.getPrevidenciaVinculoFPs().size() == 1) {
             PrevidenciaVinculoFP prev = selecionado.getPrevidenciaVinculoFPs().get(0);
-            if (validarVigenciaAoDefinirDatas(date, prev.getFinalVigencia())) {
-                prev.setInicioVigencia(date);
-            } else {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência da Previdência é posterior a data de Final de Vigência, não será alterada.");
-            }
+            prev.setInicioVigencia(date);
         }
     }
 
-    private boolean validarVigenciaAoDefinirDatas(Date inicioVigencia, Date finalVigencia) {
-        if (finalVigencia == null) {
-            return true;
-        }
-        if (inicioVigencia.after(finalVigencia)) {
-            return false;
-        }
-        return true;
-    }
-
-    public void definirDataInicioVigenciaHorario(Date date, boolean podeAlterar, ValidacaoException ve) {
+    public void definirDataInicioVigenciaHorario(Date date, boolean podeAlterar) {
         if (podeAlterar && date != null && selecionado.getHorarioContratoFPs() != null && selecionado.getHorarioContratoFPs().size() == 1) {
             for (HorarioContratoFP horarioContrato : selecionado.getHorarioContratoFPs()) {
-                if (horarioContrato.getFimVigencia() == null && validarVigenciaAoDefinirDatas(date, horarioContrato.getFinalVigencia())) {
+                if (horarioContrato.getFimVigencia() == null) {
                     horarioContrato.setInicioVigencia(date);
-                } else {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida("A data de Inicio de Vigência do Horarío é posterior a data de Final de Vigência, não será alterada.");
                 }
             }
         }
@@ -1088,6 +1047,8 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
                 if (nivelEscolaridadePessoa.getOrdem() < nivelEscolaridadeCargo.getOrdem()) {
                     ve.adicionarMensagemDeOperacaoNaoPermitida("O instituidor desta matrícula não está apto a assumir o cargo, " + selecionado.getCargo() + " devido ao seu nível de escolaridade!");
                 }
+            } catch (ExcecaoNegocioGenerica ex) {
+                FacesUtil.addOperacaoNaoRealizada(ex.getMessage());
             } catch (Exception ex) {
                 logger.debug(ex.getMessage());
             }
@@ -1747,20 +1708,6 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
         return converterHierarquiaOrganizacional;
     }
 
-    public void atualizarHierarquiaContratoFPComNivel2() {
-
-        if (lotacaoFuncional.getUnidadeOrganizacional() != null) {
-            HierarquiaOrganizacional orgao = hierarquiaOrganizacionalFacadeNovo.buscarOrgaoAdministrativoPorUnidadeAndVigencia(lotacaoFuncional.getUnidadeOrganizacional(),
-                UtilRH.getDataOperacao());
-            if (orgao != null) {
-                this.selecionado.setHierarquiaOrganizacional(orgao);
-                if (selecionado.getHierarquiaOrganizacional().getSubordinada().getObrigaQualificacaoCadastral()) {
-                    validarPessoaQualificada();
-                }
-            }
-        }
-    }
-
     public void actionListenerHO(SelectEvent evt) {
         hierarquiaOrganizacionalEnquadramento = ((HierarquiaOrganizacional) evt.getObject());
     }
@@ -1901,7 +1848,6 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
             validarLotacaoFuncionalVigencia();
 
             lotacaoFuncional.setUnidadeOrganizacional(hierarquiaOrganizacionalEnquadramento.getSubordinada());
-            atualizarHierarquiaContratoFPComNivel2();
             lotacaoFuncional.setVinculoFP(selecionado);
             adicionarRecursoDoVinculoFP(selecionado, recursoFP, lotacaoFuncional.getInicioVigencia(), lotacaoFuncional.getFinalVigencia());
             selecionado.getLotacaoFuncionals().add(lotacaoFuncional);
@@ -4274,6 +4220,7 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
         ve.lancarException();
     }
 
+
     public List<PrevidenciaArquivo> getPrevidenciaArquivos() {
         return previdenciaArquivos;
     }
@@ -4362,10 +4309,6 @@ public class ContratoFPControlador extends PrettyControlador<ContratoFP> impleme
 
     public Boolean isAprendiz() {
         return selecionado != null && (selecionado.getCategoriaTrabalhador() != null && selecionado.getCategoriaTrabalhador().getCodigo() == APRENDIZ);
-    }
-
-    public boolean temProvimentoReversaoPorContratoFP(){
-        return provimentoReversaoFacade.temProvimentoReversaoPorContratoFP(selecionado);
     }
 
 }

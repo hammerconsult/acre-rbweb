@@ -30,6 +30,7 @@ public class PesquisaContribuinteDebitoOutorga extends ComponentePesquisaGeneric
         return "left join obj.usuarioCadastrou usuarioCadastrou left join obj.usuarioAlterou usuarioAlterou where " + montaCondicao() + montaOrdenacao();
     }
 
+
     @Override
     protected String montaOrdenacao() {
         if (camposOrdenacao == null || camposOrdenacao.size() <= 1) {

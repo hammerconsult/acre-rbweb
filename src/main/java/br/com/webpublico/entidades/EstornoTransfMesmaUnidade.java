@@ -4,18 +4,19 @@
  */
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
+import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.TreeMap;
 import java.util.UUID;
 
 /**
@@ -24,7 +25,7 @@ import java.util.UUID;
 @Audited
 @Entity
 @Etiqueta("Estorno de Transferência Financeira Mesma Unidade")
-public class EstornoTransfMesmaUnidade extends SuperEntidadeContabilGerarContaAuxiliar implements EntidadeContabil {
+public class EstornoTransfMesmaUnidade extends SuperEntidade implements EntidadeContabil, IGeraContaAuxiliar {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -289,13 +290,84 @@ public class EstornoTransfMesmaUnidade extends SuperEntidadeContabilGerarContaAu
     }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
-        if (ParametroEvento.ComplementoId.CONCEDIDO.equals(complementoId)) {
-            return new GeradorContaAuxiliarDTO(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
-                transferenciaMesmaUnidade.getContaDeDestinacaoRetirada(), transferenciaMesmaUnidade.getExercicio());
-        } else if (ParametroEvento.ComplementoId.RECEBIDO.equals(complementoId)) {
-            return new GeradorContaAuxiliarDTO(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
-                transferenciaMesmaUnidade.getContaDeDestinacaoDeposito(), transferenciaMesmaUnidade.getExercicio());
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(transferenciaMesmaUnidade.getUnidadeOrganizacional());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    contaContabil.getSubSistema(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoDeposito(),
+                    transferenciaMesmaUnidade.getExercicio());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoDeposito(),
+                    transferenciaMesmaUnidade.getExercicio());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(transferenciaMesmaUnidade.getUnidadeOrganizacional());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    contaContabil.getSubSistema(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoRetirada(),
+                    transferenciaMesmaUnidade.getExercicio());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoRetirada(),
+                    transferenciaMesmaUnidade.getExercicio());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(transferenciaMesmaUnidade.getUnidadeOrganizacional());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    contaContabil.getSubSistema(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoDeposito());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoDeposito());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(transferenciaMesmaUnidade.getUnidadeOrganizacional());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    contaContabil.getSubSistema(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoRetirada());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(transferenciaMesmaUnidade.getUnidadeOrganizacional(),
+                    transferenciaMesmaUnidade.getContaDeDestinacaoRetirada());
         }
         return null;
     }

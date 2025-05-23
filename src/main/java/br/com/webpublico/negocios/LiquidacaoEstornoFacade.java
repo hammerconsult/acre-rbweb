@@ -8,7 +8,7 @@ import br.com.webpublico.controle.portaltransparencia.entidades.LiquidacaoEstorn
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.DocumentoFiscalIntegracao;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentaria;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.EntidadeContabil;
@@ -343,7 +343,6 @@ public class LiquidacaoEstornoFacade extends SuperFacadeContabil<LiquidacaoEstor
             if (liquidacao.getSaldo().compareTo(entity.getValor()) < 0) {
                 throw new ValidacaoException("O movimento já foi salvo por outro usuário! Atualize a página e tente novamente.");
             }
-            validarSaldoLiquidacao(entity);
             liquidacao.setSaldo(liquidacao.getSaldo().subtract(entity.getValor()));
             liquidacao.setEmpenho(movimentarEmpenho(entity));
 
@@ -356,25 +355,6 @@ public class LiquidacaoEstornoFacade extends SuperFacadeContabil<LiquidacaoEstor
             liquidacao = em.merge(liquidacao);
             entity.setLiquidacao(liquidacao);
         }
-    }
-
-    private void validarSaldoLiquidacao(LiquidacaoEstorno entity) {
-        ValidacaoException ve = new ValidacaoException();
-        if (entity.getLiquidacao().getSaldo().compareTo(entity.getValor()) < 0) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida(" O valor a ser estornado de <b> " + Util.formataValor(entity.getValor()) + "</b> é maior que o saldo de <b> " + Util.formataValor(entity.getLiquidacao().getSaldo()) + " </b> disponível na liquidação.");
-        }
-        ve.lancarException();
-    }
-
-    public BigDecimal getValorEstornadoDocumentoFiscal(DoctoFiscalLiquidacao documentoFiscal) {
-        String sql = " select coalesce(sum(doc.valor),0) from liquidacaoestdoctofiscal doc " +
-            "         where doc.documentofiscal_id = :idDocumentoFiscal ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idDocumentoFiscal", documentoFiscal.getId());
-        if (q.getResultList().isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        return (BigDecimal) q.getSingleResult();
     }
 
     private Empenho movimentarEmpenho(LiquidacaoEstorno entity) {
@@ -589,16 +569,16 @@ public class LiquidacaoEstornoFacade extends SuperFacadeContabil<LiquidacaoEstor
 
     private List<ObjetoParametro> criarObjetosParametros(DesdobramentoLiquidacaoEstorno desdobramento, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = new ArrayList<ObjetoParametro>();
-        objetos.add(new ObjetoParametro(desdobramento.getConta(), item));
-        objetos.add(new ObjetoParametro(desdobramento.getLiquidacaoEstorno().getLiquidacao().getEmpenho().getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getLiquidacaoEstorno().getLiquidacao().getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         if (desdobramento.getLiquidacaoEstorno().isLiquidacaoEstornoCategoriaNormal() && desdobramento.getLiquidacaoEstorno().getLiquidacao().getEmpenho().getDividaPublica() != null) {
-            objetos.add(new ObjetoParametro(desdobramento.getLiquidacaoEstorno().getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica(), item));
+            objetos.add(new ObjetoParametro(desdobramento.getLiquidacaoEstorno().getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
         }
         if (DesdobramentoLiquidacaoEstorno.class.isAnnotationPresent(Entity.class)) {
             Entity entity = DesdobramentoLiquidacaoEstorno.class.getAnnotation(Entity.class);
-            objetos.add(new ObjetoParametro(desdobramento, item));
+            objetos.add(new ObjetoParametro(desdobramento.getId().toString(), entity.name(), item));
         } else {
-            objetos.add(new ObjetoParametro(desdobramento, item));
+            objetos.add(new ObjetoParametro(desdobramento.getId().toString(), DesdobramentoLiquidacaoEstorno.class.getSimpleName(), item));
         }
         return objetos;
     }
@@ -682,10 +662,6 @@ public class LiquidacaoEstornoFacade extends SuperFacadeContabil<LiquidacaoEstor
         return desdobramentoObrigacaoAPagarFacade;
     }
 
-    public SingletonConcorrenciaContabil getSingletonConcorrenciaContabil() {
-        return singletonConcorrenciaContabil;
-    }
-
     public NotaOrcamentariaFacade getNotaOrcamentariaFacade() {
         return notaOrcamentariaFacade;
     }
@@ -713,10 +689,6 @@ public class LiquidacaoEstornoFacade extends SuperFacadeContabil<LiquidacaoEstor
 
     public SolicitacaoLiquidacaoEstornoFacade getSolicitacaoLiquidacaoFacade() {
         return solicitacaoLiquidacaoFacade;
-    }
-
-    public ConfigDespesaBensFacade getConfigDespesaBensFacade() {
-        return configDespesaBensFacade;
     }
 
     public List<NotaExecucaoOrcamentaria> buscarNotaLiquidacaoEstorno(String condicao, CategoriaOrcamentaria categoriaOrcamentaria) {
@@ -835,8 +807,16 @@ public class LiquidacaoEstornoFacade extends SuperFacadeContabil<LiquidacaoEstor
         return retorno;
     }
 
+    public SingletonConcorrenciaContabil getSingletonConcorrenciaContabil() {
+        return singletonConcorrenciaContabil;
+    }
+
     public ConfigGrupoMaterialFacade getConfigGrupoMaterialFacade() {
         return configGrupoMaterialFacade;
+    }
+
+    public ConfigDespesaBensFacade getConfigDespesaBensFacade() {
+        return configDespesaBensFacade;
     }
 
     public IntegradorDocumentoFiscalLiquidacaoFacade getIntegradorDocumentoFiscalLiquidacaoFacade() {

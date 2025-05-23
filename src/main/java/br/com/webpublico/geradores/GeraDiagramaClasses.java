@@ -2,7 +2,7 @@ package br.com.webpublico.geradores;
 
 import br.com.webpublico.controle.PrettyControlador;
 import br.com.webpublico.entidades.Menu;
-import br.com.webpublico.seguranca.menu.LeitorMenuFacade;
+import br.com.webpublico.singletons.SingletonMenu;
 import br.com.webpublico.util.ClassFinder;
 import br.com.webpublico.util.StringUtil;
 import br.com.webpublico.util.Util;
@@ -205,10 +205,9 @@ public class GeraDiagramaClasses {
         List<Class<?>> controladores = ClassFinder.findClassByReflection("br.com.webpublico.controle");
         Map<String, List<Class>> grupoEntidades = Maps.newHashMap();
 
-        LeitorMenuFacade menuFacade = (LeitorMenuFacade) Util.getSpringBeanPeloNome("leitorMenuFacade");
+        SingletonMenu menuFacade = (SingletonMenu) Util.getSpringBeanPeloNome("singletonMenu");
 
-//        List<Menu> itensParaAutoComplete = menuFacade.getItensParaContruirMenu();
-        List<Menu> itensParaAutoComplete = Lists.newArrayList();
+        List<Menu> itensParaAutoComplete = menuFacade.getMenus();
 
         for (Menu menu : itensParaAutoComplete) {
             if (menu.getCaminho() == null) {

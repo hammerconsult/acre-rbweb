@@ -8,7 +8,7 @@ import br.com.webpublico.controle.Web;
 import br.com.webpublico.controle.portaltransparencia.entidades.EmpenhoEstornoPortal;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentaria;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.PatrimonioLiquido;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
@@ -631,19 +631,19 @@ public class EmpenhoEstornoFacade extends SuperFacadeContabil<EmpenhoEstorno> {
     private List<ObjetoParametro> criarObjetosParametros(EmpenhoEstorno entity, DesdobramentoEmpenhoEstorno desdobramentoEmpenhoEstorno, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
         if (desdobramentoEmpenhoEstorno == null) {
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(getContaDespesaEmpenho(entity), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), EmpenhoEstorno.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(getContaDespesaEmpenho(entity).getId().toString(), ContaDespesa.class.getSimpleName(), item));
         } else {
-            objetos.add(new ObjetoParametro(desdobramentoEmpenhoEstorno, item));
-            objetos.add(new ObjetoParametro(desdobramentoEmpenhoEstorno.getConta(), item));
+            objetos.add(new ObjetoParametro(desdobramentoEmpenhoEstorno.getId().toString(), DesdobramentoEmpenhoEstorno.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(desdobramentoEmpenhoEstorno.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
         }
-        objetos.add(new ObjetoParametro(entity.getEmpenho().getClasseCredor(), item));
-        objetos.add(new ObjetoParametro(entity.getEmpenho().getFornecedor(), item));
+        objetos.add(new ObjetoParametro(entity.getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getEmpenho().getFornecedor().getId().toString(), Pessoa.class.getSimpleName(), item));
         if (entity.isEmpenhoEstornoNormal()) {
-            objetos.add(new ObjetoParametro(entity.getEmpenho(), item));
-            objetos.add(new ObjetoParametro(entity.getEmpenho().getFonteDespesaORC(), item));
-            objetos.add(new ObjetoParametro(entity.getEmpenho().getDespesaORC().getProvisaoPPADespesa(), item));
-            objetos.add(new ObjetoParametro(entity.getEmpenho().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos(), item));
+            objetos.add(new ObjetoParametro(entity.getEmpenho().getId().toString(), Empenho.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getEmpenho().getFonteDespesaORC().getId().toString(), FonteDespesaORC.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getEmpenho().getDespesaORC().getProvisaoPPADespesa().getId().toString(), ProvisaoPPADespesa.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getEmpenho().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
         }
         return objetos;
     }
@@ -688,9 +688,9 @@ public class EmpenhoEstornoFacade extends SuperFacadeContabil<EmpenhoEstorno> {
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(entity, item));
-            listaObj.add(new ObjetoParametro(((ContaDespesa) entity.getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa()), item));
-            listaObj.add(new ObjetoParametro(entity.getEmpenho().getClasseCredor(), item));
+            listaObj.add(new ObjetoParametro(entity.getId().toString(), EmpenhoEstorno.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(((ContaDespesa) entity.getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa()).getId().toString(), ContaDespesa.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
             item.setObjetoParametros(listaObj);
             parametroEvento.getItensParametrosEvento().add(item);
 

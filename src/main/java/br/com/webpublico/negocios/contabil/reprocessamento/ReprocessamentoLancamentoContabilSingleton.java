@@ -4,8 +4,6 @@ import br.com.webpublico.controle.SistemaControlador;
 import br.com.webpublico.controle.contabil.reprocessamento.ReprocessamentoContabilControlador;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.contabil.ReprocessamentoContabil;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.MovimentoContabilDTO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.ParametroEventoDTO;
 import br.com.webpublico.enums.TipoEventoContabil;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.negocios.HierarquiaOrganizacionalFacade;
@@ -45,9 +43,6 @@ public class ReprocessamentoLancamentoContabilSingleton implements Serializable 
     //reprocessamento utilizado pelo usuario
     private List<ReprocessamentoContabil> reprocessamentos;
     private Map<String, SuperFacadeContabil> mapa;
-
-    private MovimentoContabilDTO movimentoContabilDTO;
-    private Integer quantidadeTotalObjetos;
 
     public static Integer getQuantidadeLogOcorrencia() {
         return QUANTIDADE_LOG_OCORRENCIA;
@@ -106,7 +101,6 @@ public class ReprocessamentoLancamentoContabilSingleton implements Serializable 
     }
 
     public void inicializar(Integer total, UsuarioSistema usuarioSistema, Date data, Date dataInicial, Date dataFinal, UnidadeOrganizacional unidadeOrganizacional, Boolean reprocessamentoInicial) {
-        atribuirNullMovimentoContabil();
         reprocessamentoContabilHistorico = new ReprocessamentoContabilHistorico();
         reprocessamentoContabilHistorico.setDataHoraInicio(new Date());
         reprocessamentoContabilHistorico.setProcessados(0);
@@ -321,10 +315,6 @@ public class ReprocessamentoLancamentoContabilSingleton implements Serializable 
         reprocessamentoContabilHistorico.getMensagens().add(new ReprocessamentoLancamentoContabilLog(new Date(), mensagem, "", null, false, reprocessamentoContabilHistorico, null, null));
     }
 
-    public void adicionarLogErro(String mensagem) {
-        reprocessamentoContabilHistorico.getMensagens().add(new ReprocessamentoLancamentoContabilLog(new Date(), mensagem, "", null, true, reprocessamentoContabilHistorico, null, null));
-    }
-
 
     public void adicionarReprocessandoLog(Object objeto, EventosReprocessar eventosReprocessar) {
         reprocessamentoContabilHistorico.getMensagens().add(new ReprocessamentoLancamentoContabilLog(new Date(), " Reprocessou o(a) " + Persistencia.getNomeDaClasse(objeto.getClass()) + ": <b>" + objeto.toString() + "</b>", "", eventosReprocessar.getEventoContabil(), false, reprocessamentoContabilHistorico, ((Long) Persistencia.getId(objeto)), objeto.getClass().getSimpleName()));
@@ -446,17 +436,6 @@ public class ReprocessamentoLancamentoContabilSingleton implements Serializable 
         return gerarTXTLog(getLogTodo(tipoLog, reprocessamentoContabilHistorico));
     }
 
-    public Integer getQuantidadeTotalObjetos() {
-        return quantidadeTotalObjetos == null ? 0 : quantidadeTotalObjetos;
-    }
-
-    public void setQuantidadeTotalObjetos(Integer quantidadeTotalObjetos) {
-        if (this.quantidadeTotalObjetos == null) {
-            this.quantidadeTotalObjetos = 0;
-        }
-        this.quantidadeTotalObjetos = quantidadeTotalObjetos;
-    }
-
     public void gerarPDFLog(ReprocessamentoContabilHistorico reprocessamentoContabilHistorico) {
         geraPDFLog(getLogTodo(tipoLog, reprocessamentoContabilHistorico));
     }
@@ -547,24 +526,6 @@ public class ReprocessamentoLancamentoContabilSingleton implements Serializable 
         Util.downloadPDF("Log de Acompanhamento do Reprocessamento Contábil", conteudo, FacesContext.getCurrentInstance());
     }
 
-    public void criarMovimentoContabil() {
-        this.movimentoContabilDTO = new MovimentoContabilDTO();
-    }
-
-    public synchronized void atribuirNullMovimentoContabil() {
-        this.movimentoContabilDTO = null;
-    }
-
-    public synchronized void adicionarMovimentoContabilizar(ParametroEventoDTO parametroEventoDTO) {
-        if (getMovimentoContabilDTO() == null) {
-            criarMovimentoContabil();
-        }
-        this.movimentoContabilDTO.getContabilizar().add(parametroEventoDTO);
-    }
-
-    public MovimentoContabilDTO getMovimentoContabilDTO() {
-        return movimentoContabilDTO;
-    }
 
     public enum EventosContabeisNormalEstornoTabelasSeparadas {
 

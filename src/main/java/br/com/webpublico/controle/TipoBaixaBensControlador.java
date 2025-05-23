@@ -7,9 +7,10 @@ package br.com.webpublico.controle;
 import br.com.webpublico.entidades.TipoBaixaBens;
 import br.com.webpublico.enums.TipoBem;
 import br.com.webpublico.enums.TipoIngressoBaixa;
-import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.TipoBaixaBensFacade;
+import br.com.webpublico.util.ConverterAutoComplete;
+import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.util.Util;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
@@ -20,6 +21,7 @@ import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import javax.faces.model.SelectItem;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**

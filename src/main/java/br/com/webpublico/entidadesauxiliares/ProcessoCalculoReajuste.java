@@ -13,7 +13,6 @@ public class ProcessoCalculoReajuste {
     private ItemValorPrevidencia itemValorPrevidenciaAntigo;
     private ItemValorPrevidencia itemValorPrevidenciaNovo;
     private Boolean selecionado;
-    private Boolean processoTransiente;
 
 
     public ProcessoCalculoReajuste() {
@@ -68,14 +67,6 @@ public class ProcessoCalculoReajuste {
 
     public void setSelecionado(Boolean selecionado) {
         this.selecionado = selecionado;
-    }
-
-    public Boolean getProcessoTransiente() {
-        return processoTransiente != null ? processoTransiente : Boolean.FALSE;
-    }
-
-    public void setProcessoTransiente(Boolean processoTransiente) {
-        this.processoTransiente = processoTransiente;
     }
 }
 

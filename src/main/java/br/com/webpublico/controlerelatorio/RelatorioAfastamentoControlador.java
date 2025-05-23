@@ -75,10 +75,6 @@ public class RelatorioAfastamentoControlador extends AbstractReport implements S
         this.hierarquiaOrganizacional = hierarquiaOrganizacional;
     }
 
-    public ContratoFP getContratoFP() {
-        return contratoFP;
-    }
-
     public void setContratoFP(ContratoFP contratoFP) {
         this.contratoFP = contratoFP;
     }
@@ -97,6 +93,10 @@ public class RelatorioAfastamentoControlador extends AbstractReport implements S
 
     public List<ContratoFP> completarContratosFP(String filtro) {
         return contratoFPFacade.buscaContratoFPFiltrandoAtributosVinculoMatriculaFP(filtro.trim());
+    }
+
+    public ContratoFP getContratoFP() {
+        return contratoFP;
     }
 
     public TipoAfastamento getTipoAfastamentoSelecionado() {
@@ -190,7 +190,7 @@ public class RelatorioAfastamentoControlador extends AbstractReport implements S
             dto.adicionarParametro("MODULO", "Recursos Humanos");
             dto.adicionarParametro("SECRETARIA", "DEPARTAMENTO DE RECURSOS HUMANOS");
             dto.adicionarParametro("NOMERELATORIO", "RELATÓRIO DE AFASTAMENTO");
-            dto.adicionarParametro("condicao", buscarClausulaWhere());
+            dto.adicionarParametro("condicao", montarWhere());
             dto.adicionarParametro("FILTROS", filtrosUtilizados);
             dto.adicionarParametro("DATA", "to_date(" + DataUtil.getDataFormatada(UtilRH.getDataOperacao()) + ", dd/MM/yyyy)");
             dto.setNomeRelatorio("RELATÓRIO-DE-AFASTAMENTO");
@@ -208,7 +208,7 @@ public class RelatorioAfastamentoControlador extends AbstractReport implements S
 
     }
 
-    private String buscarClausulaWhere() {
+    private String montarWhere() {
         filtrosUtilizados = "";
         String retorno = " where to_date('" + UtilRH.getDataOperacaoFormatada() + "' , 'dd/MM/yyyy') between ho.iniciovigencia " +
             "   and coalesce(ho.fimvigencia, to_date('" + UtilRH.getDataOperacaoFormatada() + "' , 'dd/MM/yyyy')) ";
@@ -217,6 +217,7 @@ public class RelatorioAfastamentoControlador extends AbstractReport implements S
             retorno += " and ho.codigo like '" + hierarquiaOrganizacional.getCodigoSemZerosFinais() + "%' ";
             filtrosUtilizados = "Unidade Organizacional: " + hierarquiaOrganizacional.getCodigo() + " - " + hierarquiaOrganizacional.getSubordinada().getDescricao();
         }
+
 
         if (contratoFP != null) {
             retorno += " and contrato.id =  " + contratoFP.getId();

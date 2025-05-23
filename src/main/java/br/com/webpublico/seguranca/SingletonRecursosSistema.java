@@ -23,7 +23,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -49,7 +48,7 @@ public class SingletonRecursosSistema implements Serializable {
     private List<Chamado> chamados;
     private Map<UsuarioSistema, List<ConfiguracaoChamadoUsuario>> configuracaoChamados;
     private Map<UsuarioSistema, Set<PermissaoAcessoRecurso>> recursosDoUsuario;
-    private Map<UsuarioSistema, LocalDateTime> ultimoAcessoUsuario;
+    private Map<UsuarioSistema, LocalTime> ultimoAcessoUsuario;
     private Map<UsuarioSistema, String> ultimaPaginaUsuario;
     private Map<String, LinkedHashMap> mapaVersaoSistema = Maps.newHashMap();
 
@@ -218,13 +217,13 @@ public class SingletonRecursosSistema implements Serializable {
     }
 
 
-    void guardarUltimoAcesso(UsuarioSistema usuarioSistema, LocalDateTime now, String url) {
+    void guardarUltimoAcesso(UsuarioSistema usuarioSistema, LocalTime now, String url) {
 
         ultimoAcessoUsuario.put(usuarioSistema, now);
         ultimaPaginaUsuario.put(usuarioSistema, url);
     }
 
-    public Map<UsuarioSistema, LocalDateTime> getUltimoAcessoUsuario() {
+    public Map<UsuarioSistema, LocalTime> getUltimoAcessoUsuario() {
         return ultimoAcessoUsuario;
     }
 

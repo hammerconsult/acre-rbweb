@@ -97,9 +97,6 @@ public class Obra extends SuperEntidade {
      */
     @Invisivel
     private Boolean prestadoConta;
-    /**
-     * campo destinado para identificar se a obra faz parte da loa
-     */
     @OneToMany(mappedBy = "obra", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ObraTermo> itemObraTermo;
 
@@ -114,7 +111,6 @@ public class Obra extends SuperEntidade {
     @ManyToOne
     @Etiqueta(value = "Projeto/Atividade")
     private AcaoPPA acaoPPA;
-
 
     @Obrigatorio
     @Length(maximo = 255)

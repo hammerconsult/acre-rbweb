@@ -10,8 +10,6 @@ import br.com.webpublico.enums.Mes;
 import br.com.webpublico.esocial.enums.SituacaoESocial;
 import br.com.webpublico.reinf.eventos.domain.EventoR2098;
 import br.com.webpublico.reinf.eventos.domain.EventoR2099;
-import br.com.webpublico.reinf.eventos.domain.EventoR9000;
-import br.com.webpublico.reinf.eventos.domain.EventoR9001;
 import br.com.webpublico.reinf.eventos.domain.EventoR4099;
 import br.com.webpublico.util.DataUtil;
 import com.google.common.collect.Lists;
@@ -144,16 +142,16 @@ public class FiltroReinf {
         this.itemEmpregadorR2020 = itemEmpregadorR2020;
     }
 
-    public Date getPrimeiroDiaDoMesAno(){
-        return DataUtil.getPrimeiroDiaMes(exercicio.getAno(), mes.getNumeroMesIniciandoEmZero());
-    }
-
     public List<RegistroEventoRetencaoReinf> getItemEmpregadorR4020() {
         return itemEmpregadorR4020;
     }
 
     public void setItemEmpregadorR4020(List<RegistroEventoRetencaoReinf> itemEmpregadorR4020) {
         this.itemEmpregadorR4020 = itemEmpregadorR4020;
+    }
+
+    public Date getPrimeiroDiaDoMesAno() {
+        return DataUtil.getPrimeiroDiaMes(exercicio.getAno(), mes.getNumeroMesIniciandoEmZero());
     }
 
     public Date getUltimoDiaDoMesAno() {

@@ -173,7 +173,6 @@ public class CadastroEconomicoControlador extends PrettyControlador<CadastroEcon
     private List<HistoricoAlteracaoRedeSim> listaHistoricosRedeSimPessoa;
 
     public Boolean autonomoMotorista;
-    private List<LogradouroBairro> logradouroBairrosCEPInformado;
     private Boolean mei;
     private EnquadramentoAmbiental enquadramentoAmbiental;
     private List<RequerimentoLicenciamentoETR> requerimentoLicenciamentoETRList;
@@ -2405,11 +2404,6 @@ public class CadastroEconomicoControlador extends PrettyControlador<CadastroEcon
         this.idRevisao = idRevisao;
     }
 
-    public enum TipoPessoaCadastro {
-        PESSOA,
-        SOCIO;
-    }
-
     public boolean hasPermissaoAlterar() {
         return Operacoes.NOVO.equals(operacao) || usuarioSistemaFacade.validaAutorizacaoUsuario(getSistemaControlador().getUsuarioCorrente(),
             AutorizacaoTributario.PERMITIR_ALTERAR_ENQUADRAMENTO_FISCAL);
@@ -2421,12 +2415,6 @@ public class CadastroEconomicoControlador extends PrettyControlador<CadastroEcon
             return SituacaoCadastralCadastroEconomico.AGUARDANDO_AVALIACAO.equals(ultimaSiuacao.get(0).getSituacaoCadastral());
         }
         return false;
-    }
-
-    public boolean hasPermissaoGerenciarNfse() {
-        boolean b = usuarioSistemaFacade.validaAutorizacaoUsuario(getSistemaControlador().getUsuarioCorrente(),
-            AutorizacaoTributario.PERMITIR_GERENCIAR_NFSE);
-        return b;
     }
 
     public String getNomeBotaoSalvar() {
@@ -2506,8 +2494,6 @@ public class CadastroEconomicoControlador extends PrettyControlador<CadastroEcon
             cnaeParaAdicionar.setTipo(pessoaCNAE.getTipo());
             cnaeParaAdicionar.setExercidaNoLocal(pessoaCNAE.getExercidaNoLocal());
             selecionado.getEconomicoCNAE().add(cnaeParaAdicionar);
-            CNAE cnae = cadastroEconomicoFacade.getCnaeFacade().recuperar(pessoaCNAE.getCnae().getId());
-            selecionado.adicionarServicos(cnae.getServicos());
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception e) {
@@ -2648,9 +2634,6 @@ public class CadastroEconomicoControlador extends PrettyControlador<CadastroEcon
 
     public void salvarCadastroEconomicoAlterandoGrauDeRiscoCnae() {
         if (selecionado.validarAlteracaoCnaeCadastroEconomico()) {
-            if (selecionado.getServico() != null && !selecionado.getServico().isEmpty()) {
-                selecionado.getEnquadramentoVigente().setTipoNotaFiscalServico(TipoNotaFiscalServico.ELETRONICA);
-            }
             selecionado = cadastroEconomicoFacade.salvarRetornado(selecionado);
             if (alteracaoCmcFacade.hasAlteracaoCadastro(selecionado.getId())
                 && (SituacaoCadastralCadastroEconomico.ATIVA_REGULAR.equals(selecionado.getSituacaoAtual().getSituacaoCadastral())
@@ -2696,6 +2679,11 @@ public class CadastroEconomicoControlador extends PrettyControlador<CadastroEcon
             return !SituacaoCadastralPessoa.ATIVO.equals(selecionado.getPessoa().getSituacaoCadastralPessoa());
         }
         return false;
+    }
+
+    public enum TipoPessoaCadastro {
+        PESSOA,
+        SOCIO;
     }
 
     public List<PessoaHorarioFuncionamento> buscarHorariosDeFuncionamento() {

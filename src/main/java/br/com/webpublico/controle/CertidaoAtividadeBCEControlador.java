@@ -131,7 +131,6 @@ public class CertidaoAtividadeBCEControlador extends PrettyControlador<CertidaoA
             validarCampos();
 
             CadastroEconomico cadastroEconomico = criarNovaSituacaoCadastral();
-            alterarDadosCmcPorSituacao(cadastroEconomico);
             certidaoAtividadeBCEFacade.montarArquivoParaSalvar(selecionado);
             selecionado = certidaoAtividadeBCEFacade.salvarRetornado(selecionado);
             cadastroEconomicoFacade.salvar(cadastroEconomico);
@@ -144,15 +143,6 @@ public class CertidaoAtividadeBCEControlador extends PrettyControlador<CertidaoA
         } catch (Exception e) {
             FacesUtil.addFatal("Erro!", "Não foi possível realizar esta operação");
             logger.error(e.getMessage());
-        }
-    }
-
-    private void alterarDadosCmcPorSituacao(CadastroEconomico cadastroEconomico) {
-        switch (cadastroEconomico.getSituacaoAtual().getSituacaoCadastral()) {
-            case BAIXADA: {
-                cadastroEconomico.getEnquadramentoVigente().setSubstitutoTributario(Boolean.FALSE);
-                break;
-            }
         }
     }
 

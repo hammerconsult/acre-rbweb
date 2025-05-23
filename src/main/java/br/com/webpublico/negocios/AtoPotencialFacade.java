@@ -105,7 +105,7 @@ public class AtoPotencialFacade extends SuperFacadeContabil<AtoPotencial> {
 
     private List<ObjetoParametro> getObjetoParametros(AtoPotencial atoPotencial, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(atoPotencial, item));
+        objetos.add(new ObjetoParametro(atoPotencial.getId().toString(), AtoPotencial.class.getSimpleName(), item));
         return objetos;
     }
 

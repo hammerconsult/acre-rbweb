@@ -80,6 +80,8 @@ public class TransferenciaParametrosTributarioFacade extends AbstractFacade<Conf
     private JdbcFaceValor faceValorDAO;
     private JdbcFaceServico faceServicoDAO;
     @EJB
+    private ParametroRegularizacaoFacade parametroRegularizacaoFacade;
+    @EJB
     private HabiteseClassesConstrucaoFacade habiteseClassesConstrucaoFacade;
     @EJB
     private HabiteseGruposConstrucaoFacade habiteseGruposConstrucaoFacade;
@@ -92,17 +94,15 @@ public class TransferenciaParametrosTributarioFacade extends AbstractFacade<Conf
     @EJB
     private ItemServicoConstrucaoFacade itemServicoConstrucaoFacade;
     @EJB
-    private ParametroRegularizacaoFacade parametroRegularizacaoFacade;
-    @EJB
     private ParametroAlvaraImediatoFacade parametroAlvaraImediatoFacade;
     @EJB
     private ParametroMalaDiretaIptuFacade parametroMalaDiretaIptuFacade;
     @EJB
-    private ParametroMarcaFogoFacade parametroMarcaFogoFacade;
-    @EJB
     private ParametroLicenciamentoAmbientalFacade parametroLicenciamentoAmbientalFacade;
     @EJB
     private AssuntoLicenciamentoAmbientalFacade assuntoLicenciamentoAmbientalFacade;
+    @EJB
+    private ParametroMarcaFogoFacade parametroMarcaFogoFacade;
     @EJB
     private ParametroInformacaoRBTransFacade parametroInformacaoRBTransFacade;
 

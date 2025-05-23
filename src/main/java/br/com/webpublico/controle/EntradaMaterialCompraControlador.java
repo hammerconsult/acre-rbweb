@@ -21,7 +21,6 @@ import com.google.common.collect.Sets;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +52,7 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
     private List<LiquidacaoVO> liquidacoesVO;
     private List<SolicitacaoEstornoEntradaMaterial> solicitacoesEstornoEntrada;
     private List<ItemEntradaReservaEstoqueVO> itensReservaEstoqueVO;
-    private FiltroEmpenhoDocumentoFiscal filtroEmpenhoDocumentoFiscal;
+    private ComponenteEmpenhoDocumentoFiscalControlador componenteEmpDocto;
 
     public EntradaMaterialCompraControlador() {
         metadata = new EntidadeMetaData(EntradaCompraMaterial.class);
@@ -147,7 +146,7 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
             getSelecionado().getDocumentosFiscais().forEach(doc -> liquidacoes.addAll(facade.getLiquidacaoFacade().buscarLiquidacaoComSaldoPorDocumentoFiscal(doc.getDoctoFiscalLiquidacao())));
 
             liquidacoes.forEach(liquidacao -> {
-                if (liquidacao.getSaldo().compareTo(BigDecimal.ZERO) > 0) {
+                if (liquidacao.getSaldo().compareTo(BigDecimal.ZERO) >0) {
                     SolicitacaoLiquidacaoEstorno novaSolEstLiq = new SolicitacaoLiquidacaoEstorno();
                     novaSolEstLiq.setLiquidacao(liquidacao);
                     novaSolEstLiq.setDataSolicitacao(new Date());
@@ -323,7 +322,7 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
     public void preencherItensEntrada() {
         try {
             validarRequisicaoCompra(getSelecionado().getRequisicaoDeCompra());
-            getSelecionado().setRequisicaoDeCompra(facade.getRequisicaoDeCompraFacade().recuperar(getSelecionado().getRequisicaoDeCompra().getId()));
+            getSelecionado().setRequisicaoDeCompra(facade.getRequisicaoDeCompraFacade().recuperarComDependenciasRequisicaoExecucao(getSelecionado().getRequisicaoDeCompra().getId()));
             recuperarCardapioRequisicaoCompra();
             if (isIntegracaoCardapio()) {
                 guiasDistribuicaoVo = facade.getCardapioRequisicaoCompraFacade().buscarGuiaDistribuicaoVO(cardapioRequisicaoCompra, SituacaoRequisicaoMaterial.NAO_AVALIADA);
@@ -411,7 +410,8 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
         mapMateriais = Maps.newHashMap();
         if (isOperacaoNovo()) {
             selecionado.setItens(Lists.newArrayList());
-            for (ItemRequisicaoDeCompra itemRequisicao : getSelecionado().getRequisicaoDeCompra().getItens()) {
+            List<ItemRequisicaoDeCompra> itensRequisicao = facade.getRequisicaoDeCompraFacade().buscarItensRequisicao(getSelecionado().getRequisicaoDeCompra());
+            for (ItemRequisicaoDeCompra itemRequisicao : itensRequisicao) {
 
                 BigDecimal quantidadeRestante = facade.getRequisicaoDeCompraFacade().buscarQuantidadeRestante(itemRequisicao);
                 itemRequisicao.setQuantidadeDisponivel(quantidadeRestante);
@@ -622,10 +622,15 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
         doctoFiscalEntradaCompra = docto;
     }
 
-    public void novoFiltroEmpenhoDocumentoFiscal(DoctoFiscalEntradaCompra docEnt) {
-        List<Long> idsItemReq = getIdsItemRequisicaoAdicionadoDocumentoFiscal(docEnt);
-        filtroEmpenhoDocumentoFiscal = new FiltroEmpenhoDocumentoFiscal(getSelecionado().getRequisicaoDeCompra().getId(), idsItemReq);
-        FacesUtil.executaJavaScript("rcBuscarEmpenhoDocumentoFiscal()");
+    public void buscarEmpenhosDocumentoFiscal(DoctoFiscalEntradaCompra docto) {
+        doctoFiscalEntradaCompra = docto;
+        componenteEmpDocto = new ComponenteEmpenhoDocumentoFiscalControlador();
+
+        componenteEmpDocto.setFiltro(new FiltroEmpenhoDocumentoFiscal());
+        componenteEmpDocto.getFiltro().setId(docto.getDoctoFiscalLiquidacao().getId());
+        componenteEmpDocto.getFiltro().setTipo(FiltroEmpenhoDocumentoFiscal.TipoFiltroEmpenhoDocto.ENTRADA_COMPRA);
+        componenteEmpDocto.getFiltro().setTipoRequisicaoCompra(getSelecionado().getRequisicaoDeCompra().getTipoRequisicao());
+        componenteEmpDocto.setEmpenhosDocumentoFiscal(facade.getRequisicaoDeCompraFacade().buscarEmpenhosDocumentoFiscal(componenteEmpDocto.getFiltro()));
     }
 
     public void adicionarDocumentoFiscalVerificandoDuplicidade() {
@@ -654,35 +659,30 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
     }
 
     public void validarDuplicidadeDocumentoFiscal() {
-        try {
-            mensagemDocumentosDuplicados = new ArrayList<>();
-//            Pessoa fornecedorRequisicao = facade.getRequisicaoDeCompraFacade().getFornecedorRequisicao(getSelecionado().getRequisicaoDeCompra());
+        mensagemDocumentosDuplicados = new ArrayList<>();
 
+        List<DoctoFiscalEntradaCompra> documentoList = facade.buscarDocumentosFiscaisDuplicados(
+            doctoFiscalEntradaCompra.getDoctoFiscalLiquidacao().getNumero(),
+            doctoFiscalEntradaCompra.getDoctoFiscalLiquidacao().getChaveDeAcesso(),
+            doctoFiscalEntradaCompra.getDoctoFiscalLiquidacao().getTipoDocumentoFiscal(),
+            getSelecionado().getRequisicaoDeCompra().getFornecedor()
+        );
 
-            List<DoctoFiscalEntradaCompra> documentoList = facade.buscarDocumentosFiscaisDuplicados(
-                doctoFiscalEntradaCompra.getDoctoFiscalLiquidacao().getNumero(),
-                doctoFiscalEntradaCompra.getDoctoFiscalLiquidacao().getChaveDeAcesso(),
-                doctoFiscalEntradaCompra.getDoctoFiscalLiquidacao().getTipoDocumentoFiscal(),
-                getSelecionado().getRequisicaoDeCompra().getFornecedor()
-            );
-
-            if (!Util.isListNullOrEmpty(documentoList)) {
-                documentoList.forEach(doc -> {
-                    if (!doc.equals(doctoFiscalEntradaCompra)) {
-                        String numeroEntrada = (doc.getEntradaCompraMaterial().getNumero() != null) ? " Nº " + doc.getEntradaCompraMaterial().getNumero() : " ";
-                        mensagemDocumentosDuplicados.add("Atenção! Foi encontrado um registro anterior de Entrada por Compra " +
-                            "com o Documento Fiscal com esse Tipo do Documento e Número ou Chave de Acesso. Entrada por Compra" +
-                            numeroEntrada + " - " + doc.getEntradaCompraMaterial().getSituacao().getDescricao() +
-                            ", verifique e prossiga com cautela a fim de evitar duplicidade. ".concat(
-                                Util.linkBlack("/entrada-por-compra/ver/" + doc.getEntradaCompraMaterial().getId(), "Clique aqui para visualizar.")
-                            )
-                        );
-                    }
-                });
-            }
-        } catch (ExcecaoNegocioGenerica e) {
-            FacesUtil.addOperacaoNaoPermitida(e.getMessage());
+        if (!Util.isListNullOrEmpty(documentoList)) {
+            documentoList.forEach(doc -> {
+                if (!doc.equals(doctoFiscalEntradaCompra)) {
+                    String numeroEntrada = (doc.getEntradaCompraMaterial().getNumero() != null) ? " Nº " + doc.getEntradaCompraMaterial().getNumero() : " ";
+                    mensagemDocumentosDuplicados.add("Atenção! Foi encontrado um registro anterior de Entrada por Compra " +
+                        "com o Documento Fiscal com esse Tipo do Documento e Número ou Chave de Acesso. Entrada por Compra" +
+                        numeroEntrada + " - " + doc.getEntradaCompraMaterial().getSituacao().getDescricao() +
+                        ", verifique e prossiga com cautela a fim de evitar duplicidade. ".concat(
+                            Util.linkBlack("/entrada-por-compra/ver/" + doc.getEntradaCompraMaterial().getId(), "Clique aqui para visualizar.")
+                        )
+                    );
+                }
+            });
         }
+
     }
 
     private void validarDocumentoFiscal() {
@@ -882,8 +882,10 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
         for (DoctoFiscalEntradaCompra docEnt : getSelecionado().getDocumentosFiscais()) {
             DoctoFiscalLiquidacao doc = docEnt.getDoctoFiscalLiquidacao();
 
-            List<Long> idsItemReq = getIdsItemRequisicaoAdicionadoDocumentoFiscal(docEnt);
-            FiltroEmpenhoDocumentoFiscal filtro = new FiltroEmpenhoDocumentoFiscal(getSelecionado().getRequisicaoDeCompra().getId(), idsItemReq);
+            FiltroEmpenhoDocumentoFiscal filtro = new FiltroEmpenhoDocumentoFiscal();
+            filtro.setId(doc.getId());
+            filtro.setTipo(FiltroEmpenhoDocumentoFiscal.TipoFiltroEmpenhoDocto.ENTRADA_COMPRA);
+            filtro.setTipoRequisicaoCompra(getSelecionado().getRequisicaoDeCompra().getTipoRequisicao());
             List<EmpenhoDocumentoFiscal> empenhosDocumentosFiscais = facade.getRequisicaoDeCompraFacade().buscarEmpenhosDocumentoFiscal(filtro);
 
             for (EmpenhoDocumentoFiscal empenhoDoc : empenhosDocumentosFiscais) {
@@ -906,12 +908,6 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
         dto.adicionarParametro("idEntradaMaterial", getSelecionado().getId());
         dto.adicionarParametro("TIPO_REQUISICAO", getSelecionado().getRequisicaoDeCompra().getTipoRequisicao().getDescricao());
         dto.setNomeRelatorio(nomeRelatorio);
-    }
-
-    @NotNull
-    private static List<Long> getIdsItemRequisicaoAdicionadoDocumentoFiscal(DoctoFiscalEntradaCompra docEnt) {
-        List<Long> idsItemReq = docEnt.getItens().stream().map(item -> item.getItemEntradaMaterial().getItemCompraMaterial().getItemRequisicaoDeCompra().getId()).collect(Collectors.toList());
-        return idsItemReq;
     }
 
 
@@ -1038,11 +1034,11 @@ public class EntradaMaterialCompraControlador extends EntradaMaterialControlador
         this.itensReservaEstoqueVO = itensReservaEstoqueVO;
     }
 
-    public FiltroEmpenhoDocumentoFiscal getFiltroEmpenhoDocumentoFiscal() {
-        return filtroEmpenhoDocumentoFiscal;
+    public ComponenteEmpenhoDocumentoFiscalControlador getComponenteEmpDocto() {
+        return componenteEmpDocto;
     }
 
-    public void setFiltroEmpenhoDocumentoFiscal(FiltroEmpenhoDocumentoFiscal filtroEmpenhoDocumentoFiscal) {
-        this.filtroEmpenhoDocumentoFiscal = filtroEmpenhoDocumentoFiscal;
+    public void setComponenteEmpDocto(ComponenteEmpenhoDocumentoFiscalControlador componenteEmpDocto) {
+        this.componenteEmpDocto = componenteEmpDocto;
     }
 }

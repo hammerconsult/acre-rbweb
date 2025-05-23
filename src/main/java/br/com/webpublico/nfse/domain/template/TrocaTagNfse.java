@@ -1,7 +1,6 @@
 package br.com.webpublico.nfse.domain.template;
 
 
-import br.com.webpublico.dte.entidades.ConfiguracaoDte;
 import br.com.webpublico.entidades.CadastroEconomico;
 import br.com.webpublico.entidades.comum.UsuarioWeb;
 import br.com.webpublico.nfse.domain.ConfiguracaoNfse;
@@ -12,14 +11,9 @@ import br.com.webpublico.util.trocatag.TrocaTag;
 public abstract class TrocaTagNfse extends TrocaTag {
 
     protected ConfiguracaoNfse configuracaoNfse;
-    protected ConfiguracaoDte configuracaoDte;
 
     TrocaTagNfse(ConfiguracaoNfse configuracaoNfse) {
         this.configuracaoNfse = configuracaoNfse;
-    }
-
-    TrocaTagNfse(ConfiguracaoDte configuracaoDte) {
-        this.configuracaoDte = configuracaoDte;
     }
 
     public void addFieldsUser(UsuarioWeb user) {

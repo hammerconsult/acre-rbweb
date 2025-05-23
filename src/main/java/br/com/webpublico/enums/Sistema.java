@@ -5,8 +5,8 @@ import java.io.Serializable;
 public enum Sistema implements Serializable {
     NOTA_PREMIADA("Nota Premiada"),
     NFSE("Nota Fiscal Eletrônica de Serviço"),
-    APP_SERVIDOR("Aplicativo do Servidor"),
-    PORTAL_CONTRIBUINTE("Portal do Contribuinte");
+    PORTAL_CONTRIBUINTE("Portal do Contribuinte"),
+    APP_SERVIDOR("Aplicativo do Servidor");
 
     private String descricao;
 

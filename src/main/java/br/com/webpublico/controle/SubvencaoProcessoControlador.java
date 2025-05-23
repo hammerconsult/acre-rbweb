@@ -3,7 +3,6 @@ package br.com.webpublico.controle;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.OrdenaResultadoParcelaSubvencao;
 import br.com.webpublico.entidadesauxiliares.ParcelaSubvencao;
-import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
@@ -228,7 +227,10 @@ public class SubvencaoProcessoControlador extends PrettyControlador<SubvencaoPro
         if (sub == null) {
             sub = new SubvencaoEmpresas();
         }
+
+
         debitoSelecionados = (List<ResultadoParcela>) Web.pegaDaSessao("debitoSelecionados");
+        List<SubvencaoEmpresas> empresasCredoras = Lists.newArrayList(selecionado.getSubvencaoEmpresas());
     }
 
     private void definirSubvencaoReicidenteSessao() {
@@ -694,7 +696,6 @@ public class SubvencaoProcessoControlador extends PrettyControlador<SubvencaoPro
                 }
             }
         }
-
         ve.lancarException();
     }
 
@@ -939,7 +940,7 @@ public class SubvencaoProcessoControlador extends PrettyControlador<SubvencaoPro
         BigDecimal valorBloqueio = sub.getBloqueioOutorga() == null ? BigDecimal.ZERO : sub.getBloqueioOutorga().totalBloqueado();
         if (sub.getValorSubvencao().subtract(valorBloqueio).compareTo(valorTotalSubvencionar) < 0) {
 
-            //para quando a primeira parcela adicionada possui valor maior que o saldo da subvenção
+            //para quando a primeira parcela adiciona possui valor maior que o saldo da subvenção
             if (saldo.compareTo(BigDecimal.ZERO) < 0) {
                 saldo = sub.getValorSubvencao().subtract(valorBloqueio);
             }

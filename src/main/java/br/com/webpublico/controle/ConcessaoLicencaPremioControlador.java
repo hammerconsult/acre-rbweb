@@ -478,7 +478,7 @@ public class ConcessaoLicencaPremioControlador extends PrettyControlador<Concess
             ValidacaoException ve = new ValidacaoException();
             ParametroLicencaPremio parametroLicencaPremio = parametroLicencaPremioFacade.recuperaVigente();
             Integer totalFaltas = faltasFacade.recuperaDiasDeFaltasPorPeriodo(contratoFP.getIdCalculo(), selecionado.getPeriodoAquisitivoFL().getInicioVigencia(), selecionado.getPeriodoAquisitivoFL().getFinalVigencia());
-            if (parametroLicencaPremio != null && parametroLicencaPremio.getQuantidadeDiasPerdaPeriodo() != null && parametroLicencaPremio.getQuantidadeDiasPerdaPeriodo() > 0 && totalFaltas >= parametroLicencaPremio.getQuantidadeDiasPerdaPeriodo()) {
+            if (totalFaltas > FALTAS_INJUSTIFICADAS) {
                 ve.adicionarMensagemDeOperacaoNaoPermitida("Devido ao número de faltas injustificadas (16 ou mais) o vínculo perdeu o direito à concessão do período aquisitivo");
             } else if (totalFaltas > 0 && parametroLicencaPremio != null && parametroLicencaPremio.getAdiarConcecaoUmMesPorFalta()) {
                 java.time.LocalDate dataInicialPermitida = (DataUtil.dateToLocalDate(selecionado.getPeriodoAquisitivoFL().getFinalVigencia()).plusDays(1)).plusMonths(totalFaltas);
@@ -595,7 +595,7 @@ public class ConcessaoLicencaPremioControlador extends PrettyControlador<Concess
     @Override
     public void excluir() {
         try {
-            concessaoFeriasLicencaFacade.realizarTratativasParaExclusaoDeConcessao(selecionado, null);
+            concessaoFeriasLicencaFacade.realizarTratativasParaExclusaoDeConcessao(selecionado);
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
             return;

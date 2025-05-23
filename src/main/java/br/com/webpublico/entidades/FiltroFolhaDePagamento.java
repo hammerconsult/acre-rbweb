@@ -1,9 +1,7 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidadesauxiliares.rh.FiltroFolhaDePagamentoDTO;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.anotacoes.Etiqueta;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
@@ -65,18 +63,5 @@ public class FiltroFolhaDePagamento implements Serializable {
 
     public void setFiltroJSON(String filtroJSON) {
         this.filtroJSON = filtroJSON;
-    }
-
-    public FiltroFolhaDePagamentoDTO getFiltroDTO() {
-        if (filtroJSON == null || filtroJSON.isEmpty()) {
-            return null;
-        }
-
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(filtroJSON, FiltroFolhaDePagamentoDTO.class);
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

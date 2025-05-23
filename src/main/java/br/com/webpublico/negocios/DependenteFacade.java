@@ -11,8 +11,8 @@ import br.com.webpublico.entidades.PessoaFisica;
 import br.com.webpublico.entidades.rh.portal.atualizacaocadastral.CamposAlteradosPortal;
 import br.com.webpublico.entidadesauxiliares.rh.sig.DependenteSigDTO;
 import br.com.webpublico.negocios.rh.portal.CamposAlteradosPortalFacade;
+import com.beust.jcommander.internal.Lists;
 import br.com.webpublico.util.DataUtil;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.hibernate.Hibernate;
 

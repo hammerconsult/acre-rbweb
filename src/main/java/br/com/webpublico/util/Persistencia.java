@@ -449,19 +449,6 @@ public class Persistencia {
         }
         return classe;
     }
-    public static Field getField(Class classe, String atributo) {
-        try {
-            for (Field f : getAtributos(classe)) {
-                if (f.getName().equals(atributo)) {
-                    return f;
-                }
-            }
-        } catch (Exception ex) {
-            logger.error("Não foi possível encontrar o atributo versão anterior na " + classe, ex);
-        }
-        return null;
-    }
-
 
     private static int pegarQuantiaAtualDeExecucoesRecursivas(String method) {
         int qtd = 0;

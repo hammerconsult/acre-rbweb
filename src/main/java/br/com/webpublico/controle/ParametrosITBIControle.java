@@ -419,7 +419,7 @@ public class ParametrosITBIControle extends PrettyControlador<ParametrosITBI> im
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 for (ArquivoParte parte : parametrosFuncionarios.getDetentorArquivoComposicao().getArquivosComposicao().get(0).getArquivo().getPartes()) {
                     try {
-                        if (parte.getDados() != null) buffer.write(parte.getDados());
+                        buffer.write(parte.getDados());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

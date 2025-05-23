@@ -76,11 +76,4 @@ public class ExtensaoFonteRecurso extends SuperEntidade {
     public String toString() {
         return codigo + " - " + descricao;
     }
-
-    public Integer getCodigoEs() {
-        return getCodigo().toString().startsWith("4") ? 2 :
-            getCodigo().toString().startsWith("1") ||
-                getCodigo().toString().startsWith("2") ||
-                getCodigo().toString().startsWith("3") ? 1 : 0;
-    }
 }

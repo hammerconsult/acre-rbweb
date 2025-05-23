@@ -239,7 +239,7 @@ public class VeiculoOperadoraTecnologiaTransporteControlador extends PrettyContr
             FacesUtil.addOperacaoRealizada("Vistoria Gerada com sucesso!");
             FacesUtil.addOperacaoRealizada("Veículo aguardando vistoria!");
             redireciona();
-        } catch (Exception e){
+        } catch (Exception e) {
             descobrirETratarException(e);
         }
     }

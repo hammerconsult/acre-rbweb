@@ -4,7 +4,7 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoEstornoItemVo;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoEstornoLoquidacaoVo;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoEstornoVo;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.negocios.tributario.singletons.SingletonGeradorCodigo;
@@ -167,39 +167,16 @@ public class ExecucaoContratoEstornoFacade extends AbstractFacade<ExecucaoContra
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
 
-    public BigDecimal getQuantidadeEstornadaItemPorFonte(ExecucaoContratoItem item, FonteDespesaORC fonteDespesaORC) {
-        String sql = " select distinct coalesce(sum(item.quantidade),0) from execucaocontratoempestitem item " +
-            "           inner join execucaocontratoitem exitem on exitem.id = item.execucaocontratoitem_id" +
-            "           inner join execucaocontratoitemdot exdot on exitem.id = exdot.execucaocontratoitem_id" +
-            "           inner join execucaocontratotipofonte exfonte on exfonte.id = exdot.execucaocontratotipofonte_id " +
-            "           where exitem.id = :idItem ";
-        sql+= fonteDespesaORC !=null ? " and exfonte.fontedespesaorc_id = :idFonteDespOrc " : "";
+    public BigDecimal getValorEstornado(ExecucaoContratoItem item) {
+        String sql = " select coalesce(sum(item.valortotal),0) from execucaocontratoempestitem item where item.execucaocontratoitem_id = :idItem ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItem", item.getId());
-        if (fonteDespesaORC !=null){
-            q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
-        }
-        return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
-    }
-
-    public BigDecimal getValorEstornadoItemPorFonte(ExecucaoContratoItem item, FonteDespesaORC fonteDespesaORC) {
-        String sql = " select distinct coalesce(sum(item.valortotal),0) from execucaocontratoempestitem item " +
-            "           inner join execucaocontratoitem exitem on exitem.id = item.execucaocontratoitem_id" +
-            "           inner join execucaocontratoitemdot exdot on exitem.id = exdot.execucaocontratoitem_id" +
-            "           inner join execucaocontratotipofonte exfonte on exfonte.id = exdot.execucaocontratotipofonte_id " +
-            "           where exitem.id = :idItem ";
-        sql+= fonteDespesaORC !=null ? " and exfonte.fontedespesaorc_id = :idFonteDespOrc " : "";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idItem", item.getId());
-        if (fonteDespesaORC !=null){
-            q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
-        }
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
 
     public BigDecimal getValorEstornado(FonteDespesaORC fonte, ExecucaoContratoItem item) {
         String sql = " select coalesce(sum(itemest.valortotal), 0) as valor " +
-            "           from execucaocontratoempestitem itemest " +
+            "from execucaocontratoempestitem itemest " +
             "         inner join execucaocontratoempenhoest exsol on exsol.id = itemest.execucaocontratoempenhoest_id " +
             "         inner join solicitacaoempenhoestorno solest on solest.id = exsol.solicitacaoempenhoestorno_id " +
             "         inner join solicitacaoempenho solemp on solemp.id = solest.solicitacaoempenho_id " +
@@ -267,7 +244,6 @@ public class ExecucaoContratoEstornoFacade extends AbstractFacade<ExecucaoContra
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
 
-
     public BigDecimal recuperarValorSolicitacaoEstornoLiquidacaoAguardandoEstornoLiquidacao(Liquidacao liquidacao, ExecucaoContrato execucaoContrato) {
         String sql = " select coalesce(sum(sol.valor),0) as total from execucaocontratoestorno exEst " +
             "          inner join execucaocontratoempenhoest est on est.execucaocontratoestorno_id = exEst.id " +
@@ -281,7 +257,6 @@ public class ExecucaoContratoEstornoFacade extends AbstractFacade<ExecucaoContra
         q.setParameter("idLiquidacao", liquidacao.getId());
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
-
 
     public List<ExecucaoContratoEmpenhoEstorno> buscarExecucaoContratoEstornoAguardandoEstornoEmpenho(Contrato contrato, ExecucaoContrato execucaoCont) {
         String sql = " select exsol.* from execucaocontratoempenhoest exsol  " +
@@ -483,9 +458,9 @@ public class ExecucaoContratoEstornoFacade extends AbstractFacade<ExecucaoContra
     public SolicitacaoEmpenhoEstornoItemVo criarExecucaoContratoEmpenhoEstornoItemVO(ExecucaoContratoItem itemEx, ExecucaoContratoEstorno selecionado, SolicitacaoEmpenhoEstornoVo solicitacaoEmpenhoEstornoVo) {
         SolicitacaoEmpenhoEstornoItemVo novoItemVo = new SolicitacaoEmpenhoEstornoItemVo();
         novoItemVo.setExecucaoContratoItem(itemEx);
-        novoItemVo.setValorEstornadoExecucao(getValorEstornadoItemPorFonte(itemEx, null).add(getValorAdicionadoEstorno(itemEx, selecionado, solicitacaoEmpenhoEstornoVo)));
+        novoItemVo.setValorEstornadoExecucao(getValorEstornado(itemEx).add(getValorAdicionadoEstorno(itemEx, selecionado, solicitacaoEmpenhoEstornoVo)));
         novoItemVo.setValorEmRequisicao(getRequisicaoDeCompraFacade().getValorEmRequisicao(itemEx));
-        novoItemVo.setValorEstornoRequisicao(getRequisicaoCompraEstornoFacade().getValorEstornadoRequisicaoContrato(itemEx));
+        novoItemVo.setValorEstornoRequisicao(getRequisicaoCompraEstornoFacade().getValorEstornado(itemEx));
         novoItemVo.setValorEmExecucao(itemEx.getValorTotal());
         novoItemVo.setQuantidade(itemEx.isExecucaoPorQuantidade() ? BigDecimal.ZERO : BigDecimal.ONE);
         novoItemVo.setValorUnitario(itemEx.isExecucaoPorQuantidade() ? itemEx.getValorUnitario() : novoItemVo.getSaldoDisponivel());

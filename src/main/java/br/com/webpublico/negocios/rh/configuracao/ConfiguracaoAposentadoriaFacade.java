@@ -1,7 +1,7 @@
 package br.com.webpublico.negocios.rh.configuracao;
 
 import br.com.webpublico.entidades.rh.configuracao.ConfiguracaoAposentadoria;
-import br.com.webpublico.entidades.RegraAposentadoria;
+import br.com.webpublico.enums.RegraAposentadoria;
 import br.com.webpublico.negocios.AbstractFacade;
 import com.google.common.base.Preconditions;
 

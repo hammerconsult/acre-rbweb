@@ -203,18 +203,6 @@ public class FiltroNotaFiscal extends AbstractFiltroNotaFiscal {
                 OperacaoRelatorio.MENOR_IGUAL, getValorTotalFinal(), null, 1, false));
         }
 
-        if (!Strings.isNullOrEmpty(getCodigoVerificacao())) {
-            parametros.add(new ParametrosRelatorios(" lower(nota.codigoverificacao) ",
-                ":codigo_verificacao", null,
-                OperacaoRelatorio.IGUAL, getCodigoVerificacao().trim().toLowerCase(), null, 1, false));
-        }
-
-        if (!Strings.isNullOrEmpty(getNomeTomador())) {
-            parametros.add(new ParametrosRelatorios(" lower(dpt.nomerazaosocial) ",
-                ":nome_tomador", null,
-                OperacaoRelatorio.IGUAL, getNomeTomador().trim().toLowerCase(), null, 1, false));
-        }
-
         dto.adicionarParametro("PARAMETROS", ParametrosRelatorios.parametrosToDto(parametros));
         dto.adicionarParametro("FILTROS", montarDescricaoFiltros());
     }

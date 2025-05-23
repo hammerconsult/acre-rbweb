@@ -501,10 +501,10 @@ public class DashboardAdministrativoResource implements Serializable {
 
     @RequestMapping(value = "/grupo-material-disponivel", method = RequestMethod.POST, produces = "application/json;charset=UTF-8")
     public ResponseEntity<String> dashboardGrupoMaterialDisponivel(@RequestParam(value = "porcentagem") Boolean porcentagem,
-                                                                  @RequestParam(value = "tipoDash") String tipoDash,
-                                                                  @RequestParam(value = "arrayExercicios") List<Long> arrayExercicios,
-                                                                  @RequestParam(value = "arrayGrupoMaterial") List<Long> arrayGrupoMaterial,
-                                                                  @RequestParam(value = "arrayLocalEstoque") List<Long> arrayLocalEstoque) throws UnsupportedEncodingException {
+                                                                   @RequestParam(value = "tipoDash") String tipoDash,
+                                                                   @RequestParam(value = "arrayExercicios") List<Long> arrayExercicios,
+                                                                   @RequestParam(value = "arrayGrupoMaterial") List<Long> arrayGrupoMaterial,
+                                                                   @RequestParam(value = "arrayLocalEstoque") List<Long> arrayLocalEstoque) throws UnsupportedEncodingException {
         try {
             ConfiguracaoDeDashboard config = configuracaoDeDashboardFacade.getConfiguracaoPorChave();
             if (config != null) {

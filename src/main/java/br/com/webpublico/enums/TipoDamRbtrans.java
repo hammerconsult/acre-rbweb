@@ -29,9 +29,5 @@ public enum TipoDamRbtrans implements EnumComDescricao {
     public String toString() {
         return descricao;
     }
+
 }
-
-
-
-
-

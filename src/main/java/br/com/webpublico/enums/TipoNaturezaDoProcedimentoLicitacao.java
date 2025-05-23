@@ -8,7 +8,6 @@ import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EnumComDescricao;
 import br.com.webpublico.webreportdto.dto.administrativo.TipoNaturezaDoProcedimentoLicitacaoDTO;
 import com.google.common.collect.Lists;
-import org.apache.poi.hpsf.Thumbnail;
 
 import java.util.List;
 

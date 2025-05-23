@@ -25,10 +25,10 @@ import java.util.List;
 @ManagedBean(name = "precatorioControlador")
 @ViewScoped
 @URLMappings(mappings = {
-    @URLMapping(id = "novo-precatorios", pattern = "/precatorios/novo/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/edita.xhtml"),
-    @URLMapping(id = "editar-precatorios", pattern = "/precatorios/editar/#{precatorioControlador.id}/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/edita.xhtml"),
-    @URLMapping(id = "ver-precatorios", pattern = "/precatorios/ver/#{precatorioControlador.id}/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/visualizar.xhtml"),
-    @URLMapping(id = "listar-precatorios", pattern = "/precatorios/listar/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/lista.xhtml")})
+        @URLMapping(id = "novo-precatorios", pattern = "/precatorios/novo/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/edita.xhtml"),
+        @URLMapping(id = "editar-precatorios", pattern = "/precatorios/editar/#{precatorioControlador.id}/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/edita.xhtml"),
+        @URLMapping(id = "ver-precatorios", pattern = "/precatorios/ver/#{precatorioControlador.id}/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/visualizar.xhtml"),
+        @URLMapping(id = "listar-precatorios", pattern = "/precatorios/listar/", viewId = "/faces/financeiro/orcamentario/dividapublica/precatorios/lista.xhtml")})
 public class PrecatorioControlador extends DividaPublicaSuperControlador {
 
     @URLAction(mappingId = "novo-precatorios", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)

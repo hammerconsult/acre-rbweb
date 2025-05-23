@@ -13,7 +13,6 @@ import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.negocios.contabil.reprocessamento.ReprocessamentoContabilFacade;
 import br.com.webpublico.negocios.contabil.reprocessamento.ReprocessamentoLancamentoContabilSingleton;
 import br.com.webpublico.util.FacesUtil;
@@ -77,8 +76,6 @@ public class ReprocessamentoContabilControlador extends PrettyControlador<Reproc
     @URLAction(mappingId = "novo-reprocessamento", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novo() {
         auxiliar = new ReprocessamentoContabil();
-        auxiliar.setConfiguracaoContabil(reprocessamentoContabilFacade.buscarConfiguracaoContabilVigente());
-
         SistemaControlador sistemaControlador = (SistemaControlador) Util.getControladorPeloNome("sistemaControlador");
         Calendar c = Calendar.getInstance();
         c.setTime(sistemaControlador.getDataOperacao());
@@ -118,10 +115,6 @@ public class ReprocessamentoContabilControlador extends PrettyControlador<Reproc
         return reprocessamentoContabilFacade.getReprocessamentoLancamentoContabilSingleton().isCalculando();
     }
 
-    public Boolean hasProcessandoPossuiErros() {
-        return reprocessamentoContabilFacade.getReprocessamentoLancamentoContabilSingleton().getReprocessamentoContabilHistorico().getProcessadosComErro() > 0;
-    }
-
     public List<TipoBalancete> getListaTiposBalancete() {
         return Arrays.asList(TipoBalancete.values());
     }
@@ -135,14 +128,6 @@ public class ReprocessamentoContabilControlador extends PrettyControlador<Reproc
 
     public void redirecionarAcompanhamentoReprocessamento() {
         FacesUtil.redirecionamentoInterno(URL_ACOMPANHAMENTO);
-    }
-
-    public void limparObjetosContabilService() {
-        ApiServiceContabil.getService().limparObjetos();
-    }
-
-    public void carregarContaAuxiliar() {
-        ApiServiceContabil.getService().carregarContaAuxiliar(auxiliar.getExercicio());
     }
 
     public void redirecionarReprocessamento() {
@@ -164,9 +149,7 @@ public class ReprocessamentoContabilControlador extends PrettyControlador<Reproc
             if (!hasProcessando() && auxiliar != null) {
                 reprocessamentoContabilFacade.apagar(auxiliar);
                 reprocessamentoContabilFacade.inicializarSingleton(auxiliar);
-                //reprocessamentoContabilFacade.buscarContasAuxiliaresDetalhadas(auxiliar.getExercicio());
-                limparObjetosContabilService();
-                carregarContaAuxiliar();
+                reprocessamentoContabilFacade.buscarContasAuxiliaresDetalhadas(auxiliar.getExercicio());
                 List<ReprocessamentoContabil> retorno = dividirUnidades();
                 futures = Lists.newArrayList();
                 for (ReprocessamentoContabil reprocessamentoContabil : retorno) {
@@ -219,7 +202,6 @@ public class ReprocessamentoContabilControlador extends PrettyControlador<Reproc
         re3.setBarraProgressoAssistente(barraProgressoAssistente);
         re3.setUnidadeOrganizacional(auxiliar.getUnidadeOrganizacional());
         re3.setUsuarioSistema(auxiliar.getUsuarioSistema());
-        re3.setConfiguracaoContabil(auxiliar.getConfiguracaoContabil());
         re3.getTipoBalancetes().addAll(auxiliar.getTipoBalancetes());
         if (tipos != null) {
             re3.getTipoEventoContabils().addAll(tipos);

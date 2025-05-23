@@ -1,21 +1,22 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.TipoGrupo;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.enums.TipoLancamento;
 import br.com.webpublico.enums.TipoOperacaoBensImoveis;
 import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.negocios.HierarquiaOrganizacionalFacade;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
+import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.TreeMap;
 
 /**
  * @author Fabio
@@ -24,7 +25,7 @@ import java.util.Date;
 @Audited
 @Etiqueta("Bens Imóveis")
 
-public class BensImoveis extends SuperEntidadeContabilGerarContaAuxiliar implements EntidadeContabil {
+public class BensImoveis extends SuperEntidade implements EntidadeContabil, IGeraContaAuxiliar {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -319,7 +320,50 @@ public class BensImoveis extends SuperEntidadeContabilGerarContaAuxiliar impleme
     }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
-        return new GeradorContaAuxiliarDTO(getUnidadeOrganizacional());
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeOrganizacional());
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(getUnidadeOrganizacional(), contaContabil.getSubSistema());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeOrganizacional());
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(getUnidadeOrganizacional(),
+                    contaContabil.getSubSistema());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
     }
 }

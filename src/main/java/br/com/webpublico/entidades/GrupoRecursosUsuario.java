@@ -1,10 +1,12 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
+import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 /**
  * @author Fabio
@@ -14,7 +16,7 @@ import javax.persistence.*;
 @Audited
 @Etiqueta("Grupos de Recursos do Usuário do Sistema")
 
-public class GrupoRecursosUsuario extends SuperEntidade {
+public class GrupoRecursosUsuario implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -27,8 +29,19 @@ public class GrupoRecursosUsuario extends SuperEntidade {
     private Boolean leitura;
     private Boolean escrita;
     private Boolean exclusao;
+    @Transient
+    private Long criadoEm;
 
     public GrupoRecursosUsuario() {
+        criadoEm = System.nanoTime();
+    }
+
+    public Long getCriadoEm() {
+        return criadoEm;
+    }
+
+    public void setCriadoEm(Long criadoEm) {
+        this.criadoEm = criadoEm;
     }
 
     public GrupoRecurso getGrupoRecurso() {
@@ -55,6 +68,16 @@ public class GrupoRecursosUsuario extends SuperEntidade {
         this.usuarioSistema = usuarioSistema;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        return IdentidadeDaEntidade.calcularEquals(this, obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return IdentidadeDaEntidade.calcularHashCode(this);
+    }
+
     public Boolean getEscrita() {
         return escrita;
     }
@@ -78,4 +101,5 @@ public class GrupoRecursosUsuario extends SuperEntidade {
     public void setLeitura(Boolean leitura) {
         this.leitura = leitura;
     }
+
 }

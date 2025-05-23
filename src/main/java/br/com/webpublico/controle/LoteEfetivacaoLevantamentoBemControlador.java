@@ -250,7 +250,7 @@ public class LoteEfetivacaoLevantamentoBemControlador extends PrettyControlador<
      */
     private void validarCodigoPatrimonial() throws ExcecaoNegocioGenerica {
         Entidade entidade = loteEfetivacaoLevantamentoBemFacade.getEntidadeFacade().recuperarEntidadePorUnidadeOrcamentaria(selecionado.getUnidadeOrcamentaria());
-        ParametroPatrimonio parametroPatrimonio = loteEfetivacaoLevantamentoBemFacade.getParametroPatrimonioFacade().recuperarParametroComDependenciasEntidadeGeradoCodigo();
+        ParametroPatrimonio parametroPatrimonio = loteEfetivacaoLevantamentoBemFacade.getParametroPatrimonioFacade().recuperarParametroPatrimonio();
         EntidadeSequenciaPropria sequenciaPropria = validarAtributosIniciais(entidade, parametroPatrimonio, TipoBem.MOVEIS);
         Long codigoBemOperacional = null;
         Long codigoBemInservivel = null;

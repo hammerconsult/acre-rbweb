@@ -91,8 +91,8 @@ public class RelatorioBensEstoqueControlador extends RelatorioContabilSuperContr
     }
 
     @Override
-    public void adicionarExercicio(List<ParametrosRelatorios> parametros) {
-        parametros.add(new ParametrosRelatorios(null, ":exercicio", null, null, buscarExercicioPelaDataFinal().getId(), null, 0, false));
+    public void adicionarExercicio(List<ParametrosRelatorios> listaParametros) {
+        listaParametros.add(new ParametrosRelatorios(null, ":exercicio", null, null, buscarExercicioPelaDataFinal().getId(), null, 0, false));
     }
 
     private void adicionarExercicioParaApresentacao(List<ParametrosRelatorios> listaParametros) {

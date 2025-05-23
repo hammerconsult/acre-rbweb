@@ -836,56 +836,20 @@ public class LoteProcessamentoControlador extends PrettyControlador<LoteProcessa
             if (selecionado.getAno() != null && selecionado.getMes() != null) {
                 Date dataInicial = DataUtil.criarDataComMesEAno(selecionado.getMes().getNumeroMes(), selecionado.getAno()).toDate();
                 Date dataFinal = DataUtil.criarDataUltimoDiaMes(selecionado.getMes().getNumeroMes(), selecionado.getAno()).toDate();
-                consulta += " and not exists ( " +
-                    "    select 1 " +
-                    "    from CedenciaContratoFP cedencia " +
-                    "    where cedencia.contratoFP_id = vinculo.id " +
-                    "      and cedencia.tipoContratoCedenciaFP = '" + TipoCedenciaContratoFP.SEM_ONUS.name() + "' " +
-                    "      and ((to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') >= trunc(cedencia.dataCessao)  " +
-                    "           and not exists (  " +
-                    "                select 1 " +
-                    "                from RetornoCedenciaContratoFP r " +
-                    "                where r.cedenciaContratoFP_id = cedencia.id) " +
-                    "                or exists (  " +
-                    " select 1 from Afastamento a  " +
-                    "  join tipoafastamento t on t.id = a.tipoafastamento_id " +
-                    " where a.contratoFP_id = vinculo.id  " +
-                    "  and t.naoCalcularFichaSemRetorno = 1  " +
-                    "  and (a.retornoInformado = 0 or a.retornoInformado is null)  " +
-                    "  and (  " +
-                    "    (a.inicio <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') and (a.termino is null or a.termino >=  to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY')))  " +
-                    "    or (  " +
-                    "      a.inicio = (  " +
-                    "        select min(a2.inicio) from Afastamento a2  " +
-                    "          join tipoafastamento t2 on t2.id = a2.tipoafastamento_id " +
-                    "        where a2.contratoFP_id = vinculo.id  " +
-                    "          and t2.naoCalcularFichaSemRetorno = 1  " +
-                    "          and (a2.retornoInformado = 0 or a2.retornoInformado is null)  " +
-                    "            and a2.termino <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY')  " +
-                    "        )  " +
-                    "      ) or ( a.inicio <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') and (a.termino + 1 ) >= cedencia.dataCessao and  to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY') <= (select Max(r.dataRetorno) " +
-                    " from RetornoCedenciaContratoFP r where r.cedenciaContratoFP_id = cedencia.id))  " +
-                    " or (to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') >= cedencia.dataCessao " +
-                    "          and a.termino >= ( " +
-                    "              select max(r.dataRetorno) " +
-                    "              from RetornoCedenciaContratoFP r " +
-                    "              where r.cedenciaContratoFP_id = cedencia.id " +
-                    "          ) and a.termino >= to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY')  and a.termino < cedencia.dataCessao) " +
-                    "        or (a.inicio < cedencia.dataCessao and (a.inicio <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') and a.termino >= to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY')))" +
-                    "         or (a.termino >= ( " +
-                    "              select max(r.dataRetorno) " +
-                    "              from RetornoCedenciaContratoFP r " +
-                    "              where r.cedenciaContratoFP_id = cedencia.id  " +
-                    "                ) and a.termino >= to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY') and a.inicio > cedencia.dataCessao)" +
-                    "      ) " +
-                    "   ))  OR (to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') >= cedencia.dataCessao AND  to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY') <= (  " +
-                    "                select Max(r.dataRetorno) " +
-                    "                from RetornoCedenciaContratoFP r " +
-                    "                where r.cedenciaContratoFP_id = cedencia.id " +
-                    "            )) " +
-                    "      )) " ;
-
-
+                consulta += "and vinculo.id not in (select contratoFP.id " +
+                    "                       from CedenciaContratoFP cedencia  " +
+                    "                                inner join contratoFP contratoFP on cedencia.CONTRATOFP_ID = contratoFP.ID " +
+                    "                       where cedencia.tipoContratoCedenciaFP = '" + TipoCedenciaContratoFP.SEM_ONUS.name() + "'" +
+                    "                         and to_date('" + Util.dateToString(dataInicial) + "','DD/MM/YYYY') between trunc(cedencia.dataCessao) and coalesce(trunc(cedencia.dataRetorno), to_date('" + Util.dateToString(dataInicial) + "','DD/MM/YYYY'))  " +
+                    "                         and to_date('" + Util.dateToString(dataFinal) + "','DD/MM/YYYY') between trunc(cedencia.dataCessao) and coalesce(trunc(cedencia.dataRetorno), to_date('" + Util.dateToString(dataFinal) + "','DD/MM/YYYY'))) " +
+                    "     and vinculo.id not in (select contratoFP.id " +
+                    "                    from RetornoCedenciaContratoFP retorno " +
+                    "                             inner join cedenciaContratoFP cedencia on retorno.CEDENCIACONTRATOFP_ID = cedencia.ID " +
+                    "                             inner join contratoFP contratoFP on cedencia.CONTRATOFP_ID = contratoFP.ID " +
+                    "                    where cedencia.tipoContratoCedenciaFP = '" + TipoCedenciaContratoFP.SEM_ONUS.name() + "'" +
+                    "                      and retorno.oficioRetorno = 0  " +
+                    "                      and to_date('" + Util.dateToString(dataInicial) + "','DD/MM/YYYY') between trunc(cedencia.dataCessao) and coalesce(trunc(retorno.dataRetorno), to_date('" + Util.dateToString(dataInicial) + "','DD/MM/YYYY')) " +
+                    "                      and to_date('" + Util.dateToString(dataFinal) + "','DD/MM/YYYY') between trunc(cedencia.dataCessao) and coalesce(trunc(retorno.dataRetorno), to_date('" + Util.dateToString(dataFinal) + "','DD/MM/YYYY'))) ";
             }
             List<Long> idsVinculo = facade.getVinculoFPFacade().findVinculosByConsultDinamicaSql(consulta);
             if (idsVinculo.isEmpty()) {

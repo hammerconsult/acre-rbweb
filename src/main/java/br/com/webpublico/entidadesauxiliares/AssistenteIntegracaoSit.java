@@ -16,7 +16,7 @@ public class AssistenteIntegracaoSit extends AssistenteBarraProgresso {
 
     private Integer integrados;
     private Date inicio, fim;
-    private String setor, quadra, lote, bloco, api, uuid, login;
+    private String setor, quadra, lote, bloco, api, uuid;
     List<String> logs = Lists.newArrayList();
     List<String> inscricoesCadastrais = Lists.newArrayList();
 
@@ -121,14 +121,6 @@ public class AssistenteIntegracaoSit extends AssistenteBarraProgresso {
 
     public void setInscricoesCadastrais(List<String> inscricoesCadastrais) {
         this.inscricoesCadastrais = inscricoesCadastrais;
-    }
-
-    public String getLogin() {
-        return login;
-    }
-
-    public void setLogin(String login) {
-        this.login = login;
     }
 
     public void integrar(String api) {

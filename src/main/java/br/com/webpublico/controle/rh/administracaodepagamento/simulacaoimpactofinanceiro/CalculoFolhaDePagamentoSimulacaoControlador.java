@@ -223,7 +223,7 @@ public class CalculoFolhaDePagamentoSimulacaoControlador extends PrettyControlad
     public List<VinculoFP> completarContratoFP(String parte) {
         if (selecionado != null && selecionado.getTipoFolhaDePagamento() != null) {
             if (!TipoFolhaDePagamento.isFolhaRescisao(selecionado)) {
-                return contratoFPFacade.recuperaContratoVigenteSemCedenciaOuAfastamento(parte.trim(), selecionado.getMes().getNumeroMes(), selecionado.getAno());
+                return contratoFPFacade.recuperaContratoVigenteNaoCedidoMatricula(parte.trim(), selecionado.getMes().getNumeroMes(), selecionado.getAno());
             }
 
             if (TipoFolhaDePagamento.isFolhaRescisao(selecionado)) {
@@ -490,12 +490,12 @@ public class CalculoFolhaDePagamentoSimulacaoControlador extends PrettyControlad
         if (!folha.getTipoFolhaDePagamento().equals(TipoFolhaDePagamento.RESCISAO)) {
 
             if (tipoCalculo.equals(TipoCalculo.TODOS)) {
-                vinculos = folhaDePagamentoFacade.recuperarMatriculasSemCedenciaEstagioOuAfastamento(folha.getMes(), folha.getAno());
+                vinculos = folhaDePagamentoFacade.recuperarTodasMatriculas(folha.getMes(), folha.getAno());
             } else if (tipoCalculo.equals(TipoCalculo.LOTE)) {
-                vinculos = folhaDePagamentoFacade.findVinculosSemCedenciaAfastamentoByLote(loteProcessamento, folha.getMes(), folha.getAno());
+                vinculos = folhaDePagamentoFacade.findVinculosByLote(loteProcessamento);
                 folha.setLoteProcessamento(loteProcessamento);
             } else if (tipoCalculo.equals(TipoCalculo.ORGAO)) {
-                vinculos = contratoFPFacade.listarVinculosPorHierarquiaSemCedenciaEstagioOuAfastamento(Lists.newArrayList(hierarquiaOrganizacional), folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
+                vinculos = contratoFPFacade.recuperaMatriculaPorOrgaoRecursivaPelaView(Lists.newArrayList(hierarquiaOrganizacional), folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
             } else if (tipoCalculo.equals(TipoCalculo.INDIVIDUAL)) {
                 servidor.getMatriculaFP().getPessoa().setFichaJaExcluidas(false);
                 vinculos.add(servidor);

@@ -14,15 +14,15 @@ public class VOCadastroImobiliario {
     private String numero;
     private String inscricaoCadastral;
     private BigDecimal valorVenal;
-    private String descricaoProprietarios;
-    private String enderecoCompleto;
-    private List<VOConstrucao> construcoes;
     private String setor;
     private String lote;
     private String quadra;
     private String bairro;
     private String logradouro;
     private boolean selecionado;
+    private String descricaoProprietarios;
+    private String enderecoCompleto;
+    private List<VOConstrucao> construcoes;
 
     public VOCadastroImobiliario(CadastroImobiliario cadastroImobiliario) {
         this.id = cadastroImobiliario.getId();
@@ -60,30 +60,6 @@ public class VOCadastroImobiliario {
 
     public void setInscricaoCadastral(String inscricaoCadastral) {
         this.inscricaoCadastral = inscricaoCadastral;
-    }
-
-    public String getDescricaoProprietarios() {
-        return descricaoProprietarios;
-    }
-
-    public void setDescricaoProprietarios(String descricaoProprietarios) {
-        this.descricaoProprietarios = descricaoProprietarios;
-    }
-
-    public String getEnderecoCompleto() {
-        return enderecoCompleto;
-    }
-
-    public void setEnderecoCompleto(String enderecoCompleto) {
-        this.enderecoCompleto = enderecoCompleto;
-    }
-
-    public List<VOConstrucao> getConstrucoes() {
-        return construcoes;
-    }
-
-    public void setConstrucoes(List<VOConstrucao> construcoes) {
-        this.construcoes = construcoes;
     }
 
     public String getSetor() {
@@ -132,6 +108,30 @@ public class VOCadastroImobiliario {
 
     public void setSelecionado(boolean selecionado) {
         this.selecionado = selecionado;
+    }
+
+    public String getDescricaoProprietarios() {
+        return descricaoProprietarios;
+    }
+
+    public void setDescricaoProprietarios(String descricaoProprietarios) {
+        this.descricaoProprietarios = descricaoProprietarios;
+    }
+
+    public String getEnderecoCompleto() {
+        return enderecoCompleto;
+    }
+
+    public void setEnderecoCompleto(String enderecoCompleto) {
+        this.enderecoCompleto = enderecoCompleto;
+    }
+
+    public List<VOConstrucao> getConstrucoes() {
+        return construcoes;
+    }
+
+    public void setConstrucoes(List<VOConstrucao> construcoes) {
+        this.construcoes = construcoes;
     }
 
     @Override

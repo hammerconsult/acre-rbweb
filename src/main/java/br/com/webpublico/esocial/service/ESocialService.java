@@ -52,11 +52,11 @@ public interface ESocialService {
 
     EventoS1207 enviarEventoS1207(EventoS1207 s1207);
 
+    EventoS1299 enviarEventoS1299(EventoS1299 s1299);
+
     EventoS1202 enviarEventoS1202(EventoS1202 s1202, VinculoFP vinculoFP);
 
     EventoS1295 enviarEventoS1295(EventoS1295 s1295);
-
-    EventoS1299 enviarEventoS1299(EventoS1299 s1299);
 
     EventoS1280 enviarEventoS1280(EventoS1280 s1280);
 
@@ -135,7 +135,6 @@ public interface ESocialService {
     EventoS2220 getEventoS2220(EmpregadorESocial empregador);
 
     EventoS1200 getEventoS1200(EmpregadorESocial empregador);
-
     EventoS1207 getEventoS1207(EmpregadorESocial empregador);
 
     EventoS1280 getEventoS1280(EmpregadorESocial empregador);
@@ -211,9 +210,7 @@ public interface ESocialService {
 
     List<EventoESocialDTO> buscarEventosESocialNaoSincronizados(Boolean logESocial, String cnpj) throws Exception;
 
-    List<EventoESocialDTO> getEventosPorIdEsocialOrCPF(BuscarEventoDTO dto);
-
     void enviarEventosAtualizarDescricao(List<EventoESocialDTO> eventos);
 
-
+    List<EventoESocialDTO> getEventosPorIdEsocialOrCPF(BuscarEventoDTO dto);
 }

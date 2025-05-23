@@ -1,6 +1,7 @@
 package br.com.webpublico.entidadesauxiliares.contabil.analise;
 
 import br.com.webpublico.entidades.UnidadeOrganizacional;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.OperacaoORC;
 import br.com.webpublico.enums.TipoOperacaoORC;
 import com.google.common.collect.Lists;

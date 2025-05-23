@@ -10,7 +10,7 @@ import br.com.webpublico.entidadesauxiliares.DocumentoFiscalIntegracao;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentaria;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentariaDetalhamento;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentariaDocumentoComprobatorio;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.EntidadeContabil;
@@ -113,10 +113,6 @@ public class LiquidacaoFacade extends SuperFacadeContabil<Liquidacao> {
     @EJB
     private ConfigMovimentacaoBemFacade configMovimentacaoBemFacade;
     @EJB
-    private ConfiguracaoExcecaoDespesaContratoFacade configuracaoExcecaoDespesaContratoFacade;
-    @EJB
-    private SolicitacaoEmpenhoFacade solicitacaoEmpenhoFacade;
-    @EJB
     private NotaOrcamentariaFacade notaOrcamentariaFacade;
     @EJB
     private FaseFacade faseFacade;
@@ -130,6 +126,10 @@ public class LiquidacaoFacade extends SuperFacadeContabil<Liquidacao> {
     private IntegradorDocumentoFiscalLiquidacaoFacade integradorDocumentoFiscalLiquidacaoFacade;
     @EJB
     private ConvenioDespesaFacade convenioDespesaFacade;
+    @EJB
+    private ConfiguracaoExcecaoDespesaContratoFacade configuracaoExcecaoDespesaContratoFacade;
+    @EJB
+    private SolicitacaoEmpenhoFacade solicitacaoEmpenhoFacade;
     @EJB
     private TransfBensMoveisFacade transfBensMoveisFacade;
     @EJB
@@ -835,13 +835,13 @@ public class LiquidacaoFacade extends SuperFacadeContabil<Liquidacao> {
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
             if (desdobramento.getId() != null) {
-                objetos.add(new ObjetoParametro(desdobramento, item));
+                objetos.add(new ObjetoParametro(desdobramento.getId().toString(), Desdobramento.class.getSimpleName(), item));
             }
-            objetos.add(new ObjetoParametro(desdobramento.getConta(), item));
+            objetos.add(new ObjetoParametro(desdobramento.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
             Preconditions.checkNotNull(desdobramento.getLiquidacao().getEmpenho().getClasseCredor(), "A Classe credor do empenho não foi preenchida.");
-            objetos.add(new ObjetoParametro(desdobramento.getLiquidacao().getEmpenho().getClasseCredor(), item));
+            objetos.add(new ObjetoParametro(desdobramento.getLiquidacao().getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
             if (desdobramento.getLiquidacao().getEmpenho().getDividaPublica() != null) {
-                objetos.add(new ObjetoParametro(desdobramento.getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica(), item));
+                objetos.add(new ObjetoParametro(desdobramento.getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
             }
             item.setObjetoParametros(objetos);
 
@@ -1401,14 +1401,6 @@ public class LiquidacaoFacade extends SuperFacadeContabil<Liquidacao> {
         return notaFiscalFacade;
     }
 
-    public boolean hasConfiguracaoExcecaoVigente(Date dataOperacao, Conta contaDespesa) {
-        return configuracaoExcecaoDespesaContratoFacade.hasConfiguracaoVigente(dataOperacao, contaDespesa);
-    }
-
-    public SolicitacaoEmpenhoFacade getSolicitacaoEmpenhoFacade() {
-        return solicitacaoEmpenhoFacade;
-    }
-
     public NotaOrcamentariaFacade getNotaOrcamentariaFacade() {
         return notaOrcamentariaFacade;
     }
@@ -1435,16 +1427,6 @@ public class LiquidacaoFacade extends SuperFacadeContabil<Liquidacao> {
         if (liquidacao.getId() != null) {
             q.setParameter("idLiquidacao", liquidacao.getId());
         }
-        return q.getResultList();
-    }
-
-    public List<Liquidacao> buscarLiquidacaoComSaldoPorDocumentoFiscal(DoctoFiscalLiquidacao doctoFiscalLiquidacao) {
-        String sql = " select distinct liq.* from liquidacao liq " +
-            "           inner join liquidacaodoctofiscal liqdoc on liqdoc.liquidacao_id = liq.id " +
-            "          where liqdoc.doctofiscalliquidacao_id = :idDocumento " +
-            "          and liq.saldo > 0 ";
-        Query q = em.createNativeQuery(sql, Liquidacao.class);
-        q.setParameter("idDocumento", doctoFiscalLiquidacao.getId());
         return q.getResultList();
     }
 
@@ -1489,5 +1471,23 @@ public class LiquidacaoFacade extends SuperFacadeContabil<Liquidacao> {
             }
         }
         return documentoFiscal;
+    }
+
+    public List<Liquidacao> buscarLiquidacaoComSaldoPorDocumentoFiscal(DoctoFiscalLiquidacao doctoFiscalLiquidacao) {
+        String sql = " select distinct liq.* from liquidacao liq " +
+            "           inner join liquidacaodoctofiscal liqdoc on liqdoc.liquidacao_id = liq.id " +
+            "          where liqdoc.doctofiscalliquidacao_id = :idDocumento " +
+            "          and liq.saldo > 0 ";
+        Query q = em.createNativeQuery(sql, Liquidacao.class);
+        q.setParameter("idDocumento", doctoFiscalLiquidacao.getId());
+        return q.getResultList();
+    }
+
+    public boolean hasConfiguracaoExcecaoVigente(Date dataOperacao, Conta contaDespesa) {
+        return configuracaoExcecaoDespesaContratoFacade.hasConfiguracaoVigente(dataOperacao, contaDespesa);
+    }
+
+    public SolicitacaoEmpenhoFacade getSolicitacaoEmpenhoFacade() {
+        return solicitacaoEmpenhoFacade;
     }
 }

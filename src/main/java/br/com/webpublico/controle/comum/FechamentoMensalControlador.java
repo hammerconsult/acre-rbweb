@@ -133,6 +133,23 @@ public class FechamentoMensalControlador extends PrettyControlador<FechamentoMen
         }
     }
 
+
+    @Override
+    public RevisaoAuditoria getUltimaRevisao() {
+        if (ultimaRevisao == null) {
+            ultimaRevisao = buscarUltimaAuditoria();
+            if (selecionado.getMeses() != null) {
+                for(FechamentoMensalMes fechamento : selecionado.getMeses()) {
+                    RevisaoAuditoria revisaoAuditoria = buscarUltimaAuditoria(FechamentoMensalMes.class, fechamento.getId());
+                    if (ultimaRevisao == null || (revisaoAuditoria != null && revisaoAuditoria.getDataHora().after(ultimaRevisao.getDataHora()))) {
+                        ultimaRevisao = revisaoAuditoria;
+                    }
+                }
+            }
+        }
+        return ultimaRevisao;
+    }
+
     public void atribuirFechamentoMes(FechamentoMensalMes fechamentoMes) {
         fechamentoMensalMes = (FechamentoMensalMes) Util.clonarObjeto(fechamentoMes);
         FacesUtil.executaJavaScript("dialogNovoAgendamento.show();");
@@ -208,23 +225,6 @@ public class FechamentoMensalControlador extends PrettyControlador<FechamentoMen
 
     public void setFechamentoMensalMes(FechamentoMensalMes fechamentoMensalMes) {
         this.fechamentoMensalMes = fechamentoMensalMes;
-    }
-
-
-    @Override
-    public RevisaoAuditoria getUltimaRevisao() {
-        if (ultimaRevisao == null) {
-            ultimaRevisao = buscarUltimaAuditoria();
-            if (selecionado.getMeses() != null) {
-                for(FechamentoMensalMes fechamento : selecionado.getMeses()) {
-                    RevisaoAuditoria revisaoAuditoria = buscarUltimaAuditoria(FechamentoMensalMes.class, fechamento.getId());
-                    if (ultimaRevisao == null || (revisaoAuditoria != null && revisaoAuditoria.getDataHora().after(ultimaRevisao.getDataHora()))) {
-                        ultimaRevisao = revisaoAuditoria;
-                    }
-                }
-            }
-        }
-        return ultimaRevisao;
     }
 }
 

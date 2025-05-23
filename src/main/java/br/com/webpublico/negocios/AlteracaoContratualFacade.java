@@ -5,7 +5,7 @@ import br.com.webpublico.entidadesauxiliares.DotacaoAlteracaoContratualVO;
 import br.com.webpublico.entidadesauxiliares.DotacaoProcessoCompraVO;
 import br.com.webpublico.entidadesauxiliares.FiltroDotacaoProcessoCompraVO;
 import br.com.webpublico.entidadesauxiliares.VOExecucaoReservadoPorLicitacao;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.util.DataUtil;
@@ -409,18 +409,17 @@ public class AlteracaoContratualFacade extends AbstractFacade<AlteracaoContratua
         return (String) q.getSingleResult();
     }
 
-    public Boolean isMovimentoAjusteValor(Long idItemContratoOrProcesso, Long idAlteracao) {
+    public Boolean isMovimentoAjusteValor(ItemContrato itemContrato, Long idAlteracao) {
         String sql = " select mov.* from movimentoalteracaocont mov " +
             "           inner join alteracaocontratual ac on ac.id = mov.alteracaocontratual_id " +
             "           inner join movimentoalteracaocontitem movitem on mov.id = movitem.movimentoalteracaocont_id   " +
-            "           left join itemcontrato ic on ic.id = movitem.itemcontrato_id " +
-            "           left join itemprocessodecompra ipc on ipc.id = movitem.itemprocessocompra_id " +
+            "           inner join itemcontrato ic on ic.id = movitem.itemcontrato_id " +
             "           where ac.id = :idAlteracao " +
-            "           and coalesce(ic.id, ipc.id) = :idItem " +
+            "           and ic.id = :idItemContrato " +
             "           and ac.tipotermo in (:tipoTermoValor, :tipoTermoPrazoValor) " +
             "           and mov.operacao in (:opReajuste, :opReequilibrio)";
         Query q = em.createNativeQuery(sql);
-        q.setParameter("idItem", idItemContratoOrProcesso);
+        q.setParameter("idItemContrato", itemContrato.getId());
         q.setParameter("idAlteracao", idAlteracao);
         q.setParameter("tipoTermoValor", TipoTermoAlteracaoContratual.VALOR.name());
         q.setParameter("tipoTermoPrazoValor", TipoTermoAlteracaoContratual.PRAZO_VALOR.name());
@@ -429,19 +428,18 @@ public class AlteracaoContratualFacade extends AbstractFacade<AlteracaoContratua
         return !q.getResultList().isEmpty();
     }
 
-    public Boolean isMovimentoApostilamentoReajusteValorPreExecucao(Long idItemContratoOrProcesso, Long idAlteracao) {
+    public Boolean isMovimentoApostilamentoReajusteValorPreExecucao(ItemContrato itemContrato, Long idAlteracao) {
         String sql = " select mov.* from movimentoalteracaocont mov " +
             "           inner join alteracaocontratual ac on ac.id = mov.alteracaocontratual_id " +
             "           inner join movimentoalteracaocontitem movitem on mov.id = movitem.movimentoalteracaocont_id   " +
-            "           left join itemcontrato ic on ic.id = movitem.itemcontrato_id " +
-            "           left join itemprocessodecompra ipc on ipc.id = movitem.itemprocessocompra_id " +
+            "           inner join itemcontrato ic on ic.id = movitem.itemcontrato_id " +
             "           where ac.id = :idAlteracao " +
-            "           and coalesce(ic.id, ipc.id) = :idItem " +
+            "           and ic.id = :idItemContrato " +
             "           and ac.tipoalteracaocontratual = :tipoAlteracao " +
             "           and ac.tipotermo = :tipoTermo " +
             "           and mov.operacao = :operacao ";
         Query q = em.createNativeQuery(sql);
-        q.setParameter("idItem", idItemContratoOrProcesso);
+        q.setParameter("idItemContrato", itemContrato.getId());
         q.setParameter("idAlteracao", idAlteracao);
         q.setParameter("tipoAlteracao", TipoAlteracaoContratual.APOSTILAMENTO.name());
         q.setParameter("tipoTermo", TipoTermoAlteracaoContratual.VALOR.name());

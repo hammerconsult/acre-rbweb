@@ -129,7 +129,6 @@ public class AprovacaoSolicitacaoIncorporacaoMovelControlador extends PrettyCont
         ve.lancarException();
     }
 
-
     public void recuperarSolicitacaoIncorporacaoMovel() {
         solicitacao = facade.getIncorporacaoMovelFacade().recuperar(selecionado.getSolicitacao().getId());
     }

@@ -37,10 +37,6 @@ public class ConsultaLocalEstoqueFacade implements Serializable {
     private ConfiguracaoDeRelatorioFacade configuracaoDeRelatorioFacade;
     @EJB
     private LoteMaterialFacade loteMaterialFacade;
-    @EJB
-    private EstoqueFacade estoqueFacade;
-    @EJB
-    private ConsultaMovimentacaoEstoqueContabilFacade consultaMovimentacaoEstoqueContabilFacade;
 
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
@@ -258,7 +254,6 @@ public class ConsultaLocalEstoqueFacade implements Serializable {
         }
         return q.getResultList();
     }
-
 
     public MovimentacaoGrupoMaterial getMovimentoGrupoMaterial(ConsultaLocalEstoqueFiltro filtro) {
         MovimentacaoGrupoMaterial movGrupo = new MovimentacaoGrupoMaterial();

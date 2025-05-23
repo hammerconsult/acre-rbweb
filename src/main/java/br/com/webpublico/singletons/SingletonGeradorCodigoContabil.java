@@ -39,9 +39,6 @@ public class SingletonGeradorCodigoContabil implements Serializable {
     private Map<IdentificadorMovimentoContabil, Long> proximoNumeroOrdemBancaria;
     private Map<IdentificadorMovimentoContabil, String> proximoNumeroObrigacaoPagar;
     private Map<IdentificadorMovimentoContabil, String> proximoNumeroInvestimento;
-    private Map<IdentificadorMovimentoContabil, String> proximoNumeroCreditoReceber;
-    private Map<IdentificadorMovimentoContabil, String> proximoNumeroDividaAtiva;
-    private Map<IdentificadorMovimentoContabil, Long> proximoNumeroMovimentoDividaPublica;
     private Map<IdentificadorMovimentoContabil, String> proximoNumeroReceitaExtra;
     private Map<IdentificadorMovimentoContabil, String> proximoNumeroResponsabilidade;
     private Map<IdentificadorMovimentoContabil, String> proximoNumeroReconhecimentoDivida;
@@ -1156,43 +1153,6 @@ public class SingletonGeradorCodigoContabil implements Serializable {
             return codigo;
         } catch (Exception e) {
             throw new ExcecaoNegocioGenerica(" Erro ao gerar o número de investimento para a unidade " + und.getDescricao() + "  " + e.getMessage() + ". Entre em contato com o suporte!");
-        }
-    }
-
-    @Lock(LockType.READ)
-    public Long getNumeroMovimentoDividaPublica(Exercicio ex, UnidadeOrganizacional und, Date date) {
-        IdentificadorMovimentoContabil identificadorMovimentoContabil = criarIdentificadorMovimentoContabil(ex, und, date);
-        try {
-            if (proximoNumeroMovimentoDividaPublica == null) {
-                proximoNumeroMovimentoDividaPublica = Maps.newHashMap();
-            }
-            if (proximoNumeroMovimentoDividaPublica.get(identificadorMovimentoContabil) == null) {
-                validaParametros(ex, und, date, "Movimento da Dívida Pública");
-                Long toReturn;
-                String s = "SELECT max(cast(OBJ.numero as number)) FROM MovimentoDividaPublica obj where OBJ.exercicio_id=:ex and OBJ.unidadeOrganizacional_id=:und having max(cast(OBJ.numero as number)) is not null";
-                Query q = em.createNativeQuery(s);
-                q.setParameter("ex", ex.getId());
-                q.setParameter("und", und.getId());
-                Object singleResult = q.getSingleResult();
-                if (singleResult == null) {
-                    throw new NoResultException("Nenhum registro encontrado.");
-                }
-                toReturn = Long.valueOf(acrecentaFormataCodigo(singleResult.toString()));
-                validaMaximoDeMovimentos(toReturn.toString());
-                proximoNumeroMovimentoDividaPublica.put(identificadorMovimentoContabil, toReturn);
-            } else {
-                String codigo = acrecentaFormataCodigo(proximoNumeroMovimentoDividaPublica.get(identificadorMovimentoContabil).toString());
-                proximoNumeroMovimentoDividaPublica.put(identificadorMovimentoContabil, Long.valueOf(codigo));
-            }
-            return proximoNumeroMovimentoDividaPublica.get(identificadorMovimentoContabil);
-        } catch (NonUniqueResultException e) {
-            throw new ExcecaoNegocioGenerica(" Erro ao gerar o número de Movimento da Dívida Pública para o exercício " + ex.getAno() + ", unidade " + und.getDescricao() + ". Entre em contato com o suporte!");
-        } catch (NoResultException e) {
-            String codigo = geraPrimeiroCoigo(date, und);
-            proximoNumeroMovimentoDividaPublica.put(identificadorMovimentoContabil, Long.valueOf(codigo));
-            return Long.valueOf(codigo);
-        } catch (Exception e) {
-            throw new ExcecaoNegocioGenerica(" Erro ao gerar o número de Movimento da Dívida Pública para o exercício " + ex.getAno() + ", unidade " + und.getDescricao() + "  " + e.getMessage() + ". Entre em contato com o suporte!");
         }
     }
 

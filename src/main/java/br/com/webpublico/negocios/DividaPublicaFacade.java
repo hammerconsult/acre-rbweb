@@ -94,13 +94,6 @@ public class DividaPublicaFacade extends AbstractFacade<DividaPublica> {
         return dp;
     }
 
-
-    public DividaPublica recuperarSomenteUnidades(Object id) {
-        DividaPublica dp = em.find(DividaPublica.class, id);
-        dp.getUnidades().size();
-        return dp;
-    }
-
     public List<PessoaDividaPublica> listaBeneficiariosCancelados() {
         String hql = "from PessoaDividaPublica pdp where pdp.cancelado = true";
         Query q = em.createQuery(hql);

@@ -245,50 +245,6 @@ public class ConcessaoFeriasLicencaFacade extends AbstractFacade<ConcessaoFerias
         }
     }
 
-    public void atualizarDadosConcessaoEPeriodoAquisitivoAoExonerarEmFerias(ConcessaoFeriasLicenca entity, ExoneracaoRescisao exoneracaoRescisao) throws Exception {
-        if (entity == null || exoneracaoRescisao == null) {
-            throw new IllegalArgumentException("Entidade e exoneracaoRescisao não podem ser nulos");
-        }
-
-        Date dataRescisao = exoneracaoRescisao.getDataRescisao();
-        Date dataInicialFerias = entity.getDataInicial();
-        Date dataFinalFerias = entity.getDataFinal();
-        PeriodoAquisitivoFL periodoAquisitivo = entity.getPeriodoAquisitivoFL();
-
-
-        Integer diasDeGozo = DataUtil.diferencaDiasInteira(dataInicialFerias, dataRescisao) +1;
-
-        Integer diasRestantesConcessao = DataUtil.diferencaDiasInteira(dataRescisao, dataFinalFerias);
-
-        // Atualiza o saldo com base no saldo anterior e nos dias restantes da concessão
-        Integer saldoAnterior = periodoAquisitivo.getSaldo();
-        Integer saldoAtualizado = saldoAnterior + (diasRestantesConcessao );
-        periodoAquisitivo.setSaldo(saldoAtualizado);
-
-        definirStatusDoPeriodoAquisitivo(saldoAnterior, entity);
-
-        entity.setDataFinal(dataRescisao);
-        entity.setDias(diasDeGozo);
-        entity.setDataCadastro(new Date());
-
-        em.merge(periodoAquisitivo);
-        em.merge(entity);
-
-        ConfiguracaoRH configuracaoRH = configuracaoRHFacade.recuperarConfiguracaoRHVigente();
-        if (configuracaoRH.getEnvioAutomaticoDadosPonto() && TipoPeriodoAquisitivo.FERIAS.equals(entity.getPeriodoAquisitivoFL().getBaseCargo().getBasePeriodoAquisitivo().getTipoPeriodoAquisitivo())) {
-            atualizarFeriasRBPonto(entity);
-        }
-    }
-
-    public SituacaoContratoFP criarSituacaoContratoFP(ConcessaoFeriasLicenca entity) {
-        DateTime calendarioInicial = new DateTime(entity.getDataInicial());
-        DateTime calendarioFinal = new DateTime(entity.getDataFinal());
-        SituacaoContratoFP novaSituacao = new SituacaoContratoFP();
-        novaSituacao.setInicioVigencia(calendarioInicial.toDate());
-        novaSituacao.setFinalVigencia(calendarioFinal.toDate());
-        novaSituacao.setContratoFP(entity.getContratoFP());
-        return novaSituacao;
-    }
 
     private void definirSaldoPeriodoAquisitivo(Integer totalDias, ConcessaoFeriasLicenca entity) {
         Integer saldoAtual = entity.getPeriodoAquisitivoFL().getSaldo();
@@ -655,7 +611,7 @@ public class ConcessaoFeriasLicencaFacade extends AbstractFacade<ConcessaoFerias
         return total;
     }
 
-    private void excluirConcessaoDeFerias(ConcessaoFeriasLicenca concessaoParaExcluir, ExoneracaoRescisao exoneracaoRecisao) throws Exception {
+    private void excluirConcessaoDeFerias(ConcessaoFeriasLicenca concessaoParaExcluir) throws Exception {
         int diasConcedidos = 0;
         VinculoFP vinculo = concessaoParaExcluir.getPeriodoAquisitivoFL().getContratoFP();
         for (ConcessaoFeriasLicenca concessaoSalva : buscarConcessoesFeriasLicencaPorPeriodoAquisitivoFL(concessaoParaExcluir.getPeriodoAquisitivoFL())) {
@@ -685,7 +641,7 @@ public class ConcessaoFeriasLicencaFacade extends AbstractFacade<ConcessaoFerias
 
     }
 
-    public void reprocessarSituacoesContrato(VinculoFP vinculo){
+    private void reprocessarSituacoesContrato(VinculoFP vinculo){
         SituacaoFuncional situacaoExonerado = situacaoContratoFPFacade.buscarSituacaoFuncionalPorCodigo(SITUACAO_EXONERADO);
         SituacaoFuncional situacaoCedidoADesposicao = situacaoContratoFPFacade.buscarSituacaoFuncionalPorCodigo(SITUACAO_CEDIDO_A_DISPOSICAO);
         SituacaoFuncional situacaoAfastado = situacaoContratoFPFacade.buscarSituacaoFuncionalPorCodigo(SITUACAO_AFASTADO);
@@ -695,7 +651,7 @@ public class ConcessaoFeriasLicencaFacade extends AbstractFacade<ConcessaoFerias
         reprocessamentoSituacaoFuncionalFacade.reprocessarSituacoesFuncionais(vinculo, situacaoExonerado, situacaoCedidoADesposicao, situacaoAfastado, situacaoFerias, situacaoExercicio, situacaoAposentado);
     }
 
-    public void realizarTratativasParaExclusaoDeConcessao(ConcessaoFeriasLicenca concessaoFeriasLicenca, ExoneracaoRescisao exoneracaoRecisao) {
+    public void realizarTratativasParaExclusaoDeConcessao(ConcessaoFeriasLicenca concessaoFeriasLicenca) {
         if (!concessaoFeriasLicenca.getLicencaPremioIndenizada()) {
             int dia = 01;
             int mes = DataUtil.getMes(concessaoFeriasLicenca.getDataInicial());
@@ -728,7 +684,7 @@ public class ConcessaoFeriasLicencaFacade extends AbstractFacade<ConcessaoFerias
             }
         }
         try {
-            excluirConcessaoDeFerias(concessaoFeriasLicenca, exoneracaoRecisao);
+            excluirConcessaoDeFerias(concessaoFeriasLicenca);
             ConfiguracaoRH configuracaoRH = configuracaoRHFacade.recuperarConfiguracaoRHVigente();
             if (configuracaoRH.getEnvioAutomaticoDadosPonto() && TipoPeriodoAquisitivo.FERIAS.equals(concessaoFeriasLicenca.getPeriodoAquisitivoFL().getBaseCargo().getBasePeriodoAquisitivo().getTipoPeriodoAquisitivo())) {
                 excluirFeriasRBPonto(concessaoFeriasLicenca);

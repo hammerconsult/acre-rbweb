@@ -4,7 +4,6 @@
  */
 package br.com.webpublico.util.obn350;
 
-import br.com.webpublico.enums.TipoBancoArquivoObn;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 
 import java.io.Serializable;
@@ -118,22 +117,5 @@ public class HeaderObn350 implements Serializable {
     public String getNumeroSequencial() {
         numeroSequencial = linha.substring(343, 350);
         return numeroSequencial;
-    }
-
-    private TipoBancoArquivoObn getTipoBanco() {
-        if (campo20b001.endsWith("001")) {
-            return TipoBancoArquivoObn.BANCO_DO_BRASIL;
-        } else if (campo20b001.endsWith("104")) {
-            return TipoBancoArquivoObn.CAIXA_ECONOMICA;
-        }
-        return null;
-    }
-
-    public boolean isArquivoCaixaEconomica() {
-        return TipoBancoArquivoObn.CAIXA_ECONOMICA.equals(getTipoBanco());
-    }
-
-    public boolean isArquivoBancoDoBrasil() {
-        return TipoBancoArquivoObn.BANCO_DO_BRASIL.equals(getTipoBanco());
     }
 }

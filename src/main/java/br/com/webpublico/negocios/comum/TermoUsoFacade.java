@@ -38,6 +38,36 @@ public class TermoUsoFacade extends AbstractFacade<TermoUso> {
         return em;
     }
 
+    public TermoUso buscarTermoUsoVigente(Sistema sistema) {
+        List<TermoUso> list = em.createNativeQuery(" select * from termouso tu " +
+            " where tu.sistema = :sistema" +
+            " and tu.iniciovigencia = (select max(s.iniciovigencia) from termouso s where s.sistema = :sistema) ", TermoUso.class)
+            .setParameter("sistema", sistema.name())
+            .setMaxResults(1)
+            .getResultList();
+        return list != null && !list.isEmpty() ? (TermoUso) list.get(0) : null;
+    }
+
+    public Boolean hasTermoUsoPortalParaAceite(UsuarioWeb usuario) {
+        List<TermoUso> list = em.createNativeQuery(" select tu.* " +
+            "   from termouso tu " +
+            " where tu.iniciovigencia = (select max(s.iniciovigencia) from termouso s where s.sistema = :sistema) " +
+            "   and not exists(select 1 from TERMOUSOPORTALCONTRIB tup " +
+            "                  where tup.termouso_id = tu.id and tup.usuarioweb_id = :usuario) ", TermoUso.class)
+            .setParameter("sistema", Sistema.PORTAL_CONTRIBUINTE.name())
+            .setParameter("usuario", usuario.getId())
+            .getResultList();
+        return list != null && !list.isEmpty();
+    }
+
+    public void aceitarTermoUsoPortal(UsuarioWeb usuarioWeb, TermoUso termoUso) {
+        TermoUsoPortalContribuinte termoUsoPortalContribuinte = new TermoUsoPortalContribuinte();
+        termoUsoPortalContribuinte.setDataAceite(new Date());
+        termoUsoPortalContribuinte.setUsuarioWeb(usuarioWeb);
+        termoUsoPortalContribuinte.setTermoUso(termoUso);
+        em.persist(termoUsoPortalContribuinte);
+    }
+
     public TermoUso buscarTermoUsoVigente(String tipo) {
         Query query = em.createNativeQuery(" SELECT " +
             " T.ID, " +
@@ -106,7 +136,7 @@ public class TermoUsoFacade extends AbstractFacade<TermoUso> {
 
         UsuarioPortalWebDTO usuarioPortalWebDTO = new UsuarioPortalWebDTO();
         usuarioPortalWebDTO.setCpf(usuario);
-        if(!hasTermoParaAceite(usuarioPortalWebDTO)){
+        if (!hasTermoParaAceite(usuarioPortalWebDTO)) {
             return;
         }
 
@@ -116,35 +146,4 @@ public class TermoUsoFacade extends AbstractFacade<TermoUso> {
         termoServidor.setUsuario(usuarioWeb);
         em.persist(termoServidor);
     }
-
-    public TermoUso buscarTermoUsoVigente(Sistema sistema) {
-        List<TermoUso> list = em.createNativeQuery(" select * from termouso tu " +
-            " where tu.sistema = :sistema" +
-            " and tu.iniciovigencia = (select max(s.iniciovigencia) from termouso s) ", TermoUso.class)
-            .setParameter("sistema", sistema.name())
-            .setMaxResults(1)
-            .getResultList();
-        return list != null && !list.isEmpty() ? (TermoUso) list.get(0) : null;
-    }
-
-    public Boolean hasTermoUsoPortalParaAceite(UsuarioWeb usuario) {
-        List<TermoUso> list = em.createNativeQuery(" select tu.* " +
-                "   from termouso tu " +
-                " where tu.iniciovigencia = (select max(s.iniciovigencia) from termouso s where s.sistema = :sistema) " +
-                "   and not exists(select 1 from TERMOUSOPORTALCONTRIB tup " +
-                "                  where tup.termouso_id = tu.id and tup.usuarioweb_id = :usuario) ", TermoUso.class)
-            .setParameter("sistema", Sistema.PORTAL_CONTRIBUINTE.name())
-            .setParameter("usuario", usuario.getId())
-            .getResultList();
-        return list != null && !list.isEmpty();
-    }
-
-    public void aceitarTermoUsoPortal(UsuarioWeb usuarioWeb, TermoUso termoUso) {
-       TermoUsoPortalContribuinte termoUsoPortalContribuinte = new TermoUsoPortalContribuinte();
-       termoUsoPortalContribuinte.setDataAceite(new Date());
-       termoUsoPortalContribuinte.setUsuarioWeb(usuarioWeb);
-       termoUsoPortalContribuinte.setTermoUso(termoUso);
-       em.persist(termoUsoPortalContribuinte);
-    }
-
 }

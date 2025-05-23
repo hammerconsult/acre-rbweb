@@ -46,7 +46,7 @@ import java.util.*;
     @URLMapping(id = "verCalculoFixo", pattern = "/tributario/lancamento-de-iss-fixo/ver/#{calculaISSControlador.id}/", viewId = "/faces/tributario/issqn/calculofixo/visualizar.xhtml"),
     @URLMapping(id = "listaCalculoEstimado", pattern = "/tributario/lancamento-de-iss-estimado/listar/", viewId = "/faces/tributario/issqn/calculoestimado/lista.xhtml"),
     @URLMapping(id = "novoCalculoEstimado", pattern = "/tributario/lancamento-de-iss-estimado/novo/", viewId = "/faces/tributario/issqn/calculoestimado/geracalculo.xhtml"),
-    @URLMapping(id = "verCalculoEstimado", pattern = "/tributario/lancamento-de-iss-estimado/ver/#{calculaISSControlador.id}/", viewId = "/faces/tributario/issqn/calculoestimado/visualizar.xhtml")
+    @URLMapping(id = "verCalculoEstimado", pattern = "/tributario/lancamento-de-iss-estimado/ver/#{calculaISSControlador.id}/", viewId = "/faces/tributario/issqn/calculoestimado/visualizar.xhtml"),
 })
 public class CalculaISSControlador extends AbstractReport implements Serializable {
 
@@ -611,6 +611,7 @@ public class CalculaISSControlador extends AbstractReport implements Serializabl
         selecionarCadastroEconomico();
         processoCalculoISS = calculaISSFacade.salva(processoCalculoISS);
         processoCalculoISS = gerarValorDivida(processoCalculoISS);
+        FacesUtil.addOperacaoRealizada("Cálculo efetivado com sucesso!");
     }
 
     public void calcularIssEstimado() {
@@ -738,8 +739,6 @@ public class CalculaISSControlador extends AbstractReport implements Serializabl
         ValidacaoException ve = new ValidacaoException();
         if (cadastroEconomico == null || cadastroEconomico.getId() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("Informe o C.M.C. antes de continuar!");
-        } else if (cadastroEconomico.getEnquadramentoVigente() == null) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("O Cadastro não possui enquadramento fiscal vigente!");
         } else {
             if (cadastroEconomico != null && cadastroEconomico.getPessoa() instanceof PessoaJuridica) {
                 if (selecionado.getQuantidadeProfissionais() <= 0) {

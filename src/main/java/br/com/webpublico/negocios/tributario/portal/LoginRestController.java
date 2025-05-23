@@ -73,20 +73,6 @@ public class LoginRestController extends PortalRestController {
         }
     }
 
-    @RequestMapping(value = "/buscar-consulta-cpf-valido-credor",
-        method = RequestMethod.GET,
-        produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public ResponseEntity<ConsultaCPF> buscarConsultaCPFValidoCredor(@RequestParam(value = "cpf", required = true) String cpf, @RequestParam(value = "email", required = true) String email) {
-        try {
-            ConsultaCPF consultaCPF = getPortalContribunteFacade().buscarConsultaCPFValidoCredor(cpf, email);
-            return new ResponseEntity<>(consultaCPF, HttpStatus.OK);
-        } catch (Exception e) {
-            getLogger().error("Exception", e);
-        }
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
     @RequestMapping(value = "/cpf-disponivel-para-primeiro-acesso",
         method = RequestMethod.GET,
         produces = MediaType.APPLICATION_JSON_VALUE)
@@ -94,6 +80,20 @@ public class LoginRestController extends PortalRestController {
     public ResponseEntity<ConsultaCPF> verificaDisponibilidadeCPFParaPrimeiroAcesso(@RequestParam(value = "cpf", required = true) String cpf) {
         try {
             ConsultaCPF consultaCPF = getPortalContribunteFacade().verificarDisponibilidadeCPFParaPrimeiroAcesso(cpf);
+            return new ResponseEntity<>(consultaCPF, HttpStatus.OK);
+        } catch (Exception e) {
+            getLogger().error("Exception", e);
+        }
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/buscar-consulta-cpf-valido-credor",
+        method = RequestMethod.GET,
+        produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<ConsultaCPF> buscarConsultaCPFValidoCredor(@RequestParam(value = "cpf", required = true) String cpf, @RequestParam(value = "email", required = true) String email) {
+        try {
+            ConsultaCPF consultaCPF = getPortalContribunteFacade().buscarConsultaCPFValidoCredor(cpf, email);
             return new ResponseEntity<>(consultaCPF, HttpStatus.OK);
         } catch (Exception e) {
             getLogger().error("Exception", e);
@@ -150,11 +150,11 @@ public class LoginRestController extends PortalRestController {
     public ResponseEntity desabilitarLoginPortalWeb(@RequestParam(value = "cpf") String cpf) {
         try {
             getPortalContribunteFacade().desabilitarLoginPortalWeb(cpf);
-            return new ResponseEntity<>("Usuario inativado", HttpStatus.OK);
+            return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             getLogger().error("Exception", e);
         }
-        return new ResponseEntity<>("Erro ao inativar usuario", HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @RequestMapping(value = "/criar-usuario",

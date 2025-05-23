@@ -310,8 +310,6 @@ public class Emenda extends SuperEntidade implements Serializable {
             String desc = descricaoDetalhada.replace("\n", " ").replace("\r", " ");
             retorno += (desc.length() > tamanho ? desc.substring(0, tamanho) + "..." : desc);
         }
-        //todo no pré ainda não esta recuperando no autocomplete, adicionado sout para conseguir identificar qual o problema, sera removido posteriormente
-        System.out.println("toStringAutoComplete EMENDA: " + retorno);
         return retorno;
     }
 

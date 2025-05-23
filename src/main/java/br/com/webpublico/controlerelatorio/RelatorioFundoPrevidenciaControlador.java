@@ -210,7 +210,7 @@ public class RelatorioFundoPrevidenciaControlador extends RelatorioPagamentoRH i
     public List<SelectItem> getTipoPrevidencia() {
         List<SelectItem> retorno = new ArrayList<>();
         retorno.add(new SelectItem(null, ""));
-        for (TipoPrevidenciaFP previdenciaFP : tipoPrevidenciaFPFacade.filtrandoTipoPrevidencia(String.valueOf(TipoPrevidenciaFP.RPPS))) {
+        for (TipoPrevidenciaFP previdenciaFP : tipoPrevidenciaFPFacade.lista()) {
             retorno.add(new SelectItem(previdenciaFP, previdenciaFP.toString()));
         }
         return retorno;

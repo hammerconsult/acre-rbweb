@@ -1094,12 +1094,4 @@ public class CreditoSalarioFacade extends AbstractFacade<CreditoSalario> impleme
         }
         return Lists.newArrayList();
     }
-
-    public boolean existeCreditoSalarioPorFolhaDePagamento(FolhaDePagamento folhaDePagamento) {
-        Long count = (Long) em.createQuery(
-            "select count(credito) from CreditoSalario credito where credito.folhaDePagamento = :folha"
-        ).setParameter("folha", folhaDePagamento).getSingleResult();
-        return count > 0;
-    }
-
 }

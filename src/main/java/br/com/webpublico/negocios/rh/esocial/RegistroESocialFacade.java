@@ -12,7 +12,6 @@ import br.com.webpublico.enums.TipoPCS;
 import br.com.webpublico.enums.rh.esocial.TipoCessao2231;
 import br.com.webpublico.enums.rh.esocial.TipoClasseESocial;
 import br.com.webpublico.enums.rh.esocial.TipoOperacaoESocial;
-import br.com.webpublico.enums.rh.esocial.TipoEventoFPEmpregador;
 import br.com.webpublico.esocial.comunicacao.enums.TipoArquivoESocial;
 import br.com.webpublico.esocial.dto.EventoESocialDTO;
 import br.com.webpublico.esocial.enums.ClasseWP;
@@ -220,6 +219,7 @@ public class RegistroESocialFacade extends AbstractFacade<RegistroESocial> {
                 tipoS3000 = getConteudoXML(s3000.get(0), "/eSocial/evtExclusao/infoExclusao/tpEvento");
                 tipoExclusao = TipoArquivoESocial.valueOf(tipoS3000.replace("-", ""));
             }
+
         } catch (Exception e) {
             logger.error("Não foi possível ler o tipo de evento de exclusao");
         }
@@ -239,46 +239,34 @@ public class RegistroESocialFacade extends AbstractFacade<RegistroESocial> {
     }
 
     public List<EventoFP> buscarEventoFPParaEnvioEsocial(ConfiguracaoEmpregadorESocial config, String
-        codigoEventoFP, Boolean somenteNaoEnviados, Date dataReferencia, TipoEventoFPEmpregador tipoEventoFPEmpregador) {
+        codigoEventoFP, Boolean somenteNaoEnviados, Date dataReferencia) {
         String sql = "select evento.* from EventoFPEmpregador eventoempregador " +
             " inner join eventofp evento on eventoempregador.EVENTOFP_ID = evento.ID " +
-            " where  :dataReferencia between INICIOVIGENCIA and coalesce(FIMVIGENCIA, :dataReferencia) ";
+            " where  :dataReferencia between INICIOVIGENCIA and coalesce(FIMVIGENCIA, :dataReferencia) and";
 
         if (!Strings.isNullOrEmpty(codigoEventoFP)) {
-            sql += " and evento.codigo = :codigoEventoFP  ";
-        }
-
-        if (tipoEventoFPEmpregador != null) {
-            sql += " and tipoEventoFPEmpregador = :tipoEvento";
+            sql += "  evento.codigo = :codigoEventoFP and ";
         }
 
         if (somenteNaoEnviados) {
-            sql += " and not exists (" +
-                "    select * from REGISTROESOCIAL registro ";
-            if (TipoEventoFPEmpregador.PADRAO.equals(tipoEventoFPEmpregador)) {
-                sql += " where registro.IDESOCIAL = TO_CHAR(evento.ID) ";
-            } else if (TipoEventoFPEmpregador.ALTERNATIVO.equals(tipoEventoFPEmpregador)) {
-                sql += " where (registro.IDESOCIAL = TO_CHAR(evento.ID) || 'D' or registro.IDESOCIAL = TO_CHAR(evento.ID) || 'C') ";
-            } else {
-                sql += " where (registro.IDESOCIAL = TO_CHAR(evento.ID) || 'DT') ";
-            }
-            sql += " and registro.TIPOARQUIVOESOCIAL = 'S1010'" +
+            sql += " not exists (" +
+                "    select * from REGISTROESOCIAL registro" +
+                "    where registro.IDESOCIAL = evento.ID and" +
+                "          registro.TIPOARQUIVOESOCIAL = :tipoEvento " +
                 " and registro.SITUACAO = :situacao " +
-                " and registro.EMPREGADOR_ID = :config) ";
+                " and registro.EMPREGADOR_ID = :config) AND ";
         }
-        sql += " and eventoempregador.ENTIDADE_ID = :entidade" +
+        sql += " eventoempregador.ENTIDADE_ID = :entidade" +
             " order by to_number(evento.CODIGO)";
         Query q = em.createNativeQuery(sql, EventoFP.class);
         q.setParameter("dataReferencia", dataReferencia);
+        q.setParameter("tipoEvento", TipoArquivoESocial.S1010.name());
         if (somenteNaoEnviados) {
             q.setParameter("situacao", SituacaoESocial.PROCESSADO_COM_SUCESSO.name());
             q.setParameter("config", config.getId());
         }
         if (!Strings.isNullOrEmpty(codigoEventoFP)) {
             q.setParameter("codigoEventoFP", codigoEventoFP);
-        }
-        if (tipoEventoFPEmpregador != null) {
-            q.setParameter("tipoEvento", tipoEventoFPEmpregador.name());
         }
         q.setParameter("entidade", config.getEntidade().getId());
 
@@ -579,11 +567,10 @@ public class RegistroESocialFacade extends AbstractFacade<RegistroESocial> {
         return null;
     }
 
-    public List<ExoneracaoRescisao> buscarExoneracaoPorEmpregador(ConfiguracaoEmpregadorESocial empregadorESocial,
-                                                                  Boolean somenteNaoEnviados,
+    public List<ExoneracaoRescisao> buscarExoneracaoPorEmpregador(ConfiguracaoEmpregadorESocial
+                                                                      empregadorESocial, Boolean somenteNaoEnviados,
                                                                   TipoArquivoESocial tipoArquivoESocial, Date dataInicial,
-                                                                  Date dataFinal, Date inicioContrato, Date fimContrato,
-                                                                  Date dataSistema,
+                                                                  Date dataFinal, Date inicioContrato, Date fimContrato, Date dataSistema,
                                                                   HierarquiaOrganizacional hierarquia) {
         String sql = " select exoneracao.* from EXONERACAORESCISAO exoneracao " +
             " inner join vinculofp vinculo on exoneracao.VINCULOFP_ID = vinculo.ID " +
@@ -855,51 +842,6 @@ public class RegistroESocialFacade extends AbstractFacade<RegistroESocial> {
         return null;
     }
 
-    public VinculoFP getVinculoFPFichaFinanceiraFP(String identificadorWP) {
-        String sql = "select vinculo.id from fichafinanceirafp ficha " +
-            " inner join vinculofp vinculo on ficha.vinculofp_id = vinculo.id " +
-            " where ficha.id like :identificadorwp ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("identificadorwp", identificadorWP.split("/")[0]);
-        List result = q.getResultList();
-        if (result == null || result.isEmpty())
-            return null;
-
-        BigDecimal idVinculo = (BigDecimal) result.get(0);
-        if (idVinculo != null)
-            return em.find(VinculoFP.class, idVinculo.longValue());
-
-        return null;
-    }
-
-    public VinculoFP getVinculoFpPorTabelaAndColuna(String identificadorWP, String tabela, String coluna) {
-        String sql = "select " + coluna + " from " + tabela +
-            " where id like :identificadorwp ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("identificadorwp", identificadorWP);
-        List result = q.getResultList();
-        if (result == null || result.isEmpty())
-            return null;
-
-        BigDecimal idVinculo = (BigDecimal) result.get(0);
-        if (idVinculo != null)
-            return em.find(VinculoFP.class, idVinculo.longValue());
-
-        return null;
-    }
-
-    public PrestadorServicos getPrestadorServicosFichaRPA(String identificadorWP) {
-        String sql = " select prestador.* from ficharpa ficha " +
-            "                  inner join prestadorservicos prestador on ficha.prestadorservicos_id = prestador.id " +
-            " where ficha.id like :identificadorwp ";
-        Query q = em.createNativeQuery(sql, PrestadorServicos.class);
-        q.setParameter("identificadorwp", identificadorWP);
-        List result = q.getResultList();
-        if (!result.isEmpty()) {
-            return (PrestadorServicos) result.get(0);
-        }
-        return null;
-    }
     public void removerRegistroEsocial(RegistroESocial registroExclusao) {
         try {
             String numeroReciboEventoExcluido = getConteudoXML(registroExclusao, "/eSocial/evtExclusao/infoExclusao/nrRecEvt");
@@ -926,21 +868,41 @@ public class RegistroESocialFacade extends AbstractFacade<RegistroESocial> {
         return result;
     }
 
+    public VinculoFP getVinculoFPFichaFinanceiraFP(String identificadorWP) {
+        String sql = "select vinculo.id from fichafinanceirafp ficha " +
+            " inner join vinculofp vinculo on ficha.vinculofp_id = vinculo.id " +
+            " where ficha.id like :identificadorwp ";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("identificadorwp", identificadorWP.split("/")[0]);
+        List result = q.getResultList();
+        if (result == null || result.isEmpty())
+            return null;
+
+        BigDecimal idVinculo = (BigDecimal) result.get(0);
+        if (idVinculo != null)
+            return em.find(VinculoFP.class, idVinculo.longValue());
+
+        return null;
+    }
+
+    public PrestadorServicos getPrestadorServicosFichaRPA(String identificadorWP) {
+        String sql = " select prestador.* from ficharpa ficha " +
+            "                  inner join prestadorservicos prestador on ficha.prestadorservicos_id = prestador.id " +
+            " where ficha.id like :identificadorwp ";
+        Query q = em.createNativeQuery(sql, PrestadorServicos.class);
+        q.setParameter("identificadorwp", identificadorWP);
+        List result = q.getResultList();
+        if (!result.isEmpty()) {
+            return (PrestadorServicos) result.get(0);
+        }
+        return null;
+    }
+
     public List<RegistroESocial> getRegistroEsocialPagamentosSemDescricao() {
         String sql = "select * from registroesocial where descricao is null and tipoarquivoesocial in :tipos " +
             " order by dataintegracao desc  ";
         Query q = em.createNativeQuery(sql, RegistroESocial.class);
-        q.setParameter("tipos", getTipoArquivoEsocialPagamento());
-        q.setMaxResults(100);
-        return q.getResultList();
-    }
-
-    public List<RegistroESocial> getRegistroEsocialComVinculoFP() {
-        String sql = "select * from registroesocial where descricao is null and identificadorwp is not null" +
-            " and tipoarquivoesocial in :tipos " +
-            " order by dataintegracao desc  ";
-        Query q = em.createNativeQuery(sql, RegistroESocial.class);
-        q.setParameter("tipos", getTipoArquivoEsocialVinculoFP());
+        q.setParameter("tipos", tipoArquivoPagamento());
         q.setMaxResults(100);
         return q.getResultList();
     }
@@ -954,7 +916,7 @@ public class RegistroESocialFacade extends AbstractFacade<RegistroESocial> {
         return q.getResultList();
     }
 
-    private List<String> getTipoArquivoEsocialPagamento() {
+    private List<String> tipoArquivoPagamento() {
         List<String> itens = Lists.newArrayList();
         for (TipoClasseESocial tipoClasseESocial : UtilEsocial.getTipoEventoPagamento()) {
             itens.add(tipoClasseESocial.name());
@@ -962,44 +924,12 @@ public class RegistroESocialFacade extends AbstractFacade<RegistroESocial> {
         return itens;
     }
 
-    private List<String> getTipoArquivoEsocialVinculoFP() {
-        List<String> itens = Lists.newArrayList();
-        for (TipoClasseESocial tipoClasseESocial : UtilEsocial.getTipoEventoVinculoFP()) {
-            itens.add(tipoClasseESocial.name());
-        }
-        return itens;
-    }
-
     public void atualizarDescricaoRegistroEsocial(RegistroESocial registroESocial) {
         em.createNativeQuery(" update RegistroESocial set descricao = :descricao" +
-                "                 where id = :idRegistro ")
+                "             where id = :idRegistro ")
             .setParameter("descricao", registroESocial.getDescricao())
             .setParameter("idRegistro", registroESocial.getId())
             .executeUpdate();
-    }
-
-    public List<RegistroESocial> buscarRegistroEsocialPorTipoIdentificadorWPEmpregador(TipoArquivoESocial tipoEsocial, String identificador,
-                                                                              Integer quantidadeRegistros, ConfiguracaoEmpregadorESocial empregador) {
-        String sql = "select * from registroesocial" +
-            " where tipoarquivoesocial = :tipoarquivo " +
-            " and identificadorwp like :identificador " +
-            " and situacao in (:situacao) " +
-            " and empregador_id = :empregador" +
-            " order by dataintegracao desc";
-        Query q = em.createNativeQuery(sql, RegistroESocial.class);
-        q.setParameter("tipoarquivo", tipoEsocial.name());
-        q.setParameter("identificador", "%" + identificador + "%");
-        q.setParameter("situacao", com.google.common.collect.Lists.newArrayList(SituacaoESocial.PROCESSADO_COM_SUCESSO.name(), SituacaoESocial.PROCESSADO_COM_ADVERTENCIA.name()));
-        q.setParameter("empregador", empregador.getId());
-        List resultList = q.getResultList();
-
-        if (quantidadeRegistros != null) {
-            q.setMaxResults(quantidadeRegistros);
-        }
-        if (!resultList.isEmpty()) {
-            return resultList;
-        }
-        return null;
     }
 
 

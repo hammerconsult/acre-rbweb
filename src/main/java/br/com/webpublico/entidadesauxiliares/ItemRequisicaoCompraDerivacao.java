@@ -1,19 +1,18 @@
 package br.com.webpublico.entidadesauxiliares;
 
 import br.com.webpublico.entidades.DerivacaoObjetoCompra;
+import br.com.webpublico.entidades.ItemRequisicaoDeCompra;
 import com.google.common.collect.Lists;
 
-import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
 
-public class ItemRequisicaoCompraDerivacao implements Serializable {
+public class ItemRequisicaoCompraDerivacao {
 
-    private ItemRequisicaoCompraVO itemRequisicaoOriginal;
+    private ItemRequisicaoDeCompra itemRequisicaoOriginal;
     private DerivacaoObjetoCompra derivacaoObjetoCompra;
     private BigDecimal quantidadDisponivel;
-    private List<ItemRequisicaoCompraVO> itensRequisicaoComponente;
+    private List<ItemRequisicaoDeCompra> itensRequisicaoComponente;
 
     public ItemRequisicaoCompraDerivacao() {
         itensRequisicaoComponente = Lists.newArrayList();
@@ -27,19 +26,19 @@ public class ItemRequisicaoCompraDerivacao implements Serializable {
         this.derivacaoObjetoCompra = derivacaoObjetoCompra;
     }
 
-    public ItemRequisicaoCompraVO getItemRequisicaoOriginal() {
+    public ItemRequisicaoDeCompra getItemRequisicaoOriginal() {
         return itemRequisicaoOriginal;
     }
 
-    public void setItemRequisicaoOriginal(ItemRequisicaoCompraVO itemRequisicaoOriginal) {
+    public void setItemRequisicaoOriginal(ItemRequisicaoDeCompra itemRequisicaoOriginal) {
         this.itemRequisicaoOriginal = itemRequisicaoOriginal;
     }
 
-    public List<ItemRequisicaoCompraVO> getItensRequisicaoComponente() {
+    public List<ItemRequisicaoDeCompra> getItensRequisicaoComponente() {
         return itensRequisicaoComponente;
     }
 
-    public void setItensRequisicaoComponente(List<ItemRequisicaoCompraVO> itensRequisicaoComponente) {
+    public void setItensRequisicaoComponente(List<ItemRequisicaoDeCompra> itensRequisicaoComponente) {
         this.itensRequisicaoComponente = itensRequisicaoComponente;
     }
 
@@ -53,33 +52,19 @@ public class ItemRequisicaoCompraDerivacao implements Serializable {
 
     public BigDecimal getQuantidadeUtilizada() {
         BigDecimal quantidade = BigDecimal.ZERO;
-        for (ItemRequisicaoCompraVO item : itensRequisicaoComponente) {
+        for (ItemRequisicaoDeCompra item : itensRequisicaoComponente) {
             quantidade = quantidade.add(item.getQuantidade());
         }
         return quantidade;
     }
 
-    public BigDecimal getQuantidadeUtilizadaOutrosItens(ItemRequisicaoCompraVO itemReq) {
+    public BigDecimal getQuantidadeUtilizadaOutrosItens(ItemRequisicaoDeCompra itemReq) {
         BigDecimal quantidade = BigDecimal.ZERO;
-        for (ItemRequisicaoCompraVO item : itensRequisicaoComponente) {
+        for (ItemRequisicaoDeCompra item : itensRequisicaoComponente) {
             if (!item.equals(itemReq)) {
                 quantidade = quantidade.add(item.getQuantidade());
             }
         }
         return quantidade;
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
-        ItemRequisicaoCompraDerivacao that = (ItemRequisicaoCompraDerivacao) object;
-        return Objects.equals(derivacaoObjetoCompra, that.derivacaoObjetoCompra)
-            && Objects.equals(itemRequisicaoOriginal.getItemContrato(), that.itemRequisicaoOriginal.getItemContrato());
-    }
-
-    @Override
-    public int hashCode() {//não utilizar assim
-        return Objects.hash(derivacaoObjetoCompra, itemRequisicaoOriginal.getItemContrato());
     }
 }

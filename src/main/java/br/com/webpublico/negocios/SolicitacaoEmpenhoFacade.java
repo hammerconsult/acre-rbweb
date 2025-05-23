@@ -159,6 +159,7 @@ public class SolicitacaoEmpenhoFacade extends AbstractFacade<SolicitacaoEmpenho>
         novaSol.setClasseCredor(vo.getClasseCredor());
         novaSol.setGerarReserva(vo.getGerarReserva());
         novaSol.setContrato(vo.getContrato());
+        novaSol.setReconhecimentoDivida(vo.getReconhecimentoDivida());
         novaSol.setOrigemSolicitacaoEmpenho(vo.getOrigemSocilicitacao());
         return novaSol;
     }

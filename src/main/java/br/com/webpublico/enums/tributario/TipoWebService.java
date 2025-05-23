@@ -11,14 +11,14 @@ public enum TipoWebService {
     E_SOCIAL("E-social"),
     REINF("REINF"),
     REDESIM("Rede SIM"),
-    SISOBRA("SisObra Pref"),
     ARQUIVO_BI_TRIBUTARIO("Arquivo BI Tributário"),
     ARQUIVO_BI_CONTABIL("Arquivo BI Contábil"),
+    SISOBRA("SisObra Pref"),
     PROTESTO("Protesto de Débitos"),
     SIT("SIT"),
     PONTO("Ponto"),
-    DAM("DAM"),
     NOTA_FISCAL_NACIONAL("Nota Fiscal Nacional"),
+    DAM("DAM"),
     SPC("SPC");
 
 

@@ -143,12 +143,12 @@ public class PessoaFisica extends Pessoa implements Serializable {
     @OneToMany(mappedBy = "responsavel", cascade = CascadeType.ALL, orphanRemoval = true)
     @Etiqueta("Dependentes")
     private List<Dependente> dependentes;
-    private Boolean viveUniaoEstavel;
     @OneToMany(mappedBy = "pessoaFisica", cascade = CascadeType.ALL, orphanRemoval = true)
     @Invisivel
     private List<TempoContratoFPPessoa> itemTempoContratoFPPessoa;
     @Transient
     private boolean fichaJaExcluidas;
+    private Boolean viveUniaoEstavel;
     @Enumerated(EnumType.STRING)
     private TipoCondicaoIngresso tipoCondicaoIngresso;
     private Boolean casadoBrasileiro;
@@ -934,22 +934,6 @@ public class PessoaFisica extends Pessoa implements Serializable {
         dto.setDependentes(Dependente.toDependentesDTO(dependentes));
         dto.setContasBancarias(ContaCorrenteBancPessoa.toContaCorrenteBancariaDTOs(pessoa.getContaCorrenteBancPessoas()));
         dto.setHierarquiaOrganizacionalDTO(HierarquiaOrganizacional.toHierarquiaOrganizacionalDTO(ho));
-        return dto;
-    }
-
-    public br.com.webpublico.tributario.dto.PessoaFisicaDTO toPessoaFisicaDTOTributario() {
-        PessoaFisica pessoa = this;
-
-        br.com.webpublico.tributario.dto.PessoaFisicaDTO dto = new br.com.webpublico.tributario.dto.PessoaFisicaDTO();
-        dto.setId(pessoa.getId());
-        dto.setNome(pessoa.getNome());
-        dto.setCpf(pessoa.getCpf());
-        dto.setDataNascimento(pessoa.getDataNascimento());
-        dto.setSexo(pessoa.getSexo() != null ? br.com.webpublico.tributario.enumeration.Sexo.valueOf(pessoa.getSexo().name()) : null);
-        dto.setMae(pessoa.getMae());
-        dto.setEmail(pessoa.getEmail());
-        dto.setHomePage(pessoa.getHomePage());
-        dto.setEnderecos(EnderecoCorreio.toEnderecoCorreioDTOsTributario(pessoa.getEnderecos()));
         return dto;
     }
 

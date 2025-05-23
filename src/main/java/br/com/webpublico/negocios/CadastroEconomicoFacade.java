@@ -132,9 +132,9 @@ public class CadastroEconomicoFacade extends AbstractFacade<CadastroEconomico> {
     @EJB
     private SingletonGeradorCodigoCadastroEconomico singletonGeradorCodigo;
     @EJB
-    private ConfiguracaoTributarioFacade configuracaoTributarioFacade;
-    @EJB
     private ConfiguracaoNfseFacade configuracaoNfseFacade;
+    @EJB
+    private ConfiguracaoTributarioFacade configuracaoTributarioFacade;
     @EJB
     private CalculoAlvaraFacade calculoAlvaraFacade;
     private WebApplicationContext ap;
@@ -435,7 +435,13 @@ public class CadastroEconomicoFacade extends AbstractFacade<CadastroEconomico> {
         if (pessoaCnaes != null && !pessoaCnaes.isEmpty()) {
             for (PessoaCNAE pessoaCnae : pessoaCnaes) {
                 CNAE cnae = cnaeFacade.recuperar(pessoaCnae.getCnae().getId());
-                cadastroEconomico.adicionarServicos(cnae.getServicos());
+                if (cnae.getServicos() != null && !cnae.getServicos().isEmpty()) {
+                    for (CNAEServico cnaeServico : cnae.getServicos()) {
+                        if (!cadastroEconomico.temServico(cnaeServico.getServico())) {
+                            cadastroEconomico.adicionarServico(cnaeServico.getServico());
+                        }
+                    }
+                }
             }
         }
     }
@@ -1503,41 +1509,6 @@ public class CadastroEconomicoFacade extends AbstractFacade<CadastroEconomico> {
         return q.getResultList();
     }
 
-    public CadastroEconomico recuperarOuCriarCadastroEconomicoPorCnpj(String cnpj, Date dataOperacao, Servico servicoNaoIndentificadoIss) {
-        CadastroEconomico cadastroEconomico = buscarCadastroEconomicoPorCnpj(cnpj);
-        if (cadastroEconomico == null) {
-            cadastroEconomico = new CadastroEconomico();
-            List<PessoaJuridica> listaPessoa = pessoaFacade.buscarPessoasJuridicasPorCnpj(cnpj, SituacaoCadastralPessoa.values());
-            PessoaJuridica pj;
-            if (listaPessoa != null && !listaPessoa.isEmpty()) {
-                pj = listaPessoa.get(0);
-            } else {
-                pj = new PessoaJuridica();
-                pj.setRazaoSocial("NÃO IDENTIFICADO");
-                pj.setNomeFantasia("NÃO IDENTIFICADO");
-                pj.setNomeReduzido("NÃO IDENTIFICADO");
-                pj.setCnpj(cnpj);
-                pj.setSituacaoCadastralPessoa(SituacaoCadastralPessoa.AGUARDANDO_CONFIRMACAO_CADASTRO);
-                pj.adicionarHistoricoSituacaoCadastral();
-                pj = em.merge(pj);
-            }
-            cadastroEconomico.setPessoa(pj);
-            cadastroEconomico.setInscricaoCadastral(buscarUltimaInscricaoCMC());
-
-            SituacaoCadastroEconomico situacao = new SituacaoCadastroEconomico();
-            situacao.setSituacaoCadastral(SituacaoCadastralCadastroEconomico.NULA);
-            situacao.setDataAlteracao(dataOperacao);
-            situacao.setDataRegistro(situacao.getDataAlteracao());
-            cadastroEconomico.getSituacaoCadastroEconomico().add(situacao);
-            cadastroEconomico.getServico().add(servicoNaoIndentificadoIss);
-
-            cadastroEconomico = salvarRetornado(cadastroEconomico);
-        }
-        cadastroEconomico = criarEnquadramentoFiscal(cadastroEconomico, null, TipoIssqn.MENSAL);
-        return em.merge(cadastroEconomico);
-    }
-
-
     public CadastroEconomico recuperarPorRevisao(Long id, Long revisao) throws EntityNotFoundException {
         AuditReader reader = AuditReaderFactory.get(Util.criarEntityManagerOpenViewReadOnly());
         CadastroEconomico bce = reader.find(CadastroEconomico.class, id, revisao);
@@ -1922,6 +1893,25 @@ public class CadastroEconomicoFacade extends AbstractFacade<CadastroEconomico> {
         return null;
     }
 
+    public Long recuperarIdRevisaoCadastroEconomicoHistoricoRedeSim(CadastroEconomico cadastroEconomico, HistoricoAlteracaoRedeSim historico) {
+        String pattern = "dd/MM/yyyy HH24:MI";
+        StringBuilder sql = new StringBuilder()
+            .append("select max(ce.rev) from cadastroeconomico_aud ce ")
+            .append("inner join revisaoauditoria rev on rev.id = ce.rev ")
+            .append("where ce.id = :idCadastro ")
+            .append("  and to_date(to_char(rev.DATAHORA,'").append(pattern)
+            .append("'), '").append(pattern).append("') = to_date(to_char(:dataHora,'")
+            .append(pattern).append("'), '").append(pattern).append("') ");
+        Query q = em.createNativeQuery(sql.toString());
+        q.setParameter("idCadastro", cadastroEconomico.getId());
+        q.setParameter("dataHora", historico.getDataAlteracao());
+        try {
+            return ((BigDecimal) q.getSingleResult()).longValue();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     public boolean isAutonomoMotorista(CadastroEconomico cmc) {
         if (cmc.getId() != null) {
             String sql = " select ptransp.* from permissaotransporte ptransp " +
@@ -2038,25 +2028,6 @@ public class CadastroEconomicoFacade extends AbstractFacade<CadastroEconomico> {
 
         List<Object[]> cadastros = q.getResultList();
         return getPrestadorServicoNfseDTOS(cadastros);
-    }
-
-    public Long recuperarIdRevisaoCadastroEconomicoHistoricoRedeSim(CadastroEconomico cadastroEconomico, HistoricoAlteracaoRedeSim historico) {
-        String pattern = "dd/MM/yyyy HH24:MI";
-        StringBuilder sql = new StringBuilder()
-            .append("select max(ce.rev) from cadastroeconomico_aud ce ")
-            .append("inner join revisaoauditoria rev on rev.id = ce.rev ")
-            .append("where ce.id = :idCadastro ")
-            .append("  and to_date(to_char(rev.DATAHORA,'").append(pattern)
-            .append("'), '").append(pattern).append("') = to_date(to_char(:dataHora,'")
-            .append(pattern).append("'), '").append(pattern).append("') ");
-        Query q = em.createNativeQuery(sql.toString());
-        q.setParameter("idCadastro", cadastroEconomico.getId());
-        q.setParameter("dataHora", historico.getDataAlteracao());
-        try {
-            return ((BigDecimal) q.getSingleResult()).longValue();
-        } catch (Exception ex) {
-            return null;
-        }
     }
 
     public Integer contarCadastrosPorUsuarioNfse(String login, String filtro) {

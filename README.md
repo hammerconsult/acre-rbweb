@@ -1,4 +1,4 @@
-# WEBPUBLICO - ERP
+# WEBPUBLICO - ERP 
 
 ______
 ## Requisitos para executar o branch *master*
@@ -8,13 +8,13 @@ ______
 
 Existe uma copia de um servidor de a aplicação configurada na raiz do FTP, chamada:  wildfly-15.0.1.Final-RB.zip
 
-Há também uma versão do webserver compartilhado no link:
+Há também uma versão do webserver compartilhado no link: 
 
 https://drive.google.com/drive/folders/10qlNg0MGis2ySzsnvssDVLj20A3Jw09n?usp=sharing
 
 OBS: Deve ser solicitado o acesso
 
-#### Descompactar a pasta e anexar o novo Wildfly no Intellij.
+#### Descompactar a pasta e anexar o novo Wildfly no Intellij. 
 
 #### Trocar a JDK para a Open JDK 8 ou Oracle JDK 8.
 

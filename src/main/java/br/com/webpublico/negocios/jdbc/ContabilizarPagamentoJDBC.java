@@ -57,10 +57,10 @@ public final class ContabilizarPagamentoJDBC extends ClassPatternJDBC {
                 item.setTagValor(TagValor.LANCAMENTO);
 
                 List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-                listaObj.add(new ObjetoParametro((pag.getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa()), item));
-                listaObj.add(new ObjetoParametro(pag.getSubConta(), item));
-                listaObj.add(new ObjetoParametro(pag.getLiquidacao().getEmpenho().getClasseCredor(), item));
-                listaObj.add(new ObjetoParametro(pag.getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica(), item));
+                listaObj.add(new ObjetoParametro((pag.getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa()).getId().toString(), ContaDespesa.class.getSimpleName(), item));
+                listaObj.add(new ObjetoParametro(pag.getSubConta().getId().toString(), SubConta.class.getSimpleName(), item));
+                listaObj.add(new ObjetoParametro(pag.getLiquidacao().getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+                listaObj.add(new ObjetoParametro(pag.getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
                 item.setObjetoParametros(listaObj);
                 parametroEvento.getItensParametrosEvento().add(item);
 

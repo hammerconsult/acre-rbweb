@@ -15,7 +15,9 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 @Stateless
 public class ReprocessamentoSituacaoFuncionalFacade extends AbstractFacade<ReprocessamentoSituacaoFuncional> {
@@ -40,8 +42,6 @@ public class ReprocessamentoSituacaoFuncionalFacade extends AbstractFacade<Repro
     private ReintegracaoFacade reintegracaoFacade;
     @EJB
     private AposentadoriaFacade aposentadoriaFacade;
-    @EJB
-    private ProvimentoReversaoFacade provimentoReversaoFacade;
 
     public ReprocessamentoSituacaoFuncionalFacade() {
         super(ReprocessamentoSituacaoFuncional.class);
@@ -100,44 +100,38 @@ public class ReprocessamentoSituacaoFuncionalFacade extends AbstractFacade<Repro
         List<Afastamento> afastamentos = afastamentoFacade.recuperarTodosAfastamentos(vinculo.getId());
         List<ConcessaoFeriasLicenca> ferias = concessaoFeriasLicencaFacade.findConcessaoFeriasLincencaByServidor(vinculo.getId(), TipoPeriodoAquisitivo.FERIAS);
         List<ConcessaoFeriasLicenca> licencas = concessaoFeriasLicencaFacade.findConcessaoFeriasLincencaByServidor(vinculo.getId(), TipoPeriodoAquisitivo.LICENCA);
-        List<Aposentadoria> aposentadorias = null;
+        Aposentadoria aposentadoria = null;
         if (vinculo instanceof ContratoFP) {
-            aposentadorias = aposentadoriaFacade.recuperaTodasAposentadoriasPorContratoFP((ContratoFP) vinculo);
+            aposentadoria = aposentadoriaFacade.recuperaAposentadoriaPorContratoFP((ContratoFP) vinculo);
         }
-        if (aposentadorias != null) {
-            aposentadorias.sort(Comparator.comparing(Aposentadoria::getInicioVigencia));
-        }
-        criarSituacaoFuncional(vinculo.getId(), exoneracaoRescisa, cedenciaContratoFPS, afastamentos, ferias, licencas, aposentadorias, situacaoExonerado, situacaoCedidoADesposicao, situacaoAfastado, situacaoFerias, situacaoExercicio, situacaoAposentado);
+        criarSituacaoFuncional(vinculo.getId(), exoneracaoRescisa, cedenciaContratoFPS, afastamentos, ferias, licencas, aposentadoria, situacaoExonerado, situacaoCedidoADesposicao, situacaoAfastado, situacaoFerias, situacaoExercicio, situacaoAposentado);
     }
 
     private void criarSituacaoFuncional(Long
                                             idServidor, List<ExoneracaoRescisao> exoneracaoRescisa, List<CedenciaContratoFP> cedenciaContratoFPS, List<Afastamento> afastamentos,
-                                        List<ConcessaoFeriasLicenca> ferias, List<ConcessaoFeriasLicenca> licencas, List<Aposentadoria> aposentadorias, SituacaoFuncional situacaoExonerado, SituacaoFuncional situacaoCedidoADesposicao, SituacaoFuncional situacaoAfastado, SituacaoFuncional situacaoFerias, SituacaoFuncional situacaoExercicio, SituacaoFuncional situacaoAposentado) {
+                                        List<ConcessaoFeriasLicenca> ferias, List<ConcessaoFeriasLicenca> licencas, Aposentadoria aposentadoria, SituacaoFuncional situacaoExonerado, SituacaoFuncional situacaoCedidoADesposicao, SituacaoFuncional situacaoAfastado, SituacaoFuncional situacaoFerias, SituacaoFuncional situacaoExercicio, SituacaoFuncional situacaoAposentado) {
         List<SituacaoContratoFP> situacoes = Lists.newArrayList();
         ContratoFP contrato = contratoFPFacade.recuperarContratoComSituacaoFuncional(idServidor);
-
         if (exoneracaoRescisa != null) {
-            for (Aposentadoria aposentadoria : aposentadorias) {
-                exoneracaoRescisa.removeIf(exoneracaoRescisao -> DataUtil.adicionaDias(exoneracaoRescisao.getDataRescisao(), 1).compareTo(aposentadoria.getInicioVigencia()) == 0);
-            }
-
-            for (Aposentadoria aposentadoria : aposentadorias) {
-                for (ExoneracaoRescisao exoneracaoRescisao : exoneracaoRescisa) {
-                    Date fim = null;
-
+            for (ExoneracaoRescisao exoneracaoRescisao : exoneracaoRescisa) {
+                Date fim = null;
+                if (aposentadoria != null) {
+                    if (DataUtil.adicionaDias(exoneracaoRescisao.getDataRescisao(), 1).compareTo(aposentadoria.getInicioVigencia()) == 0) {
+                        continue;
+                    }
                     if (aposentadoria.getInicioVigencia().after(DataUtil.adicionaDias(exoneracaoRescisao.getDataRescisao(), 1))) {
                         fim = aposentadoria.getInicioVigencia();
                     }
-                    Reintegracao reintegracao = reintegracaoFacade.buscarReintegracaoParaContrato(idServidor, exoneracaoRescisao.getId());
-                    if (reintegracao != null) {
-                        if (reintegracao.getInicioEfeitosFinanceiros() != null && reintegracao.getInicioEfeitosFinanceiros().after(exoneracaoRescisao.getDataRescisao())) {
-                            fim = reintegracao.getInicioEfeitosFinanceiros();
-                        } else if (reintegracao.getDataReintegracao().after(exoneracaoRescisao.getDataRescisao())) {
-                            fim = reintegracao.getDataReintegracao();
-                        }
-                    }
-                    situacoes.add(criarSituacaoFuncional(situacaoExonerado, contrato, DataUtil.adicionaDias(exoneracaoRescisao.getDataRescisao(), 1), fim != null ? DataUtil.removerDias(fim, 1) : null));
                 }
+                Reintegracao reintegracao = reintegracaoFacade.buscarReintegracaoParaContrato(idServidor, exoneracaoRescisao.getId());
+                if (reintegracao != null) {
+                    if (reintegracao.getInicioEfeitosFinanceiros() != null && reintegracao.getInicioEfeitosFinanceiros().after(exoneracaoRescisao.getDataRescisao())) {
+                        fim = reintegracao.getInicioEfeitosFinanceiros();
+                    } else if (reintegracao.getDataReintegracao().after(exoneracaoRescisao.getDataRescisao())) {
+                        fim = reintegracao.getDataReintegracao();
+                    }
+                }
+                situacoes.add(criarSituacaoFuncional(situacaoExonerado, contrato, DataUtil.adicionaDias(exoneracaoRescisao.getDataRescisao(), 1), fim != null ? DataUtil.removerDias(fim, 1) : null));
             }
         }
 
@@ -240,10 +234,8 @@ public class ReprocessamentoSituacaoFuncionalFacade extends AbstractFacade<Repro
             }
         }
 
-        if (aposentadorias != null) {
-            for (Aposentadoria aposentadoria : aposentadorias) {
-                    situacoes.add(criarSituacaoFuncional(situacaoAposentado, contrato, aposentadoria.getInicioVigencia(), aposentadoria.getFinalVigencia()));
-            }
+        if (aposentadoria != null) {
+            situacoes.add(criarSituacaoFuncional(situacaoAposentado, contrato, aposentadoria.getInicioVigencia(), aposentadoria.getFinalVigencia()));
         }
 
         montarSituacoesOriginais(contrato);

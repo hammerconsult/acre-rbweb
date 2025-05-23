@@ -1,7 +1,5 @@
 package br.com.webpublico.negocios.comum;
 
-import br.com.webpublico.dte.dto.RegisterDteDTO;
-import br.com.webpublico.dte.facades.ConfiguracaoDteFacade;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.comum.UsuarioWeb;
 import br.com.webpublico.entidadesauxiliares.comum.UsuarioPortalWebDTO;
@@ -74,8 +72,6 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
     @EJB
     private SistemaFacade sistemaFacade;
     @EJB
-    private ConfiguracaoDteFacade configuracaoDteFacade;
-    @EJB
     private NfseAuthorityFacade nfseAuthorityFacade;
     @EJB
     private ConfiguracaoTributarioFacade configuracaoTributarioFacade;
@@ -85,8 +81,6 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
         UsuarioWeb recuperar = super.recuperar(id);
         Hibernate.initialize(recuperar.getUserNfseCadastroEconomicos());
         Hibernate.initialize(recuperar.getUserNfseHistoricosAtivacao());
-        Hibernate.initialize(recuperar.getUserDteCadastrosEconomicos());
-        Hibernate.initialize(recuperar.getTermosAdesaoDte());
         Hibernate.initialize(recuperar.getBloqueiosEmissaoNfse());
         return recuperar;
     }
@@ -116,9 +110,8 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
         return null;
     }
 
-    public UsuarioWeb buscarUsuarioWebPorLogin(String login) {
-        Query q = em.createNativeQuery(" select * from UsuarioWeb " +
-            " where regexp_replace(login, '[^0-9]') = regexp_replace(:login, '[^0-9]') ", UsuarioWeb.class);
+    public UsuarioWeb buscarNfseUserPorLogin(String login) {
+        Query q = em.createNativeQuery(" select * from UsuarioWeb where LOGIN = :login", UsuarioWeb.class);
         q.setParameter("login", login);
         q.setMaxResults(1);
         List resultList = q.getResultList();
@@ -369,31 +362,6 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
         return salvarRetornando(usuarioWeb);
     }
 
-    public UsuarioWeb registrarUsuarioDTE(RegisterDteDTO registerDTO) throws NfseOperacaoNaoPermitidaException, ValidacaoException {
-        UsuarioWeb usuarioWeb = new UsuarioWeb();
-        List<NfseUserAuthority> authorities = Lists.newArrayList();
-        usuarioWeb.setLogin(registerDTO.getPrestador().getPessoa().getDadosPessoais().getCpfCnpj());
-        usuarioWeb.setPassword(registerDTO.getPassword());
-        usuarioWeb.setEmail(registerDTO.getEmail());
-        usuarioWeb.setActivated(false);
-        usuarioWeb.setActivationKey(RandomUtil.generateActivationKey());
-        authorities.add(new NfseUserAuthority(usuarioWeb, authorityService.buscarPorTipo(AuthoritiesConstants.USER)));
-        authorities.add(new NfseUserAuthority(usuarioWeb, authorityService.buscarPorTipo(AuthoritiesConstants.CONTRIBUINTE)));
-        usuarioWeb.setNfseUserAuthorities(authorities);
-
-        usuarioWeb.setPessoa(pessoaFacade.recuperar(registerDTO.getPrestador().getPessoa().getId()));
-
-        usuarioWeb.setUserDteCadastrosEconomicos(new ArrayList<UserDteCadastroEconomico>());
-        UserDteCadastroEconomico userDteCadastroEconomico = new UserDteCadastroEconomico();
-        userDteCadastroEconomico.setUsuarioWeb(usuarioWeb);
-        userDteCadastroEconomico.setCadastroEconomico(cadastroEconomicoFacade.recuperar(registerDTO.getPrestador().getId()));
-        usuarioWeb.getUserDteCadastrosEconomicos().add(userDteCadastroEconomico);
-
-        usuarioWeb.setUserDteCadastroEconomico(userDteCadastroEconomico);
-
-        return em.merge(usuarioWeb);
-    }
-
 
     @Asynchronous
     public void enviarEmailAtivacaoUsuario(UsuarioWeb user) {
@@ -403,16 +371,6 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
             .trocarTags(templateEmail.getConteudo());
 
         enviarEmail(user.getEmail(), "Ativação de Cadastro para acesso ao sistema WP ISS", conteudo);
-    }
-
-    @Asynchronous
-    public void enviarEmailAtivacaoUsuarioDTE(UsuarioWeb user) {
-        TemplateNfse templateEmail = templateNfseFacade.buscarPorTipo(TipoTemplateNfse.ATIVACAO_CADASTRO_DTE);
-
-        String conteudo = new TrocaTagNfseEmailAtivacaoUsuarioDTE(user, configuracaoDteFacade.recuperarConfiguracao())
-            .trocarTags(templateEmail.getConteudo());
-
-        enviarEmail(user.getEmail(), "Ativação de Cadastro para acesso ao sistema WP DT-e", conteudo);
     }
 
     @Asynchronous
@@ -441,17 +399,6 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
             enviarEmail(user.getEmail(), "Alteração de senha para acesso ao sistema WP ISS", conteudo);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new NfseOperacaoNaoPermitidaException("Erro ao enviar o e-mail!");
-        }
-    }
-
-    public void enviarEmailResetarSenhaDte(UsuarioWeb usuarioWeb) {
-        TemplateNfse templateEmail = templateNfseFacade.buscarPorTipo(TipoTemplateNfse.SOLICITACAO_ALTERACAO_SENHA_DTE);
-        String conteudo = new TrocaTagEmailSolicitacaoAlteracaoSenhaDte(usuarioWeb, configuracaoDteFacade.recuperarConfiguracao())
-            .trocarTags(templateEmail.getConteudo());
-        try {
-            enviarEmail(usuarioWeb.getEmail(), "Alteração de senha para acesso ao sistema WP DT-e", conteudo);
-        } catch (Exception e) {
             throw new NfseOperacaoNaoPermitidaException("Erro ao enviar o e-mail!");
         }
     }
@@ -670,7 +617,7 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
     public void ativarOuDesativarUsuario(Long empresaId, String login, String loginResponsavel) {
         UsuarioWeb userResponsavel = null;
         if (loginResponsavel != null && !loginResponsavel.isEmpty())
-            userResponsavel = buscarUsuarioWebPorLogin(loginResponsavel);
+            userResponsavel = buscarNfseUserPorLogin(loginResponsavel);
 
         UserNfseCadastroEconomico userNfseCadastroEconomico = buscarNfseUserPorEmpresaAndLogin(empresaId, login);
 
@@ -719,6 +666,7 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
         return usuario;
     }
 
+
     public boolean hasEscritorioContabilidadeDaPessoa(Pessoa pessoa) {
         Query q = em.createNativeQuery("select ec.id from EscritorioContabil ec " +
             " inner join CadastroEconomico ce on ce.escritorioContabil_id = ec.id " +
@@ -738,13 +686,13 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
     }
 
     public Boolean hasAcessoEmpresa(String login, String inscricaoMunicipal) {
-        UsuarioWeb user = buscarUsuarioWebPorLogin(login);
+        UsuarioWeb user = buscarNfseUserPorLogin(login);
         CadastroEconomico cadastroEconomico = cadastroEconomicoFacade.buscarCadastroEconomicoPorInscricaoMunicipal(inscricaoMunicipal);
         return user.hasPermissao(cadastroEconomico);
     }
 
     public void changePassword(String login, String newPassword) {
-        UsuarioWeb usuarioWeb = buscarUsuarioWebPorLogin(login);
+        UsuarioWeb usuarioWeb = buscarNfseUserPorLogin(login);
         usuarioWeb.setPassword(newPassword);
         salvarRetornando(usuarioWeb);
     }
@@ -835,19 +783,6 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
         });
     }
 
-    public void updateUserDteCadastroEconomico(UserDteCadastroEconomico userDteCadastroEconomico) {
-        em.merge(userDteCadastroEconomico);
-    }
-
-    public List<UsuarioWeb> buscarUsuariosDte(CadastroEconomico cadastroEconomico) {
-        String sql = " select uw.* from usuarioweb uw " +
-            " inner join userdtecadastroeconomico uw_ce on uw_ce.usuarioweb_id = uw.id " +
-            " where uw_ce.cadastroeconomico_id = :id_cadastro ";
-        Query q = em.createNativeQuery(sql, UsuarioWeb.class);
-        q.setParameter("id_cadastro", cadastroEconomico);
-        return q.getResultList();
-    }
-
     public List<UsuarioWeb> buscarTodosUsuariosAtivos() {
         String hql = " select new UsuarioWeb(u.id) from UsuarioWeb u where u.activated = :ativo ";
         return em.createQuery(hql)
@@ -876,6 +811,15 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
             em.createNativeQuery("delete from TermoUsoAppServidor where usuario_id = (select id from UsuarioWeb where pessoa_id = :idPessoa)")
                 .setParameter("idPessoa", pessoa.getId()).executeUpdate();
         }
+    }
+
+    public UsuarioWeb buscarUsuarioWebPorLogin(String login) {
+        Query q = em.createNativeQuery(" select * from usuarioWeb " +
+            " where regexp_replace(login, '[^0-9]') = regexp_replace(:login, '[^0-9]') ", UsuarioWeb.class);
+        q.setParameter("login", login);
+        q.setMaxResults(1);
+        List resultList = q.getResultList();
+        return !resultList.isEmpty() ? (UsuarioWeb) resultList.get(0) : null;
     }
 
     public Pessoa criarLoginPortalWebSeNaoExistir(String email, Pessoa pessoa) {
@@ -1040,7 +984,7 @@ public class UsuarioWebFacade extends AbstractFacade<UsuarioWeb> {
         UsuarioWeb usuario = null;
         usuario = getUsuarioPorPessoa(pessoas);
         if (usuario == null) {
-            usuario = buscarUsuarioWebPorLogin(StringUtil.retornaApenasNumeros(dto.getCpf()));
+            usuario = buscarNfseUserPorLogin(StringUtil.retornaApenasNumeros(dto.getCpf()));
         }
 
         if (usuario == null && pessoas.isEmpty()) {

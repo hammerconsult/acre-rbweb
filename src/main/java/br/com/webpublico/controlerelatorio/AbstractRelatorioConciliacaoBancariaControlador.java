@@ -110,7 +110,7 @@ public abstract class AbstractRelatorioConciliacaoBancariaControlador extends Re
     }
 
     private String getParametroDataSaldoAnterior() {
-        return " where trunc(datasaldo) <= TO_DATE('" + DataUtil.getDataFormatada(dataReferencia) + "', 'dd/MM/yyyy') ";
+        return DataUtil.getDataFormatada(dataReferencia).startsWith("01/01") ? " where trunc(datasaldo) <= TO_DATE('" + DataUtil.getDataFormatada(dataReferencia) + "', 'dd/MM/yyyy') " : " where trunc(datasaldo) <= TO_DATE('" + DataUtil.getDataFormatada(dataReferencia) + "', 'dd/MM/yyyy') ";
     }
 
     public List<ParametrosRelatorios> montarParametros() {
@@ -145,7 +145,6 @@ public abstract class AbstractRelatorioConciliacaoBancariaControlador extends Re
 
     @Override
     public void adicionarExercicio(List<ParametrosRelatorios> parametros) {
-
     }
 
     public Boolean getDiferenteZero() {

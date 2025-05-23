@@ -133,7 +133,7 @@ public class RelatorioDemonstrativoCreditosReceberNovoControlador extends Relato
             filtros += " Intervalo: " + intervalo.getDescricao() + " -";
         }
         if (unidadeGestora != null) {
-            parametros.add(new ParametrosRelatorios(" ug.id ", ":ugId", null, OperacaoRelatorio.IGUAL, unidadeGestora.getId(), null, 1, false));
+            parametros.add(new ParametrosRelatorios(" ug.id ", ":ugId", null, OperacaoRelatorio.IGUAL, unidadeGestora.getId(), null, 2, false));
             filtros += " Unidade Gestora: " + unidadeGestora.getCodigo() + " -";
         }
         parametros.add(new ParametrosRelatorios(null, ":exercicio", null, null, buscarExercicioPelaDataFinal().getId(), null, 4, false));

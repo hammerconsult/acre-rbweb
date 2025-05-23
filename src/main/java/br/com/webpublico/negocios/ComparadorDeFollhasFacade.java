@@ -314,9 +314,9 @@ public class ComparadorDeFollhasFacade extends AbstractFacade<FolhaDePagamento> 
         logger.debug("Iniciando a busca dos vinculos calculados..." + objetoPesquisa);
         List<VinculoFP> vinculos = new LinkedList<>();
         if (objetoPesquisa.getHierarquiaOrganizacional() != null) {
-            vinculos = contratoFPFacade.listarVinculosPorHierarquiaSemCedenciaEstagioOuAfastamento(Lists.newArrayList(objetoPesquisa.getHierarquiaOrganizacional()), Mes.getMesToInt(objetoPesquisa.getMes()), objetoPesquisa.getAno(), false);
+            vinculos = contratoFPFacade.recuperaMatriculaPorOrgaoRecursivaPelaView(Lists.newArrayList(objetoPesquisa.getHierarquiaOrganizacional()), Mes.getMesToInt(objetoPesquisa.getMes()), objetoPesquisa.getAno(), false);
         } else if (!objetoPesquisa.getTipoFolhaDePagamentoWeb().equals(TipoFolhaDePagamento.RESCISAO)) {
-            vinculos = folhaDePagamentoFacade.recuperarMatriculasSemCedenciaEstagioOuAfastamento(Mes.getMesToInt(objetoPesquisa.getMes()), objetoPesquisa.getAno());
+            vinculos = folhaDePagamentoFacade.recuperarTodasMatriculas(Mes.getMesToInt(objetoPesquisa.getMes()), objetoPesquisa.getAno());
         } else {
             vinculos = folhaDePagamentoFacade.recuperaVinculosPorTipoFolhaMesEAno(Mes.getMesToInt(objetoPesquisa.getMes()), objetoPesquisa.getAno(), objetoPesquisa.getTipoFolhaDePagamentoWeb());
         }

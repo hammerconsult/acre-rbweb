@@ -243,8 +243,8 @@ public class EstornoTransferenciaFacade extends SuperFacadeContabil<EstornoTrans
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getTransferencia().getSubContaDeposito(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), EstornoTransferencia.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getTransferencia().getSubContaDeposito().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -282,8 +282,8 @@ public class EstornoTransferenciaFacade extends SuperFacadeContabil<EstornoTrans
 
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getTransferencia().getSubContaRetirada(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), EstornoTransferencia.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getTransferencia().getSubContaRetirada().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);

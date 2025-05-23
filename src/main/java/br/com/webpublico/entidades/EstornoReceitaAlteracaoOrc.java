@@ -4,21 +4,23 @@
  */
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
+import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.ErroReprocessamentoContabil;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Obrigatorio;
 import br.com.webpublico.util.anotacoes.ReprocessamentoContabil;
+import com.google.common.base.Strings;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.TreeMap;
 
 /**
  * @author Claudio
@@ -28,7 +30,7 @@ import java.math.BigDecimal;
 @Audited
 
 @Entity
-public class EstornoReceitaAlteracaoOrc extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil {
+public class EstornoReceitaAlteracaoOrc extends SuperEntidade implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -166,13 +168,53 @@ public class EstornoReceitaAlteracaoOrc extends SuperEntidadeContabilGerarContaA
         return toString();
     }
 
+    @Override
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
+    }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
-        return new GeradorContaAuxiliarDTO(receitaAlteracaoORC.getReceitaLOA().getEntidade(),
-            receitaAlteracaoORC.getContaDeDestinacao(),
-            receitaAlteracaoORC.getReceitaLOA().getContaDeReceita(),
-            receitaAlteracaoORC.getReceitaLOA().getContaDeReceita().getCodigoContaSiconf(),
-            getEstornoAlteracaoOrc().getExercicio());
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "96":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada6(receitaAlteracaoORC.getReceitaLOA().getEntidade(),
+                    receitaAlteracaoORC.getContaDeDestinacao(),
+                    receitaAlteracaoORC.getReceitaLOA().getContaDeReceita(),
+                    getEstornoAlteracaoOrc().getExercicio());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "96":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar6(receitaAlteracaoORC.getReceitaLOA().getEntidade(),
+                    receitaAlteracaoORC.getContaDeDestinacao(),
+                    (!Strings.isNullOrEmpty(receitaAlteracaoORC.getReceitaLOA().getContaDeReceita().getCodigoSICONFI()) ?
+                        receitaAlteracaoORC.getReceitaLOA().getContaDeReceita().getCodigoSICONFI() :
+                        receitaAlteracaoORC.getReceitaLOA().getContaDeReceita().getCodigo()).replace(".", ""));
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
     }
 }

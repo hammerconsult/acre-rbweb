@@ -220,20 +220,6 @@ public class Telefone extends SuperEntidade {
         return null;
     }
 
-    public static List<br.com.webpublico.tributario.dto.TelefoneDTO> toTelefonesTributario(List<Telefone> telefones) {
-        if (telefones != null && !telefones.isEmpty()) {
-            List<br.com.webpublico.tributario.dto.TelefoneDTO> dtos = Lists.newLinkedList();
-            for (Telefone telefone : telefones) {
-                br.com.webpublico.tributario.dto.TelefoneDTO dto = toTelefoneTributario(telefone);
-                if (dto != null) {
-                    dtos.add(dto);
-                }
-            }
-            return dtos;
-        }
-        return null;
-    }
-
     public static TelefoneDTO toTelefone(Telefone telefone) {
         if (telefone == null) {
             return null;
@@ -244,20 +230,6 @@ public class Telefone extends SuperEntidade {
         dto.setPessoaContato(telefone.getPessoaContato());
         dto.setPrincipalTelefone(telefone.getPrincipal());
         dto.setTipoFone(telefone.getTipoFone() != null ? br.com.webpublico.pessoa.enumeration.TipoTelefone.valueOf(telefone.getTipoFone().name()) : null);
-        dto.setTelefone(telefone.getTelefone());
-        return dto;
-    }
-
-    public static br.com.webpublico.tributario.dto.TelefoneDTO toTelefoneTributario(Telefone telefone) {
-        if (telefone == null) {
-            return null;
-        }
-        br.com.webpublico.tributario.dto.TelefoneDTO dto = new br.com.webpublico.tributario.dto.TelefoneDTO();
-        dto.setId(telefone.getId());
-        dto.setDataRegistro(telefone.getDataRegistro());
-        dto.setPessoaContato(telefone.getPessoaContato());
-        dto.setPrincipalTelefone(telefone.getPrincipal());
-        dto.setTipoFone(br.com.webpublico.tributario.enumeration.TipoTelefone.valueOf(telefone.getTipoFone().name()));
         dto.setTelefone(telefone.getTelefone());
         return dto;
     }

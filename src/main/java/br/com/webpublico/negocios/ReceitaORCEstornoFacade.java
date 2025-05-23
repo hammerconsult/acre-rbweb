@@ -454,15 +454,15 @@ public class ReceitaORCEstornoFacade extends SuperFacadeContabil<ReceitaORCEstor
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
             if (!simulacao) {
-                objetos.add(new ObjetoParametro(entity, item));
+                objetos.add(new ObjetoParametro(entity.getId().toString(), ReceitaORCFonteEstorno.class.getSimpleName(), item));
             }
-            objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getReceitaLOA().getContaDeReceita(), item));
-            objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getContaFinanceira(), item));
-            objetos.add(new ObjetoParametro(((ContaDeDestinacao) entity.getReceitaLoaFonte().getDestinacaoDeRecursos()).getFonteDeRecursos(), item));
+            objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getContaFinanceira().getId().toString(), SubConta.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(((ContaDeDestinacao) entity.getReceitaLoaFonte().getDestinacaoDeRecursos()).getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
 
             if (entity.getReceitaORCEstorno().getDividaPublica() != null) {
-                objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getDividaPublica().getCategoriaDividaPublica(), item));
-                objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getDividaPublica(), item));
+                objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
+                objetos.add(new ObjetoParametro(entity.getReceitaORCEstorno().getDividaPublica().getId().toString(), DividaPublica.class.getSimpleName(), item));
             }
             item.setObjetoParametros(objetos);
             parametroEvento.getItensParametrosEvento().add(item);
@@ -754,6 +754,14 @@ public class ReceitaORCEstornoFacade extends SuperFacadeContabil<ReceitaORCEstor
 
     public SaldoSubContaFacade getSaldoSubContaFacade() {
         return saldoSubContaFacade;
+    }
+
+    public SaldoDividaAtivaContabilFacade getSaldoDividaAtivaContabilFacade() {
+        return saldoDividaAtivaContabilFacade;
+    }
+
+    public SaldoCreditoReceberFacade getSaldoCreditoReceberFacade() {
+        return saldoCreditoReceberFacade;
     }
 
     public UnidadeOrganizacionalFacade getUnidadeOrganizacionalFacade() {

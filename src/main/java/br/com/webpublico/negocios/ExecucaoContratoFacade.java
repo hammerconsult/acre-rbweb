@@ -4,7 +4,7 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AgrupadorSolicitacaoEmpenho;
 import br.com.webpublico.entidadesauxiliares.SaldoItemContratoOrigemVO;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoVo;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.negocios.tributario.singletons.SingletonGeradorCodigo;
 import br.com.webpublico.util.DataUtil;
@@ -150,10 +150,6 @@ public class ExecucaoContratoFacade extends AbstractFacade<ExecucaoContrato> {
             atribuirHierarquiaExecucao(entity);
         }
         return entity;
-    }
-
-    public ExecucaoContrato recuperarSemDependencias(Object id) {
-        return super.recuperar(id);
     }
 
     @Override
@@ -1038,28 +1034,19 @@ public class ExecucaoContratoFacade extends AbstractFacade<ExecucaoContrato> {
         return q.getResultList();
     }
 
-    public ExecucaoContratoItemDotacao buscarItemDotacaoPorItemExecucao(ExecucaoContratoItem execucaoItem, FonteDespesaORC fonteDespOrc) {
+    public ExecucaoContratoItemDotacao buscarItemDotacao(ExecucaoContrato execucao, FonteDespesaORC fonte, ExecucaoContratoItem item) {
         String sql = " select itemdot.* from execucaocontratoitemdot itemdot " +
-            "           inner join execucaocontratotipofonte exfonte on exfonte.id = itemdot.execucaocontratotipofonte_id  " +
-            "          where itemdot.execucaocontratoitem_id = :idItem " +
-            "           and exfonte.fontedespesaorc_id = :idFonteDespOrc ";
+            "         inner join execucaocontratotipofonte exfonte on exfonte.id = itemdot.execucaocontratotipofonte_id " +
+            "         inner join execucaocontratotipo extipo on extipo.id = exfonte.execucaocontratotipo_id " +
+            "where extipo.execucaocontrato_id = :idExecucao " +
+            "and exfonte.fontedespesaorc_id = :idFonte " +
+            "and itemdot.execucaocontratoitem_id = :idItem ";
         Query q = em.createNativeQuery(sql, ExecucaoContratoItemDotacao.class);
-        q.setParameter("idItem", execucaoItem.getId());
-        q.setParameter("idFonteDespOrc", fonteDespOrc.getId());
+        q.setParameter("idExecucao", execucao.getId());
+        q.setParameter("idFonte", fonte.getId());
+        q.setParameter("idItem", item.getId());
         try {
             return (ExecucaoContratoItemDotacao) q.getSingleResult();
-        } catch (NoResultException nre) {
-            return null;
-        }
-    }
-
-    public List<ExecucaoContratoItemDotacao> buscarItensDotacaoPorItemExecucao(ExecucaoContratoItem execucaoItem) {
-        String sql = " select itemdot.* from execucaocontratoitemdot itemdot " +
-            "          where itemdot.execucaocontratoitem_id = :idItem ";
-        Query q = em.createNativeQuery(sql, ExecucaoContratoItemDotacao.class);
-        q.setParameter("idItem", execucaoItem.getId());
-        try {
-            return q.getResultList();
         } catch (NoResultException nre) {
             return null;
         }
@@ -1091,15 +1078,6 @@ public class ExecucaoContratoFacade extends AbstractFacade<ExecucaoContrato> {
             "          order by emp.numero ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("idExecucao", execucaoContrato.getId());
-        return q.getResultList();
-    }
-
-    public List<ExecucaoContratoEmpenho> buscarExecucaoContratoEmpenhoPorExecucao(Long idExecucao) {
-        String sql = " select exemp.* from execucaocontratoempenho exemp " +
-            "          where exemp.execucaocontrato_id = :idExecucao " +
-            "           and exemp.empenho_id is not null " ;
-        Query q = em.createNativeQuery(sql, ExecucaoContratoEmpenho.class);
-        q.setParameter("idExecucao", idExecucao);
         return q.getResultList();
     }
 
@@ -1216,6 +1194,7 @@ public class ExecucaoContratoFacade extends AbstractFacade<ExecucaoContrato> {
         q.setParameter("idExecucao", execucaoContrato.getId());
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
+
 
     public BigDecimal getQuantidadeExecucaoOriginal(ItemContrato itemContrato) {
         String sql = " select coalesce(sum(item.quantidadeutilizada),0) from execucaocontratoitem item " +

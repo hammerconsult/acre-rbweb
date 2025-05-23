@@ -1,12 +1,10 @@
 package br.com.webpublico.seguranca;
 
 import br.com.webpublico.entidades.MensagemUsuario;
-import br.com.webpublico.entidades.UsuarioSistema;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.tributario.services.ServiceAgendamentoTarefa;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
@@ -19,14 +17,12 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.text.ParseException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 
 @Service
 public class MensagemTodosUsuariosService {
     private Set<MensagemUsuario> mensagens = Sets.newHashSet();
-    private Map<UsuarioSistema, List<MensagemUsuario>> mensagensLidas = Maps.newHashMap();
     private static final String idPushMessage = "mensagemUsuario";
     private static final String idPushMessageBloqueio = "mensagemUsuarioBloqueado";
     private static final String GROUP_SCHEDULE_NAME = "group_mensagem_usuario";
@@ -181,9 +177,4 @@ public class MensagemTodosUsuariosService {
         }
     }
 
-    public List<MensagemUsuario> getMensagensLidas(UsuarioSistema usuarioSistema) {
-        if (mensagensLidas.get(usuarioSistema) == null)
-            mensagensLidas.put(usuarioSistema, Lists.newArrayList());
-        return mensagensLidas.get(usuarioSistema);
-    }
 }

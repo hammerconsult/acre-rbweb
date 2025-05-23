@@ -500,7 +500,8 @@ public class LeilaoAlienacaoFacade extends AbstractFacade<LeilaoAlienacao> {
         return !q.getResultList().isEmpty();
     }
 
-    public DetentorDoctoFiscalLiquidacao recuperarDetentorDoctoFiscalLiquidacao(DetentorDoctoFiscalLiquidacao doctoFiscalLiquidacao) {
+    public DetentorDoctoFiscalLiquidacao recuperarDetentorDoctoFiscalLiquidacao(DetentorDoctoFiscalLiquidacao
+                                                                                    doctoFiscalLiquidacao) {
         String hql = " select d from DetentorDoctoFiscalLiquidacao  d " +
             " inner join d.doctoLista lista" +
             " where d.id = :doc ";

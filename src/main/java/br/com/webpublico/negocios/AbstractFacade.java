@@ -133,7 +133,7 @@ public abstract class AbstractFacade<T> implements Serializable {
     }
 
     /**
-     * Salva a entidade em uma transação separada, e torna o objeto salvo fora de uma transação
+     * Salva a entidade em uma transação separada, e retorna o objeto salvo fora de uma transação
      * chamar utilizando sessionContext.getBusinessObject
      *
      * @param entity Entidade a ser salva

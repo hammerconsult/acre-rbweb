@@ -1,54 +1,48 @@
 package br.com.webpublico.entidadesauxiliares;
 
-import br.com.webpublico.util.Util;
-
-import java.util.List;
+import br.com.webpublico.enums.TipoRequisicaoCompra;
 
 public class FiltroEmpenhoDocumentoFiscal {
 
-    private Long idDoctoFiscalLiquidacao;
-    private Long idRequisicao;
-    private List<Long> idsItemRequisicao;
+    private Long id;
+    private TipoFiltroEmpenhoDocto tipo;
+    private TipoRequisicaoCompra tipoRequisicaoCompra;
 
-    public FiltroEmpenhoDocumentoFiscal(Long idRequisicao, List<Long> idsItemRequisicao) {
-        this.idRequisicao = idRequisicao;
-        this.idsItemRequisicao = idsItemRequisicao;
+
+    public Long getId() {
+        return id;
     }
 
-    public Long getIdDoctoFiscalLiquidacao() {
-        return idDoctoFiscalLiquidacao;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setIdDoctoFiscalLiquidacao(Long idDoctoFiscalLiquidacao) {
-        this.idDoctoFiscalLiquidacao = idDoctoFiscalLiquidacao;
+    public TipoFiltroEmpenhoDocto getTipo() {
+        return tipo;
     }
 
-    public Long getIdRequisicao() {
-        return idRequisicao;
+    public void setTipo(TipoFiltroEmpenhoDocto tipo) {
+        this.tipo = tipo;
     }
 
-    public void setIdRequisicao(Long idRequisicao) {
-        this.idRequisicao = idRequisicao;
+    public TipoRequisicaoCompra getTipoRequisicaoCompra() {
+        return tipoRequisicaoCompra;
+    }
+
+    public void setTipoRequisicaoCompra(TipoRequisicaoCompra tipoRequisicaoCompra) {
+        this.tipoRequisicaoCompra = tipoRequisicaoCompra;
     }
 
     public String getCondicaoSql() {
-        String condicao = "";
-        if (idRequisicao != null) {
-            condicao += " and req.id = " + idRequisicao;
+        if (TipoFiltroEmpenhoDocto.ENTRADA_COMPRA.equals(tipo)) {
+            return " and dfec.doctofiscalliquidacao_id = " + id;
         }
-        if (idDoctoFiscalLiquidacao != null) {
-            condicao += " and dfec.doctofiscalliquidacao_id = " + idDoctoFiscalLiquidacao;
-        }
-        if (!Util.isListNullOrEmpty(idsItemRequisicao)) {
-            StringBuilder idsItem = new StringBuilder();
-            String concatId = "";
-            for (Long id : idsItemRequisicao) {
-                idsItem.append(concatId).append(id);
-                concatId = ",";
-            }
-            condicao += " and irc.id in (" + idsItem + ") ";
-        }
-        return condicao;
-
+        return " and req.id = " + id;
     }
+
+    public enum TipoFiltroEmpenhoDocto {
+        ENTRADA_COMPRA,
+        REQUISICAO_COMPRA;
+    }
+
 }

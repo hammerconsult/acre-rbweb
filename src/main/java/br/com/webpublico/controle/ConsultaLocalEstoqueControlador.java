@@ -7,7 +7,6 @@ import br.com.webpublico.enums.Operador;
 import br.com.webpublico.enums.Perecibilidade;
 import br.com.webpublico.enums.StatusMaterial;
 import br.com.webpublico.enums.TipoConsulta;
-import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.exception.WebReportRelatorioExistenteException;
 import br.com.webpublico.negocios.ConsultaLocalEstoqueFacade;

@@ -19,7 +19,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.util.Date;
 import java.util.List;
 
 @Stateless
@@ -78,23 +77,6 @@ public class ReajusteMediaAposentadoriaFacade extends AbstractFacade<ReajusteMed
         Query q = em.createNativeQuery(sql, ReajusteMediaAposentadoria.class);
         q.setParameter("exercicioAplicacao", exercicioAplicacao.getId());
         q.setParameter("exercicioReferencia", exercicioReferencia.getId());
-        List resultado = q.getResultList();
-        if (resultado != null) {
-            return resultado;
-        }
-        return Lists.newArrayList();
-    }
-
-    public List<ReajusteMediaAposentadoria> buscarReajustesVigentesPorExercicios(Date dataOperacao, Exercicio exercicioAplicacao, Exercicio exercicioReferencia) {
-        String sql = " select rma.*" +
-            " from reajustemediaaposentadoria rma " +
-            " where rma.exercicio_id = :exercicioAplicacao" +
-            "  and rma.exercicioreferencia_id = :exercicioReferencia" +
-            "  and :dataOperacao between rma.iniciovigencia and coalesce(finalvigencia, :dataOperacao) ";
-        Query q = em.createNativeQuery(sql, ReajusteMediaAposentadoria.class);
-        q.setParameter("exercicioAplicacao", exercicioAplicacao.getId());
-        q.setParameter("exercicioReferencia", exercicioReferencia.getId());
-        q.setParameter("dataOperacao", dataOperacao);
         List resultado = q.getResultList();
         if (resultado != null) {
             return resultado;

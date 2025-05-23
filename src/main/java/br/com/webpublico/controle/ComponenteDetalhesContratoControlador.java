@@ -164,13 +164,6 @@ public class ComponenteDetalhesContratoControlador implements Serializable {
         }
     }
 
-    public void buscarExclusaoContato(Contrato contrato) {
-        exclusoesContrato = Lists.newArrayList();
-        if (contrato != null && contrato.getId() != null) {
-            exclusoesContrato = exclusaoContratoFacade.buscarExclusaoContrato(contrato);
-        }
-    }
-
     public String getUrlEmpenhoEstorno() {
         if (solicitacaoEmpenhoEstorno.getEmpenhoEstorno() != null) {
             if (solicitacaoEmpenhoEstorno.getEmpenhoEstorno().isEmpenhoEstornoNormal()) {
@@ -189,6 +182,13 @@ public class ComponenteDetalhesContratoControlador implements Serializable {
             return "/empenho/resto-a-pagar/ver/" + solicitacaoEmpenhoEstorno.getEmpenho().getId() + "/";
         }
         return "";
+    }
+
+    public void buscarExclusaoContato(Contrato contrato) {
+        exclusoesContrato = Lists.newArrayList();
+        if (contrato != null && contrato.getId() != null) {
+            exclusoesContrato = exclusaoContratoFacade.buscarExclusaoContrato(contrato);
+        }
     }
 
     public EventoPncpVO getEventoPncpVO() {

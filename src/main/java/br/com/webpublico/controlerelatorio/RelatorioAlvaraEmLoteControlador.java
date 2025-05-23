@@ -45,9 +45,9 @@ public class RelatorioAlvaraEmLoteControlador implements Serializable {
     public List<SelectItem> getTiposDeAlvara() {
         List<SelectItem> tipos = Lists.newArrayList();
         tipos.add(new SelectItem(null, "     "));
-        for (TipoAlvara tipo : TipoAlvara.values()) {
-            tipos.add(new SelectItem(tipo, tipo.getDescricaoSimples()));
-        }
+        tipos.add(new SelectItem(TipoAlvara.LOCALIZACAO, TipoAlvara.LOCALIZACAO.getDescricaoSimples()));
+        tipos.add(new SelectItem(TipoAlvara.FUNCIONAMENTO, TipoAlvara.FUNCIONAMENTO.getDescricaoSimples()));
+        tipos.add(new SelectItem(TipoAlvara.SANITARIO, TipoAlvara.SANITARIO.getDescricaoSimples()));
         return tipos;
     }
 

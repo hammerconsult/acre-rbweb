@@ -21,7 +21,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -384,38 +383,6 @@ public class ParecerBaixaPatrimonialFacade extends AbstractFacade<ParecerBaixaPa
             toReturn.add(VOItemBaixaPatrimonial.criarObjetoVoItemSolicitacaoBaixa(obj));
         }
         return new AsyncResult<List<VOItemBaixaPatrimonial>>(toReturn);
-    }
-
-    @TransactionTimeout(unit = TimeUnit.HOURS, value = 8)
-    public void gerarItensParecerBaixaCorrecaoDados(ParecerBaixaPatrimonial parecerBaixaPatrimonial, List<VOItemBaixaPatrimonial> bens) {
-        for (VOItemBaixaPatrimonial item : bens) {
-            for (VOItemBaixaPatrimonial itemSolicitacao : item.getBensAgrupados()) {
-                ItemSolicitacaoBaixaPatrimonial itemBaixa = em.find(ItemSolicitacaoBaixaPatrimonial.class, itemSolicitacao.getIdItem());
-                EstadoBem ultimoEstado = itemBaixa.getEstadoResultante();
-                EstadoBem estadoResultante = em.merge(bemFacade.criarNovoEstadoResultanteAPartirDoEstadoInicial(ultimoEstado));
-
-                ItemParecerBaixaPatrimonial itemParecer = new ItemParecerBaixaPatrimonial();
-                itemParecer.setBem(itemSolicitacao.getBemEfetivacao());
-                itemParecer.setParecerBaixa(parecerBaixaPatrimonial);
-                itemParecer.setSituacaoEventoBem(SituacaoEventoBem.FINALIZADO);
-                itemParecer.setDataLancamento(itemBaixa.getDataLancamento());
-                itemParecer.setEstadoInicial(ultimoEstado);
-                itemParecer.setEstadoResultante(estadoResultante);
-
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTime(itemBaixa.getDataOperacao());
-                calendar.set(Calendar.MINUTE, calendar.getTime().getMinutes() + 1);
-                itemParecer.setDataOperacao( calendar.getTime());
-                em.merge(itemParecer);
-
-            }
-        }
-    }
-
-    public List<VOItemBaixaPatrimonial> buscarBensSolicitacaoBaixaCorrecaoDados(ParecerBaixaPatrimonial selecionado) {
-        List<VOItemBaixaPatrimonial> toReturn = Lists.newArrayList();
-        buscarBensSolicitacaoBaixa(selecionado, toReturn, null);
-        return toReturn;
     }
 
     public ArquivoFacade getArquivoFacade() {

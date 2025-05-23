@@ -14,7 +14,6 @@ import br.com.webpublico.negocios.tributario.LeitorWsConfig;
 import br.com.webpublico.report.ReportService;
 import br.com.webpublico.util.*;
 import br.com.webpublico.webreportdto.dto.comum.RelatorioDTO;
-import com.google.common.base.Strings;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
@@ -1188,9 +1187,7 @@ public class CadastroImobiliarioControlador extends PrettyControlador<CadastroIm
 
     public void sincronizarDadosComSIT() {
         try {
-            UsuarioSistema usuarioCorrente = cadastroImobiliarioFacade.getSistemaFacade().getUsuarioCorrente();
             assistenteSit = new AssistenteIntegracaoSit(Lists.newArrayList(selecionado.getInscricaoCadastral()));
-            assistenteSit.setLogin(cadastroImobiliarioFacade.getSistemaFacade().getUsuarioCorrente().getLogin());
             assistenteSit.integrar(getUrlSIT().getUrl());
             cadastroImobiliarioFacade.atualizaValoresDosCadastros(Lists.newArrayList(selecionado));
             FacesUtil.executaJavaScript("iniciaSit();");
@@ -1215,7 +1212,6 @@ public class CadastroImobiliarioControlador extends PrettyControlador<CadastroIm
 
     public void sincronizarDadosComSITPorPeriodo() {
         try {
-            UsuarioSistema usuarioCorrente = cadastroImobiliarioFacade.getSistemaFacade().getUsuarioCorrente();
             if (tipoSincroniaSit == SINCRONIA_DATA) {
                 DateTime hoje = new DateTime(hojeInformado);
                 DateTime ontem = hoje.minusDays(1);
@@ -1229,7 +1225,6 @@ public class CadastroImobiliarioControlador extends PrettyControlador<CadastroIm
             } else if (tipoSincroniaSit == SINCRONIA_INSCRICAO) {
                 assistenteSit = new AssistenteIntegracaoSit(Lists.newArrayList(inscricaoSincronia));
             }
-            assistenteSit.setLogin(cadastroImobiliarioFacade.getSistemaFacade().getUsuarioCorrente().getLogin());
             assistenteSit.integrar(getUrlSIT().getUrl());
             FacesUtil.executaJavaScript("iniciaSit();");
         } catch (Exception e) {
@@ -1270,9 +1265,9 @@ public class CadastroImobiliarioControlador extends PrettyControlador<CadastroIm
         if (integracaoSit != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             if (integracaoSit.getSucesso()) {
-                return sdf.format(integracaoSit.getDataIntegracao()) + " com sucesso.";
+                return "Sincronizado em " + sdf.format(integracaoSit.getDataIntegracao()) + " com sucesso.";
             } else {
-                return sdf.format(integracaoSit.getDataIntegracao()) + " sem sucesso.";
+                return "Sincronizado em " + sdf.format(integracaoSit.getDataIntegracao()) + " sem sucesso.";
             }
         }
         return "";
@@ -1284,27 +1279,14 @@ public class CadastroImobiliarioControlador extends PrettyControlador<CadastroIm
 
     public void alterarTabs(TabChangeEvent evt) {
         String tab = evt.getTab().getId();
-        switch (tab) {
-            case "tabAlvaraConstrucaoHabitese": {
-                selecionado.setAlvarasContrucao(cadastroImobiliarioFacade.getAlvaraConstrucaoFacade()
-                    .buscarAlvarasConstrucaoPorCadastroImobiliario(selecionado));
-                selecionado.setHabiteses(cadastroImobiliarioFacade.getHabiteseConstrucaoFacade()
-                    .buscarHabitesConstrucaoPorCadastroImobiliario(selecionado));
-                break;
-            }
-            case "tabHistoricoLegado": {
-                carregaHistoricoLegado();
-                break;
-            }
-            case "tabMapa": {
-                verInscricaoMapa();
-                break;
-            }
-            case "tabBloqueioTransferenciaProprietario": {
-                setBloqueioTransferenciaProprietariosList(bloqueioTransferenciaProprietarioFacade
-                    .buscarBloqueiosPorCadastro(getSelecionado()));
-                break;
-            }
+        if ("tabHistoricoLegado".equals(tab)) {
+            carregaHistoricoLegado();
+        }
+        if ("tabMapa".equals(tab)) {
+            verInscricaoMapa();
+        }
+        if ("tabBloqueioTransferenciaProprietario".equals(tab)) {
+            setBloqueioTransferenciaProprietariosList(bloqueioTransferenciaProprietarioFacade.buscarBloqueiosPorCadastro(selecionado));
         }
     }
 
@@ -1539,12 +1521,6 @@ public class CadastroImobiliarioControlador extends PrettyControlador<CadastroIm
         } catch (Exception e) {
             FacesUtil.addErroAoGerarRelatorio(e.getMessage());
             logger.error("error gerarRelatorioHistoricoLegadoBCI {} " + e);
-        }
-    }
-
-    public void atualizarCoordenadasDoSit(){
-        if (!Strings.isNullOrEmpty(selecionado.getCoordenadasSIT())) {
-            cadastroImobiliarioFacade.atualizarCoordenadasDoSit(selecionado);
         }
     }
 

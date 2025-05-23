@@ -194,11 +194,11 @@ public class SuperRelatorioInventarioBemControlador extends RelatorioPatrimonioC
         }
 
         if (dtinicial == null && dtFinal == null) {
-            where.append(" and b.dataaquisicao <= to_date('").append(DataUtil.getDataFormatada(dtReferencia)).append("','dd/MM/yyyy') ");
+            where.append(" and trunc(b.dataaquisicao) <= to_date('").append(DataUtil.getDataFormatada(dtReferencia)).append("','dd/MM/yyyy') ");
         }
 
         if (dtinicial != null) {
-            where.append(" and b.dataaquisicao >= to_date('").append(DataUtil.getDataFormatada(dtinicial)).append("','dd/MM/yyyy') ");
+            where.append(" and trunc(b.dataaquisicao) >= to_date('").append(DataUtil.getDataFormatada(dtinicial)).append("','dd/MM/yyyy') ");
             filtros.append("Data de Aquisição Inicial: ").append(DataUtil.getDataFormatada(dtinicial)).append(". ");
         }
 

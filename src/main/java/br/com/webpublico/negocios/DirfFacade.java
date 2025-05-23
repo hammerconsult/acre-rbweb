@@ -786,7 +786,7 @@ public class DirfFacade extends AbstractFacade<Dirf> {
         }
     }
 
-    public BigDecimal getSomaDosEventosAnual(Pessoa p, VinculoFP vinculoFP, Integer ano, DirfReg316 nomeReduzido, List<TipoFolhaDePagamento> tiposFolha, boolean is13Salario, EventoFP verba, Boolean temDeducaoDeValor) {
+    private BigDecimal getSomaDosEventosAnual(Pessoa p, VinculoFP vinculoFP, Integer ano, DirfReg316 nomeReduzido, List<TipoFolhaDePagamento> tiposFolha, boolean is13Salario, EventoFP verba, Boolean temDeducaoDeValor) {
         String folhas = "and (";
 
         for (int i = 0; i < tiposFolha.size(); i++) {
@@ -2605,16 +2605,6 @@ public class DirfFacade extends AbstractFacade<Dirf> {
         }
         return false;
     }
-
-    private boolean podeBuscarValorPorTipoFolha(VinculoFP vinculoFP, List<TipoFolhaDePagamento> tipos, Dirf d) {
-        for (RecursoFP recursoFP : fichaFinanceiraFPFacade.buscarRecursosFPPorServidorPorTiposFolha(vinculoFP, tipos, d.getExercicio())) {
-            if (d.getRecursos().contains(recursoFP)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 
     private void buscarValoresDePensaoAlimenticia(PessoaInfo p, BeneficioPensaoAlimenticiaEventoFP filho, Dirf d, StringBuilder sb, DirfReg316 dr, DirfVinculoFP dirfVinculoFP, HashMap<PessoaFisica, BeneficiarioPensaoAlimenticiaMesValor> beneficiarioMesValor) {
         DirfInfoComplementares dirfInfoComplementares = new DirfInfoComplementares();

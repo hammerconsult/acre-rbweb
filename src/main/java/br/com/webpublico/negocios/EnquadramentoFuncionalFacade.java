@@ -515,9 +515,6 @@ public class EnquadramentoFuncionalFacade extends AbstractFacade<EnquadramentoFu
     }
 
     public ProvimentoFP salvarProvimento(ProvimentoFP provimentoFP) {
-        if(provimentoFP.getId() == null){
-             em.persist(provimentoFP);
-        }
         return em.merge(provimentoFP);
     }
 
@@ -602,19 +599,5 @@ public class EnquadramentoFuncionalFacade extends AbstractFacade<EnquadramentoFu
         Query q = em.createNativeQuery(sql);
         q.setParameter("idEnquadramento", enquadramentoFuncionalLoteItem.getId());
         q.executeUpdate();
-    }
-
-    public List<EnquadramentoFuncional> recuperarEnquadramentoContratoFPDesc(ContratoFP contratoFP) {
-        String sql = "select ef.* from enquadramentofuncional ef " +
-            " inner join contratofp contrato on ef.contratoservidor_id = contrato.id " +
-            " where contrato.id = :contratoFP " +
-            " order by ef.iniciovigencia desc ";
-        Query q = em.createNativeQuery(sql, EnquadramentoFuncional.class);
-        q.setParameter("contratoFP", contratoFP.getId());
-        List enquadramentos = q.getResultList();
-        if (enquadramentos!= null && !enquadramentos.isEmpty()) {
-            return enquadramentos;
-        }
-        return Lists.newArrayList();
     }
 }

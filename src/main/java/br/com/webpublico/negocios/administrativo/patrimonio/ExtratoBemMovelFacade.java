@@ -29,6 +29,7 @@ public class ExtratoBemMovelFacade {
     public BemFacade getBemFacade() {
         return bemFacade;
     }
+
     public HierarquiaOrganizacionalFacade getHierarquiaOrganizacionalFacade() {
         return hierarquiaOrganizacionalFacade;
     }

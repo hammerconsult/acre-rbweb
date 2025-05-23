@@ -1,7 +1,7 @@
 package br.com.webpublico.entidadesauxiliares.contabil.analise;
 
 import br.com.webpublico.entidades.FonteDespesaORC;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import com.google.common.collect.Lists;
 
 import java.util.List;

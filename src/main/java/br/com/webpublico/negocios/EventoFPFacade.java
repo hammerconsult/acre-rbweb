@@ -6,7 +6,6 @@ package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
-import br.com.webpublico.enums.Mes;
 import br.com.webpublico.entidades.rh.esocial.EventoFPEmpregador;
 import br.com.webpublico.enums.Mes;
 import br.com.webpublico.enums.OperacaoFormula;
@@ -627,13 +626,7 @@ public class EventoFPFacade extends AbstractFacade<EventoFP> {
 
     }
 
-
     public List<EventoFP> buscarEventoFPs(List<Long> eventoFPIds) {
-
-        if (eventoFPIds == null || eventoFPIds.isEmpty()) {
-            return Lists.newArrayList();
-        }
-
         String sql = "select * from eventofp e where e.id in :eventoFPIds";
         Query q = em.createNativeQuery(sql, EventoFP.class);
         q.setParameter("eventoFPIds", eventoFPIds);

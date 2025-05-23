@@ -166,6 +166,7 @@ public class LoteBaixaControlador extends PrettyControlador<LoteBaixa> implement
     @EJB
     private IntegracaoTributarioContabilQueueManager integracaoTributarioContabilQueueManager;
 
+
     public LoteBaixaControlador() {
         super(LoteBaixa.class);
     }
@@ -2369,4 +2370,3 @@ public class LoteBaixaControlador extends PrettyControlador<LoteBaixa> implement
         return agrupadoresDeConta;
     }
 }
-

@@ -6,7 +6,6 @@ package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.HierarquiaOrganizacional;
 import br.com.webpublico.entidades.PrestadorServicos;
-import br.com.webpublico.entidades.UsuarioSistema;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidades.rh.esocial.ItemConfiguracaoEmpregadorESocial;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
@@ -72,55 +71,35 @@ public class PrestadorServicosFacade extends AbstractFacade<PrestadorServicos> {
         return s2306Service;
     }
 
-    public List<PrestadorServicos> listaPrestadoresPorUsuarioFiltrando(String filtro, UsuarioSistema usuarioSistema, Date dataOperacao) {
+    public List<PrestadorServicos> listaPrestadoresPorID(String filtro) {
         Long id;
         try {
             id = Long.parseLong(filtro);
         } catch (Exception e) {
             id = 0l;
         }
-        String sql = "select prestador.*  " +
-            " from prestadorservicos prestador  " +
-            "         inner join pessoa on prestador.prestador_id = pessoa.id  " +
-            "         inner join unidadeorganizacional lotacao on prestador.lotacao_id = lotacao.id  " +
-            " where lotacao.id in (select distinct ho.subordinada_id  " +
-            "                     from unidadeorganizacional uo  " +
-            "                              inner join hierarquiaorganizacional ho  " +
-            "                                         on uo.id = ho.subordinada_id and  " +
-            "                                            ho.tipohierarquiaorganizacional = :tipoHierarquia  " +
-            "                                             and :dataOperacao between ho.iniciovigencia and coalesce(ho.fimvigencia, :dataOperacao)  " +
-            "                     start with ho.id in (select distinct hierarquia.id  " +
-            "                                          from hierarquiaorganizacional hierarquia  " +
-            "                                                   inner join usuariounidadeorganizacio uu  " +
-            "                                                              on uu.unidadeorganizacional_id = hierarquia.subordinada_id  " +
-            "                                                   inner join usuariosistema u on u.id = uu.usuariosistema_id  " +
-            "                                          where u.id = :idUsuario  " +
-            "                                            and hierarquia.tipohierarquiaorganizacional =  :tipoHierarquia  " +
-            "                                            and :dataOperacao between trunc(hierarquia.iniciovigencia) and coalesce(trunc(hierarquia.fimvigencia), :dataOperacao))  " +
-            "                     connect by prior ho.subordinada_id = ho.superior_id)  " +
-            "  and (pessoa.id in (select pf.id  " +
-            "                     from pessoafisica pf  " +
-            "                     where pf.id = :filtroId  " +
-            "                        or lower(pf.nome) like :filtro  " +
-            "                        or lower(pf.cpf) like :filtro)  " +
-            "    or pessoa.id in (select pj.id  " +
-            "                     from pessoajuridica pj  " +
-            "                     where pj.id = :filtroId  " +
-            "                        or lower(pj.razaosocial) like :filtro  " +
-            "                        or lower(pj.cnpj) like :filtro  " +
-            "                        or lower(pj.nomefantasia) like :filtro))";
-        Query q = em.createNativeQuery(sql, PrestadorServicos.class);
+        Query q;
+        ArrayList<PrestadorServicos> retorno = new ArrayList<PrestadorServicos>();
+        q = getEntityManager().createQuery(" select prestador from PrestadorServicos prestador "
+            + " inner join prestador.prestador pessoa "
+            + " where pessoa in "
+            + " (select pf from PessoaFisica pf where pf.id = :filtroId or lower(pf.nome) like :filtro "
+            + " or lower(pf.cpf) like :filtro) ");
         q.setParameter("filtroId", id);
         q.setParameter("filtro", "%" + filtro.toLowerCase().trim() + "%");
-        q.setParameter("idUsuario", usuarioSistema.getId());
-        q.setParameter("dataOperacao", dataOperacao);
-        q.setParameter("tipoHierarquia", TipoHierarquiaOrganizacional.ADMINISTRATIVA.name());
         q.setMaxResults(10);
-        List resultList = q.getResultList();
-        if (!resultList.isEmpty()) {
-            return resultList;
-        }
-        return Lists.newArrayList();
+        retorno.addAll(q.getResultList());
+
+        q = getEntityManager().createQuery("select prestador from PrestadorServicos prestador "
+            + " inner join prestador.prestador pessoa "
+            + " where pessoa in "
+            + " (select pj from PessoaJuridica pj where pj.id = :filtroId or lower(pj.razaoSocial) like :filtro "
+            + " or lower(pj.cnpj) like :filtro or lower(pj.nomeFantasia) like :filtro )");
+        q.setParameter("filtroId", id);
+        q.setParameter("filtro", "%" + filtro.toLowerCase().trim() + "%");
+        q.setMaxResults(10);
+        retorno.addAll(q.getResultList());
+        return retorno;
     }
 
     public Long retornaUltimoCodigo() {

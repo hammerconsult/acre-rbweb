@@ -1,10 +1,8 @@
 package br.com.webpublico.controle;
 
 import br.com.webpublico.entidadesauxiliares.ItemPesquisaGenerica;
-import br.com.webpublico.enums.TipoGestor;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.util.FacesUtil;
-import com.google.common.base.Strings;
 
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
@@ -67,11 +65,8 @@ public class PesquisaSaidaDireta extends AbstractPesquisaMateriais {
     @Override
     public String montaCondicao() {
         String condicao = super.montaCondicao();
-        if (getSingletonUsuarioGestor().isGestor(TipoGestor.MATERIAIS, getSistemaFacade().getUsuarioCorrente(), getNivelHierarquia())) {
-            condicaoUnidade = montarCondicaoUnidade("local.unidadeorganizacional_id");
-            condicao += " where " + condicaoUnidade;
-        }
-        return " and " + condicao;
+        return " where " + montarCondicaoUnidade("local.unidadeorganizacional_id") +
+            "     and " + condicao;
     }
 
     @Override
@@ -82,6 +77,7 @@ public class PesquisaSaidaDireta extends AbstractPesquisaMateriais {
     @Override
     public void executarConsulta(String sql, String sqlCount) {
         try {
+            validarUsuarioGestorMateriais();
             Object[] retorno = getSaidaMaterialFacade().filtarComContadorDeRegistrosSaidaDireta(sql, sqlCount, inicio, maximoRegistrosTabela);
             processarRetorno(retorno);
         } catch (ValidacaoException ve) {

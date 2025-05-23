@@ -89,9 +89,9 @@ public class InvestimentoFacade extends SuperFacadeContabil<Investimento> {
         Preconditions.checkNotNull(investimento.getClasseCredor(), "A classe credor não foi preenchida.");
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(investimento, item));
-        objetos.add(new ObjetoParametro(investimento.getClasseCredor(), item));
-        objetos.add(new ObjetoParametro(investimento.getPessoa(), item));
+        objetos.add(new ObjetoParametro(investimento.getId().toString(), Investimento.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(investimento.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(investimento.getPessoa().getId().toString(), Pessoa.class.getSimpleName(), item));
         return objetos;
     }
 

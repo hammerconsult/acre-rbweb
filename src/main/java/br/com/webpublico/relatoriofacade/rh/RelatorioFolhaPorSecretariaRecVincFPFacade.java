@@ -1,6 +1,5 @@
 package br.com.webpublico.relatoriofacade.rh;
 
-import br.com.webpublico.controlerelatorio.AbstractReport;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.ParametrosRelatorios;
 import br.com.webpublico.entidadesauxiliares.rh.FolhaPorSecretariaPrincipal;
@@ -15,27 +14,20 @@ import br.com.webpublico.negocios.*;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilRelatorioContabil;
 import com.google.common.collect.Lists;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ejb.AsyncResult;
-import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -43,7 +35,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Stateless
 @Deprecated
-public class RelatorioFolhaPorSecretariaRecVincFPFacade {
+public class RelatorioFolhaPorSecretariaRecVincFPFacade implements Serializable {
 
     protected static final Logger logger = LoggerFactory.getLogger(RelatorioFolhaPorSecretariaRecVincFPFacade.class);
     @PersistenceContext(unitName = "webpublicoPU")
@@ -59,6 +51,8 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
     @EJB
     private GrupoRecursoFPFacade grupoRecursoFPFacade;
     @EJB
+    private SistemaFacade sistemaFacade;
+    @EJB
     private FolhaDePagamentoFacade folhaDePagamentoFacade;
     @EJB
     private EventoFPFacade eventoFPFacade;
@@ -66,26 +60,19 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
     private ContratoFPFacade contratoFPFacade;
 
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<ByteArrayOutputStream> montarConsultaLotacaoFuncionalGeral(List<HierarquiaOrganizacional> listaHierarquia, List<ParametrosRelatorios> parametros
-        , String caminhoReport, String nomeReport, HashMap paramatrosReports) throws IOException, JRException {
+    public List<FolhaPorSecretariaPrincipal> montarConsultaLotacaoFuncionalGeral(List<HierarquiaOrganizacional> listaHierarquia, List<ParametrosRelatorios> parametros) {
         List<FolhaPorSecretariaPrincipal> retorno = Lists.newArrayList();
         montarConsultaLotacaoFuncional(parametros, retorno, listaHierarquia);
-        JRBeanCollectionDataSource bean = new JRBeanCollectionDataSource(retorno);
-        return new AsyncResult<>(AbstractReport.gerarReport(paramatrosReports, caminhoReport + nomeReport, bean));
+        return retorno;
     }
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<ByteArrayOutputStream> montarConsultaLotacaoFuncionalPorOrgao(HierarquiaOrganizacional[] listaHierarquia, List<ParametrosRelatorios> parametros
-        , String caminhoReport, String nomeReport, HashMap paramatrosReports) throws IOException, JRException {
+    public List<FolhaPorSecretariaPrincipal> montarConsultaLotacaoFuncionalPorOrgao(HierarquiaOrganizacional[] listaHierarquia, List<ParametrosRelatorios> parametros) {
         List<FolhaPorSecretariaPrincipal> retorno = Lists.newArrayList();
         montarConsultaLotacaoFuncional(parametros, retorno, Lists.newArrayList(listaHierarquia));
-        JRBeanCollectionDataSource bean = new JRBeanCollectionDataSource(retorno);
-        return new AsyncResult<>(AbstractReport.gerarReport(paramatrosReports, caminhoReport + nomeReport, bean));
+        return retorno;
     }
-
 
     private void montarConsultaLotacaoFuncional(List<ParametrosRelatorios> parametros, List<FolhaPorSecretariaPrincipal> retorno, List<HierarquiaOrganizacional> listaHierarquia) {
         List<ParametrosRelatorios> parametrosReport = new ArrayList<>();
@@ -152,10 +139,8 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
 
     }
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<ByteArrayOutputStream> montarConsultaRecursoFpPorOrgao(RecursoFP[] listaRecursosFp, List<ParametrosRelatorios> parametros
-        , String caminhoReport, String nomeReport, HashMap paramatrosReports) throws IOException, JRException {
+    public List<FolhaPorSecretariaPrincipal> montarConsultaRecursoFpPorOrgao(RecursoFP[] listaRecursosFp, List<ParametrosRelatorios> parametros) {
         List<FolhaPorSecretariaPrincipal> retorno = new ArrayList<>();
         for (RecursoFP obj : listaRecursosFp) {
             FolhaPorSecretariaPrincipal item = new FolhaPorSecretariaPrincipal();
@@ -171,8 +156,7 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
                 retorno.add(item);
             }
         }
-        JRBeanCollectionDataSource bean = new JRBeanCollectionDataSource(retorno);
-        return new AsyncResult<>(AbstractReport.gerarReport(paramatrosReports, caminhoReport + nomeReport, bean));
+        return retorno;
     }
 
     private void agruparParametrosRecursoFP(List<ParametrosRelatorios> parametrosOrgao, List<ParametrosRelatorios> parametros) {
@@ -183,10 +167,8 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
         }
     }
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<ByteArrayOutputStream> montarConsultaGrupoRecursoFpPorOrgao(GrupoRecursoFP[] listaGrupoRecursosFp, List<ParametrosRelatorios> parametros
-        , String caminhoReport, String nomeReport, HashMap paramatrosReports) throws IOException, JRException {
+    public List<FolhaPorSecretariaPrincipal> montarConsultaGrupoRecursoFpPorOrgao(GrupoRecursoFP[] listaGrupoRecursosFp, List<ParametrosRelatorios> parametros) {
         List<FolhaPorSecretariaPrincipal> retorno = new ArrayList<>();
         for (GrupoRecursoFP obj : listaGrupoRecursosFp) {
             FolhaPorSecretariaPrincipal item = new FolhaPorSecretariaPrincipal();
@@ -202,8 +184,7 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
                 retorno.add(item);
             }
         }
-        JRBeanCollectionDataSource bean = new JRBeanCollectionDataSource(retorno);
-        return new AsyncResult<>(AbstractReport.gerarReport(paramatrosReports, caminhoReport + nomeReport, bean));
+        return retorno;
     }
 
     private void agruparParametrosGrupoRecursoFP(List<ParametrosRelatorios> parametrosOrgao, List<ParametrosRelatorios> parametros) {
@@ -214,10 +195,9 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
         }
     }
 
-    @Asynchronous
+
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<ByteArrayOutputStream> montarConsultaRecursoFpGeral(List<RecursoFP> listaRecursosFp, List<ParametrosRelatorios> parametros
-        , String caminhoReport, String nomeReport, HashMap paramatrosReports) throws IOException, JRException {
+    public List<FolhaPorSecretariaPrincipal> montarConsultaRecursoFpGeral(List<RecursoFP> listaRecursosFp, List<ParametrosRelatorios> parametros) {
         List<FolhaPorSecretariaPrincipal> retorno = new ArrayList<>();
         for (RecursoFP obj : listaRecursosFp) {
             FolhaPorSecretariaPrincipal item = new FolhaPorSecretariaPrincipal();
@@ -233,14 +213,12 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
                 retorno.add(item);
             }
         }
-        JRBeanCollectionDataSource bean = new JRBeanCollectionDataSource(retorno);
-        return new AsyncResult<>(AbstractReport.gerarReport(paramatrosReports, caminhoReport + nomeReport, bean));
+        return retorno;
     }
 
-    @Asynchronous
+
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<ByteArrayOutputStream> montarConsultaGrupoRecursoFpGeral(List<GrupoRecursoFP> listaGrupoRecursosFp, List<ParametrosRelatorios> parametros
-        , String caminhoReport, String nomeReport, HashMap paramatrosReports) throws IOException, JRException {
+    public List<FolhaPorSecretariaPrincipal> montarConsultaGrupoRecursoFpGeral(List<GrupoRecursoFP> listaGrupoRecursosFp, List<ParametrosRelatorios> parametros) {
         List<FolhaPorSecretariaPrincipal> retorno = new ArrayList<>();
         for (GrupoRecursoFP obj : listaGrupoRecursosFp) {
             FolhaPorSecretariaPrincipal item = new FolhaPorSecretariaPrincipal();
@@ -256,16 +234,13 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
                 retorno.add(item);
             }
         }
-        JRBeanCollectionDataSource bean = new JRBeanCollectionDataSource(retorno);
-        return new AsyncResult<>(AbstractReport.gerarReport(paramatrosReports, caminhoReport + nomeReport, bean));
+        return retorno;
     }
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<ByteArrayOutputStream> montarConsultaNaoAgrupado(List<ParametrosRelatorios> parametros
-        , String caminhoReport, String nomeReport, HashMap paramatrosReports, Date dataOperacao) throws IOException, JRException {
+    public List<FolhaPorSecretariaPrincipal> montarConsultaNaoAgrupado(List<ParametrosRelatorios> parametros) {
         List<FolhaPorSecretariaPrincipal> retorno = new ArrayList<>();
-        HierarquiaOrganizacional ho = hierarquiaOrganizacionalFacade.getRaizHierarquia(dataOperacao);
+        HierarquiaOrganizacional ho = hierarquiaOrganizacionalFacade.getRaizHierarquia(sistemaFacade.getDataOperacao());
         if (ho != null) {
             FolhaPorSecretariaPrincipal item = new FolhaPorSecretariaPrincipal();
             item.setDescricaoHierarquia(ho.getCodigo() + " - " + ho.getSubordinada().getDescricao());
@@ -274,8 +249,7 @@ public class RelatorioFolhaPorSecretariaRecVincFPFacade {
                 retorno.add(item);
             }
         }
-        JRBeanCollectionDataSource bean = new JRBeanCollectionDataSource(retorno);
-        return new AsyncResult<>(AbstractReport.gerarReport(paramatrosReports, caminhoReport + nomeReport, bean));
+        return retorno;
     }
 
     public List<FolhaPorSecretariaPrincipal> montarConsulta(List<ParametrosRelatorios> parametros) {

@@ -17,6 +17,7 @@ public class MovimentacaoGrupoMaterial {
     private List<MovimentoEstoqueContabil> entradasEstoque;
     private List<MovimentoEstoqueContabil> saidasEstoque;
     private List<MovimentoEstoqueContabil> movimentosEstoque;
+
     private List<MovimentoEstoqueContabil> entradasContabil;
     private List<MovimentoEstoqueContabil> saidasContabil;
     private List<MovimentoEstoqueContabil> movimentosEntradaContabil;

@@ -30,7 +30,6 @@ public enum TipoAtoLegal implements EnumComDescricao {
     LEI_COMPLEMENTAR("Lei Complementar", TipoAtoLegalDTO.LEI_COMPLEMENTAR),
     LEI_ORDINARIA("Lei ordinária", TipoAtoLegalDTO.LEI_ORDINARIA),
     LEI_ORGANICA("Lei Orgânica", TipoAtoLegalDTO.LEI_ORGANICA),
-    LEI_MUNICIPAL("Lei Municipal", TipoAtoLegalDTO.LEI_MUNICIPAL),
     REGIMENTO_INTERNO("Regimento Interno", TipoAtoLegalDTO.REGIMENTO_INTERNO),
     TERMO_POSSE("Termo de Posse", TipoAtoLegalDTO.TERMO_POSSE),
     ORIENTACAO_TECNICA("Orientação técnica", TipoAtoLegalDTO.ORIENTACAO_TECNICA),
@@ -40,11 +39,7 @@ public enum TipoAtoLegal implements EnumComDescricao {
     AUTOGRAFO("Autógrafo", TipoAtoLegalDTO.AUTOGRAFO),
     LEGISLATIVO("Legislativo", TipoAtoLegalDTO.LEGISLATIVO),
     CONTROLE_EXTERNO("Controle Externo", TipoAtoLegalDTO.CONTROLE_EXTERNO),
-    CODIGO_MUNICIPAL("Código Municipal", TipoAtoLegalDTO.CODIGO_MUNICIPAL),
-    CODIGO_OBRA_EDIFICACAO("Código de Obras e Edificações", TipoAtoLegalDTO.CODIGO_OBRA_EDIFICACAO),
-    CODIGO_POSTURAS("Código de Posturas", TipoAtoLegalDTO.CODIGO_POSTURAS),
-    CODIGO_SANITARIO("Código Sanitário", TipoAtoLegalDTO.CODIGO_SANITARIO),
-    CODIGO_TRIBUTARIO("Código Tributário", TipoAtoLegalDTO.CODIGO_TRIBUTARIO);
+    CODIGO_MUNICIPAL("Código Municipal", TipoAtoLegalDTO.CODIGO_MUNICIPAL);
 
     private String descricao;
     private TipoAtoLegalDTO toDto;

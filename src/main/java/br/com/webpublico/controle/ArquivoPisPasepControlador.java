@@ -2,7 +2,6 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.RegistroPisPasep;
-import br.com.webpublico.enums.TipoFolhaDePagamento;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.*;
 import br.com.webpublico.util.ConverterGenerico;
@@ -37,8 +36,7 @@ import java.util.regex.Pattern;
 @ViewScoped
 @URLMappings(mappings = {
     @URLMapping(id = "novoArquivoPisPasep", pattern = "/arquivo-pis-pasep/novo/", viewId = "/faces/rh/administracaodepagamento/arquivopispasep/edita.xhtml"),
-    @URLMapping(id = "listarArquivoPisPasep", pattern = "/arquivo-pis-pasep/listar/", viewId = "/faces/rh/administracaodepagamento/arquivopispasep/lista.xhtml"),
-    @URLMapping(id = "visualizarArquivoPisPasep", pattern = "/arquivo-pis-pasep/ver/#{arquivoPisPasepControlador.id}/", viewId = "/faces/rh/administracaodepagamento/arquivopispasep/visualizar.xhtml")
+    @URLMapping(id = "listarArquivoPisPasep", pattern = "/arquivo-pis-pasep/listar/", viewId = "/faces/rh/administracaodepagamento/arquivopispasep/lista.xhtml")
 })
 public class ArquivoPisPasepControlador extends PrettyControlador<ArquivoPisPasep> implements Serializable, CRUD {
 
@@ -191,12 +189,6 @@ public class ArquivoPisPasepControlador extends PrettyControlador<ArquivoPisPase
         limparCampos();
     }
 
-    @URLAction(mappingId = "visualizarArquivoPisPasep", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
-    @Override
-    public void ver() {
-        super.ver();
-    }
-
     public ConverterGenerico getConverterContaBancariaEntidade() {
         if (converterContaBancariaEntidade == null) {
             converterContaBancariaEntidade = new ConverterGenerico(ContaBancariaEntidade.class, contaBancariaEntidadeFacade);
@@ -241,15 +233,9 @@ public class ArquivoPisPasepControlador extends PrettyControlador<ArquivoPisPase
     private boolean temTrintaDiasTrabalhados(ContratoFP contrato) {
         Double diasTrabalhados = 0d;
 
-        contrato.setAno(ano);
-        FolhaDePagamento folha = new FolhaDePagamento();
-        folha.setTipoFolhaDePagamento(TipoFolhaDePagamento.NORMAL);
-        contrato.setFolha(folha);
-
         /*percorre os meses do ano de 1 a 12
          somando a quantidade de dias trabalhados no ano*/
         for (int i = 1; i <= 12; i++) {
-            contrato.setMes(i);
             diasTrabalhados += funcoesFolhaFacade.diasTrabalhados(contrato, i, ano, TipoDiasTrabalhados.NORMAL, null, null, null);
         }
         if (diasTrabalhados >= 30) {

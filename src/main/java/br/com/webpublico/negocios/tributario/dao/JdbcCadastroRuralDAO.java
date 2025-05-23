@@ -33,7 +33,7 @@ public class JdbcCadastroRuralDAO extends JdbcDaoSupport implements Serializable
             "  left join pessoa p on cr_prop.pessoa_id = p.id " +
             "  left join pessoafisica pf on p.id = pf.id " +
             "  left join pessoajuridica pj on pj.id = p.id " +
-            "where (cr_prop.id is null or cr_prop.finalvigencia is null or trunc(cr_prop.finalvigencia) <= sysdate) ";
+            "where (cr_prop.id is null or cr_prop.finalvigencia is null or cr_prop.finalvigencia <= sysdate) ";
         if (ativo != null) {
             sql += " and coalesce(cr.ativo, 1) = " + (ativo ? "1" : "0");
         }

@@ -5,15 +5,13 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
+import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Obrigatorio;
-import br.com.webpublico.util.anotacoes.Pesquisavel;
-import br.com.webpublico.util.anotacoes.Tabelavel;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -31,24 +29,19 @@ public class ConfiguracaoDiaria extends SuperEntidade implements Serializable {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     @Obrigatorio
+    @Etiqueta("Nome")
+    private String nome;
+    @Obrigatorio
     @Etiqueta("Base Legal")
     @OneToOne()
-    @Pesquisavel
-    @Tabelavel
     private AtoLegal lei;
     @Etiqueta("Ato Legal Complementar")
     @OneToOne()
-    @Pesquisavel
-    @Tabelavel
     private AtoLegal atoLegal;
-    @Tabelavel
     @Obrigatorio
     @Etiqueta("Início de Vigência")
-    @Pesquisavel
     @Temporal(javax.persistence.TemporalType.DATE)
     private Date inicioVigencia;
-    @Tabelavel
-    @Pesquisavel
     @Etiqueta("Fim de Vigência")
     @Temporal(javax.persistence.TemporalType.DATE)
     private Date fimVigencia;
@@ -81,6 +74,14 @@ public class ConfiguracaoDiaria extends SuperEntidade implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 
     public AtoLegal getAtoLegal() {
@@ -149,6 +150,6 @@ public class ConfiguracaoDiaria extends SuperEntidade implements Serializable {
 
     @Override
     public String toString() {
-        return "Lei " + lei.toString() + " Inicio de Vigência : " + new SimpleDateFormat("dd/MM/yyyy").format(inicioVigencia);
+        return nome != null ? nome : "Lei " + lei.toString() + " Inicio de Vigência : " + DataUtil.getDataFormatada(inicioVigencia);
     }
 }

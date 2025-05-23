@@ -60,7 +60,6 @@ public class ParametroLicencaPremioControlador extends PrettyControlador<Paramet
     @Override
     public void novo() {
         super.novo();
-        selecionado.setQuantidadeDiasPerdaPeriodo(0);
     }
 
     @URLAction(mappingId = "verParametroLicencaPremioControlador", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)

@@ -1,8 +1,7 @@
 package br.com.webpublico.esocial.service;
 
 import br.com.webpublico.entidades.Afastamento;
-import br.com.webpublico.entidades.ModalidadeContratoFP;
-import br.com.webpublico.entidades.PrestadorServicos;
+import br.com.webpublico.entidades.PessoaFisica;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.enums.rh.esocial.TipoAfastamentoESocial;
 import br.com.webpublico.esocial.comunicacao.eventos.naoperiodicos.EventoS2230;
@@ -10,11 +9,16 @@ import br.com.webpublico.esocial.domain.EmpregadorESocial;
 import br.com.webpublico.esocial.dto.EventosESocialDTO;
 import br.com.webpublico.esocial.enums.ClasseWP;
 import br.com.webpublico.exception.ValidacaoException;
+import br.com.webpublico.negocios.PessoaFisicaFacade;
 import br.com.webpublico.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.PostConstruct;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 import static br.com.webpublico.util.StringUtil.retornaApenasNumeros;
 
@@ -28,15 +32,26 @@ public class S2230Service {
     @Autowired
     private ESocialService eSocialService;
 
-    public void enviarS2230(ConfiguracaoEmpregadorESocial config, Afastamento afastamento, PrestadorServicos prestadorServicos) {
+    private PessoaFisicaFacade pessoaFisicaFacade;
+
+    @PostConstruct
+    public void init() {
+        try {
+            pessoaFisicaFacade = (PessoaFisicaFacade) new InitialContext().lookup("java:module/PessoaFisicaFacade");
+        } catch (NamingException e) {
+            logger.error("Erro ao injetar Facades : ", e);
+        }
+    }
+
+    public void enviarS2230(ConfiguracaoEmpregadorESocial config, Afastamento afastamento) {
         ValidacaoException val = new ValidacaoException();
-        EventoS2230 s2230 = criarEventoS2230(afastamento, config, prestadorServicos, val);
+        EventoS2230 s2230 = criarEventoS2230(afastamento, config, val);
         logger.debug("Antes de Enviar: " + s2230.getXml());
         val.lancarException();
         eSocialService.enviarEventoS2230(s2230);
     }
 
-    private EventoS2230 criarEventoS2230(Afastamento afastamento, ConfiguracaoEmpregadorESocial config, PrestadorServicos prestadorServicos, ValidacaoException val) {
+    private EventoS2230 criarEventoS2230(Afastamento afastamento, ConfiguracaoEmpregadorESocial config, ValidacaoException val) {
         EmpregadorESocial empregador = eSocialService.getEmpregadorPorCnpj(retornaApenasNumeros(config.getEntidade().getPessoaJuridica().getCnpj()));
         EventosESocialDTO.S2230 eventoS2230 = (EventosESocialDTO.S2230) eSocialService.getEventoS2230(empregador);
         eventoS2230.setIdentificadorWP(afastamento.getId().toString());
@@ -44,33 +59,29 @@ public class S2230Service {
         eventoS2230.setDescricao(afastamento.getContratoFP().toString());
 
         eventoS2230.setIdESocial(afastamento.getId().toString());
-        adicionarInformacoesBasicas(eventoS2230, afastamento, prestadorServicos);
+        adicionarInformacoesBasicas(eventoS2230, afastamento);
         adicionarInformacoesEmpregador(eventoS2230, afastamento, val);
         adicionarInformacoesAdastamento(eventoS2230, afastamento, val);
         return eventoS2230;
     }
 
-    private void adicionarMatricula(EventoS2230 eventoS2230, Afastamento afastamento, String vinculo, PrestadorServicos prestadorServicos) {
-        if(ModalidadeContratoFP.PRESTADOR_SERVICO.equals(afastamento.getContratoFP().getModalidadeContratoFP().getCodigo())) {
-            if (prestadorServicos != null) {
-                eventoS2230.setMatricula(prestadorServicos.getMatriculaESocial());
-            }
-        } else {
-            eventoS2230.setMatricula(afastamento.getContratoFP().getMatriculaFP().getMatricula().concat(vinculo));
-        }
+    private void adicionarMatricula(EventoS2230 eventoS2230, Afastamento afastamento, String vinculo) {
+        eventoS2230.setMatricula(afastamento.getContratoFP().getMatriculaFP().getMatricula().concat(vinculo));
     }
 
-    private void adicionarInformacoesBasicas(EventoS2230 eventoS2230, Afastamento afastamento, PrestadorServicos prestadorServicos) {
+    private void adicionarInformacoesBasicas(EventoS2230 eventoS2230, Afastamento afastamento) {
         String vinculo = StringUtil.cortarOuCompletarEsquerda(afastamento.getContratoFP().getNumero(), 2, "0");
-        adicionarMatricula(eventoS2230, afastamento, vinculo, prestadorServicos);
+        adicionarMatricula(eventoS2230, afastamento, vinculo);
     }
 
     private void adicionarInformacoesEmpregador(EventoS2230 eventoS2230, Afastamento afastamento, ValidacaoException ve) {
-        eventoS2230.setCpfTrab(StringUtil.retornaApenasNumeros(afastamento.getContratoFP().getMatriculaFP().getPessoa().getCpf()));
-        if (afastamento.getContratoFP().getMatriculaFP().getPessoa().getCarteiraDeTrabalho() == null) {
-            ve.adicionarMensagemDeOperacaoNaoRealizada("A pessoa " + afastamento.getContratoFP().getMatriculaFP().getPessoa() + " não possui carteira de trabalho.");
+        PessoaFisica pessoaFisica = afastamento.getContratoFP().getMatriculaFP().getPessoa();
+        pessoaFisica = pessoaFisicaFacade.recuperarComDocumentos(pessoaFisica.getId());
+        eventoS2230.setCpfTrab(StringUtil.retornaApenasNumeros(pessoaFisica.getCpf()));
+        if (pessoaFisica.getCarteiraDeTrabalho() == null) {
+            ve.adicionarMensagemDeOperacaoNaoRealizada("A pessoa " + pessoaFisica + " não possui carteira de trabalho.");
         } else {
-            eventoS2230.setNisTrab(afastamento.getContratoFP().getMatriculaFP().getPessoa().getCarteiraDeTrabalho().getPisPasep());
+            eventoS2230.setNisTrab(pessoaFisica.getCarteiraDeTrabalho().getPisPasep());
         }
     }
 

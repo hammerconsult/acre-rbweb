@@ -152,19 +152,19 @@ public class BensMoveisFacade extends SuperFacadeContabil<BensMoveis> {
     private List<ObjetoParametro> criarObjetosParametros(BensMoveis entity, ItemParametroEvento item) {
         List<ObjetoParametro> objetosParametro = Lists.newArrayList();
         if (entity.getId() != null) {
-            objetosParametro.add(new ObjetoParametro(entity, item));
+            objetosParametro.add(new ObjetoParametro(entity.getId().toString(), BensMoveis.class.getSimpleName(), item));
         }
-        objetosParametro.add(new ObjetoParametro(entity.getTipoOperacaoBemEstoque(), item));
+        objetosParametro.add(new ObjetoParametro(entity.getTipoOperacaoBemEstoque().toString(), TipoOperacaoBensMoveis.class.getSimpleName(), item));
         if (TipoOperacaoBensMoveis.ALIENACAO_BENS_MOVEIS.equals(entity.getTipoOperacaoBemEstoque())) {
-            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
+            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem().getId().toString(), GrupoBem.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo().name(), TipoGrupo.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
 
             ConfigAlienacaoAtivos configAlienacao = buscarConfigAlienacaoAtivos(entity);
-            objetosParametro.add(new ObjetoParametro(configAlienacao.getGrupo(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
-            objetosParametro.add(new ObjetoParametro(configAlienacao.getTipoGrupo(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
+            objetosParametro.add(new ObjetoParametro(configAlienacao.getGrupo().getId().toString(), GrupoBem.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
+            objetosParametro.add(new ObjetoParametro(configAlienacao.getTipoGrupo().name(), TipoGrupo.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
         } else {
-            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem(), item, ObjetoParametro.TipoObjetoParametro.AMBOS));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo(), item, ObjetoParametro.TipoObjetoParametro.AMBOS));
+            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem().getId().toString(), GrupoBem.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.AMBOS));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo().name(), TipoGrupo.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.AMBOS));
         }
         return objetosParametro;
     }

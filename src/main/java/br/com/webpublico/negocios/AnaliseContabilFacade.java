@@ -7,12 +7,8 @@ import br.com.webpublico.entidades.contabil.conciliacaocontabil.MovimentoHashCon
 import br.com.webpublico.entidadesauxiliares.*;
 import br.com.webpublico.entidadesauxiliares.contabil.ExtratoMovimentoDespesaORC;
 import br.com.webpublico.entidadesauxiliares.contabil.ReprocessamentoSaldoExtraOrcamentario;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.entidadesauxiliares.contabil.analise.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
-import br.com.webpublico.enums.Intervalo;
-import br.com.webpublico.enums.OperacaoMovimentoDividaPublica;
-import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
-import br.com.webpublico.enums.TipoReprocessamentoHistorico;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.enums.contabil.SituacaoMovimentoContabil;
 import br.com.webpublico.negocios.contabil.execucao.ExtratoMovimentoDespesaOrcFacade;

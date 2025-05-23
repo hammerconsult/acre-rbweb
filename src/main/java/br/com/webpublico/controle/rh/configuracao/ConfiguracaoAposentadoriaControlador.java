@@ -3,12 +3,11 @@ package br.com.webpublico.controle.rh.configuracao;
 import br.com.webpublico.controle.PrettyControlador;
 import br.com.webpublico.entidades.rh.configuracao.ConfiguracaoAposentadoria;
 import br.com.webpublico.entidades.rh.configuracao.TempoMinimoAposentadoria;
-import br.com.webpublico.entidades.RegraAposentadoria;
+import br.com.webpublico.enums.RegraAposentadoria;
 import br.com.webpublico.enums.Sexo;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.interfaces.ValidadorEntidade;
-import br.com.webpublico.negocios.RegraAposentadoriaFacade;
 import br.com.webpublico.negocios.rh.configuracao.ConfiguracaoAposentadoriaFacade;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.util.Util;
@@ -40,8 +39,6 @@ public class ConfiguracaoAposentadoriaControlador extends PrettyControlador<Conf
     @EJB
     private ConfiguracaoAposentadoriaFacade configuracaoAposentadoriaFacade;
     private TempoMinimoAposentadoria tempoMinimoAposentadoria;
-    @EJB
-    private RegraAposentadoriaFacade regraAposentadoriaFacade;
 
     public ConfiguracaoAposentadoriaControlador() {
         super(ConfiguracaoAposentadoria.class);
@@ -97,11 +94,20 @@ public class ConfiguracaoAposentadoriaControlador extends PrettyControlador<Conf
         this.tempoMinimoAposentadoria = tempoMinimoAposentadoria;
     }
 
+    public List<SelectItem> getRegraAposentadorias() {
+        List<SelectItem> toReturn = new ArrayList<SelectItem>();
+        toReturn.add(new SelectItem(null, ""));
+        for (RegraAposentadoria regraAposentadoria : RegraAposentadoria.values()) {
+            toReturn.add(new SelectItem(regraAposentadoria, regraAposentadoria.getDescricao()));
+        }
+        return toReturn;
+    }
+
     public List<SelectItem> getSexos() {
         List<SelectItem> toReturn = new ArrayList<SelectItem>();
         toReturn.add(new SelectItem(null, ""));
-        for (Sexo sexo : Sexo.values()) {
-            toReturn.add(new SelectItem(sexo, sexo.getDescricao()));
+        for (Sexo regraAposentadoria : Sexo.values()) {
+            toReturn.add(new SelectItem(regraAposentadoria, regraAposentadoria.getDescricao()));
         }
         return toReturn;
     }

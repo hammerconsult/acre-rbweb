@@ -533,7 +533,6 @@ public class RelatorioPatrimonioControlador extends AbstractRelatorioAssincronoC
             loteEfetivacao.getDataEfetivacao());
     }
 
-
     public void termoDeResponsabilidade(EfetivacaoSolicitacaoIncorporacaoMovel incorporacaoBem) {
         try {
             String nomeArquivo = "TermoDeResponsabilidade.jasper";

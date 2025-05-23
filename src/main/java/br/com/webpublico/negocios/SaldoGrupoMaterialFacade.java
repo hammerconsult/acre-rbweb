@@ -1,13 +1,10 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoGrupoMaterialDTO;
 import br.com.webpublico.enums.*;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
-import org.joda.time.LocalDate;
 
 import javax.ejb.*;
 import javax.persistence.EntityManager;
@@ -43,41 +40,30 @@ public class SaldoGrupoMaterialFacade implements Serializable {
     public void geraSaldoGrupoMaterial(UnidadeOrganizacional unidade, GrupoMaterial grupoMaterial, BigDecimal valor,
                                        TipoEstoque tipoEstoque, Date data, TipoOperacaoBensEstoque operacao, TipoLancamento tipoLancamento,
                                        TipoOperacao tipoOperacao, Long idOrigem, Boolean validarSaldo) throws ExcecaoNegocioGenerica {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDOGRUPOMATERIALMICROSERVICE")) {
-            SaldoGrupoMaterialDTO dto = new SaldoGrupoMaterialDTO();
-            dto.setIdUnidadeOrganizacional(unidade.getId());
-            dto.setIdGrupoMaterial(grupoMaterial.getId());
-            dto.setValor(valor);
-            dto.setTipoEstoque(tipoEstoque);
-            dto.setTipoLancamento(tipoLancamento);
-            dto.setTipoOperacaoBensEstoque(operacao);
-            dto.setTipoOperacao(tipoOperacao);
-            dto.setData(DataUtil.dateToLocalDate(data));
-            dto.setValidarSaldo(validarSaldo);
-            dto.setIdOrigem(idOrigem);
-            ApiServiceContabil.getService().gerarSaldoGrupoMaterial(dto);
-        } else {
-            NaturezaTipoGrupoMaterial naturezaTipoGrupoMaterial = recuperarNaturezaGrupoMaterial(operacao, tipoOperacao);
-            MovimentoGrupoMaterial movimento = new MovimentoGrupoMaterial();
-            movimento.setId(null);
-            movimento.setOrigem(idOrigem);
-            movimento.setDataMovimento(data);
-            movimento.setUnidadeOrganizacional(unidade);
-            movimento.setGrupoMaterial(grupoMaterial);
-            movimento.setNaturezaTipoGrupoMaterial(naturezaTipoGrupoMaterial);
-            movimento.setTipoEstoque(tipoEstoque);
-            movimento.setOperacao(operacao);
-            movimento.setTipoLancamento(tipoLancamento);
-            movimento.setTipoOperacao(tipoOperacao);
-            movimento.setValor(valor);
-            movimento.setValidarSaldo(validarSaldo);
-            alterarValorColunaCredioDebito(movimento, null);
-            SaldoGrupoMaterial ultimoSaldo = buscarUltimoSaldoPorData(movimento);
-            List<SaldoGrupoMaterial> saldosPosteriores = recuperaSaldosPosterioresAData(movimento);
-            gerarSaldo(movimento, ultimoSaldo);
-            gerarSaldoPosterior(movimento, saldosPosteriores);
-            em.merge(movimento);
-        }
+
+        NaturezaTipoGrupoMaterial naturezaTipoGrupoMaterial = recuperarNaturezaGrupoMaterial(operacao, tipoOperacao);
+
+        MovimentoGrupoMaterial movimento = new MovimentoGrupoMaterial();
+        movimento.setId(null);
+        movimento.setOrigem(idOrigem);
+        movimento.setDataMovimento(data);
+        movimento.setUnidadeOrganizacional(unidade);
+        movimento.setGrupoMaterial(grupoMaterial);
+        movimento.setNaturezaTipoGrupoMaterial(naturezaTipoGrupoMaterial);
+        movimento.setTipoEstoque(tipoEstoque);
+        movimento.setOperacao(operacao);
+        movimento.setTipoLancamento(tipoLancamento);
+        movimento.setTipoOperacao(tipoOperacao);
+        movimento.setValor(valor);
+        movimento.setValidarSaldo(validarSaldo);
+        alterarValorColunaCredioDebito(movimento, null);
+
+        SaldoGrupoMaterial ultimoSaldo = buscarUltimoSaldoPorData(movimento);
+        List<SaldoGrupoMaterial> saldosPosteriores = recuperaSaldosPosterioresAData(movimento);
+
+        gerarSaldo(movimento, ultimoSaldo);
+        gerarSaldoPosterior(movimento, saldosPosteriores);
+        em.merge(movimento);
     }
 
     private void gerarSaldo(MovimentoGrupoMaterial movimento, SaldoGrupoMaterial ultimoSaldo) {
@@ -312,7 +298,7 @@ public class SaldoGrupoMaterialFacade implements Serializable {
         if (configuracaoContabil.getBloquearSaldoNegativoBemEstoque() && movimento.getValidarSaldo()) {
             SaldoGrupoMaterial saldoGrupoMaterial = buscarUltimoSaldoPorData(movimento);
             BigDecimal saldoDoDia = saldoGrupoMaterial.getCredito().subtract(saldoGrupoMaterial.getDebito().add(movimento.getValor()));
-            if (saldoDoDia.compareTo(BigDecimal.ZERO) < 0) {
+            if (saldoDoDia.compareTo(BigDecimal.ZERO) < 0){
                 throw new ExcecaoNegocioGenerica("O Saldo ficará negativo em <b>" + Util.formataValor(saldoDoDia) + "</b>, na data " + DataUtil.getDataFormatada(saldoGrupoMaterial.getDataSaldo()) + " referente a natureza: " + saldoGrupoMaterial.getNaturezaTipoGrupoMaterial().getDescricao() + ".");
             }
         }
@@ -394,25 +380,25 @@ public class SaldoGrupoMaterialFacade implements Serializable {
 
     public BigDecimal buscarUltimoSaldo(GrupoMaterial grupo, UnidadeOrganizacional unidade, TipoEstoque tipoEstoque, NaturezaTipoGrupoMaterial natureza, Date dataReferencia) {
         String sql = " " +
-            " select coalesce(sum(s.credito - s.debito), 0) as valor " +
-            "from saldogrupomaterial s " +
-            "         inner join (select max(saldo.datasaldo) as data, " +
-            "                            saldo.unidadeorganizacional_id, " +
-            "                            saldo.grupomaterial_id, " +
-            "                            saldo.naturezatipogrupomaterial, " +
-            "                            saldo.tipoestoque " +
-            "                     from saldogrupomaterial saldo " +
-            "                     where trunc(saldo.datasaldo) <= to_date(:dataReferencia, 'dd/mm/yyyy') " +
-            "                     group by saldo.unidadeorganizacional_id, saldo.grupomaterial_id, saldo.naturezatipogrupomaterial, " +
-            "                              saldo.tipoestoque " +
-            ") maiorsaldo on s.datasaldo = maiorsaldo.data " +
-            "    and s.unidadeorganizacional_id = maiorsaldo.unidadeorganizacional_id " +
-            "    and s.grupomaterial_id = maiorsaldo.grupomaterial_id " +
-            "    and s.naturezatipogrupomaterial = maiorsaldo.naturezatipogrupomaterial " +
-            "    and s.tipoestoque = maiorsaldo.tipoestoque " +
-            "where s.unidadeorganizacional_id = :idUnidade " +
-            "  and s.grupomaterial_id = :idGrupo " +
-            "  and s.naturezatipogrupomaterial = :natureza " +
+            " select coalesce(sum(s.credito - s.debito), 0) as valor "+
+            "from saldogrupomaterial s "+
+            "         inner join (select max(saldo.datasaldo) as data, "+
+            "                            saldo.unidadeorganizacional_id, "+
+            "                            saldo.grupomaterial_id, "+
+            "                            saldo.naturezatipogrupomaterial, "+
+            "                            saldo.tipoestoque "+
+            "                     from saldogrupomaterial saldo "+
+            "                     where trunc(saldo.datasaldo) <= to_date(:dataReferencia, 'dd/mm/yyyy') "+
+            "                     group by saldo.unidadeorganizacional_id, saldo.grupomaterial_id, saldo.naturezatipogrupomaterial, "+
+            "                              saldo.tipoestoque "+
+            ") maiorsaldo on s.datasaldo = maiorsaldo.data "+
+            "    and s.unidadeorganizacional_id = maiorsaldo.unidadeorganizacional_id "+
+            "    and s.grupomaterial_id = maiorsaldo.grupomaterial_id "+
+            "    and s.naturezatipogrupomaterial = maiorsaldo.naturezatipogrupomaterial "+
+            "    and s.tipoestoque = maiorsaldo.tipoestoque "+
+            "where s.unidadeorganizacional_id = :idUnidade "+
+            "  and s.grupomaterial_id = :idGrupo "+
+            "  and s.naturezatipogrupomaterial = :natureza "+
             "  and s.tipoestoque = :tipoEstoque ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idGrupo", grupo.getId());

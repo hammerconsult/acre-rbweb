@@ -1,7 +1,5 @@
 package br.com.webpublico.entidadesauxiliares;
 
-import br.com.webpublico.entidades.UnidadeOrganizacional;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 
@@ -9,7 +7,6 @@ import java.math.BigDecimal;
  * Created by peixe on 19/08/2015.
  */
 public class ValorFinanceiroRH implements Serializable {
-    private UnidadeOrganizacional unidadeOrganizacional;
     private BigDecimal totalVantagem;
     private BigDecimal totalDesconto;
     private BigDecimal totalBase;
@@ -21,12 +18,6 @@ public class ValorFinanceiroRH implements Serializable {
     }
 
     public ValorFinanceiroRH(BigDecimal totalVantagem, BigDecimal totalDesconto) {
-        this.totalVantagem = totalVantagem;
-        this.totalDesconto = totalDesconto;
-    }
-
-    public ValorFinanceiroRH(UnidadeOrganizacional unidadeOrganizacional, BigDecimal totalVantagem, BigDecimal totalDesconto) {
-        this.unidadeOrganizacional = unidadeOrganizacional;
         this.totalVantagem = totalVantagem;
         this.totalDesconto = totalDesconto;
     }
@@ -59,14 +50,6 @@ public class ValorFinanceiroRH implements Serializable {
 
     public void setTotalDesconto(BigDecimal totalDesconto) {
         this.totalDesconto = totalDesconto;
-    }
-
-    public UnidadeOrganizacional getUnidadeOrganizacional() {
-        return unidadeOrganizacional;
-    }
-
-    public void setUnidadeOrganizacional(UnidadeOrganizacional unidadeOrganizacional) {
-        this.unidadeOrganizacional = unidadeOrganizacional;
     }
 
     @Override

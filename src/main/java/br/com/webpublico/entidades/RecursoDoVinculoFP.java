@@ -4,12 +4,9 @@
  */
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.enums.SummaryMessages;
-import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.geradores.CorEntidade;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.PossuidorHistorico;
-import br.com.webpublico.interfaces.ValidadorEntidade;
 import br.com.webpublico.interfaces.ValidadorVigencia;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilRH;
@@ -19,7 +16,6 @@ import br.com.webpublico.util.anotacoes.Pesquisavel;
 import br.com.webpublico.util.anotacoes.Tabelavel;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
-import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -33,7 +29,7 @@ import java.util.Date;
 @CorEntidade(value = "#00FFFF")
 
 @Etiqueta("Recurso do Vínculo Folha de Pagamento")
-public class RecursoDoVinculoFP extends SuperEntidade implements Serializable, PossuidorHistorico, ValidadorVigencia, ValidadorEntidade, Comparable {
+public class RecursoDoVinculoFP extends SuperEntidade implements Serializable, PossuidorHistorico, ValidadorVigencia {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -212,21 +208,5 @@ public class RecursoDoVinculoFP extends SuperEntidade implements Serializable, P
 
     public boolean temId() {
         return id != null;
-    }
-
-    @Override
-    public int compareTo(@NotNull Object o) {
-        return this.getInicioVigencia().compareTo(((RecursoDoVinculoFP) o).getInicioVigencia());
-    }
-
-    @Override
-    public void validarConfirmacao() throws ValidacaoException {
-        ValidacaoException ve = new ValidacaoException();
-        if (getFinalVigencia() != null && getFinalVigencia().compareTo(getInicioVigencia()) <= 0) {
-            ve.adicionarMensagemError(SummaryMessages.OPERACAO_NAO_PERMITIDA, "A data de final de vigência deve ser posterior a data de início de vigência.");
-        }
-        if (ve.temMensagens()) {
-            throw ve;
-        }
     }
 }

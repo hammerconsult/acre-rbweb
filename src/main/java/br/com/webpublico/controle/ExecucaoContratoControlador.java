@@ -718,6 +718,7 @@ public class ExecucaoContratoControlador extends PrettyControlador<ExecucaoContr
                     reservasLicitacao.add(fonte);
                 }
             }
+
             BigDecimal valorDiferencaReserva = BigDecimal.ZERO;
             BigDecimal valorReservado = BigDecimal.ZERO;
             if (contrato.getObjetoAdequado().getProcessoDeCompra() != null) {

@@ -8,7 +8,6 @@ import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.interfaces.ValidadorEntidade;
 import br.com.webpublico.negocios.AbstractFacade;
-import br.com.webpublico.negocios.ContratoFacade;
 import br.com.webpublico.negocios.DispensaDeLicitacaoFacade;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.pncp.entidadeauxiliar.EventoPncpVO;
@@ -59,8 +58,6 @@ public class DispensaDeLicitacaoControlador extends PrettyControlador<DispensaDe
 
     @EJB
     private DispensaDeLicitacaoFacade dispensaDeLicitacaoFacade;
-    @EJB
-    private ContratoFacade contratoFacade;
     private MoneyConverter moneyConverter;
     private ConverterAutoComplete converterPessoa;
     private DocumentoDispensaDeLicitacao documentoDispensaDeLicitacaoSelecionado;
@@ -147,6 +144,14 @@ public class DispensaDeLicitacaoControlador extends PrettyControlador<DispensaDe
 
     public boolean isPodeSalvarRegistroSemValidacoes() {
         return selecionado.isDispensaEmElaboracao();
+    }
+
+    public boolean hasContratos() {
+        if (selecionado.getId() != null) {
+            List<Contrato> contratos = dispensaDeLicitacaoFacade.getContratoFacade().buscarContratoDispensa(selecionado);
+            return !Util.isListNullOrEmpty(contratos);
+        }
+        return false;
     }
 
     public EventoPncpVO getEventoPncpVO() {
@@ -271,7 +276,7 @@ public class DispensaDeLicitacaoControlador extends PrettyControlador<DispensaDe
         selecionado.setProcessoDeCompra(carregaListasDoProcessoDeCompraSelecionado(selecionado.getProcessoDeCompra()));
         inicializaItensDoLoteSelecionado();
         setUnidadeAdministrativaProcessoCompra();
-        bloquearEdicao = !Util.isListNullOrEmpty(contratoFacade.buscarContratoDispensa(selecionado));
+        bloquearEdicao = !Util.isListNullOrEmpty(dispensaDeLicitacaoFacade.getContratoFacade().buscarContratoDispensa(selecionado));
     }
 
     private void inicializaItensDoLoteSelecionado() {
@@ -1292,22 +1297,6 @@ public class DispensaDeLicitacaoControlador extends PrettyControlador<DispensaDe
         }
     }
 
-    public HierarquiaOrganizacional getUnidadeAdministrativa() {
-        return unidadeAdministrativa;
-    }
-
-    public void setUnidadeAdministrativa(HierarquiaOrganizacional unidadeAdministrativa) {
-        this.unidadeAdministrativa = unidadeAdministrativa;
-    }
-
-    public void setUnidadeAdministrativaProcessoCompra() {
-        setUnidadeAdministrativa(dispensaDeLicitacaoFacade.getUnidadeOrganizacionalFacade().getHierarquiaOrganizacionalFacade().getHierarquiaDaUnidade(
-            TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(),
-            selecionado.getProcessoDeCompra().getUnidadeOrganizacional(),
-            dispensaDeLicitacaoFacade.getSistemaFacade().getDataOperacao()
-        ));
-    }
-
     public void selecionarTodosItensPropostaFornecedor() {
         for (ItemPropostaFornecedorDispensa itemPropostaFornecedorDispensa : getItensDaProposta()
         ) {
@@ -1329,6 +1318,22 @@ public class DispensaDeLicitacaoControlador extends PrettyControlador<DispensaDe
             quantidadeSelecionado = itemPropostaFornecedorDispensa.getSelecionado() == true ? quantidadeSelecionado + 1 : quantidadeSelecionado;
         }
         return quantidadeSelecionado - getItensDaProposta().size() == 0;
+    }
+
+    public HierarquiaOrganizacional getUnidadeAdministrativa() {
+        return unidadeAdministrativa;
+    }
+
+    public void setUnidadeAdministrativa(HierarquiaOrganizacional unidadeAdministrativa) {
+        this.unidadeAdministrativa = unidadeAdministrativa;
+    }
+
+    public void setUnidadeAdministrativaProcessoCompra() {
+        setUnidadeAdministrativa(dispensaDeLicitacaoFacade.getUnidadeOrganizacionalFacade().getHierarquiaOrganizacionalFacade().getHierarquiaDaUnidade(
+            TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(),
+            selecionado.getProcessoDeCompra().getUnidadeOrganizacional(),
+            dispensaDeLicitacaoFacade.getSistemaFacade().getDataOperacao()
+        ));
     }
 
     private void novoFiltroResumoExecucao() {

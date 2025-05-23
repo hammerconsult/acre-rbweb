@@ -7,7 +7,7 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.controle.portaltransparencia.PortalTransparenciaNovoFacade;
 import br.com.webpublico.controle.portaltransparencia.entidades.AlteracaoOrcEstornoPortal;
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.interfaces.EntidadeContabil;
 import br.com.webpublico.negocios.contabil.reprocessamento.SuperFacadeContabil;
@@ -193,11 +193,11 @@ public class EstornoAlteracaoOrcFacade extends SuperFacadeContabil<EstornoAltera
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(entity, item));
-            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa(), item));
-            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getOrigemSuplemtacao().name(), item));
-            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getFonteDespesaORC(), item));
-            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos(), item));
+            listaObj.add(new ObjetoParametro(entity.getId().toString(), EstornoSuplementacaoOrc.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getOrigemSuplemtacao().name(), OrigemSuplementacaoORC.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getFonteDespesaORC().getId().toString(), FonteDespesaORC.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getSuplementacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
             item.setObjetoParametros(listaObj);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -236,10 +236,10 @@ public class EstornoAlteracaoOrcFacade extends SuperFacadeContabil<EstornoAltera
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(entity, item));
-            listaObj.add(new ObjetoParametro(entity.getAnulacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa(), item));
-            listaObj.add(new ObjetoParametro(entity.getAnulacaoORC().getFonteDespesaORC(), item));
-            listaObj.add(new ObjetoParametro(entity.getAnulacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos(), item));
+            listaObj.add(new ObjetoParametro(entity.getId().toString(), EstornoAnulacaoOrc.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getAnulacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getAnulacaoORC().getFonteDespesaORC().getId().toString(), FonteDespesaORC.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getAnulacaoORC().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
             item.setObjetoParametros(listaObj);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -276,8 +276,8 @@ public class EstornoAlteracaoOrcFacade extends SuperFacadeContabil<EstornoAltera
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(entity, item));
-            listaObj.add(new ObjetoParametro(entity.getReceitaAlteracaoORC().getReceitaLOA().getContaDeReceita(), item));
+            listaObj.add(new ObjetoParametro(entity.getId().toString(), EstornoReceitaAlteracaoOrc.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(entity.getReceitaAlteracaoORC().getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item));
             item.setObjetoParametros(listaObj);
 
             parametroEvento.getItensParametrosEvento().add(item);

@@ -97,8 +97,8 @@ public class ConfigAlienacaoAtivosFacade extends AbstractFacade<ConfigAlienacaoA
     public void adicionarObjetoParametro(EventoContabil eventoContabil, Date data, List<ObjetoParametro> listaObj, ItemParametroEvento item, ObjetoParametro.TipoObjetoParametro tipoObjetoParametro) throws ExcecaoNegocioGenerica {
         ConfigAlienacaoAtivos configAlienacaoAtivos = buscarConfigVigente(eventoContabil, data);
         if (configAlienacaoAtivos != null) {
-            listaObj.add(new ObjetoParametro(configAlienacaoAtivos.getGrupo(), item, tipoObjetoParametro));
-            listaObj.add(new ObjetoParametro(configAlienacaoAtivos.getTipoGrupo(), item, tipoObjetoParametro));
+            listaObj.add(new ObjetoParametro(configAlienacaoAtivos.getGrupo().getId().toString(), GrupoBem.class.getSimpleName(), item, tipoObjetoParametro));
+            listaObj.add(new ObjetoParametro(configAlienacaoAtivos.getTipoGrupo().toString(), TipoGrupo.class.getSimpleName(), item, tipoObjetoParametro));
         }
     }
 

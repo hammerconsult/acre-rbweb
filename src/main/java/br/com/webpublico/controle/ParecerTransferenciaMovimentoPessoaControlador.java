@@ -5,12 +5,10 @@ import br.com.webpublico.entidades.ArquivoComposicao;
 import br.com.webpublico.entidades.ParecerTransferenciaMovimentoPessoa;
 import br.com.webpublico.entidades.TransferenciaMovPessoa;
 import br.com.webpublico.entidades.UsuarioSistema;
-import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.ParecerTransferenciaMovimentoPessoaFacade;
-import br.com.webpublico.negocios.TransferenciaMovPessoaFacade;
 import br.com.webpublico.util.ConverterAutoComplete;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.util.Util;
@@ -22,7 +20,9 @@ import org.primefaces.model.StreamedContent;
 import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
+import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
+import javax.servlet.ServletContext;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,8 +46,6 @@ public class ParecerTransferenciaMovimentoPessoaControlador extends PrettyContro
 
     @EJB
     private ParecerTransferenciaMovimentoPessoaFacade parecerTransferenciaMovimentoPessoaFacade;
-    @EJB
-    private TransferenciaMovPessoaFacade transferenciaMovPessoaFacade;
     private ConverterAutoComplete converterTransferenciaMovPessoa;
     private TransferenciaMovPessoa transferenciaMovPessoa;
     Future<TransferenciaMovPessoa> future;
@@ -89,13 +87,9 @@ public class ParecerTransferenciaMovimentoPessoaControlador extends PrettyContro
     public void deferir() {
         if (Util.validaCampos(selecionado)) {
             try {
-                validarTransferenciasAnteriores();
                 AbstractReport ar = AbstractReport.getAbstractReport();
                 ParametrosRelatorioTransferenciaPessoa parametro = new ParametrosRelatorioTransferenciaPessoa(ar.getCaminho(), ar.getCaminhoImagem(), transferenciaMovPessoa.getUsuarioSistema(), ar.getCaminho());
                 future = parecerTransferenciaMovimentoPessoaFacade.deferirParecerSolicitacao(selecionado, parametro, parecerTransferenciaMovimentoPessoaFacade.getSistemaFacade().getUsuarioCorrente(), parecerTransferenciaMovimentoPessoaFacade.getSistemaFacade().getUnidadeOrganizacionalOrcamentoCorrente());
-            } catch (ValidacaoException ve) {
-                FacesUtil.printAllFacesMessages(ve.getMensagens());
-                FacesUtil.executaJavaScript("aguarde.hide()");
             } catch (ExcecaoNegocioGenerica e) {
                 FacesUtil.addOperacaoNaoRealizada(e.getMessage());
             } catch (Exception ex) {
@@ -104,20 +98,6 @@ public class ParecerTransferenciaMovimentoPessoaControlador extends PrettyContro
         } else {
             FacesUtil.executaJavaScript("aguarde.hide()");
         }
-    }
-
-    public void validarTransferenciasAnteriores() {
-        ValidacaoException ve = new ValidacaoException();
-        List<TransferenciaMovPessoa> trasferencias = transferenciaMovPessoaFacade.buscarTransferenciaMovPessoaPorPessoaAbertas(selecionado.getTransferenciaMovPessoa().getPessoaOrigem());
-        trasferencias.addAll(transferenciaMovPessoaFacade.buscarTransferenciaMovPessoaPorPessoaAbertas(selecionado.getTransferenciaMovPessoa().getPessoaDestino()));
-        for (TransferenciaMovPessoa trasferencia : trasferencias) {
-            if (!trasferencia.getId().equals(selecionado.getTransferenciaMovPessoa().getId())
-                && selecionado.getTransferenciaMovPessoa().getDataTransferencia().after(trasferencia.getDataTransferencia())) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("Existe solicitação anterior em aberto de transferência de movimentos da pessoa envolvendo a pessoa de origem ou destino desta solicitação.");
-                break;
-            }
-        }
-        ve.lancarException();
     }
 
     public void verificarSeAcabou() {

@@ -760,14 +760,11 @@ public class EntradaMaterialFacade extends AbstractFacade<EntradaMaterial> {
     }
 
 
-    public BigDecimal getValorTotalLiquidadoEntradaPorCompra(Long idEntrada) {
-        String sql = " select coalesce(sum(docto.valor),0) from doctofiscalliquidacao docto " +
-            "           inner join doctofiscalentradacompra docent on docent.doctofiscalliquidacao_id = docto.id " +
-            "           where docent.entradacompramaterial_id = :idEntrada " +
-            "           and docent.situacao = :situacaoLiquidado";
+    public BigDecimal getValorTotalLiquidadoItemDocumentoFiscal(Long idItemEntrada) {
+        String sql = " select coalesce(sum(itemdoc.valorliquidado),0) from itemdoctoitementrada itemdoc " +
+            "           where itemdoc.itementradamaterial_id = :idItem ";
         Query q = em.createNativeQuery(sql);
-        q.setParameter("idEntrada", idEntrada);
-        q.setParameter("situacaoLiquidado", SituacaoDocumentoFiscalEntradaMaterial.LIQUIDADO.name());
+        q.setParameter("idItem", idItemEntrada);
         try {
             return (BigDecimal) q.getSingleResult();
         } catch (NoResultException e) {
@@ -795,12 +792,10 @@ public class EntradaMaterialFacade extends AbstractFacade<EntradaMaterial> {
             "         inner join entradacompramaterial ecm on docem.entradacompramaterial_id = ecm.id " +
             "         inner join tipodocumentofiscal tipo on doc.tipodocumentofiscal_id = tipo.id " +
             "         left join requisicaodecompra req on ecm.requisicaodecompra_id = req.id " +
+            "         left join reconhecimentodivida rd on req.reconhecimentodivida_id = rd.id " +
             "         left join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
             "         left join execucaoprocesso execproc on execproc.id = rce.execucaoprocesso_id " +
-            "         left join solicitacaoempenhorecdiv solrd on rce.execucaoreconhecimentodiv_id = solrd.id " +
-            "         left join reconhecimentodivida rd on solrd.reconhecimentodivida_id = rd.id " +
-            "         left join execucaocontrato excont on excont.id = rce.execucaocontrato_id " +
-            "         left join contrato c on c.id = excont.contrato_id " +
+            "         left join contrato c on c.id = req.contrato_id " +
             " where coalesce(c.contratado_id, rd.fornecedor_id, execproc.fornecedor_id) = :idFornecedor " +
             "    and tipo.id = :idTipo ";
         if (!Util.isStringNulaOuVazia(chave)) {
@@ -828,6 +823,7 @@ public class EntradaMaterialFacade extends AbstractFacade<EntradaMaterial> {
             return Lists.newArrayList();
         }
     }
+
 
     public PessoaFacade getPessoaFacade() {
         return pessoaFacade;

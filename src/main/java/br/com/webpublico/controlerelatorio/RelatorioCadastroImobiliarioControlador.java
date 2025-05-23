@@ -182,34 +182,32 @@ public class RelatorioCadastroImobiliarioControlador implements Serializable {
         return Util.getListSelectItem(TipoColetaLixo.values());
     }
 
+    public void gerarRelatorio(String tipoRelatorioExtensao) {
+        try {
+            validarRelatorio();
+            montarCondicao();
+            assistente.setCondicoes(new StringBuilder(assistente.getCondicoes().toString().replaceFirst("and", "where")));
+            assistente.setFiltros(new StringBuilder(StringUtils.chop(assistente.getFiltros().toString().trim())));
+            montarOrdenacao();
+            RelatorioDTO dto = new RelatorioDTO();
+            dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
+            dto.setNomeParametroBrasao("BRASAO_RIO_BRANCO");
+            adicionarParametros(dto);
+            dto.setNomeRelatorio("Relatório de Cadastro Imobiliário");
+            dto.setApi("tributario/cadastro-imobiliario/");
 
-    public void gerarRelatorio(String tipoExtensaoRelatorio)
-    {
-            try {
-                validarRelatorio();
-                montarCondicao();
-                assistente.setCondicoes(new StringBuilder(assistente.getCondicoes().toString().replaceFirst("and", "where")));
-                assistente.setFiltros(new StringBuilder(StringUtils.chop(assistente.getFiltros().toString().trim())));
-                montarOrdenacao();
-                RelatorioDTO dto = new RelatorioDTO();
-                dto.setTipoRelatorio(TipoRelatorioDTO.valueOf((tipoExtensaoRelatorio)));
-                dto.setNomeParametroBrasao("BRASAO_RIO_BRANCO");
-                adicionarParametros(dto);
-                dto.setNomeRelatorio("Relatório de Cadastro Imobiliário");
-                dto.setApi("tributario/cadastro-imobiliario/");
-
-                ReportService.getInstance().gerarRelatorio(assistente.getAbstractReport().usuarioLogado(), dto);
-                FacesUtil.addMensagemRelatorioSegundoPlano();
-            } catch (ValidacaoException ve) {
-                FacesUtil.printAllFacesMessages(ve.getMensagens());
-            } catch (WebReportRelatorioExistenteException ex) {
-                ReportService.getInstance().abrirDialogConfirmar(ex);
-                logger.error("Erro ao gerar relatorio. ", ex);
-            } catch (Exception e) {
-                FacesUtil.addErroAoGerarRelatorio(e.getMessage());
-                logger.error("Erro ao gerar relatorio. ", e);
-            }
+            ReportService.getInstance().gerarRelatorio(assistente.getAbstractReport().usuarioLogado(), dto);
+            FacesUtil.addMensagemRelatorioSegundoPlano();
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve.getMensagens());
+        } catch (WebReportRelatorioExistenteException ex) {
+            ReportService.getInstance().abrirDialogConfirmar(ex);
+            logger.error("Erro ao gerar relatorio. ", ex);
+        } catch (Exception e) {
+            FacesUtil.addErroAoGerarRelatorio(e.getMessage());
+            logger.error("Erro ao gerar relatorio. ", e);
         }
+    }
 
     private void validarRelatorio() {
         ValidacaoException ve = new ValidacaoException();

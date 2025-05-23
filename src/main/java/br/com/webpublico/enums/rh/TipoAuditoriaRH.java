@@ -12,12 +12,12 @@ public enum TipoAuditoriaRH implements EnumComDescricao {
     AFASTAMENTO("Afastamento", Afastamento.class, Boolean.TRUE, "contratofp_id", Boolean.FALSE, null, null, null),
     FICHA_FINANCEIRA("Ficha Financeira", FichaFinanceiraFP.class, Boolean.TRUE, "vinculofp_id", Boolean.FALSE, null, null, "usuariosistema_id"),
     LANCAMENTO_FP("Lançamento FP", LancamentoFP.class, Boolean.TRUE, "vinculofp_id", Boolean.FALSE, null, null, null),
-    CONCESSAO_FERIAS("Concessão de Férias", ConcessaoFeriasLicenca.class, Boolean.TRUE, "contratofp_id", Boolean.TRUE, "PERIODOAQUISITIVOFL_AUD", "aud.PERIODOAQUISITIVOFL_ID", null),
-    CONCESSAO_LICENCA("Concessão de Licença Prêmio", ConcessaoFeriasLicenca.class, Boolean.TRUE, "contratofp_id", Boolean.TRUE, "PERIODOAQUISITIVOFL_AUD", "aud.PERIODOAQUISITIVOFL_ID", null),
+    CONCESSAO_FERIAS("Concessão de Férias", ConcessaoFeriasLicenca.class, Boolean.TRUE, "contratofp_id", Boolean.TRUE, "PERIODOAQUISITIVOFL", "aud.PERIODOAQUISITIVOFL_ID", null),
+    CONCESSAO_LICENCA("Concessão de Licença Prêmio", ConcessaoFeriasLicenca.class, Boolean.TRUE, "contratofp_id", Boolean.TRUE, "PERIODOAQUISITIVOFL", "aud.PERIODOAQUISITIVOFL_ID", null),
     ENQUADRAMENTO_FUNCIONAL("Enquadramento Funcional", EnquadramentoFuncional.class, Boolean.TRUE, "contratoservidor_id", Boolean.FALSE, null, null, null),
-    FALTAS("Faltas", Faltas.class, Boolean.TRUE, "contratofp_id", Boolean.FALSE, null, null, null),
     CEDENCIA("Cedência", CedenciaContratoFP.class, Boolean.TRUE, "contratofp_id", Boolean.FALSE, null, null, null),
     RETORNO_CEDENCIA("Retorno da Cedência", RetornoCedenciaContratoFP.class, Boolean.TRUE, "contratofp_id", Boolean.FALSE, null, null, null),
+    FALTAS("Faltas", Faltas.class, Boolean.TRUE, "contratofp_id", Boolean.FALSE, null, null, null),
     LANCAMENTO_TERCO_FERIAS_AUT("Lançamento de 1/3 de Férias Automático", LancamentoTercoFeriasAut.class, Boolean.TRUE, "contratofp_id", Boolean.FALSE, null, null, null);
 
     private String descricao;

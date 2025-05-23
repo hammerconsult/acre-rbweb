@@ -507,7 +507,7 @@ public class PropostaConcessaoDiariaControlador extends PrettyControlador<Propos
         List<SelectItem> toReturn = Lists.newArrayList();
         toReturn.add(new SelectItem(null, " "));
         for (ConfiguracaoDiaria c : propostaConcessaoDiariaFacade.getConfiguracaoDiariaFacade().listaConfiguracaoDiaria(selecionado.getDataLancamento())) {
-            toReturn.add(new SelectItem(c, c.getLei().toString()));
+            toReturn.add(new SelectItem(c, c.toString()));
         }
         return toReturn;
     }

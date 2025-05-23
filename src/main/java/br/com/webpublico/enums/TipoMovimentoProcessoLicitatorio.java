@@ -29,7 +29,7 @@ public enum TipoMovimentoProcessoLicitatorio {
     PREGAO_POR_LOTE("Pregão por Lote", "/pregao/por-lote/ver/"),
     ATA_REGISTRO_PRECO("Ata Registro de Preço", "/ata-registro-preco/ver/"),
     CONTRATO("Contrato", "/contrato-adm/ver/"),
-    CONTRATO_VIGENTE("Contrato Vigente", "/contrato-adm/ver/"),
+    CONTRATO_VIGENTE("Contrato", "/contrato-adm/ver/"),
     SOLICITACAO_ADESAO_INTERNA("Solicitação a Ata Registro de Preço Interna", "/solicitacao-adesao-ata-registro-preco-interna/ver/"),
     ADESAO_INTERNA("Adesão a Ata Interna", "/solicitacao-adesao-ata-registro-preco-interna/ver/"),
     SOLICITACAO_ADESAO_EXTERNA("Solicitação de Adesão a Ata Externa", "/solicitacao-adesao-ata-registro-preco-externa/ver/"),

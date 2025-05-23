@@ -477,18 +477,6 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         }
     }
 
-    public List<ContratoFP> recuperarTodosContratosEncerradosPorMatriculaFP(MatriculaFP matriculaFP) {
-        Query q = em.createQuery(" from ContratoFP cfp "
-            + " where cfp.matriculaFP = :matricula and cfp.finalVigencia is not null and cfp.finalVigencia < :dataOperacao");
-        q.setParameter("matricula", matriculaFP);
-        q.setParameter("dataOperacao", sistemaFacade.getDataOperacao());
-        try {
-            return q.getResultList();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     public List<ContratoFP> recuperaContratosPorUnidadeMatriculada(UnidadeOrganizacional unidade, Date data) {
         Query q = em.createQuery("from ContratoFP cfp where cfp.matriculaFP.unidadeMatriculado = :uo and :dataVigencia >= cfp.inicioVigencia and "
             + " :dataVigencia <= coalesce(cfp.finalVigencia,:dataVigencia)");
@@ -724,15 +712,13 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         hql.append(" (lower(matricula.matricula) like :filtro)) ");
         hql.append(" and (prev.tipoPrevidenciaFP.codigo in (3,4)) ");
         hql.append(" and prev.id = (select max(previdencia.id) from PrevidenciaVinculoFP previdencia where previdencia.contratoFP = contrato)");
-        hql.append(" and  contrato not in (select ap.contratoFP from Aposentadoria ap ");
-        hql.append(" where :dataAtual between ap.inicioVigencia and coalesce(ap.finalVigencia, :dataAtual) )");
+        hql.append(" and  contrato not in (select ap.contratoFP from Aposentadoria ap) ");
         hql.append(" and modalidade.codigo = 1 ");
         hql.append(" order by to_number(matricula.matricula) asc ");
 
         Query q = em.createQuery(hql.toString());
         q.setMaxResults(10);
         q.setParameter("filtro", "%" + s.toLowerCase() + "%");
-        q.setParameter("dataAtual", new Date());
         List<ContratoFP> retorno = q.getResultList();
         contratoFPs.addAll(retorno);
         retorno = new LinkedList<>();
@@ -847,72 +833,45 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         return new ArrayList<>();
     }
 
-    public List<VinculoFP> recuperaContratoVigenteSemCedenciaOuAfastamento(String s, Integer mes, Integer ano) {
-        String hql = "select new VinculoFP(v.id,  v.matriculaFP.matricula||'/'|| v.numero||' - '|| v.matriculaFP.pessoa.nome|| ' '||(select ' - APOSENTADO' from Aposentadoria a where a.id =  v.id)||' '||(select ' - PENSIONISTA' from Pensionista a where a.id =  v.id)) from VinculoFP v where " +
-            " ((lower(v.matriculaFP.pessoa.nome) like :filtro) " +
-            " OR (lower(v.matriculaFP.pessoa.nomeAbreviado) like :filtro) " +
-            " OR (lower(v.matriculaFP.pessoa.cpf) like :filtro) " +
-            " OR (lower(v.matriculaFP.matricula) like :filtro)) " +
-            " and to_date(to_char(:dataVigencia,'mm/yyyy'),'mm/yyyy') between " +
-            " to_date(to_char(v.inicioVigencia,'mm/yyyy'),'mm/yyyy') " +
-            " and to_date(to_char(coalesce(v.finalVigencia,:dataVigencia),'mm/yyyy'),'mm/yyyy') " +
-             " and not exists ( "+
-             "    select cedencia.contratoFP.id "+
-            "    from CedenciaContratoFP cedencia " +
-            "    where cedencia.contratoFP.id = v.id " +
-            "      and cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia " +
-            "      and ((:dataInicial >= cedencia.dataCessao  " +
-            "           and not exists (  " +
-            "                select 1 " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciaContratoFP.id = cedencia.id) " +
-            "                or exists (  " +
-            " select 1 from Afastamento a  " +
-            "  join a.tipoAfastamento t " +
-            " where a.contratoFP.id = v.id  " +
-            "  and t.naoCalcularFichaSemRetorno = true " +
-            "  and (a.retornoInformado = false or a.retornoInformado is null)  " +
-            "  and (  " +
-            "    (a.inicio <= :dataInicial and (a.termino is null or a.termino >= :dataFinal))  " +
-            "    or (  " +
-            "      a.inicio = (  " +
-            "        select min(a2.inicio) from Afastamento a2  " +
-            "          join a2.tipoAfastamento t2 " +
-            "        where a2.contratoFP.id = v.id  " +
-            "          and t2.naoCalcularFichaSemRetorno = true  " +
-            "          and (a2.retornoInformado = false or a2.retornoInformado is null)  " +
-            "            and a2.termino <= :dataInicial  " +
-            "        )  " +
-            "      ) or ( a.inicio <= :dataInicial and (TRUNC(a.termino) + 1) >= cedencia.dataCessao and :dataFinal <= (select max(r.dataRetorno) " +
-            " from RetornoCedenciaContratoFP r where r.cedenciaContratoFP.id = cedencia.id)) " +
-            " or (:dataInicial >= cedencia.dataCessao " +
-            "          and a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciaContratoFP.id = cedencia.id " +
-            "          ) and a.termino >= :dataFinal and a.termino < cedencia.dataCessao " +
-            "        ) " +
-            "        or (a.inicio < cedencia.dataCessao and (a.inicio <= :dataInicial and a.termino >= :dataFinal))" +
-            "         or (a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciaContratoFP.id = cedencia.id  " +
-            "                ) and a.termino >= :dataFinal and a.inicio > cedencia.dataCessao)" +
-            ") " +
-            "   ))  or (:dataInicial >= cedencia.dataCessao and :dataFinal <= (  " +
-            "                select Max(r.dataRetorno) " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciaContratoFP.id = cedencia.id " +
-            "            )) " +
-            "      )) "+
-            " order by cast(v.matriculaFP.matricula as integer) ";
+    public List<VinculoFP> recuperaContratoVigenteNaoCedidoMatricula(String s, Integer mes, Integer ano) {
+        String hql = "select new VinculoFP(obj.id, obj.matriculaFP.matricula||'/'||obj.numero||' - '||obj.matriculaFP.pessoa.nome|| ' '||(select ' - APOSENTADO' from Aposentadoria a where a.id = obj.id)||' '||(select ' - PENSIONISTA' from Pensionista a where a.id = obj.id)) from VinculoFP obj where "
+            + " ((lower(obj.matriculaFP.pessoa.nome) like :filtro) "
+            + " OR (lower(obj.matriculaFP.pessoa.nomeAbreviado) like :filtro) "
+            + " OR (lower(obj.matriculaFP.pessoa.cpf) like :filtro) "
+            + " OR (lower(obj.matriculaFP.matricula) like :filtro)) "
+
+            + " and to_date(to_char(:dataVigencia,'mm/yyyy'),'mm/yyyy') between "
+            + " to_date(to_char(obj.inicioVigencia,'mm/yyyy'),'mm/yyyy') "
+            + " and to_date(to_char(coalesce(obj.finalVigencia,:dataVigencia),'mm/yyyy'),'mm/yyyy') "
+            + " and obj.id not in ( "
+            + "    select cedencia.contratoFP.id "
+            + "    from CedenciaContratoFP cedencia "
+            + "    where cedencia.tipoContratoCedenciaFP = :tipoCedencia "
+            + "    and ( "
+            + "        (:dataInicial >= cedencia.dataCessao "
+            + "        and not exists ( "
+            + "            select 1 "
+            + "            from RetornoCedenciaContratoFP r "
+            + "            where r.cedenciaContratoFP.id = cedencia.id "
+            + "        )) "
+            + "        or ( "
+            + "            :dataInicial >= cedencia.dataCessao "
+            + "            and :dataFinal <= ( "
+            + "                select r.dataRetorno "
+            + "                from RetornoCedenciaContratoFP r "
+            + "                where r.cedenciaContratoFP.id = cedencia.id "
+            + "            ) "
+            + "        ) "
+            + "    ) "
+            + ") "
+            + " order by cast(obj.matriculaFP.matricula as integer) ";
 
         Query q = em.createQuery(hql);
         q.setParameter("filtro", "%" + s.toLowerCase() + "%");
-        q.setParameter("dataVigencia", Util.getDataHoraMinutoSegundoZerado(Util.criaDataPrimeiroDiaMesJoda(mes, ano).toDate()));
-        q.setParameter("dataInicial", Util.getDataHoraMinutoSegundoZerado(Util.criaDataPrimeiroDiaMesJoda(mes, ano).toDate()));
-        q.setParameter("dataFinal", Util.getDataHoraMinutoSegundoZerado(DataUtil.criarDataUltimoDiaMes(mes, ano).toDate()));
-        q.setParameter("parametroTipoCedencia", TipoCedenciaContratoFP.SEM_ONUS);
+        q.setParameter("dataVigencia", Util.criaDataPrimeiroDiaMesJoda(mes, ano).toDate());
+        q.setParameter("dataInicial", Util.criaDataPrimeiroDiaMesJoda(mes, ano).toDate());
+        q.setParameter("dataFinal", DataUtil.criarDataUltimoDiaMes(mes, ano).toDate());
+        q.setParameter("tipoCedencia", TipoCedenciaContratoFP.SEM_ONUS);
         q.setMaxResults(50);
         return q.getResultList();
     }
@@ -951,20 +910,6 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
             Query query = em.createQuery("from FolhaDePagamento folha inner join folha.fichaFinanceiraFPs ficha "
                 + " where ficha.vinculoFP = :vinculo and "
                 + " folha.ano >= :ano  and folha.mes >= :mes");
-            query.setParameter("ano", DataUtil.getAno(data));
-            query.setParameter("mes", Mes.getMesToInt(DataUtil.getMes(data)));
-            query.setParameter("vinculo", contrato);
-            return query.getResultList().isEmpty();
-        }
-    }
-
-    public boolean temFichaNaCompetencia(VinculoFP contrato, Date data) {
-        if (contrato == null || contrato.getId() == null) {
-            return true;
-        } else {
-            Query query = em.createQuery("from FolhaDePagamento folha inner join folha.fichaFinanceiraFPs ficha "
-                + " where ficha.vinculoFP = :vinculo and "
-                + " folha.ano = :ano  and folha.mes = :mes");
             query.setParameter("ano", DataUtil.getAno(data));
             query.setParameter("mes", Mes.getMesToInt(DataUtil.getMes(data)));
             query.setParameter("vinculo", contrato);
@@ -1200,73 +1145,41 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         return contratosFPs;
     }
 
-    public List<VinculoFP> listarVinculosPorHierarquiaSemCedenciaEstagioOuAfastamento(List<HierarquiaOrganizacional> hos, Mes mes, Integer ano, Boolean isExonerados) {
+    public List<VinculoFP> recuperaMatriculaPorOrgaoRecursivaPelaView(List<HierarquiaOrganizacional> hos, Mes mes, Integer ano, Boolean isExonerados) {
 
-        String ss = "select distinct v from VinculoFP v, HierarquiaOrganizacional ho inner join v.lotacaoFuncionals lotacao where " +
+        String ss = "select distinct vinculo from VinculoFP vinculo, HierarquiaOrganizacional ho inner join vinculo.lotacaoFuncionals lotacao where " +
             " ho.subordinada.id = lotacao.unidadeOrganizacional.id  " +
-            " and :vigencia between v.inicioVigencia and coalesce(v.finalVigencia,:vigencia) " +
-            " and :vigencia >= lotacao.inicioVigencia and :vigencia <= coalesce(lotacao.finalVigencia,:vigencia) " +
-            " and :vigencia >= ho.inicioVigencia and :vigencia <= coalesce(ho.fimVigencia,:vigencia) and ho.tipoHierarquiaOrganizacional = 'ADMINISTRATIVA' ";
+            "  and :vigencia between vinculo.inicioVigencia and coalesce(vinculo.finalVigencia,:vigencia) "
+            + "AND :vigencia >= lotacao.inicioVigencia AND :vigencia <= coalesce(lotacao.finalVigencia,:vigencia)"
+            + " AND :vigencia >= ho.inicioVigencia AND :vigencia <= coalesce(ho.fimVigencia,:vigencia) and ho.tipoHierarquiaOrganizacional = 'ADMINISTRATIVA'";
         if (isExonerados) {
-            ss += " and v.id in(select ex.vinculoFP.id from ExoneracaoRescisao ex ) ";
+            ss += " and vinculo.id in(select ex.vinculoFP.id from ExoneracaoRescisao ex ) ";
         }
         ss += gerarSqlHierarquiaOrganizacional(hos);
-        ss +=  " and not exists ( " +
-            "    select 1 " +
-            "    from CedenciaContratoFP cedencia " +
-            "    where cedencia.contratoFP.id = v.id " +
-            "      and cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia " +
-            "      and ((:dataInicial >= cedencia.dataCessao  " +
-            "           and not exists (  " +
-            "                select 1 " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciaContratoFP.id = cedencia.id) " +
-            "                or exists (  " +
-            " select 1 from Afastamento a  " +
-            "  join a.tipoAfastamento t " +
-            " where a.contratoFP.id = v.id  " +
-            "  and t.naoCalcularFichaSemRetorno = true  " +
-            "  and (a.retornoInformado = false or a.retornoInformado is null)  " +
-            "  and (  " +
-            "    (a.inicio <= :dataInicial and (a.termino is null or a.termino >= :dataFinal))  " +
-            "    or (  " +
-            "      a.inicio = (  " +
-            "        select min(a2.inicio) from Afastamento a2  " +
-            "          join a2.tipoAfastamento t2 " +
-            "        where a2.contratoFP.id = v.id  " +
-            "          and t2.naoCalcularFichaSemRetorno = true  " +
-            "          and (a2.retornoInformado = false or a2.retornoInformado is null)  " +
-            "            and a2.termino <= :dataInicial  " +
-            "        )  " +
-            "      ) or ( a.inicio <= :dataInicial and (a.termino + 1 ) >= cedencia.dataCessao and :dataFinal <= (select Max(r.dataRetorno) " +
-            " from RetornoCedenciaContratoFP r where r.cedenciaContratoFP.id = cedencia.id)) " +
-            " or (:dataInicial >= cedencia.dataCessao " +
-            "          and a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciaContratoFP.id = cedencia.id " +
-            "          ) and a.termino >= :dataFinal and a.termino < cedencia.dataCessao " +
-            "        ) " +
-            "        or (a.inicio < cedencia.dataCessao and (a.inicio <= :dataInicial and a.termino >= :dataFinal))" +
-            "         or (a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciaContratoFP.id = cedencia.id  " +
-            "                ) and a.termino >= :dataFinal and a.inicio > cedencia.dataCessao)" +
-            "      ) " +
-            "   ))  or (:dataInicial >= cedencia.dataCessao and :dataFinal <= (  " +
-            "                select Max(r.dataRetorno) " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciaContratoFP.id = cedencia.id " +
-            "            )) " +
-            "      )) "+
-            "    and not exists (select 1 from Estagiario e where e.id = v.id) order by v.inicioVigencia";
+        ss += "  and vinculo.id not in  (select contratoFP.id "
+            + "                  from CedenciaContratoFP cedencia"
+            + "                   inner join cedencia.contratoFP contratoFP "
+            + "                 where cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia "
+            + "                     and trunc(:dataInicial) between trunc(cedencia.dataCessao) and trunc(coalesce(cedencia.dataRetorno, trunc(:dataInicial))) "
+            + "                       and trunc(:dataFinal) between trunc(cedencia.dataCessao) and trunc(coalesce(cedencia.dataRetorno, trunc(:dataFinal)))) "
+
+
+            + "   and vinculo not in(select contratoFP"
+            + "                  from RetornoCedenciaContratoFP retorno"
+            + "                 inner join retorno.cedenciaContratoFP cedencia "
+            + "                   inner join cedencia.contratoFP contratoFP "
+            + "                 where cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia "
+            + "                   and retorno.oficioRetorno = false "
+            + "                   and trunc(:dataInicial) between trunc(cedencia.dataCessao) and trunc(coalesce(retorno.dataRetorno, trunc(:dataInicial))) "
+            + "                     and trunc(:dataFinal) between trunc(cedencia.dataCessao) and trunc(coalesce(retorno.dataRetorno, trunc(:dataFinal)))) "
+            + "    and vinculo.id not in (select e.id from Estagiario e) order by vinculo.inicioVigencia";
+
 
         Query q = em.createQuery(ss);
         q.setParameter("parametroTipoCedencia", TipoCedenciaContratoFP.SEM_ONUS);
-        q.setParameter("vigencia", Util.getDataHoraMinutoSegundoZerado(Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate()));
-        q.setParameter("dataInicial", Util.getDataHoraMinutoSegundoZerado(Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate()));
-        q.setParameter("dataFinal", Util.getDataHoraMinutoSegundoZerado(DataUtil.criarDataUltimoDiaMes(mes.getNumeroMes(), ano).toDate()));
+        q.setParameter("vigencia", Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate());
+        q.setParameter("dataInicial", Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate());
+        q.setParameter("dataFinal", DataUtil.criarDataUltimoDiaMes(mes.getNumeroMes(), ano).toDate());
 
         return q.getResultList();
     }
@@ -1683,8 +1596,7 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         hql.append(" where ((lower(pessoa.nome) like :filtro) ");
         hql.append(" OR (lower(unidade.descricao) like :filtro) ");
         hql.append(" OR (lower(obj.numero) like :filtro) ");
-        hql.append(" OR (lower(obj.id) like :filtro) "
-            + " OR (lower(matricula.matricula) like :filtro) ");
+        hql.append(" OR (lower(matricula.matricula) like :filtro) ");
         hql.append(" OR (replace(replace(pessoa.cpf,'.',''),'-','') = :cpf) ");
         if (!Strings.isNullOrEmpty(id)) {
             hql.append(" OR (obj.id = :id)) ");
@@ -2073,9 +1985,9 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         contratoFP = em.merge(contratoFP);
     }
 
-    public void voltarVigenciasContratoFPAndAssociacoes(ContratoFP contratoFP, ProvimentoReversao provimentoReversao) {
+    public void voltarVigenciasContratoFPAndAssociacoes(ContratoFP contratoFP) {
         contratoFP = recuperar(contratoFP.getId());
-        voltarFinalVigenciaContratoFP(contratoFP, provimentoReversao);
+        voltarFinalVigenciaContratoFP(contratoFP);
         voltarFinalVigenciaPrevidenciaVinculoFP(contratoFP);
         voltarFinalVigenciaOpcaoValeTransporteFP(contratoFP);
         voltarFinalVigenciaLotacaoFuncionalAndHorarioContratoFP(contratoFP);
@@ -2159,11 +2071,8 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         }
     }
 
-    private void voltarFinalVigenciaContratoFP(ContratoFP contratoFP, ProvimentoReversao provimentoReversao) {
+    private void voltarFinalVigenciaContratoFP(ContratoFP contratoFP) {
         contratoFP.voltarHistorico();
-        if (provimentoReversao != null) {
-            contratoFP.setFinalVigencia(provimentoReversao.getFinalVigencia());
-        }
         contratoFP = em.merge(contratoFP);
     }
 
@@ -3040,22 +2949,6 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         return c;
     }
 
-    public ContratoFP recuperarParaReversao(Long id) {
-        ContratoFP c = em.find(ContratoFP.class, id);
-        c.getEnquadramentos().size();
-        c.getModalidadeContratoFPDatas().size();
-        c.getPrevidenciaVinculoFPs().size();
-        c.getOpcaoValeTransporteFPs().size();
-        c.getLotacaoFuncionals().size();
-        c.getSindicatosVinculosFPs().size();
-        c.getAssociacaosVinculosFPs().size();
-        c.getContratoVinculoDeContratos().size();
-        c.getRecursosDoVinculoFP().size();
-        c.getCargos().size();
-   //     c.getEventosEsocial().size();
-        return c;
-    }
-
     public ContratoFP recuperarPrevidencia(Long id) {
         ContratoFP c = em.find(ContratoFP.class, id);
         Hibernate.initialize(c.getPrevidenciaVinculoFPs());
@@ -3180,6 +3073,28 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         return new ArrayList<>();
     }
 
+    public List<ContratoFP> buscarContratoFPPorCapacitacao(String parte, Capacitacao capacitacao) {
+        String hql = " select distinct new ContratoFP(obj.id, obj.matriculaFP.matricula||'/'||obj.numero||' - '||obj.matriculaFP.pessoa.nome) "
+            + " from ContratoFP obj, InscricaoCapacitacao inscricao "
+            + " inner join obj.matriculaFP matricula "
+            + " inner join inscricao.capacitacao capacitacao "
+            + " where (lower(obj.matriculaFP.pessoa.nome) "
+            + " like :filtro OR lower(obj.matriculaFP.pessoa.cpf) "
+            + " like :filtro OR matricula.matricula like :filtro) "
+            + " and inscricao.matriculaFP.id = matricula.id "
+            + " and :data >= obj.inicioVigencia and :data <= coalesce(obj.finalVigencia, :data) ";
+        if (capacitacao != null) {
+            hql += (" and capacitacao.id = :capacitacao");
+        }
+        Query q = em.createQuery(hql);
+        q.setParameter("data", Util.getDataHoraMinutoSegundoZerado(sistemaFacade.getDataOperacao()));
+        q.setParameter("filtro", "%" + parte.toLowerCase() + "%");
+        if (capacitacao != null) {
+            q.setParameter("capacitacao", capacitacao.getId());
+        }
+        return q.getResultList();
+    }
+
     public ObjetoData getDataFromOracle(Integer totalDias) {
         Query q = em.createNativeQuery("select " +
             "           trunc((:dias/:parametro)) as anos, " +
@@ -3213,28 +3128,6 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         return objetoData;
     }
 
-
-    public List<ContratoFP> buscarContratoFPPorCapacitacao(String parte, Capacitacao capacitacao) {
-        String hql = " select distinct new ContratoFP(obj.id, obj.matriculaFP.matricula||'/'||obj.numero||' - '||obj.matriculaFP.pessoa.nome) "
-            + " from ContratoFP obj, InscricaoCapacitacao inscricao "
-            + " inner join obj.matriculaFP matricula "
-            + " inner join inscricao.capacitacao capacitacao "
-            + " where (lower(obj.matriculaFP.pessoa.nome) "
-            + " like :filtro OR lower(obj.matriculaFP.pessoa.cpf) "
-            + " like :filtro OR matricula.matricula like :filtro) "
-            + " and inscricao.matriculaFP.id = matricula.id "
-            + " and :data >= obj.inicioVigencia and :data <= coalesce(obj.finalVigencia, :data) ";
-        if (capacitacao != null) {
-            hql += (" and capacitacao.id = :capacitacao");
-        }
-        Query q = em.createQuery(hql);
-        q.setParameter("data", Util.getDataHoraMinutoSegundoZerado(sistemaFacade.getDataOperacao()));
-        q.setParameter("filtro", "%" + parte.toLowerCase() + "%");
-        if (capacitacao != null) {
-            q.setParameter("capacitacao", capacitacao.getId());
-        }
-        return q.getResultList();
-    }
     public BigDecimal buscarTempoServicoEmDias(ContratoFP contrato) {
         String sql = " select (coalesce(sum(tempoBruto), 0) - (coalesce(sum(injustificada), 0) + coalesce(sum(penalidades), 0))) as tempoServico from ( " +
             "  SELECT " +
@@ -3367,59 +3260,11 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         s2206Service.enviarS2206(empregador, contratoFP, dataOperacao, dataAlteracaoContrato);
     }
 
-    public List<VinculoFP> buscarVinculosPorItemDPContasSemCedenciaOuAfastamento(ItemEntidadeDPContas itemEntidadeDPContas, Boolean isRescisao, Mes mes, Integer ano) {
+    public List<VinculoFP> buscarVinculoFpPorItemEntidadeDPContas(ItemEntidadeDPContas itemEntidadeDPContas, Boolean isRescisao) {
         List<VinculoFP> vunculoFP = Lists.newArrayList();
         String sql = " select contrato.id from vinculofp vinculo " +
             " inner join contratofp contrato on vinculo.id = contrato.id " +
-            " where  :dataAtual between vinculo.INICIOVIGENCIA and coalesce(vinculo.FINALVIGENCIA,  :dataAtual) " +
-            "   and not exists ( " +
-            "    select 1 " +
-            "    from CedenciaContratoFP cedencia " +
-            "    where cedencia.contratofp_id = contrato.id " +
-            "      and cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia " +
-            "      and ((:dataInicial >= cedencia.dataCessao  " +
-            "           and not exists (  " +
-            "                select 1 " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciacontratofp_id = cedencia.id) " +
-            "                or exists (  " +
-            " select 1 from Afastamento a  " +
-            "  join tipoafastamento t on t.id = a.tipoafastamento_id " +
-            " where a.contratofp_id = vinculo.id " +
-            "  and t.naoCalcularFichaSemRetorno = 1 " +
-            "  and (a.retornoInformado = 0 or a.retornoInformado is null) " +
-            "  and (  " +
-            "    (a.inicio <= :dataInicial and (a.termino is null or a.termino >= :dataFinal)) " +
-            "    or (  " +
-            "      a.inicio = (  " +
-            "        select min(a2.inicio) from Afastamento a2  " +
-            "          join tipoafastamento t2 on t2.id = a2.tipoafastamento_id " +
-            "        where a2.CONTRATOFP_ID = vinculo.id " +
-            "          and t2.naoCalcularFichaSemRetorno = 1 " +
-            "          and (a2.retornoInformado = 0 or a2.retornoInformado is null) " +
-            "            and a2.termino <= :dataInicial  " +
-            "        )  " +
-            "      ) or ( a.inicio <= :dataInicial and (a.termino + 1 ) >= cedencia.dataCessao and :dataFinal <= (select Max(r.dataRetorno) " +
-            " from RetornoCedenciaContratoFP r where r.cedenciacontratofp_id = cedencia.id )) " +
-            " or (:dataInicial >= cedencia.dataCessao " +
-            "          and a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciacontratofp_id = cedencia.ID " +
-            "          ) and a.termino >= :dataFinal and a.termino < cedencia.dataCessao ) " +
-            "        or (a.inicio < cedencia.dataCessao and  (a.inicio <= :dataInicial and a.termino >= :dataFinal)) " +
-            "         or (a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciacontratofp_id = cedencia.ID " +
-            "                ) and a.termino >= :dataFinal and a.inicio > cedencia.dataCessao)" +
-            "      ) " +
-            "   ))  or (:dataInicial >= cedencia.dataCessao and :dataFinal <= ( " +
-            "                select Max(r.dataRetorno) " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciacontratofp_id = cedencia.ID " +
-            "            )) " +
-            "      ))"+
+            " where :dataAtual between vinculo.INICIOVIGENCIA and coalesce(vinculo.FINALVIGENCIA, :dataAtual) " +
             " and vinculo.UNIDADEORGANIZACIONAL_ID in (:unidades)";
         if (isRescisao) {
             sql += "and vinculo.id in(select ex.vinculoFP_id from ExoneracaoRescisao ex ) ";
@@ -3427,9 +3272,6 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         Query q = em.createNativeQuery(sql);
         q.setParameter("dataAtual", sistemaFacade.getDataOperacao());
         q.setParameter("unidades", montarIdOrgaoItemEntidadeDPContas(itemEntidadeDPContas));
-        q.setParameter("parametroTipoCedencia", TipoCedenciaContratoFP.SEM_ONUS.name());
-        q.setParameter("dataInicial", Util.getDataHoraMinutoSegundoZerado(Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate()));
-        q.setParameter("dataFinal", Util.getDataHoraMinutoSegundoZerado(DataUtil.criarDataUltimoDiaMes(mes.getNumeroMes(), ano).toDate()));
         if (!q.getResultList().isEmpty()) {
             for (BigDecimal id : (List<BigDecimal>) q.getResultList()) {
                 vunculoFP.add(em.find(VinculoFP.class, id.longValue()));
@@ -3561,6 +3403,20 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
         return Lists.newArrayList();
     }
 
+    public ContratoFP buscarContratoFPPorPessoa(Long idPessoa, Date dataReferencia) {
+        String sql = "select obj from ContratoFP obj " +
+            "        inner join obj.matriculaFP mat " +
+            "where mat.pessoa.id = :idPessoa and :dataReferencia between obj.inicioVigencia and coalesce(obj.finalVigencia, :dataReferencia)";
+        Query q = em.createQuery(sql);
+        q.setParameter("idPessoa", idPessoa);
+        q.setParameter("dataReferencia", dataReferencia);
+        List result = q.getResultList();
+        if (result != null && !result.isEmpty()) {
+            return (ContratoFP) result.get(0);
+        }
+        return null;
+    }
+
     public List<VinculoFP> buscarContratoPorNomeOrUnidadeOrNumeroOrMatriculaFP(String parte) {
         String sql = " SELECT v.id, M.MATRICULA " +
             " ||'/' " +
@@ -3600,19 +3456,5 @@ public class ContratoFPFacade extends AbstractFacade<ContratoFP> {
             retorno.add(vinculoFP);
         }
         return retorno;
-    }
-
-    public ContratoFP buscarContratoFPPorPessoa(Long idPessoa, Date dataReferencia) {
-        String sql = "select obj from ContratoFP obj " +
-            "        inner join obj.matriculaFP mat " +
-            "where mat.pessoa.id = :idPessoa and :dataReferencia between obj.inicioVigencia and coalesce(obj.finalVigencia, :dataReferencia)";
-        Query q = em.createQuery(sql);
-        q.setParameter("idPessoa", idPessoa);
-        q.setParameter("dataReferencia", dataReferencia);
-        List result = q.getResultList();
-        if (result != null && !result.isEmpty()) {
-            return (ContratoFP) result.get(0);
-        }
-        return null;
     }
 }

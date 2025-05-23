@@ -106,7 +106,6 @@ public class Cargo implements Serializable {
     private String descricaoCarreira;
     @Enumerated(EnumType.STRING)
     @Obrigatorio
-    @Etiqueta("Situação da Carreira")
     private SituacaoAtoLegal situacaoCarreira;
     @Invisivel
     private String migracaoChave;
@@ -158,7 +157,6 @@ public class Cargo implements Serializable {
     private List<ItemCargoSindicato> itensCargoSindicato;
 
     @OneToMany(mappedBy = "cargo", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Obrigatorio
     @Tabelavel
     @Etiqueta("Empregadores")
     private List<CargoEmpregadorESocial> empregadores;

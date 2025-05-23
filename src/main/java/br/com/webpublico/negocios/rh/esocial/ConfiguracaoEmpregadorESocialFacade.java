@@ -82,6 +82,8 @@ public class ConfiguracaoEmpregadorESocialFacade extends AbstractFacade<Configur
     @EJB
     private CodigoAliquotaFPAEsocialFacade codigoAliquotaFPAEsocialFacade;
     @EJB
+    private HorarioDeTrabalhoFacade horarioDeTrabalhoFacade;
+    @EJB
     private ProcessoAdministrativoJudicialFacade processoAdministrativoJudicialFacade;
     @EJB
     private ContratoFPFacade contratoFPFacade;
@@ -91,9 +93,6 @@ public class ConfiguracaoEmpregadorESocialFacade extends AbstractFacade<Configur
     private AfastamentoFacade afastamentoFacade;
     @EJB
     private VinculoFPFacade vinculoFPFacade;
-
-    @EJB
-    private HorarioDeTrabalhoFacade horarioDeTrabalhoFacade;
     @EJB
     private PrestadorServicosFacade prestadorServicosFacade;
     @EJB
@@ -930,7 +929,6 @@ public class ConfiguracaoEmpregadorESocialFacade extends AbstractFacade<Configur
         return new AsyncResult<>(assistenteBarraProgresso);
     }
 
-
     public void enviarS2240(ConfiguracaoEmpregadorESocial empregador, List<RiscoOcupacional> riscos) throws ValidacaoException {
         for (RiscoOcupacional risco : riscos) {
             s2240Service.enviarS2240(empregador, risco);
@@ -1102,7 +1100,7 @@ public class ConfiguracaoEmpregadorESocialFacade extends AbstractFacade<Configur
 //        ABDEL BARBOSA DERZE
     }
 
-    //apenas para teste, o s2206 não tem carga inicial
+    //apenas para teste, o s2205 não tem carga inicial
     public void enviarCargaInicialS2206(ConfiguracaoEmpregadorESocial selecionado) {
         contratoFPFacade.enviarS2206ESocial(selecionado, contratoFPFacade.recuperar(639006473l), sistemaFacade.getDataOperacao(), sistemaFacade.getDataOperacao());
 //        ABDEL BARBOSA DERZE
@@ -1571,20 +1569,6 @@ public class ConfiguracaoEmpregadorESocialFacade extends AbstractFacade<Configur
         }
     }
 
-    private void iniciarSincronizacaoR4099(AssistenteSincronizacaoReinf assistente) {
-        if (assistente.getSelecionado().getEventoR4099() != null) {
-            assistente.iniciarBarraProgresso(1);
-            try {
-                assistente.getBarraProgressoItens().setMensagens("Enviando o evento R4099 " + assistente.getSelecionado().getEventoR4099().getId());
-                r4099Service.enviar(assistente);
-                assistente.getBarraProgressoItens().setProcessados(assistente.getBarraProgressoItens().getProcessados() + 1);
-            } catch (Exception e) {
-                assistente.getBarraProgressoItens().addMensagem("Erro no evento " + e.getMessage());
-                assistente.getBarraProgressoItens().setProcessados(assistente.getBarraProgressoItens().getProcessados() + 1);
-            }
-        }
-    }
-
     private void iniciarSincronizacaoR4020(AssistenteSincronizacaoReinf assistente) {
         assistente.getBarraProgressoItens().setMensagens("Iniciando a sincronização dos eventos R4020....");
         if (assistente.getEventoR4020s() != null) {
@@ -1605,6 +1589,20 @@ public class ConfiguracaoEmpregadorESocialFacade extends AbstractFacade<Configur
                     assistente.getBarraProgressoItens().addMensagem("Erro no evento " + e.getMessage());
                     assistente.getBarraProgressoItens().setProcessados(assistente.getBarraProgressoItens().getProcessados() + 1);
                 }
+            }
+        }
+    }
+
+    private void iniciarSincronizacaoR4099(AssistenteSincronizacaoReinf assistente) {
+        if (assistente.getSelecionado().getEventoR4099() != null) {
+            assistente.iniciarBarraProgresso(1);
+            try {
+                assistente.getBarraProgressoItens().setMensagens("Enviando o evento R4099 " + assistente.getSelecionado().getEventoR4099().getId());
+                r4099Service.enviar(assistente);
+                assistente.getBarraProgressoItens().setProcessados(assistente.getBarraProgressoItens().getProcessados() + 1);
+            } catch (Exception e) {
+                assistente.getBarraProgressoItens().addMensagem("Erro no evento " + e.getMessage());
+                assistente.getBarraProgressoItens().setProcessados(assistente.getBarraProgressoItens().getProcessados() + 1);
             }
         }
     }
@@ -1726,23 +1724,6 @@ public class ConfiguracaoEmpregadorESocialFacade extends AbstractFacade<Configur
         List resultList = q.getResultList();
         if (!resultList.isEmpty()) {
             return q.getResultList();
-        }
-        return Lists.newArrayList();
-    }
-
-    public List<Entidade> buscarEntidadesDasConfiguracoesDoEmpregadorFiltrando(String filtro) {
-        String sql = "select ent.* " +
-            " from entidade ent " +
-            "         inner join configempregadoresocial confg on ent.id = confg.entidade_id " +
-            "         inner join pessoajuridica pj on ent.pessoajuridica_id = pj.id " +
-            " where lower(ent.nome) like :filtro " +
-            "   or pj.cnpj like :filtro " +
-            "   or formatacpfcnpj(pj.cnpj) like :filtro";
-        Query q = em.createNativeQuery(sql, Entidade.class);
-        q.setParameter("filtro", "%" + filtro.trim().toLowerCase() + "%");
-        List resultList = q.getResultList();
-        if (resultList != null && !resultList.isEmpty()) {
-            return resultList;
         }
         return Lists.newArrayList();
     }

@@ -4,7 +4,10 @@
  */
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.enums.*;
+import br.com.webpublico.enums.TipoBaseCalculo;
+import br.com.webpublico.enums.TipoITBI;
+import br.com.webpublico.enums.VencimentoLaudoDeAvaliacao;
+import br.com.webpublico.enums.VerificarDebitosDoImovel;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.IdentidadeDaEntidade;
@@ -89,7 +92,6 @@ public class ParametrosITBI extends SuperEntidade implements Serializable {
     private int diasVencimentoSegundaViaItbi;
     @OneToMany(mappedBy = "parametrosITBI", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ParametrosITBIDocumento> documentos;
-    private String textoAvisoSolicitacaoItbiOnline;
 
     public ParametrosITBI() {
         super();
@@ -178,8 +180,8 @@ public class ParametrosITBI extends SuperEntidade implements Serializable {
         return vencLaudoDeAvaliacao;
     }
 
-    public void setVencLaudoDeAvaliacao(VencimentoLaudoDeAvaliacao vencimentoDoLaudoDeAvaliacao) {
-        this.vencLaudoDeAvaliacao = vencimentoDoLaudoDeAvaliacao;
+    public void setVencLaudoDeAvaliacao(VencimentoLaudoDeAvaliacao vencimentoDoLaudoDeAvaliação) {
+        this.vencLaudoDeAvaliacao = vencimentoDoLaudoDeAvaliação;
     }
 
     public Integer getVencLaudoAvaliacaoEmDias() {
@@ -238,14 +240,6 @@ public class ParametrosITBI extends SuperEntidade implements Serializable {
         this.documentos = documentos;
     }
 
-    public String getTextoAvisoSolicitacaoItbiOnline() {
-        return textoAvisoSolicitacaoItbiOnline;
-    }
-
-    public void setTextoAvisoSolicitacaoItbiOnline(String textoAvisoSolicitacaoItbiOnline) {
-        this.textoAvisoSolicitacaoItbiOnline = textoAvisoSolicitacaoItbiOnline;
-    }
-
     @Override
     public int hashCode() {
         return IdentidadeDaEntidade.calcularHashCode(this);
@@ -274,6 +268,7 @@ public class ParametrosITBI extends SuperEntidade implements Serializable {
                 return pf;
             }
         }
+
         return null;
     }
 
@@ -283,15 +278,7 @@ public class ParametrosITBI extends SuperEntidade implements Serializable {
                 return pf;
             }
         }
-        return null;
-    }
 
-    public ParametrosFuncionarios getFuncionarioPorFuncao(TipoFuncaoParametrosITBI funcao) {
-        for (ParametrosFuncionarios pf : listaFuncionarios) {
-            if (pf.getFuncaoParametrosITBI().getFuncao().equals(funcao)) {
-                return pf;
-            }
-        }
         return null;
     }
 

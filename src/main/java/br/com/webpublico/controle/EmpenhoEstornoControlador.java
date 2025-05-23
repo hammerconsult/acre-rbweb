@@ -385,7 +385,6 @@ public class EmpenhoEstornoControlador extends PrettyControlador<EmpenhoEstorno>
                 facade.getNotaOrcamentariaFacade().imprimirDocumentoOficial(notas.get(0), selecionado.getCategoriaOrcamentaria().isResto() ? ModuloTipoDoctoOficial.NOTA_RESTO_ESTORNO_EMPENHO : ModuloTipoDoctoOficial.NOTA_ESTORNO_EMPENHO, selecionado, isDownload);
             }
         } catch (Exception ex) {
-            logger.error("Erro ao gerar relatório: " + ex);
             FacesUtil.addErroAoGerarRelatorio(ex.getMessage());
         }
     }

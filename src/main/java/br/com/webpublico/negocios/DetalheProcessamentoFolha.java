@@ -1,11 +1,9 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidades.rh.administracaodepagamento.EventoFPTipoFolha;
 import br.com.webpublico.entidades.rh.configuracao.ConfiguracaoFP;
 import br.com.webpublico.enums.rh.TipoCalculo;
-import br.com.webpublico.interfaces.EntidadePagavelRH;
 import com.google.common.collect.Lists;
 import org.joda.time.DateTime;
 
@@ -40,8 +38,6 @@ public class DetalheProcessamentoFolha implements Serializable {
     private transient Map<String, List<BloqueioEventoFP>> bloqueioVerbaMap = new LinkedHashMap<>();
     private transient Map<String, List<BloqueioBeneficio>> bloqueioBeneficioMap = new LinkedHashMap<>();
     private transient Map<Long, Boolean> servidoresComFolhaEfetivada = new HashMap<>();
-    private Map<ConfiguracaoEmpregadorESocial, List<HierarquiaOrganizacional>> empregadores;
-    private Map<EntidadePagavelRH, String> vinculoOrgao;
     private transient Map<String, List<ItemBaseFP>> cacheItensBaseFP = new HashMap<>();
     private transient Map<String, List<EventoFPTipoFolha>> eventoFPTiposFolha = new HashMap<>();
     private List<EventoFP> eventosAutomaticos;
@@ -62,6 +58,7 @@ public class DetalheProcessamentoFolha implements Serializable {
     private ItemCalendarioFP itemCalendarioFP;
     private boolean calculandoRetroativo = false;
     private ConfiguracaoFP configuracaoFP;
+
 
     public DetalheProcessamentoFolha() {
         liberaCalculo = true;
@@ -438,22 +435,6 @@ public class DetalheProcessamentoFolha implements Serializable {
 
     public void setQuantidadeMesesRetroativos(Integer quantidadeMesesRetroativos) {
         this.quantidadeMesesRetroativos = quantidadeMesesRetroativos;
-    }
-
-    public Map<ConfiguracaoEmpregadorESocial, List<HierarquiaOrganizacional>> getEmpregadores() {
-        return empregadores;
-    }
-
-    public void setEmpregadores(Map<ConfiguracaoEmpregadorESocial, List<HierarquiaOrganizacional>> empregadores) {
-        this.empregadores = empregadores;
-    }
-
-    public Map<EntidadePagavelRH, String> getVinculoOrgao() {
-        return vinculoOrgao;
-    }
-
-    public void setVinculoOrgao(Map<EntidadePagavelRH, String> vinculoOrgao) {
-        this.vinculoOrgao = vinculoOrgao;
     }
 
     public void gerarMessagens() {

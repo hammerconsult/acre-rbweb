@@ -200,15 +200,6 @@ public abstract class FacesUtil {
         FacesContext.getCurrentInstance().addMessage(null, getMessageError(SummaryMessages.OPERACAO_NAO_PERMITIDA.getDescricao(), " Sistema gerou esse erro: " + exceptionLog.getId() + ", encaminhe para o  suporte."));
     }
 
-    public static void addOperacaoRealizadaComSucessoContabil() {
-        FacesContext.getCurrentInstance().addMessage(null, getMessageInfo(SummaryMessages.OPERACAO_REALIZADA.getDescricao(), "Movimento adicionado na fila para seu devido processamento."));
-    }
-
-    public static void addOperacaoOptimisticLock() {
-        FacesUtil.addOperacaoNaoPermitida("O registro que você está alterando acabou de ser modificado por outro usuário.");
-        FacesUtil.addOperacaoNaoPermitida("Atualize a página e tente novamente.");
-    }
-
     public static void navegaEmbora(Object selecionado, String caminhoPadrao) {
         String origem = Web.getCaminhoOrigem();
         if (!origem.isEmpty()) {
@@ -324,6 +315,33 @@ public abstract class FacesUtil {
         return urlFinal;
     }
 
+    public static void addOperacaoOptimisticLock() {
+        FacesUtil.addOperacaoNaoPermitida("O registro que você está alterando acabou de ser modificado por outro usuário.");
+        FacesUtil.addOperacaoNaoPermitida("Atualize a página e tente novamente.");
+    }
+
+    public static String getBaseUrl(HttpServletRequest request) {
+        String baseUrl = request.getScheme() + // "http"
+            "://" +                                // "://"
+            request.getServerName() +              // "myhost"
+            ":" +                                  // ":"
+            request.getServerPort() +               // "80"
+
+            request.getContextPath() +              // webpublico
+
+            request.getServletPath();               // spring
+
+        return baseUrl;
+    }
+
+    public static void printAllFacesMessages(ValidacaoException op) {
+        printAllFacesMessages(op.getMensagens());
+    }
+
+    public static void addMensagemRelatorioSegundoPlano() {
+        addInfo("Aguarde!", "O Relatório está sendo gerado em segundo Plano");
+    }
+
     public static void recarregarPaginAtual() {
         PrettyFacesWrappedRequest prettyFacesRequest = getPrettyFacesRequest();
         SecurityContextHolderAwareRequestWrapper securityContextHolderAwareRequestWrapper = (SecurityContextHolderAwareRequestWrapper) prettyFacesRequest.getRequest();
@@ -355,28 +373,6 @@ public abstract class FacesUtil {
             }
         }
         return (PrettyFacesWrappedRequest) wrapper;
-    }
-
-    public static String getBaseUrl(HttpServletRequest request) {
-        String baseUrl = request.getScheme() + // "http"
-            "://" +                                // "://"
-            request.getServerName() +              // "myhost"
-            ":" +                                  // ":"
-            request.getServerPort() +               // "80"
-
-            request.getContextPath() +              // webpublico
-
-            request.getServletPath();               // spring
-
-        return baseUrl;
-    }
-
-    public static void printAllFacesMessages(ValidacaoException op) {
-        printAllFacesMessages(op.getMensagens());
-    }
-
-    public static void addMensagemRelatorioSegundoPlano() {
-        addInfo("Aguarde!", "O Relatório está sendo gerado em segundo Plano");
     }
 
     public static void ciarFacesContext(HttpServletRequest request, HttpServletResponse response) {

@@ -3,7 +3,6 @@ package br.com.webpublico.reinf.service;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.contabil.reinf.FiltroReinf;
 import br.com.webpublico.entidades.contabil.reinf.NotaReinf;
-import br.com.webpublico.entidades.contabil.reinf.ReceitaExtraReinf;
 import br.com.webpublico.entidades.contabil.reinf.RegistroEventoRetencaoReinf;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidadesauxiliares.AssistenteSincronizacaoReinf;
@@ -14,7 +13,6 @@ import br.com.webpublico.negocios.ConfiguracaoContabilFacade;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.contabil.reinf.ReinfFacade;
 import br.com.webpublico.reinf.eventos.EventosReinfDTO;
-import br.com.webpublico.reinf.eventos.domain.EventoR2010;
 import br.com.webpublico.reinf.eventos.TipoArquivoReinf;
 import br.com.webpublico.reinf.eventos.domain.EventoR2020;
 import br.com.webpublico.util.DataUtil;
@@ -106,9 +104,6 @@ public class R2020Service {
     private EventosReinfDTO.R2020 criarEvento2020(RegistroEventoRetencaoReinf reg, ConfiguracaoEmpregadorESocial config) {
         EventosReinfDTO.R2020 evento = (EventosReinfDTO.R2020) reinfService.getEventoR2020(empregadorESocial);
 
-        if (reinfService.isPerfilDev()) {
-            evento.setTpAmb(2);
-        }
         Integer mes = DataUtil.getMes(reg.getData());
         Integer ano = DataUtil.getAno(reg.getData());
         evento.setIdESocial(reg.getPessoa().getId().toString().concat(ano.toString()).concat(mes.toString()));
@@ -123,6 +118,9 @@ public class R2020Service {
         evento.setNrInsc(empregadorESocial.getNrInscID());
         evento.setPerApur(ano, mes);
 
+        if (reinfService.isPerfilDev()) {
+            evento.setTpAmb(2);
+        }
         evento.setTpInscEstabPrest(1);
         evento.setNrInscrEstabPrest(config.getEntidade().getPessoaJuridica().getCnpjSemFormatacao());
 

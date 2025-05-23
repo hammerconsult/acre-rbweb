@@ -38,10 +38,10 @@ public class ReinfFacade {
     private EntityManager em;
     @EJB
     private ConfiguracaoContabilFacade configuracaoContabilFacade;
-    @EJB
-    private ConfiguracaoEmpregadorESocialFacade configuracaoEmpregadorESocialFacade;
     private final static String CAMPO_DATA_DOCUMENTO_COMPROBATORIO_LIQUIDACAO = "doc.datadocto";
     private final static String CAMPO_DATA_PAGAMENTO = "pag.datapagamento";
+    @EJB
+    private ConfiguracaoEmpregadorESocialFacade configuracaoEmpregadorESocialFacade;
 
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 2)
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)

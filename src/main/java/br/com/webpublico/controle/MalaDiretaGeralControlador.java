@@ -11,6 +11,7 @@ import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.*;
 import br.com.webpublico.negocios.comum.ConfiguracaoEmailFacade;
+import br.com.webpublico.negocios.tributario.services.ServiceDAM;
 import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
 import br.com.webpublico.util.*;
 import com.google.common.base.Strings;
@@ -19,6 +20,7 @@ import com.google.common.collect.Maps;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
+import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.primefaces.model.DefaultStreamedContent;
@@ -31,7 +33,6 @@ import javax.faces.bean.ViewScoped;
 import javax.faces.model.SelectItem;
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.zip.ZipEntry;
@@ -91,14 +92,13 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
 
     private ConfiguracaoTributario configuracaoTributario;
     private DefaultStreamedContent fileDownload;
-    private List<CompletableFuture<AssistenteImpressaoMalaDiretaGeral>> listaFuturesGeracaoDam;
+    private List<Future<AssistenteImpressaoMalaDiretaGeral>> listaFuturesGeracaoDam;
     private String pastaMalaDireta;
     private String email;
     private Long idCadastro;
     private ItemMalaDiretaGeral item;
     private Map<ContribuinteTributario, List<ResultadoParcela>> mapaCadastroParcelas;
-    private List<CompletableFuture<Map<ContribuinteTributario, List<ResultadoParcela>>>> futureConsultaDebitosCadastro;
-    private ImprimeDAM imprimeDAM = new ImprimeDAM();
+    private List<Future<Map<ContribuinteTributario, List<ResultadoParcela>>>> futureConsultaDebitosCadastro;
 
     public MalaDiretaGeralControlador() {
         super(MalaDiretaGeral.class);
@@ -331,10 +331,7 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
                 if (selecionado.getTipoMalaDireta().isCobranca()) {
                     futureConsultaDebitosCadastro = Lists.newArrayList();
                     for (List<ImpressaoMalaDiretaGeral> listaIdsCadastrosParcial : Lists.partition(idsCadastros, idsCadastros.size() > 5 ? idsCadastros.size() / 5 : 1)) {
-                        AssistenteBarraProgresso assistente = new AssistenteBarraProgresso(sistemaFacade.getUsuarioCorrente(),
-                            "Buscando cadastros para mala direta geral", 0);
-                        futureConsultaDebitosCadastro.add(AsyncExecutor.getInstance().execute(assistente,
-                            () -> malaDiretaGeralFacade.buscarDebitosDaMalaDiretaDe(filtro, listaIdsCadastrosParcial)));
+                        futureConsultaDebitosCadastro.add(malaDiretaGeralFacade.buscarDebitosDaMalaDiretaDe(filtro, listaIdsCadastrosParcial));
                     }
                 } else {
                     for (ImpressaoMalaDiretaGeral idsCadastro : idsCadastros) {
@@ -428,9 +425,6 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
             validarDadosDaMalaDireta();
             selecionado.setTipoCadastro(filtro.getTipoCadastroTributario());
             selecionado = malaDiretaGeralFacade.salvarRetornando(selecionado);
-
-            System.out.println("Vai colocar na sessão: " + mapaCadastroParcelas.size());
-
             Web.poeNaSessao(SESSAO, mapaCadastroParcelas);
             Web.poeNaSessao(filtro);
             FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "acompanhamento/" + selecionado.getId() + "/");
@@ -461,15 +455,14 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
             selecionado.setConfiguracaoDAM(filtro.getDividas().get(0).getConfiguracaoDAM());
         }
         assistenteBarraProgresso = new AssistenteBarraProgresso("Gerando mala direta", 1);
-        assistenteBarraProgresso.setUsuarioSistema(sistemaFacade.getUsuarioCorrente());
         futuresItemMalaDireta = Lists.newArrayList();
+        UsuarioSistema usuarioSistema = malaDiretaGeralFacade.getSistemaFacade().getUsuarioCorrente();
 
         if (!mapaCadastroParcelas.isEmpty()) {
             List<Map<ContribuinteTributario, List<ResultadoParcela>>> mapaParticionado = particionarMapaDeCadastrosComDebitos(mapaCadastroParcelas);
             assistenteBarraProgresso.setTotal(mapaCadastroParcelas.size());
             for (Map<ContribuinteTributario, List<ResultadoParcela>> mapa : mapaParticionado) {
-                futuresItemMalaDireta.add(AsyncExecutor.getInstance().execute(assistenteBarraProgresso,
-                    () -> malaDiretaGeralFacade.criarItemMalaDireta(selecionado, mapa, assistenteBarraProgresso)));
+                futuresItemMalaDireta.add(malaDiretaGeralFacade.criarItemMalaDireta(selecionado, mapa, assistenteBarraProgresso, usuarioSistema));
             }
         } else {
             assistenteBarraProgresso.setDescricaoProcesso("Nenhum débito encontrado para os cadastros");
@@ -519,35 +512,55 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
             ByteArrayOutputStream byteArrayOutputStream = report.exportarJasperParaPDF(jasperPrint);
             report.escreveNoResponse(arquivoJasper, byteArrayOutputStream.toByteArray());
         } catch (Exception e) {
-            FacesUtil.addErrorGenerico(e);
+            logger.error("Não foi possível gerar o PDF da mala direta: {}", e);
         }
     }
 
     public void imprimirDam(ItemMalaDiretaGeral item) {
         try {
-            imprimeDAM.imprimirDamMalaDiretaGeral(sistemaFacade.getUsuarioCorrente().getLogin(),
-                selecionado.getId(), Lists.newArrayList(item.getId()));
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve);
+            List<ImpressaoMalaDiretaGeral> listaDams = malaDiretaGeralFacade.listaImpressaoMalaDireta(Lists.newArrayList(item.getId()), selecionado);
+            String arquivoJasper = "DAM_MALA_DIRETA_GERAL";
+            AbstractReport report = AbstractReport.getAbstractReport();
+            ByteArrayOutputStream byteArrayOutputStream = gerarBytesDam(listaDams.get(0), arquivoJasper, report);
+            report.escreveNoResponse(arquivoJasper, byteArrayOutputStream.toByteArray());
         } catch (Exception e) {
-            FacesUtil.addErrorGenerico(e);
+            logger.error("Não foi possível gerar o PDF da mala direta: {}", e);
         }
     }
 
-    public void imprimirDams() {
-        listaFuturesGeracaoDam = new ArrayList<>();
-        criarPastaDaMalaDireta();
+    public ByteArrayOutputStream gerarBytesDam(ImpressaoMalaDiretaGeral impressao, String arquivoJasper, AbstractReport report) throws JRException, IOException {
+        ServiceDAM serviceDAM = Util.recuperarSpringBean(ServiceDAM.class);
+
+        List<DAM> dans = malaDiretaGeralFacade.buscarDansDaMalaDireta(Lists.newArrayList(impressao));
+        pixFacade.gerarQrCodePIX(dans);
+
+        HashMap parameters = new HashMap<>();
+        parameters.put("USUARIO", getSistemaControlador().getUsuarioCorrente().getLogin());
+        parameters.put("BRASAO", report.getCaminhoImagem());
+        parameters.put("IMAGEM_FUNDO", malaDiretaGeralFacade.getImagemInputStream(report.getCaminhoImagem()));
+        parameters.put("HOMOLOGACAO", serviceDAM.isAmbienteHomologacao());
+        parameters.put("MSG_PIX", "Pagamento Via QrCode PIX");
+        report.setGeraNoDialog(true);
+        JasperPrint jasperPrint = report.gerarBytesDeRelatorioComDadosEmCollectionView(report.getCaminho(),
+            arquivoJasper + ".jasper", parameters, new JRBeanCollectionDataSource(Lists.newArrayList(impressao)));
+        return report.exportarJasperParaPDF(jasperPrint);
+    }
+
+    public void imprimirDams() throws Exception {
+        assistenteImpressaoMalaDireta = new AssistenteImpressaoMalaDiretaGeral();
         List<ImpressaoMalaDiretaGeral> impressoes = Lists.newArrayList();
         impressoes.addAll(malaDiretaGeralFacade.listaImpressaoMalaDireta(null, selecionado));
+        assistenteImpressaoMalaDireta.setItens(impressoes);
+        assistenteImpressaoMalaDireta.setGerados(0);
+        AbstractReport report = AbstractReport.getAbstractReport();
+        listaFuturesGeracaoDam = new ArrayList<>();
+        criarPastaDaMalaDireta();
         int partes = impressoes.size() > 50 ? impressoes.size() / 4 : impressoes.size();
-        List<List<ImpressaoMalaDiretaGeral>> impressoesParticionadas = Lists.partition(impressoes, partes);
+        List<List<ImpressaoMalaDiretaGeral>> listaDamsPartes = Lists.partition(impressoes, partes);
         int numFuture = 1;
-        UsuarioSistema usuarioCorrente = sistemaFacade.getUsuarioCorrente();
-        for (List<ImpressaoMalaDiretaGeral> parte : impressoesParticionadas) {
-            assistenteImpressaoMalaDireta = new AssistenteImpressaoMalaDiretaGeral(imprimeDAM,
-                selecionado.getId(), parte, usuarioCorrente, getPastaMalaDireta(), numFuture++);
-            listaFuturesGeracaoDam.add(AsyncExecutor.getInstance().execute(assistenteImpressaoMalaDireta,
-                () -> malaDiretaGeralFacade.imprimirDamsMalaDireta(assistenteImpressaoMalaDireta)));
+        for (List<ImpressaoMalaDiretaGeral> parte : listaDamsPartes) {
+            listaFuturesGeracaoDam.add(malaDiretaGeralFacade.imprimirDamsMalaDireta(assistenteImpressaoMalaDireta, parte, numFuture, getSistemaControlador().getUsuarioCorrente(), report.getCaminho(), report.getCaminhoImagem(), selecionado.getId(), getPastaMalaDireta(), selecionado.getExercicio()));
+            numFuture++;
         }
     }
 
@@ -555,10 +568,6 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
         File pasta = new File(getPastaMalaDireta());
         if (!pasta.exists()) {
             pasta.mkdir();
-        } else {
-            for (File file : new File(getPastaMalaDireta()).listFiles()) {
-                file.delete();
-            }
         }
     }
 
@@ -760,7 +769,7 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
     }
 
     public void enviarTodosEmails() {
-       AbstractReport report = AbstractReport.getAbstractReport();
+        AbstractReport report = AbstractReport.getAbstractReport();
         List<ImpressaoMalaDiretaGeral> impressaoMalaDiretaGerals = malaDiretaGeralFacade.listaImpressaoMalaDireta(null, selecionado);
         List<ImpressaoMalaDiretaGeral> enviarEmail = Lists.newArrayList();
         for (ImpressaoMalaDiretaGeral impressao : impressaoMalaDiretaGerals) {
@@ -769,21 +778,18 @@ public class MalaDiretaGeralControlador extends PrettyControlador<MalaDiretaGera
             }
             enviarEmail.add(impressao);
         }
-        UsuarioSistema usuarioCorrente = sistemaFacade.getUsuarioCorrente();
-        malaDiretaGeralFacade.enviarEmail(imprimeDAM, selecionado.getId(),
-            enviarEmail, usuarioCorrente.getLogin(), getAssunto());
+        malaDiretaGeralFacade.envarEmail(enviarEmail, getSistemaControlador().getUsuarioCorrente(), report.getCaminho(),
+            report.getCaminhoImagem(), getAssunto());
         FacesUtil.addOperacaoRealizada("TODOS os e-mails estão sendo enviados em segundo plano");
     }
 
     public void enviarEmail() {
         try {
-            List<ImpressaoMalaDiretaGeral> listaDams = malaDiretaGeralFacade
-                .listaImpressaoMalaDireta(Lists.newArrayList(item.getId()), selecionado);
+            List<ImpressaoMalaDiretaGeral> listaDams = malaDiretaGeralFacade.listaImpressaoMalaDireta(Lists.newArrayList(item.getId()), selecionado);
             ImpressaoMalaDiretaGeral impressao = listaDams.get(0);
-            byte[] bytes = imprimeDAM.gerarBytesImpressaoMalaDiretaGeral(sistemaFacade.getUsuarioCorrente().getLogin(),
-                selecionado.getId(), Lists.newArrayList(item.getId()));
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(bytes.length);
-            byteArrayOutputStream.write(bytes);
+            String arquivoJasper = "DAM_MALA_DIRETA_GERAL";
+            AbstractReport report = AbstractReport.getAbstractReport();
+            ByteArrayOutputStream byteArrayOutputStream = gerarBytesDam(impressao, arquivoJasper, report);
             EmailService.getInstance().enviarEmail(email, getAssunto(), impressao.getTexto(), byteArrayOutputStream);
             FacesUtil.addOperacaoRealizada("E-mail enviado com sucesso!");
         } catch (Exception e) {

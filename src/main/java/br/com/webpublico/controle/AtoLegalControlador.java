@@ -419,6 +419,42 @@ public class AtoLegalControlador extends PrettyControlador<AtoLegal> implements 
         this.validaTotais = validaTotais;
     }
 
+    public void validarDemaisCamposObrigatorios(ValidacaoException ve) {
+        if (!selecionado.isTipoAtoLegalOficio()) {
+            if (selecionado.getVeiculoDePublicacao() == null) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo Veículo de Publicação deve ser informado!");
+            }
+        }
+        if (selecionado.isTipoAtoLegalProjetoDeLei()) {
+            if (selecionado.getDataEnvio() == null) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo Data de Envio deve ser informado!");
+            }
+        }
+        if (renderizaPainelUnidades() || isTipoAtoLegalLegislativoOuControleExternoOuPortaria()) {
+            if (selecionado.isTipoAtoLegalUnidadeInterna()) {
+                if (hierarquiaOrganizacional == null) {
+                    ve.adicionarMensagemDeCampoObrigatorio("O campo Unidade Organizacional deve ser informada!");
+                }
+            }
+            if (selecionado.isTipoAtoLegalUnidadeExterna()) {
+                if (selecionado.getUnidadeExterna() == null) {
+                    ve.adicionarMensagemDeCampoObrigatorio("O campo Unidade Externa deve ser informado!");
+                }
+            }
+
+        } else {
+            if (selecionado.getDataPromulgacao() == null) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo Data de Sanção deve ser informada!");
+            }
+            if (selecionado.getDataPublicacao() == null) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo Data de Publicação deve ser informada!");
+            }
+        }
+        if (selecionado.getArquivo() == null) {
+            ve.adicionarMensagemDeCampoObrigatorio("O campo Anexar Arquivo deve ser informado.");
+        }
+    }
+
     public void validaAtoLegalORC() {
         boolean isAlteracaoOrcamento = PropositoAtoLegal.ALTERACAO_ORCAMENTARIA.equals(selecionado.getPropositoAtoLegal());
         boolean isOrcamento = PropositoAtoLegal.ORCAMENTO.equals(selecionado.getPropositoAtoLegal());

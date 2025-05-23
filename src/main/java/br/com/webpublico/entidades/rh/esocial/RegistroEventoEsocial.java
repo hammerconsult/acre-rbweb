@@ -140,6 +140,14 @@ public class RegistroEventoEsocial extends SuperEntidade {
         this.tipoTrabalhadorEsocial = tipoTrabalhadorEsocial;
     }
 
+    public PessoaFisica getPessoaFisica() {
+        return pessoaFisica;
+    }
+
+    public void setPessoaFisica(PessoaFisica pessoaFisica) {
+        this.pessoaFisica = pessoaFisica;
+    }
+
     public List<VinculoFPEventoEsocial> getItensVinculo() {
         List<VinculoFPEventoEsocial> vinculosEvento = Lists.newArrayList();
         if (itemVinculoFP != null && !itemVinculoFP.isEmpty()) {
@@ -210,14 +218,6 @@ public class RegistroEventoEsocial extends SuperEntidade {
 
     public void setTipoApuracaoFolha(TipoApuracaoFolha tipoApuracaoFolha) {
         this.tipoApuracaoFolha = tipoApuracaoFolha;
-    }
-
-    public PessoaFisica getPessoaFisica() {
-        return pessoaFisica;
-    }
-
-    public void setPessoaFisica(PessoaFisica pessoaFisica) {
-        this.pessoaFisica = pessoaFisica;
     }
 
     public void marcarTodosItensVinculos() {

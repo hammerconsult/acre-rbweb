@@ -8,16 +8,7 @@ import br.com.webpublico.negocios.ConfiguracaoLicitacaoFacade;
 import br.com.webpublico.negocios.ConfiguracaoTributarioFacade;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.SistemaFacade;
-import br.com.webpublico.pncp.dto.AtaRegistroPrecoConsultaDTO;
-import br.com.webpublico.pncp.dto.ContratacaoConsultaDTO;
-import br.com.webpublico.pncp.dto.ContratoEmpenhoConsultaDTO;
-import br.com.webpublico.pncp.dto.EventoPncpDTO;
-import br.com.webpublico.pncp.dto.FiltroConsultaDTO;
-import br.com.webpublico.pncp.dto.OrgaoEntidadeConsultaDTO;
-import br.com.webpublico.pncp.dto.PlanoContratacaoAnualConsultaDTO;
-import br.com.webpublico.pncp.dto.PlanoContratacaoAnualItemConsultaDTO;
-import br.com.webpublico.pncp.dto.RespostaErroDTO;
-import br.com.webpublico.pncp.dto.UnidadeConsultaDTO;
+import br.com.webpublico.pncp.dto.*;
 import br.com.webpublico.pncp.entidade.EventoPncp;
 import br.com.webpublico.pncp.entidade.LogEventoPncp;
 import br.com.webpublico.pncp.enums.OperacaoPncp;
@@ -41,7 +32,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -266,20 +256,6 @@ public class PncpService implements Serializable {
         }
     }
 
-    public List<PlanoContratacaoAnualItemConsultaDTO> recuperarItensPlanoContratacaoAnual(ValidacaoException ve, PlanoContratacaoAnualConsultaDTO dto) {
-        try {
-            String url = getBaseUrl(ve) + URL_API_PCA + "get-itens-pca/" + dto.getId();
-            ResponseEntity<PlanoContratacaoAnualItemConsultaDTO[]> itens = restTemplate.getForEntity(
-                url, PlanoContratacaoAnualItemConsultaDTO[].class);
-            dto.setItensPlano(Arrays.asList(itens.getBody()));
-
-            return dto.getItensPlano();
-        } catch (HttpClientErrorException ex) {
-            tratarErroGenerico(ve, ex);
-        }
-        return null;
-    }
-
     public List<OrgaoEntidadeConsultaDTO> buscarOrgaoEntidade(ValidacaoException ve) {
         List<OrgaoEntidadeConsultaDTO> list = Lists.newArrayList();
         try {
@@ -310,21 +286,6 @@ public class PncpService implements Serializable {
             tratarErroGenerico(ve, ex);
         }
     }
-
-    public void enviarEmLote(TipoEventoPncp tipoEvento, OperacaoPncp operacao, List<Long> idsOrigem) {
-        ValidacaoException ve = new ValidacaoException();
-        try {
-            List<EventoPncpDTO> dtos = new ArrayList<>();
-            for (Long id : idsOrigem) {
-                EventoPncp evento = criarEvento(tipoEvento, operacao, id);
-                dtos.add(new EventoPncpDTO(evento));
-            }
-            restTemplate.postForEntity(getBaseUrl(ve) + URL_API_EVENTO + "/por-lote", dtos, String.class);
-        } catch (HttpClientErrorException ex) {
-            tratarErroGenerico(ve, ex);
-        }
-    }
-
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public EventoPncp criarEvento(TipoEventoPncp tipoEvento, OperacaoPncp operacao, Long idOrigem) {

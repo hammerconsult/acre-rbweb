@@ -5,17 +5,13 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoCreditoReceberDTO;
 import br.com.webpublico.enums.Intervalo;
 import br.com.webpublico.enums.NaturezaDividaAtivaCreditoReceber;
 import br.com.webpublico.exception.ValidacaoException;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
-import org.joda.time.LocalDate;
 
-import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -32,8 +28,6 @@ public class SaldoCreditoReceberFacade extends AbstractFacade<SaldoCreditoRecebe
 
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
-    @EJB
-    private ConfiguracaoContabilFacade configuracaoContabilFacade;
 
     public SaldoCreditoReceberFacade() {
         super(SaldoCreditoReceber.class);
@@ -45,39 +39,26 @@ public class SaldoCreditoReceberFacade extends AbstractFacade<SaldoCreditoRecebe
     }
 
     public void gerarSaldoCreditoReceber(CreditoReceber creditoReceber, Boolean validarSaldoNegativo) throws ExcecaoNegocioGenerica {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDOCREDITORECEBERMICROSERVIC")) {
-            SaldoCreditoReceberDTO dto = new SaldoCreditoReceberDTO();
-            dto.setIdUnidadeOrganizacional(creditoReceber.getUnidadeOrganizacional().getId());
-            dto.setIdContaDeDestinacao(creditoReceber.getContaDeDestinacao().getId());
-            dto.setIdContaReceita(creditoReceber.getReceitaLOA().getContaDeReceita().getId());
-            dto.setValor(creditoReceber.getValor());
-            dto.setTipoLancamento(creditoReceber.getTipoLancamento());
-            dto.setOperacaoCreditoReceber(creditoReceber.getOperacaoCreditoReceber());
-            dto.setNatureza(creditoReceber.getNaturezaCreditoReceber());
-            dto.setDataSaldo(DataUtil.dateToLocalDate(creditoReceber.getDataCredito()));
-            dto.setIntervalo(creditoReceber.getIntervalo());
-            ApiServiceContabil.getService().gerarSaldoCreditoReceber(dto);
+        SaldoCreditoReceber ultimoSaldo = getUltimoSaldoPorDataUnidadeConta(creditoReceber);
+        List<SaldoCreditoReceber> saldosPosteriores = getSaldosPosterioresPorDataUnidadeConta(creditoReceber);
+
+        if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
+            ultimoSaldo = criarNovoSaldo(creditoReceber);
+            ultimoSaldo = definirValorNaColunaCorrespondente(ultimoSaldo, creditoReceber);
+            salvar(ultimoSaldo);
         } else {
-            SaldoCreditoReceber ultimoSaldo = getUltimoSaldoPorDataUnidadeConta(creditoReceber);
-            List<SaldoCreditoReceber> saldosPosteriores = getSaldosPosterioresPorDataUnidadeConta(creditoReceber);
-            if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
-                ultimoSaldo = criarNovoSaldo(creditoReceber);
+            if (DataUtil.dataSemHorario(ultimoSaldo.getDataSaldo()).compareTo(DataUtil.dataSemHorario(creditoReceber.getDataCredito())) == 0) {
                 ultimoSaldo = definirValorNaColunaCorrespondente(ultimoSaldo, creditoReceber);
                 salvar(ultimoSaldo);
             } else {
-                if (DataUtil.dataSemHorario(ultimoSaldo.getDataSaldo()).compareTo(DataUtil.dataSemHorario(creditoReceber.getDataCredito())) == 0) {
-                    ultimoSaldo = definirValorNaColunaCorrespondente(ultimoSaldo, creditoReceber);
-                    salvar(ultimoSaldo);
-                } else {
-                    SaldoCreditoReceber novoSaldo;
-                    novoSaldo = criarNovoSaldo(creditoReceber);
-                    novoSaldo = definirValoresDoSaldoRecuperado(ultimoSaldo, novoSaldo);
-                    novoSaldo = definirValorNaColunaCorrespondente(novoSaldo, creditoReceber);
-                    salvarNovo(novoSaldo);
-                }
+                SaldoCreditoReceber novoSaldo;
+                novoSaldo = criarNovoSaldo(creditoReceber);
+                novoSaldo = definirValoresDoSaldoRecuperado(ultimoSaldo, novoSaldo);
+                novoSaldo = definirValorNaColunaCorrespondente(novoSaldo, creditoReceber);
+                salvarNovo(novoSaldo);
             }
-            gerarSaldoPosteriores(creditoReceber, saldosPosteriores);
         }
+        gerarSaldoPosteriores(creditoReceber, saldosPosteriores);
     }
 
     private void gerarSaldoPosteriores(CreditoReceber creditoReceber, List<SaldoCreditoReceber> saldosPosteriores) {

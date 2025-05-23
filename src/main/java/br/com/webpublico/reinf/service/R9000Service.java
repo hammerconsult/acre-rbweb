@@ -81,13 +81,13 @@ public class R9000Service {
     private EventosReinfDTO.R9000 criarEventoR9000V1(ConfiguracaoEmpregadorESocial config, RegistroEventoExclusaoReinf reg, ValidacaoException val) {
         EventosReinfDTO.R9000 evento = (EventosReinfDTO.R9000) reinfService.getEventoR9000(empregadorESocial);
 
-        if (reinfService.isPerfilDev()) {
-            evento.setTpAmb(2);
-        }
         Integer mes = reg.getMes().getNumeroMes();
         Integer ano = reg.getExercicio().getAno();
         evento.setIdESocial(ano.toString().concat(mes.toString()));
 
+        if (reinfService.isPerfilDev()) {
+            evento.setTpAmb(2);
+        }
         evento.setTpInsc(1);
         evento.setNrInsc(empregadorESocial.getNrInscID());
 

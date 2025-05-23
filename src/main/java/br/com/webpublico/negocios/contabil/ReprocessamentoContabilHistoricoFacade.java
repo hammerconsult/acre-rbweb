@@ -67,7 +67,7 @@ public class ReprocessamentoContabilHistoricoFacade extends AbstractFacade<Repro
                 reprocessamento.setTotal(((BigDecimal) object[5]).intValue());
                 reprocessamento.setDataHoraInicio((Date) object[6]);
                 reprocessamento.setDataHoraTermino((Date) object[7]);
-                reprocessamento.setDecorrido(object[8] != null ? ((BigDecimal) object[8]).longValue() : 0);
+                reprocessamento.setDecorrido(((BigDecimal) object[8]).longValue());
                 reprocessamento.setUsuario((String) object[9]);
                 resultado.add(reprocessamento);
             }

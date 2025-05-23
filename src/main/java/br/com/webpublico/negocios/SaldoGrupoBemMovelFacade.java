@@ -1,15 +1,10 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoGrupoBemMovelDTO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoGrupoMaterialDTO;
 import br.com.webpublico.enums.*;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
-import org.jboss.ejb3.annotation.TransactionTimeout;
-import org.joda.time.LocalDate;
 
 import javax.ejb.*;
 import javax.persistence.EntityManager;
@@ -20,7 +15,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created with IntelliJ IDEA.
@@ -38,8 +32,6 @@ public class SaldoGrupoBemMovelFacade implements Serializable {
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
     @EJB
-    private SistemaFacade sistemaFacade;
-    @EJB
     private ConfiguracaoContabilFacade configuracaoContabilFacade;
     private ConfiguracaoContabil configuracaoContabil;
 
@@ -47,43 +39,30 @@ public class SaldoGrupoBemMovelFacade implements Serializable {
     public void geraSaldoGrupoBemMoveis(UnidadeOrganizacional unidade, GrupoBem grupoBem, BigDecimal valor,
                                         TipoGrupo tipoGrupo, Date data, TipoOperacaoBensMoveis operacao,
                                         TipoLancamento tipoLancamento, TipoOperacao tipoOperacao, Boolean validarSaldo) throws ExcecaoNegocioGenerica {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDOGRUPOBEMMICROSERVICE")) {
-            SaldoGrupoBemMovelDTO dto = new SaldoGrupoBemMovelDTO();
-            dto.setIdUnidadeOrganizacional(unidade.getId());
-            dto.setIdGrupoBem(grupoBem.getId());
-            dto.setValor(valor);
-            dto.setTipoGrupo(tipoGrupo);
-            dto.setTipoLancamento(tipoLancamento);
-            dto.setOperacao(operacao);
-            dto.setTipoOperacao(tipoOperacao);
-            dto.setData(DataUtil.dateToLocalDate(data));
-            dto.setValidarSaldo(validarSaldo);
-            ApiServiceContabil.getService().gerarSaldoGrupoBemMovel(dto);
-        } else {
-            NaturezaTipoGrupoBem naturezaTipoGrupoBem = recuperarNaturezaGrupoBem(operacao, tipoOperacao);
-            validarNaturezaDoSaldo(operacao, tipoOperacao, naturezaTipoGrupoBem);
 
-            MovimentoGrupoBensMoveis movimento = new MovimentoGrupoBensMoveis();
-            movimento.setId(null);
-            movimento.setDataMovimento(data);
-            movimento.setUnidadeOrganizacional(unidade);
-            movimento.setGrupoBem(grupoBem);
-            movimento.setNaturezaTipoGrupoBem(naturezaTipoGrupoBem);
-            movimento.setTipoGrupo(tipoGrupo);
-            movimento.setOperacao(operacao);
-            movimento.setTipoLancamento(tipoLancamento);
-            movimento.setTipoOperacao(tipoOperacao);
-            movimento.setValor(valor);
-            movimento.setValidarSaldo(validarSaldo);
-            alterarValorColunaCredioDebito(movimento, null);
+        NaturezaTipoGrupoBem naturezaTipoGrupoBem = recuperarNaturezaGrupoBem(operacao, tipoOperacao);
+        validarNaturezaDoSaldo(operacao, tipoOperacao, naturezaTipoGrupoBem);
 
-            SaldoGrupoBem ultimoSaldo = recuperaUltimoSaldoPorData(grupoBem, unidade, tipoGrupo, naturezaTipoGrupoBem, data);
-            List<SaldoGrupoBem> saldoPosterior = recuperaSaldosPosterioresAData(movimento);
+        MovimentoGrupoBensMoveis movimento = new MovimentoGrupoBensMoveis();
+        movimento.setId(null);
+        movimento.setDataMovimento(data);
+        movimento.setUnidadeOrganizacional(unidade);
+        movimento.setGrupoBem(grupoBem);
+        movimento.setNaturezaTipoGrupoBem(naturezaTipoGrupoBem);
+        movimento.setTipoGrupo(tipoGrupo);
+        movimento.setOperacao(operacao);
+        movimento.setTipoLancamento(tipoLancamento);
+        movimento.setTipoOperacao(tipoOperacao);
+        movimento.setValor(valor);
+        movimento.setValidarSaldo(validarSaldo);
+        alterarValorColunaCredioDebito(movimento, null);
 
-            gerarSaldo(movimento, ultimoSaldo);
-            gerarSaldoPosterior(movimento, saldoPosterior);
-            em.merge(movimento);
-        }
+        SaldoGrupoBem ultimoSaldo = recuperaUltimoSaldoPorData(grupoBem, unidade, tipoGrupo, naturezaTipoGrupoBem, data);
+        List<SaldoGrupoBem> saldoPosterior = recuperaSaldosPosterioresAData(movimento);
+
+        gerarSaldo(movimento, ultimoSaldo);
+        gerarSaldoPosterior(movimento, saldoPosterior);
+        em.merge(movimento);
     }
 
     private void validarNaturezaDoSaldo(TipoOperacaoBensMoveis operacao, TipoOperacao tipoOperacao, NaturezaTipoGrupoBem naturezaTipoGrupoBem) {

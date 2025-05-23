@@ -7,15 +7,15 @@ package br.com.webpublico.entidades;
 
 import br.com.webpublico.enums.TipoUnidadeGestora;
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.anotacoes.Etiqueta;
-import br.com.webpublico.util.anotacoes.Obrigatorio;
-import br.com.webpublico.util.anotacoes.Pesquisavel;
-import br.com.webpublico.util.anotacoes.Tabelavel;
+import br.com.webpublico.util.IdentidadeDaEntidade;
+import br.com.webpublico.util.anotacoes.*;
 import com.google.common.collect.Lists;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -146,7 +146,7 @@ public class UnidadeGestora extends SuperEntidade implements Serializable {
 
     @Override
     public String toString() {
-        return codigo + " - " + descricao + " - " + pessoaJuridica + " (" + tipoUnidadeGestora.getDescricao()+ ")";
+        return codigo + " - " + descricao + " - PJ (" + pessoaJuridica + ")";
     }
 
     public Exercicio getExercicio() {

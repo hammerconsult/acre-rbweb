@@ -335,7 +335,7 @@ public class ProcessoDebitoAtualizacaoMonetariaFacade extends AbstractFacade<Pro
             "  where PARCELAVALORDIVIDA_ID = :pvd " +
             "  and processo.SITUACAOPARCELAMENTO <> :situacaoEstornado";
         Query q = em.createNativeQuery(sql, ItemProcessoParcelamento.class);
-        q.setParameter("situacaoEstornado", SituacaoParcelamento.ESTORNADO.name());;
+        q.setParameter("situacaoEstornado", SituacaoParcelamento.ESTORNADO.name());
         q.setParameter("pvd", parcela.getId());
         Util.imprimeSQL(sql, q);
         if (!q.getResultList().isEmpty()) {

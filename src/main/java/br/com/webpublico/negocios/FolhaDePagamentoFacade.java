@@ -11,7 +11,10 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.rh.administracaodepagamento.*;
 import br.com.webpublico.entidades.rh.configuracao.ConfiguracaoRH;
 import br.com.webpublico.entidades.rh.creditodesalario.CreditoSalario;
-import br.com.webpublico.entidades.rh.esocial.*;
+import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
+import br.com.webpublico.entidades.rh.esocial.RegistroESocial;
+import br.com.webpublico.entidades.rh.esocial.RegistroEventoEsocial;
+import br.com.webpublico.entidades.rh.esocial.VinculoFPEventoEsocial;
 import br.com.webpublico.entidadesauxiliares.EventoTotalItemFicha;
 import br.com.webpublico.entidadesauxiliares.ResultadoCalculoRetroativoFP;
 import br.com.webpublico.entidadesauxiliares.rh.CedenciaPortal;
@@ -28,14 +31,12 @@ import br.com.webpublico.exception.rh.CalculoBloqueadoException;
 import br.com.webpublico.interfaces.EntidadePagavelRH;
 import br.com.webpublico.interfaces.FolhaCalculavel;
 import br.com.webpublico.negocios.rh.configuracao.ConfiguracaoRHFacade;
-import br.com.webpublico.negocios.rh.esocial.ConfiguracaoEmpregadorESocialFacade;
 import br.com.webpublico.script.ItemErroScript;
 import br.com.webpublico.singletons.SingletonFolhaDePagamento;
 import br.com.webpublico.util.*;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.hibernate.Hibernate;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
@@ -119,11 +120,6 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
     private PensaoAlimenticiaFacade pensaoAlimenticiaFacade;
     @EJB
     private ContratoFPFacade contratoFPFacade;
-
-    @EJB
-    private ConfiguracaoEmpregadorESocialFacade configuracaoEmpregadorESocialFacade;
-    @EJB
-    private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacadeAtual;
 
     public FolhaDePagamentoFacade() {
         super(FolhaDePagamento.class);
@@ -327,69 +323,36 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
     }
 
     @TransactionTimeout(value = 1, unit = TimeUnit.HOURS)
-    public List<VinculoFP> recuperarMatriculasSemCedenciaEstagioOuAfastamento(Mes mes, Integer ano) {
-        Query q = em.createQuery("select v " +
-            "  from VinculoFP v, RecursoDoVinculoFP recurso " +
-            "  join v.matriculaFP m " +
-            " where to_date(to_char(:dataHoje,'mm/yyyy'),'mm/yyyy') between to_date(to_char(v.inicioVigencia,'mm/yyyy'),'mm/yyyy') and to_date(to_char(coalesce(v.finalVigencia,:dataHoje),'mm/yyyy'),'mm/yyyy') " +
+    public List<VinculoFP> recuperarTodasMatriculas(Mes mes, Integer ano) {
+        Query q = em.createQuery("select v "
+            + "  from VinculoFP v, RecursoDoVinculoFP recurso " +
+            "   "
+            + "  join v.matriculaFP m"
+            + " where to_date(to_char(:dataHoje,'mm/yyyy'),'mm/yyyy') between to_date(to_char(v.inicioVigencia,'mm/yyyy'),'mm/yyyy') and to_date(to_char(coalesce(v.finalVigencia,:dataHoje),'mm/yyyy'),'mm/yyyy') " +
             " and to_date(to_char(:dataHoje,'mm/yyyy'),'mm/yyyy') between to_date(to_char(recurso.inicioVigencia,'mm/yyyy'),'mm/yyyy') and to_date(to_char(coalesce(recurso.finalVigencia,:dataHoje),'mm/yyyy'),'mm/yyyy') " +
-            " and m.matricula is not null and m.pessoa is not null and v.inicioVigencia is not null and v.id = recurso.vinculoFP.id " +
-            " and :data between v.inicioVigencia and coalesce(v.finalVigencia,:data) " +
-            "  and not exists ( " +
-            "    select 1 " +
-            "    from CedenciaContratoFP cedencia " +
-            "    where cedencia.contratoFP.id = v.id " +
-            "      and cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia " +
-            "      and ((:dataInicial >= cedencia.dataCessao  " +
-            "           and not exists (  " +
-            "                select 1 " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciaContratoFP.id = cedencia.id) " +
-            "                or exists (  " +
-            " select 1 from Afastamento a  " +
-            "  join a.tipoAfastamento t " +
-            " where a.contratoFP.id = v.id  " +
-            "  and t.naoCalcularFichaSemRetorno = true  " +
-            "  and (a.retornoInformado = false or a.retornoInformado is null)  " +
-            "  and (  " +
-            "    (a.inicio <= :dataInicial and (a.termino is null or a.termino >= :dataFinal))  " +
-            "    or (  " +
-            "      a.inicio = (  " +
-            "        select min(a2.inicio) from Afastamento a2  " +
-            "          join a2.tipoAfastamento t2 " +
-            "        where a2.contratoFP.id = v.id  " +
-            "          and t2.naoCalcularFichaSemRetorno = true  " +
-            "          and (a2.retornoInformado = false or a2.retornoInformado is null)  " +
-            "            and a2.termino <= :dataInicial  " +
-            "        )  " +
-            "      ) or ( a.inicio <= :dataInicial and (a.termino + 1 ) >= cedencia.dataCessao and :dataFinal <= (select Max(r.dataRetorno) " +
-            " from RetornoCedenciaContratoFP r where r.cedenciaContratoFP.id = cedencia.id)) " +
-            " or (:dataInicial >= cedencia.dataCessao " +
-            "          and a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciaContratoFP.id = cedencia.id " +
-            "          ) and a.termino >= :dataFinal and a.termino < cedencia.dataCessao) " +
-            "        or (a.inicio < cedencia.dataCessao and (a.inicio <= :dataInicial and a.termino >= :dataFinal))" +
-            "         or (a.termino >= ( " +
-            "              select max(r.dataRetorno) " +
-            "              from RetornoCedenciaContratoFP r " +
-            "              where r.cedenciaContratoFP.id = cedencia.id  " +
-            "                ) and a.termino >= :dataFinal and a.inicio > cedencia.dataCessao)" +
-            "      ) " +
-            "   ))  or (:dataInicial >= cedencia.dataCessao and :dataFinal <= (  " +
-            "                select Max(r.dataRetorno) " +
-            "                from RetornoCedenciaContratoFP r " +
-            "                where r.cedenciaContratoFP.id = cedencia.id " +
-            "            )) " +
-            "      )) "+
-            "     and v.id not in (select e.id from Estagiario e) order by v.inicioVigencia");
+            " and m.matricula is not null and m.pessoa is not null and v.inicioVigencia is not null and v.id = recurso.vinculoFP.id "
+            + " and :data between v.inicioVigencia and coalesce(v.finalVigencia,:data) and v.id not in (select contratoFP.id "
+            + "                  from CedenciaContratoFP cedencia"
+            + "                   inner join cedencia.contratoFP contratoFP "
+            + "                 where cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia "
+            + "   and trunc(:dataInicial) between trunc(cedencia.dataCessao) and trunc(coalesce(cedencia.dataRetorno, trunc(:dataInicial))) "
+            + "     and trunc(:dataFinal) between trunc(cedencia.dataCessao) and trunc(coalesce(cedencia.dataRetorno, trunc(:dataFinal)))) "
 
+
+            + "   and v not in(select contratoFP"
+            + "                  from RetornoCedenciaContratoFP retorno"
+            + "                 inner join retorno.cedenciaContratoFP cedencia "
+            + "                   inner join cedencia.contratoFP contratoFP "
+            + "                 where cedencia.tipoContratoCedenciaFP = :parametroTipoCedencia "
+            + "                   and retorno.oficioRetorno = 0 "
+            + "                   and trunc(:dataInicial) between trunc(cedencia.dataCessao) and trunc(coalesce(retorno.dataRetorno, trunc(:dataInicial))) "
+            + "                   and trunc(:dataFinal) between trunc(cedencia.dataCessao) and trunc(coalesce(retorno.dataRetorno, trunc(:dataFinal)))) "
+            + "     and v.id not in (select e.id from Estagiario e) order by v.inicioVigencia");
         q.setParameter("dataHoje", Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate());
         q.setParameter("data", UtilRH.getDataOperacao(), TemporalType.DATE);
         q.setParameter("parametroTipoCedencia", TipoCedenciaContratoFP.SEM_ONUS);
-        q.setParameter("dataInicial", Util.getDataHoraMinutoSegundoZerado(Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate()));
-        q.setParameter("dataFinal", Util.getDataHoraMinutoSegundoZerado(DataUtil.criarDataUltimoDiaMes(mes.getNumeroMes(), ano).toDate()));
+        q.setParameter("dataInicial", Util.criaDataPrimeiroDiaMesJoda(mes.getNumeroMes(), ano).toDate());
+        q.setParameter("dataFinal", DataUtil.criarDataUltimoDiaMes(mes.getNumeroMes(), ano).toDate());
 
         List<VinculoFP> vinculoFPs = q.getResultList();
         int contatorContrato = 0;
@@ -872,77 +835,6 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         return null;
     }
 
-    public List<VinculoFPEventoEsocial> buscarVinculosTipoPrevidenciaRppsSemRescisaoNoMesSelecionado(RegistroEventoEsocial selecionado, List<Long> idsUnidade,
-                                                                                                     VinculoFP vinculoFP, Date dataOperacao,
-                                                                                                     TipoArquivoESocial tipoArquivoESocial,
-                                                                                                     boolean somenteNaoEnviados) {
-        String sql = " select distinct vinculo.id, pf.nome, matricula.matricula || '/' || vinculo.numero, ficha.id as idFicha" +
-            " from fichafinanceirafp ficha                                                                " +
-            " inner join folhadepagamento folha on ficha.folhadepagamento_id = folha.id                   " +
-            " inner join vinculofp vinculo on ficha.vinculofp_id = vinculo.id                             " +
-            " inner join matriculafp matricula on vinculo.matriculafp_id = matricula.id                   " +
-            " inner join pessoafisica pf on matricula.pessoa_id = pf.id                                   " +
-            " inner join itemfichafinanceirafp item on ficha.id = item.fichafinanceirafp_id               " +
-            " inner join competenciafp competencia on folha.competenciafp_id = competencia.id             " +
-            " inner join previdenciavinculofp previdencia on previdencia.contratofp_id = vinculo.id       " +
-            " inner join tipoprevidenciafp tiporegime on previdencia.tipoprevidenciafp_id = tiporegime.id " +
-            " inner join categoriatrabalhador categoria on vinculo.categoriatrabalhador_id = categoria.id " +
-            " where tiporegime.tiporegimeprevidenciario = :tipoRegimePrevidencia                          " +
-            " and to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(previdencia.iniciovigencia)          " +
-            "    and coalesce(trunc(previdencia.finalvigencia), to_date(:dataOperacao, 'dd/MM/yyyy'))     " +
-            " and folha.ano = :ano and folha.mes = :mes and folha.tipofolhadepagamento = :tipoFolha       " +
-            " and vinculo.unidadeorganizacional_id in :unidades " +
-            " and not exists(select vinc.id from vinculofp vinc " +
-            "               where vinc.id = vinculo.id          " +
-            "               and (vinc.finalvigencia is not null and (extract(month from vinc.finalvigencia) - 1) = :mes) " +
-            "               and (vinc.finalvigencia is not null and extract(year from vinc.finalvigencia) = :ano))       " +
-            " and (categoria.tipo = :tipoCategoria3 or categoria.codigo = :categoria4) " +
-            (vinculoFP != null ? " and vinculo.id = :idVinculo " : "") ;
-
-        if (somenteNaoEnviados) {
-            sql += "  and not exists(select * " +
-                "                 from REGISTROESOCIAL registro " +
-                "                 where registro.IDESOCIAL like to_char('%' || vinculo.id || '%')" +
-                "                   and registro.IDESOCIAL like '%' || folha.mes || '%' " +
-                "                   and registro.IDESOCIAL like '%' || folha.ano || '%' " +
-                "                   and registro.TIPOARQUIVOESOCIAL = :evento " +
-                "                   and registro.SITUACAO in (:situacoes) " +
-                "    )";
-        }
-        sql +=  " order by pf.nome ";
-
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("tipoRegimePrevidencia", TipoRegimePrevidenciario.RPPS.name());
-        q.setParameter("ano", selecionado.getExercicio().getAno());
-        q.setParameter("mes", selecionado.getMes().getNumeroMesIniciandoEmZero());
-        q.setParameter("tipoFolha", selecionado.getTipoFolhaDePagamento().name());
-        q.setParameter("unidades", idsUnidade);
-        q.setParameter("dataOperacao", DataUtil.getDataFormatada(dataOperacao));
-        q.setParameter("tipoCategoria3", TipoGrupoCategoriaTrabalhador.AGENTE_PUBLICO.name());
-        q.setParameter("categoria4", "410");
-        if (somenteNaoEnviados) {
-            q.setParameter("situacoes", Lists.newArrayList(SituacaoESocial.PROCESSADO_COM_SUCESSO.name(), SituacaoESocial.PROCESSADO_COM_ADVERTENCIA.name()));
-            q.setParameter("evento", tipoArquivoESocial.name());
-        }
-        if (vinculoFP != null) {
-            q.setParameter("idVinculo", vinculoFP.getId());
-        }
-
-        List<Object[]> resultado = q.getResultList();
-        List<VinculoFPEventoEsocial> vinculosESocial = Lists.newArrayList();
-
-        for (Object[] obj : resultado) {
-            VinculoFPEventoEsocial vinculoFPEventoEsocial = new VinculoFPEventoEsocial();
-            vinculoFPEventoEsocial.setIdVinculo(Long.parseLong(obj[0].toString()));
-            vinculoFPEventoEsocial.setNome((String) obj[1]);
-            vinculoFPEventoEsocial.setMatricula((String) obj[2]);
-            vinculoFPEventoEsocial.setIdFichaFinanceira(Long.parseLong(obj[3].toString()));
-
-            vinculosESocial.add(vinculoFPEventoEsocial);
-        }
-        return !vinculosESocial.isEmpty() ? vinculosESocial : null;
-    }
-
     public List<VinculoFPEventoEsocial> buscarVinculosPorTipoFolhaMesEAnoAndFolhaEfetivadaAndUnidadesEventoS1210(RegistroEventoEsocial registroEventoEsocial, List<Long> idsUnidade,
                                                                                                                  VinculoFP vinculoFP, TipoArquivoESocial tipoArquivoESocial,
                                                                                                                  PessoaFisica pessoaVinculo, ConfiguracaoEmpregadorESocial configuracaoEmpregadorESocial,
@@ -995,6 +887,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         List resultList = q.getResultList();
 
         if (!resultList.isEmpty()) {
+            List<String> cpf = Lists.newArrayList();
             List<VinculoFPEventoEsocial> item = Lists.newArrayList();
             for (Object[] obj : (List<Object[]>) resultList) {
                 boolean podeAdicionar = true;
@@ -1047,6 +940,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
             " and to_date(folha.MES + 1 || '/' || folha.ANO, 'MM/yyyy') between trunc(to_date(to_char(previdencia.iniciovigencia, 'MM/yyyy'), 'MM/yyyy')) " +
             " and coalesce(trunc(to_date(to_char(previdencia.FINALVIGENCIA, 'MM/yyyy'), 'MM/yyyy')), to_date(folha.MES + 1 || '/' || folha.ANO, 'MM/yyyy'))" +
             " and folha.ANO = :ano and folha.efetivadaEm is not null";
+
 
         if (TipoApuracaoFolha.MENSAL.equals(registroEventoEsocial.getTipoApuracaoFolha())) {
             sql += " and folha.mes = :mes " +
@@ -1238,7 +1132,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
     }
 
     public List<VinculoFPEventoEsocial> buscarAposentadosPorTipoFolhaMesEAnoAndFolhaEfetivadaAndUnidades(RegistroEventoEsocial registroEventoEsocial, List<Long> idsUnidade,
-                                                                                                      VinculoFP vinculoFP) {
+                                                                                                         VinculoFP vinculoFP) {
         String sql = " select distinct vinculo.id, pf.NOME, matricula.MATRICULA || '/' || vinculo.NUMERO, ficha.id as idFicha" +
             " from FOLHADEPAGAMENTO folha " +
             " inner join FICHAFINANCEIRAFP ficha on ficha.FOLHADEPAGAMENTO_ID = folha.id " +
@@ -1248,7 +1142,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
             " inner join PESSOAFISICA pf on matricula.PESSOA_ID = pf.ID " +
             " inner join aposentadoria on aposentadoria.id = vinculo.id" +
             " where folha.ANO = :ano and folha.mes = :mes and folha.tipoFolhaDePagamento = :tipoFolha" +
-            " and vinculo.UNIDADEORGANIZACIONAL_ID in (:unidades)" ;
+            " and vinculo.UNIDADEORGANIZACIONAL_ID in (:unidades)";
         if (vinculoFP != null) {
             sql += " and vinculo.id = :idVinculo";
         }
@@ -2270,7 +2164,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
             if (folhaCalculando.getId() != null && !isSimulacao(folhaCalculando)) {
                 FolhaCalculavel folhaRecuperada = recuperarAlternativo(folhaCalculando.getId());
                 folhaRecuperada.setLoteProcessamento(folhaCalculando.getLoteProcessamento());
-                folhaRecuperada.setCalculadaEm(SistemaFacade.getDataCorrente());
+                folhaRecuperada.setCalculadaEm(folhaCalculando.getCalculadaEm());
                 folhaRecuperada.setVersao(folhaCalculando.getVersao());
                 folhaRecuperada.setImprimeLogEmArquivo(folhaCalculando.isImprimeLogEmArquivo());
                 folhaRecuperada.setGravarMemoriaCalculo(folhaCalculando.isGravarMemoriaCalculo());
@@ -2295,7 +2189,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
             salvar(folhaCalculando);
             logger.error("Até carregar os dados: " + (System.currentTimeMillis() - time + " ms "));
             detalheProcessamentoFolha.getDetalhesCalculoRH().setDescricao("Carregando bloqueios de calculo...");
-            preCarregarCache(detalheProcessamentoFolha, vinculos, folhaCalculando);
+            preCarregarBloqueiosERejeicoes(detalheProcessamentoFolha, vinculos, folhaCalculando);
             if (vinculos.size() > 200) {
                 List<VinculoFP> multiplos = verificarEPegarMultiplosVinculos(vinculos, detalheProcessamentoFolha.getDataReferencia().toDate(), mapFontePagadora);
                 for (Iterator it = vinculos.iterator(); it.hasNext(); ) {
@@ -2322,16 +2216,14 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
 
                 logger.error("sistema user " + usuarioCorrente);
                 logger.error("data " + new Date());
-                Hibernate.initialize(folhaCalculando.getFiltros());
-                detalheProcessamentoFolha.setTarefa1(middleRH.calculoGeralNovo(folhaCalculando, lista1, detalheProcessamentoFolha, usuarioCorrente, filas, assistente, filtroFolhaDePagamento));
-                detalheProcessamentoFolha.setTarefa2(middleRH.calculoGeralNovo(folhaCalculando, lista2, detalheProcessamentoFolha, usuarioCorrente, filas, assistente, filtroFolhaDePagamento));
-                detalheProcessamentoFolha.setTarefa3(middleRH.calculoGeralNovo(folhaCalculando, lista3, detalheProcessamentoFolha, usuarioCorrente, filas, assistente, filtroFolhaDePagamento));
-                detalheProcessamentoFolha.setTarefa4(middleRH.calculoGeralNovo(folhaCalculando, lista4, detalheProcessamentoFolha, usuarioCorrente, filas, assistente, filtroFolhaDePagamento));
-                detalheProcessamentoFolha.setTarefa5(middleRH.calculoGeralNovo(folhaCalculando, novaLista, detalheProcessamentoFolha, usuarioCorrente, filas, assistente, filtroFolhaDePagamento));
+                detalheProcessamentoFolha.setTarefa1(middleRH.calculoGeralNovo(folhaCalculando, lista1, detalheProcessamentoFolha, usuarioCorrente, filas, assistente));
+                detalheProcessamentoFolha.setTarefa2(middleRH.calculoGeralNovo(folhaCalculando, lista2, detalheProcessamentoFolha, usuarioCorrente, filas, assistente));
+                detalheProcessamentoFolha.setTarefa3(middleRH.calculoGeralNovo(folhaCalculando, lista3, detalheProcessamentoFolha, usuarioCorrente, filas, assistente));
+                detalheProcessamentoFolha.setTarefa4(middleRH.calculoGeralNovo(folhaCalculando, lista4, detalheProcessamentoFolha, usuarioCorrente, filas, assistente));
+                detalheProcessamentoFolha.setTarefa5(middleRH.calculoGeralNovo(folhaCalculando, novaLista, detalheProcessamentoFolha, usuarioCorrente, filas, assistente));
             } else {
                 ordenarPorMatriculaVinculos(vinculos);
-                Hibernate.initialize(folhaCalculando.getFiltros());
-                detalheProcessamentoFolha.setTarefa1(middleRH.calculoGeralNovo(folhaCalculando, vinculos, detalheProcessamentoFolha, usuarioCorrente, filas, assistente, filtroFolhaDePagamento));
+                detalheProcessamentoFolha.setTarefa1(middleRH.calculoGeralNovo(folhaCalculando, vinculos, detalheProcessamentoFolha, usuarioCorrente, filas, assistente));
             }
 
         } catch (Exception e) {
@@ -2441,45 +2333,11 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         return em.createQuery("select  v.id from VinculoFP v where v.matriculaFP.pessoa.id = :id ").setParameter("id", v.getMatriculaFP().getPessoa().getId()).getResultList().size() > 1;
     }
 
-    private void preCarregarCache(DetalheProcessamentoFolha detalheProcessamentoFolha, List<VinculoFP> vinculos, FolhaCalculavel folha) {
+    private void preCarregarBloqueiosERejeicoes(DetalheProcessamentoFolha detalheProcessamentoFolha, List<VinculoFP> vinculos, FolhaCalculavel folha) {
         preCarregaDadosBloqueioVerba(detalheProcessamentoFolha, vinculos);//precarregar dados...
         preCarregaDadosBloqueioBenficio(detalheProcessamentoFolha, vinculos);//precarregar dados...
         preCarregaDadosMotivosRejeicao(detalheProcessamentoFolha);//precarregar dados...
         preCarregarServidoresComFolhaEfetivada(detalheProcessamentoFolha, vinculos, folha);
-        //preCarregarOrgaoServidor(detalheProcessamentoFolha, vinculos, folha);
-        preCarregarEmpregadores(detalheProcessamentoFolha);
-    }
-
-    private void preCarregarOrgaoServidor(DetalheProcessamentoFolha detalheProcessamentoFolha, List<VinculoFP> vinculos, FolhaCalculavel folha) {
-        Map<EntidadePagavelRH, String> vinculosOrgao = Maps.newHashMap();
-        for (VinculoFP vinculo : vinculos) {
-            String orgaoServidor = funcoesFolhaFacade.getOrgaoServidor(vinculo, detalheProcessamentoFolha.getDataReferencia().toDate());
-            if(orgaoServidor == null || orgaoServidor.isEmpty()){
-                orgaoServidor = funcoesFolhaFacade.getOrgaoServidorUltimoVigente(vinculo, detalheProcessamentoFolha.getDataReferencia().toDate());
-            }
-            vinculosOrgao.put(vinculo, orgaoServidor);
-        }
-        detalheProcessamentoFolha.setVinculoOrgao(vinculosOrgao);
-    }
-
-    private void preCarregarEmpregadores(DetalheProcessamentoFolha detalheProcessamentoFolha) {
-        Map<ConfiguracaoEmpregadorESocial, List<HierarquiaOrganizacional>> empregadores = Maps.newLinkedHashMap();
-        for (ConfiguracaoEmpregadorESocial empregadorESocial : configuracaoEmpregadorESocialFacade.lista()) {
-            ConfiguracaoEmpregadorESocial empregador = configuracaoEmpregadorESocialFacade.recuperar(empregadorESocial.getId());
-            empregadores.put(empregador, getHierarquiasDoEmpregador(empregadorESocial, detalheProcessamentoFolha.getDataReferencia().toDate()));
-        }
-        detalheProcessamentoFolha.setEmpregadores(empregadores);
-    }
-
-    public List<HierarquiaOrganizacional> getHierarquiasDoEmpregador(ConfiguracaoEmpregadorESocial empregadorESocial, Date dataReferencia) {
-        Set<HierarquiaOrganizacional> hierarquiaOrganizacionals = Sets.newHashSet();
-        if (empregadorESocial.getItemConfiguracaoEmpregadorESocial() != null) {
-            for (ItemConfiguracaoEmpregadorESocial item : empregadorESocial.getItemConfiguracaoEmpregadorESocial()) {
-                HierarquiaOrganizacional hierarquia = hierarquiaOrganizacionalFacadeAtual.getHierarquiaOrganizacionalVigentePorUnidade(item.getUnidadeOrganizacional(), TipoHierarquiaOrganizacional.ADMINISTRATIVA, dataReferencia);
-                hierarquiaOrganizacionals.add(hierarquia);
-            }
-        }
-        return Lists.newArrayList(hierarquiaOrganizacionals);
     }
 
     private void preCarregarServidoresComFolhaEfetivada(DetalheProcessamentoFolha detalheProcessamentoFolha, List<VinculoFP> vinculos, FolhaCalculavel folha) {
@@ -2636,7 +2494,6 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         return retorno;
     }
 
-
     private void processarLancamentosTransients(VinculoFP vinculo, FolhaDePagamento f, DetalheProcessamentoFolha detalheProcessamentoFolha, FolhaDePagamentoNovoCalculador contextTransient) {
         List<LancamentoFP> lista = lancamentoFPFacade.buscarLancamentosPorTipo(vinculo, f.getAno(), f.getMes().getNumeroMes(), f.getTipoFolhaDePagamento(), detalheProcessamentoFolha.getItemCalendarioFP().getDataUltimoDiaProcessamento(), false);
         contextTransient.preencheLacamentosCache(lista);
@@ -2705,6 +2562,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         return contextTransient;
     }
 
+
     public void calculoFolhaIndividualNovo(VinculoFP vinculoFP, FolhaCalculavel f, boolean mostra, DetalheProcessamentoFolha detalheProcessamentoFolha,
                                            List<EventoFP> eventosAutomaticos, UsuarioSistema usuario) {
 
@@ -2753,7 +2611,6 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
             folhaDePagamentoNovoCalculador.setContextoTransient(contextoTransient);
             logger.debug("Fim da execução do contexto transient...");
         }
-
         detalheProcessamentoFolha.setCalculandoRetroativo(false);
         vinculo.setCalculandoRetroativo(false);
 
@@ -3042,7 +2899,7 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
             for (EventoFP eventoFP : folhaDePagamentoNovoCalculador.getEventoValorFormula().keySet()) {
                 verificarLancamentoRejeitadoSemEstorno(vinculo, folhaDePagamentoNovoCalculador, treeMapLancamentos, eventoFP);
                 if (folhaDePagamentoNovoCalculador.getEventoValorFormula().get(eventoFP).compareTo(BigDecimal.ZERO) > 0 && !folhaDePagamentoNovoCalculador.getEventoEstornoValor().containsKey(eventoFP)) {
-                    if (folhaDePagamentoNovoCalculador.avaliarRegrasPrimarias(eventoFP)) {
+                    if (folhaDePagamentoNovoCalculador.avaliarRegraTipoFolhaEvento(eventoFP)) {
                         ItemFichaFinanceiraFP item = new ItemFichaFinanceiraFP();
                         item.setMes(f.getMes().getNumeroMes());
                         item.setAno(f.getAno());
@@ -4631,7 +4488,6 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         nova.setMes(Mes.getMesToInt(mes));
         nova.setTipoFolhaDePagamento(ficha.getFolhaDePagamento().getTipoFolhaDePagamento());
         nova.setImprimeLogEmArquivo(ficha.getFolhaDePagamento().isImprimeLogEmArquivo());
-        nova.setGravarMemoriaCalculo(ficha.getFolhaDePagamento().isGravarMemoriaCalculo());
         nova.setVersao(ficha.getFolhaDePagamento().getVersao());
         nova.setGravarMemoriaCalculo(ficha.getFolhaDePagamento().isGravarMemoriaCalculo());
         nova.setProcessarCalculoTransient(ficha.getFolhaDePagamento().isProcessarCalculoTransient());
@@ -4990,68 +4846,9 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         }
     }
 
-    public List<VinculoFP> findVinculosSemCedenciaAfastamentoByLote(LoteProcessamento loteProcessamento, Mes mes, Integer ano) {
+    public List<VinculoFP> findVinculosByLote(LoteProcessamento loteProcessamento) {
         LoteProcessamento lote = loteProcessamentoFacade.recuperar(loteProcessamento.getId());
         String consulta = loteProcessamentoFacade.gerarQueryConsulta(lote);
-
-        if (consulta.contains("where ( )")) {
-            return Lists.newArrayList();
-        }
-
-        if (ano != null && mes != null) {
-            Date dataInicial = DataUtil.criarDataComMesEAno(mes.getNumeroMes(), ano).toDate();
-            Date dataFinal = DataUtil.criarDataUltimoDiaMes(mes.getNumeroMes(), ano).toDate();
-            consulta += " and not exists ( " +
-                "    select 1 " +
-                "    from CedenciaContratoFP cedencia " +
-                "    where cedencia.contratoFP_id = vinculo.id " +
-                "      and cedencia.tipoContratoCedenciaFP = '" + TipoCedenciaContratoFP.SEM_ONUS.name() + "' " +
-                "      and ((to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') >= trunc(cedencia.dataCessao)  " +
-                "           and not exists (  " +
-                "                select 1 " +
-                "                from RetornoCedenciaContratoFP r " +
-                "                where r.cedenciaContratoFP_id = cedencia.id) " +
-                "                or exists (  " +
-                " select 1 from Afastamento a  " +
-                "  join tipoafastamento t on t.id = a.tipoafastamento_id " +
-                " where a.contratoFP_id = vinculo.id  " +
-                "  and t.naoCalcularFichaSemRetorno = 1  " +
-                "  and (a.retornoInformado = 0 or a.retornoInformado is null)  " +
-                "  and (  " +
-                "    (a.inicio <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') and (a.termino is null or a.termino >=  to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY')))  " +
-                "    or (  " +
-                "      a.inicio = (  " +
-                "        select min(a2.inicio) from Afastamento a2  " +
-                "          join tipoafastamento t2 on t2.id = a2.tipoafastamento_id " +
-                "        where a2.contratoFP_id = vinculo.id  " +
-                "          and t2.naoCalcularFichaSemRetorno = 1  " +
-                "          and (a2.retornoInformado = 0 or a2.retornoInformado is null)  " +
-                "            and a2.termino <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY')  " +
-                "        )  " +
-                "      ) or ( a.inicio <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') and (a.termino + 1 ) >= cedencia.dataCessao and  to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY') <= (select Max(r.dataRetorno) " +
-                " from RetornoCedenciaContratoFP r where r.cedenciaContratoFP_id = cedencia.id))  " +
-                " or (to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') >= cedencia.dataCessao " +
-                "          and a.termino >= ( " +
-                "              select max(r.dataRetorno) " +
-                "              from RetornoCedenciaContratoFP r " +
-                "              where r.cedenciaContratoFP_id = cedencia.id " +
-                "          ) and a.termino >= to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY')  and a.termino < cedencia.dataCessao) " +
-                "        or (a.inicio < cedencia.dataCessao and (a.inicio <= to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') and a.termino >= to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY')))" +
-                "         or (a.termino >= ( " +
-                "              select max(r.dataRetorno) " +
-                "              from RetornoCedenciaContratoFP r " +
-                "              where r.cedenciaContratoFP_id = cedencia.id  " +
-                "                ) and a.termino >= to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY') and a.inicio > cedencia.dataCessao)" +
-                "      ) " +
-                "   ))  OR (to_date('" + Util.dateToString(dataInicial) + "', 'DD/MM/YYYY') >= cedencia.dataCessao AND  to_date('" + Util.dateToString(dataFinal) + "', 'DD/MM/YYYY') <= (  " +
-                "                select Max(r.dataRetorno) " +
-                "                from RetornoCedenciaContratoFP r " +
-                "                where r.cedenciaContratoFP_id = cedencia.id " +
-                "            )) " +
-                "      )) " ;
-        }
-
-
         List<Long> idsVinculo = vinculoFPFacade.findVinculosByConsultDinamicaSql(consulta);
         List<VinculoFP> vinculosRecuperados = Lists.newArrayList();
         for (Long id : idsVinculo) {
@@ -5112,30 +4909,21 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         return q.getResultList();
     }
 
-    @TransactionTimeout(unit = TimeUnit.HOURS, value = 4)
-    public AssistenteBarraProgresso remover(FolhaDePagamento entity, AssistenteBarraProgresso assistenteBarraProgressoExclusao) {
-        Long folhaId = entity.getId();
-        excluirDependencias(folhaId);
+    @Override
+    public void remover(FolhaDePagamento entity) {
+        removerDependencias(entity);
+        removerFilaProcessamento(entity);
         super.remover(entity);
-        assistenteBarraProgressoExclusao.conta();
-        return assistenteBarraProgressoExclusao;
     }
 
-    private void excluirDependencias(Long folhaId) {
-        List<String> queries = Arrays.asList(
-            "DELETE FROM ItensDetalhesErrosCalculo WHERE detalhescalculorh_id IN (SELECT id FROM DetalhesCalculoRH WHERE folhadepagamento_id = :folhaId)",
-            "DELETE FROM DetalhesCalculoRH WHERE folhadepagamento_id = :folhaId",
-            "DELETE FROM ItemErroDuplicidade WHERE folhaDePagamento_id = :folhaId",
-            "DELETE FROM FilaProcessamentoFolha WHERE folhaDePagamento_id = :folhaId",
-            "DELETE FROM fichafinanceirafp WHERE folhadepagamento_id = :folhaId",
-            "DELETE FROM filtrofolhadepagamento WHERE folhadepagamento_id = :folhaId"
-        );
+    private void removerDependencias(FolhaDePagamento entity) {
+        Query deleteItem = em.createNativeQuery(" delete from ItemErroDuplicidade where folhaDePagamento_id = " + entity.getId());
+        deleteItem.executeUpdate();
+    }
 
-        for (String query : queries) {
-            em.createNativeQuery(query)
-                .setParameter("folhaId", folhaId)
-                .executeUpdate();
-        }
+    private void removerFilaProcessamento(FolhaDePagamento entity) {
+        Query deleteItem = em.createNativeQuery(" delete from FilaProcessamentoFolha fila where fila.folhaDePagamento_id = " + entity.getId());
+        deleteItem.executeUpdate();
     }
 
     @Override
@@ -5851,7 +5639,6 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         return null;
     }
 
-
     public List<FolhaDePagamento> buscarFolhaPorTipoMesAndExercicio(TipoFolhaDePagamento tipo, Mes mes, Exercicio exercicio) {
         Query q = em.createQuery("from FolhaDePagamento f where f.tipoFolhaDePagamento =:tipoFolha " +
             "and f.mes = :mes and f.ano = :ano order by f.versao");
@@ -6192,5 +5979,19 @@ public class FolhaDePagamentoFacade extends AbstractFacade<FolhaDePagamento> {
         Query q = em.createNativeQuery(sql);
         q.setParameter("idServidor", servidorPortal.getId());
         q.executeUpdate();
+    }
+
+    public List<FiltroFolhaDePagamento> buscarFiltros(FolhaDePagamento folhaDePagamento) {
+        String sql = " select ffp.* " +
+            " from filtrofolhadepagamento ffp " +
+            " where ffp.folhadepagamento_id = :folhaId " +
+            " order by ffp.id ";
+        Query q = em.createNativeQuery(sql, FiltroFolhaDePagamento.class);
+        q.setParameter("folhaId", folhaDePagamento.getId());
+        List retorno = q.getResultList();
+        if (retorno != null) {
+            return retorno;
+        }
+        return Lists.newArrayList();
     }
 }

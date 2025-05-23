@@ -18,7 +18,6 @@ import javax.persistence.*;
 import java.util.Date;
 import java.util.List;
 
-@Etiqueta("Configuração de Iss Online")
 @Entity
 @Audited
 public class ConfiguracaoNfse extends SuperEntidade implements PossuidorArquivo {
@@ -42,11 +41,11 @@ public class ConfiguracaoNfse extends SuperEntidade implements PossuidorArquivo 
     private List<ConfiguracaoNfseParametros> parametros;
     @OneToMany(mappedBy = "configuracaoNfse", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ConfiguracaoNfseDivida> dividasNfse;
+    @ManyToOne
+    private Servico padraoServicoPrestado;
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     private ConfiguracaoIssForaMunicipio configuracaoIssForaMun;
 
-    @ManyToOne
-    private Servico padraoServicoPrestado;
     @ManyToOne(cascade = CascadeType.ALL)
     private ConfiguracaoNotaPremiada configuracaoNotaPremiada;
 

@@ -10,7 +10,7 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.Conta;
 import br.com.webpublico.entidades.contabil.execucao.DesdobramentoPagamento;
 import br.com.webpublico.entidadesauxiliares.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.EntidadeContabil;
@@ -26,10 +26,7 @@ import br.com.webpublico.singletons.SingletonGeradorCodigoContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Persistencia;
 import br.com.webpublico.util.Util;
-import br.com.webpublico.webreportdto.dto.contabil.ModalidadeLicitacaoEmpenhoDTO;
-import br.com.webpublico.webreportdto.dto.contabil.SituacaoContaDTO;
-import br.com.webpublico.webreportdto.dto.contabil.TipoContaBancariaDTO;
-import br.com.webpublico.webreportdto.dto.contabil.TipoEmpenhoDTO;
+import br.com.webpublico.webreportdto.dto.contabil.*;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.jboss.ejb3.annotation.TransactionTimeout;
@@ -752,6 +749,9 @@ public class PagamentoFacade extends SuperFacadeContabil<Pagamento> {
         if (!taLiberadoPagamento(pagamento)) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("O Pagamento " + pagamento + " está sendo utilizado por outro usuário. Caso o problema persistir, selecione novamente o Pagamento.");
         }
+        if (!taLiberadoUnidadePagamento(pagamento)) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("A unidade  " + pagamento.getUnidadeOrganizacional() + " está realizando movimentos para outro pagamento. Por favor, aguarde alguns instantes e clique em deferir novamente.");
+        }
         if (ve.temMensagens()) {
             throw ve;
         }
@@ -794,6 +794,9 @@ public class PagamentoFacade extends SuperFacadeContabil<Pagamento> {
         return singletonConcorrenciaContabil.isDisponivel(pag);
     }
 
+    public boolean taLiberadoUnidadePagamento(Pagamento pag) {
+        return singletonConcorrenciaContabil.isDisponivelUnidadePagamento(pag.getUnidadeOrganizacional());
+    }
 
     private void atualizaPagamentoELiquidacao(Pagamento pag) {
         pag.setSaldo(pag.getValor());
@@ -1236,14 +1239,14 @@ public class PagamentoFacade extends SuperFacadeContabil<Pagamento> {
 
     private void adicionarObjetosParametros(Pagamento entity, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity.getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa(), item));
-        objetos.add(new ObjetoParametro(entity.getSubConta(), item));
+        objetos.add(new ObjetoParametro(entity.getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getSubConta().getId().toString(), SubConta.class.getSimpleName(), item));
         Preconditions.checkNotNull(entity.getLiquidacao().getEmpenho().getClasseCredor(), "A Classe credor do empenho não foi preenchida.");
-        objetos.add(new ObjetoParametro(entity.getLiquidacao().getEmpenho().getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(entity.getLiquidacao().getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         if (entity.getLiquidacao().getEmpenho().getDividaPublica() != null) {
-            objetos.add(new ObjetoParametro(entity.getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica(), item));
+            objetos.add(new ObjetoParametro(entity.getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
         }
-        objetos.add(new ObjetoParametro(entity, item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), Pagamento.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
     }
 

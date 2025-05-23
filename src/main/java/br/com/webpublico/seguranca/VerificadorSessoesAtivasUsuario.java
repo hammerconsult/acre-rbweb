@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +24,7 @@ public class VerificadorSessoesAtivasUsuario {
     private SingletonRecursosSistema singletonRecursosSistema;
 
     public void notificarTodosUsuariosLogados(String pushId) {
-        Map<UsuarioSistema, LocalDateTime> ultimoAcessoUsuario = singletonRecursosSistema.getUltimoAcessoUsuario();
+        Map<UsuarioSistema, LocalTime> ultimoAcessoUsuario = singletonRecursosSistema.getUltimoAcessoUsuario();
         for (UsuarioSistema usuarioSistema : ultimoAcessoUsuario.keySet()) {
             Push.sendTo(usuarioSistema, pushId);
         }
@@ -34,18 +33,18 @@ public class VerificadorSessoesAtivasUsuario {
     @Scheduled(cron = "0/15 * * * * ?")
     public void verificarUsuarios() {
         if (getConfiguracaoMetrica().getVerificarTimeout()) {
-            Map<UsuarioSistema, LocalDateTime> ultimoAcessoUsuario = singletonRecursosSistema.getUltimoAcessoUsuario();
+            Map<UsuarioSistema, LocalTime> ultimoAcessoUsuario = singletonRecursosSistema.getUltimoAcessoUsuario();
             List<UsuarioSistema> remover = Lists.newArrayList();
 
             if (ultimoAcessoUsuario != null) {
                 for (UsuarioSistema usuarioSistema : ultimoAcessoUsuario.keySet()) {
-                    if (ultimoAcessoUsuario.get(usuarioSistema).isBefore(LocalDateTime.now().minusMinutes(usuarioSistema.getTempoMaximoInativoMinutos()))) {
-                        Push.sendTo( usuarioSistema, MATAR_SESSAO);
+                    if (ultimoAcessoUsuario.get(usuarioSistema).isBefore(LocalTime.now().minusMinutes(usuarioSistema.getTempoMaximoInativoMinutos()))) {
+                        Push.sendTo(usuarioSistema, MATAR_SESSAO);
                         remover.add(usuarioSistema);
                         continue;
                     }
-                    if (ultimoAcessoUsuario.get(usuarioSistema).isBefore(LocalDateTime.now().minusMinutes(getTempoAntesDoAvisoEncerrarSessaoMinutos(usuarioSistema)))) {
-                        Push.sendTo( usuarioSistema, AVISO_FIM_SESSAO);
+                    if (ultimoAcessoUsuario.get(usuarioSistema).isBefore(LocalTime.now().minusMinutes(getTempoAntesDoAvisoEncerrarSessaoMinutos(usuarioSistema)))) {
+                        Push.sendTo(usuarioSistema, AVISO_FIM_SESSAO);
                     }
                 }
             }

@@ -11,6 +11,7 @@ import br.com.webpublico.enums.TipoFonteRecurso;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
+import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.FonteDeRecursosFacade;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.util.Util;
@@ -54,7 +55,6 @@ public class FonteDeRecursosControlador extends PrettyControlador<FonteDeRecurso
     @Override
     public void novo() {
         super.novo();
-        selecionado.setExercicio(sistemaControlador.getExercicioCorrente());
         exercicio = fonteDeRecursosFacade.getExercicioFacade().getExercicioPorAno(sistemaControlador.getExercicioCorrente().getAno() - 1);
     }
 
@@ -183,8 +183,27 @@ public class FonteDeRecursosControlador extends PrettyControlador<FonteDeRecurso
         return toReturn;
     }
 
-    public List<FonteDeRecursos> listaFontesPorExercicio() {
-        return fonteDeRecursosFacade.listaPorExercicio(sistemaControlador.getExercicioCorrente());
+    @Override
+    public void salvar() {
+        try {
+            ((FonteDeRecursos) selecionado).setExercicio(sistemaControlador.getExercicioCorrente());
+            if (validaCodigo()) {
+                super.salvar();
+            }
+        } catch (ExcecaoNegocioGenerica ex) {
+            FacesUtil.addError("Erro ao Salvar a Fonte de Recurso: ", ex.getMessage());
+        }
+    }
+
+    private Boolean validaCodigo() {
+        if (selecionado.getCodigo() != null) {
+            FonteDeRecursos f = fonteDeRecursosFacade.recuperaPorCodigoExericio(selecionado, sistemaControlador.getExercicioCorrente());
+            if (f != null) {
+                FacesUtil.addOperacaoNaoPermitida("Existe uma Fonte de Recurso com o mesmo código para o exercício de " + sistemaControlador.getExercicioCorrente() + ".");
+                return Boolean.FALSE;
+            }
+        }
+        return Boolean.TRUE;
     }
 
     public SistemaControlador getSistemaControlador() {
@@ -199,10 +218,6 @@ public class FonteDeRecursosControlador extends PrettyControlador<FonteDeRecurso
         return fonteDeRecursosFacade.listaFiltrandoPorExercicio(parte.trim(), sistemaControlador.getExercicioCorrente());
     }
 
-    @Override
-    protected boolean validaRegrasParaSalvar() {
-        return true;
-    }
     public Exercicio getExercicio() {
         return exercicio;
     }

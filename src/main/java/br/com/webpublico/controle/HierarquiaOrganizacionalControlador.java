@@ -1001,17 +1001,6 @@ public class HierarquiaOrganizacionalControlador extends SuperControladorCRUD im
         return hierarquiaOrganizacionalFacade.buscarHierarquiaOrganizacionalOrcamentariaPorCodigoOrDescricao(codigoOrDescricao);
     }
 
-    public String buscarCodigoDescricaoHierarquia(String tipoHierarquia, UnidadeOrganizacional unidade, Date dataMovimento) {
-        if (unidade != null && dataMovimento != null) {
-            HierarquiaOrganizacional hierarquia = hierarquiaOrganizacionalFacade.getHierarquiaDaUnidade(tipoHierarquia, unidade, dataMovimento);
-            if (hierarquia != null) {
-                return hierarquia.getCodigo() + " - " + hierarquia.getDescricao();
-            }
-            return unidade.getDescricao();
-        }
-        return "";
-    }
-
     public class Mascara implements Serializable {
         String codigo;
         int indice;
@@ -1044,6 +1033,17 @@ public class HierarquiaOrganizacionalControlador extends SuperControladorCRUD im
         public String toString() {
             return "indice.: " + indice + " codigo.: " + codigo;
         }
+    }
+
+    public String buscarCodigoDescricaoHierarquia(String tipoHierarquia, UnidadeOrganizacional unidade, Date dataMovimento) {
+        if (unidade != null && dataMovimento != null) {
+            HierarquiaOrganizacional hierarquia = hierarquiaOrganizacionalFacade.getHierarquiaDaUnidade(tipoHierarquia, unidade, dataMovimento);
+            if (hierarquia != null) {
+                return hierarquia.getCodigo() + " - " + hierarquia.getDescricao();
+            }
+            return unidade.getDescricao();
+        }
+        return "";
     }
 
     public Date getDataOperacao(){

@@ -1,16 +1,12 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.enums.SituacaoSolicitacaoITBI;
-import com.google.common.collect.Lists;
-import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.List;
 
 @Entity
-@Audited
 public class TramiteSolicitacaoItbiOnline extends SuperEntidade {
 
     @Id
@@ -29,13 +25,10 @@ public class TramiteSolicitacaoItbiOnline extends SuperEntidade {
     @OneToOne
     private Arquivo arquivo;
     private BigDecimal valorAvaliado;
-    @OneToMany(mappedBy = "tramiteSolicitacaoItbiOnline", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<SolicitacaoItbiOnlineDocumento> documentos;
 
     public TramiteSolicitacaoItbiOnline() {
         super();
         this.dataRegistro = new Date();
-        this.documentos = Lists.newArrayList();
     }
 
     @Override
@@ -111,20 +104,8 @@ public class TramiteSolicitacaoItbiOnline extends SuperEntidade {
         this.valorAvaliado = valorAvaliado;
     }
 
-    public List<SolicitacaoItbiOnlineDocumento> getDocumentos() {
-        return documentos;
-    }
-
-    public void setDocumentos(List<SolicitacaoItbiOnlineDocumento> documentos) {
-        this.documentos = documentos;
-    }
-
     public boolean isDesignada() {
         return SituacaoSolicitacaoITBI.DESIGNADA.equals(this.situacaoSolicitacaoITBI);
-    }
-
-    public boolean isIndeferida() {
-        return SituacaoSolicitacaoITBI.INDEFERIDA.equals(this.situacaoSolicitacaoITBI);
     }
 
     public boolean isAvaliada() {
@@ -135,7 +116,7 @@ public class TramiteSolicitacaoItbiOnline extends SuperEntidade {
         return SituacaoSolicitacaoITBI.HOMOLOGADA.equals(this.situacaoSolicitacaoITBI);
     }
 
-    public boolean isIndeferidaOrAvaliadaOrHomologada() {
-        return isIndeferida() || isAvaliada() || isHomologada();
+    public boolean isAvaliadaOrHomologada() {
+        return isAvaliada() || isHomologada();
     }
 }

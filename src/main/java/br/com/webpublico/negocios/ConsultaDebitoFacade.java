@@ -41,16 +41,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
 @Stateless
 public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
 
-    public static final DecimalFormat formatterReais = new DecimalFormat("###,###,##0.00");
     private static final BigDecimal CEM = BigDecimal.valueOf(100);
     private Logger log = LoggerFactory.getLogger(ConsultaDebitoFacade.class);
     @PersistenceContext(unitName = "webpublicoPU")
@@ -828,32 +824,27 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
     }
 
     public String buscarNumeroTipoCadastroPorParcela(ParcelaValorDivida parcelaValorDivida) {
-        StringBuilder sql = new StringBuilder(" SELECT CASE ")
-            .append(" WHEN BCI.INSCRICAOCADASTRAL IS NOT NULL")
-            .append(" THEN bci.inscricaocadastral ||  '(Cadastro Imobiliário) '")
-            .append(" WHEN CMC.INSCRICAOCADASTRAL IS NOT NULL ")
-            .append(" THEN cmc.inscricaocadastral  || '(Cadastro Econômico)' ")
-            .append(" WHEN TO_CHAR(BCR.CODIGO) IS NOT NULL ")
-            .append(" THEN BCR.CODIGO || '(Cadastro Rural) '")
-            .append(" WHEN PJ.ID IS NOT NULL ")
-            .append(" THEN PJ.CNPJ || ' - ' || PJ.RAZAOSOCIAL || '(Contribuinte Geral)' ")
-            .append("ELSE PF.CPF || ' - ' || PF.NOME  || '(Contribuinte Geral)'")
-            .append(" END")
-            .append(" from ")
-            .append(" parcelavalordivida parcela ")
-            .append(" inner join valordivida vd on vd.id = parcela.valordivida_id ")
-            .append(" inner join calculo on vd.calculo_id = calculo.id ")
-            .append(" left join cadastroimobiliario bci on bci.id = calculo.cadastro_id ")
-            .append(" left join cadastroeconomico cmc on cmc.id = calculo.cadastro_id ")
-            .append(" left join cadastrorural bcr on bcr.id = calculo.cadastro_id ")
-            .append(" left join calculopessoa calcpessoa on calcpessoa.calculo_id = calculo.id")
-            .append(" left join pessoa pessoa on  calcpessoa.pessoa_id = pessoa.id")
-            .append(" left join pessoafisica pf on pf.id = pessoa.id")
-            .append(" left join pessoajuridica pj on pj.id = pessoa.id")
-            .append(" where parcela.id = :idParcela");
-
+        StringBuilder sql = new StringBuilder(" SELECT CASE ").append(" WHEN BCI.INSCRICAOCADASTRAL IS NOT NULL").append(" THEN bci.inscricaocadastral ||  '(Cadastro Imobiliário) '").append(" WHEN CMC.INSCRICAOCADASTRAL IS NOT NULL ").append(" THEN cmc.inscricaocadastral  || '(Cadastro Econômico)' ").append(" WHEN TO_CHAR(BCR.CODIGO) IS NOT NULL ").append(" THEN BCR.CODIGO || '(Cadastro Rural) '").append(" WHEN PJ.ID IS NOT NULL ").append(" THEN PJ.CNPJ || ' - ' || PJ.RAZAOSOCIAL || '(Contribuinte Geral)' ").append("ELSE PF.CPF || ' - ' || PF.NOME  || '(Contribuinte Geral)'").append(" END").append(" from ").append(" parcelavalordivida parcela ").append(" inner join valordivida vd on vd.id = parcela.valordivida_id ").append(" inner join calculo on vd.calculo_id = calculo.id ").append(" left join cadastroimobiliario bci on bci.id = calculo.cadastro_id ").append(" left join cadastroeconomico cmc on cmc.id = calculo.cadastro_id ").append(" left join cadastrorural bcr on bcr.id = calculo.cadastro_id ").append(" left join calculopessoa calcpessoa on calcpessoa.calculo_id = calculo.id").append(" left join pessoa pessoa on  calcpessoa.pessoa_id = pessoa.id").append(" left join pessoafisica pf on pf.id = pessoa.id").append(" left join pessoajuridica pj on pj.id = pessoa.id").append(" where parcela.id = :idParcela");
+//                StringBuilder sql = new StringBuilder("select (coalesce(bci.inscricaocadastral, cmc.inscricaocadastral, to_char(bcr.codigo), (pf.nome || '-' || pf.cpf), (pj.razaosocial || '-' ||pj.cnpj)) || ' ' ||")
+//                .append(" case when bci.inscricaocadastral is not null then '(Cadastro Imobiliário) ' ")
+//                .append(" when cmc.inscricaocadastral is not null then '(Cadastro Econômico)' ")
+//                .append(" when to_char(bcr.codigo) is not null then '(Cadastro Rural)' ")
+//                .append(" else '(Contribuinte Geral)' end)")
+//                .append(" from ")
+//                .append(" parcelavalordivida parcela ")
+//                .append(" inner join valordivida vd on vd.id = parcela.valordivida_id ")
+//                .append(" inner join calculo on vd.calculo_id = calculo.id ")
+//                .append(" left join cadastroimobiliario bci on bci.id = calculo.cadastro_id ")
+//                .append(" left join cadastroeconomico cmc on cmc.id = calculo.cadastro_id ")
+//                .append(" left join cadastrorural bcr on bcr.id = calculo.cadastro_id ")
+//                .append(" left join calculopessoa calcpessoa on calcpessoa.calculo_id = calculo.id")
+//                .append(" left join pessoa pessoa on  calcpessoa.pessoa_id = pessoa.id")
+//                .append(" left join pessoafisica pf on pf.id = pessoa.id")
+//                .append(" left join pessoajuridica pj on pj.id = pessoa.id")
+//                .append(" where parcela.id = :idParcela");
         Query q = em.createNativeQuery(sql.toString());
         q.setParameter("idParcela", parcelaValorDivida.getId());
+        ////System.out.println("parcela id = " + parcelaValorDivida.getId());
         q.setMaxResults(1);
         return (String) q.getResultList().get(0);
 
@@ -1075,6 +1066,33 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
 
         }
 
+//        List<ProcessoParcelamento> parcelamentos = em.createQuery("select pp from ProcessoParcelamento pp where pp.cadastro = :cadastro")
+//                .setParameter("cadastro", cadastro).getResultList();
+//
+//        for (ProcessoParcelamento parcelamento : parcelamentos) {
+//            BigDecimal imposto = BigDecimal.ZERO;
+//            BigDecimal taxa = BigDecimal.ZERO;
+//            BigDecimal correcao = BigDecimal.ZERO;
+//            for (ItemProcessoParcelamento item : parcelamento.getItensProcessoParcelamento()) {
+//                imposto = item.getImposto().add(imposto);
+//                taxa = item.getImposto().add(taxa);
+//                correcao = item.getImposto().add(correcao);
+//            }
+//            System.out.println("Parcelamento     " + parcelamento.getNumero() + "/" + parcelamento.getExercicio().getAno());
+//            System.out.println("Imposto Antigo   " + parcelamento.getValorTotalImposto());
+//            System.out.println("Taxa Antiga      " + parcelamento.getValorTotalTaxa());
+//            System.out.println("Correcao Antiga  " + parcelamento.getValorTotalCorrecao());
+//            System.out.println("Total Antigo     " + parcelamento.getTotalGeral());
+//            parcelamento.setValorTotalImposto(imposto);
+//            parcelamento.setValorTotalTaxa(taxa);
+//            parcelamento.setValorTotalCorrecao(correcao);
+//            System.out.println("Imposto Novo     " + parcelamento.getValorTotalImposto());
+//            System.out.println("Imposto Novo     " + parcelamento.getValorTotalTaxa());
+//            System.out.println("Imposto Novo     " + parcelamento.getValorTotalCorrecao());
+//            System.out.println("Total Novo       " + parcelamento.getTotalGeral());
+//
+//        }
+
         throw new ExcecaoNegocioGenerica("teste");
     }
 
@@ -1096,6 +1114,17 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
         query.setParameter("idPessoa", pessoa.getId());
         return query.getResultList();
     }
+
+    public List<CalculoPessoa> buscarCalculoPessoaPorPessoaAndCadastros(Pessoa pessoa, String idsCadastros) {
+        String sql = " select cp.* " + "    from calculoPessoa cp " + "   inner join calculo on calculo.id = cp.calculo_id " + " where cp.pessoa_id =:idPessoa ";
+        if (idsCadastros != null && !idsCadastros.isEmpty()) {
+            sql += " and (calculo.cadastro_id is null or calculo.cadastro_id in (" + idsCadastros + ")) ";
+        }
+        Query query = em.createNativeQuery(sql, CalculoPessoa.class);
+        query.setParameter("idPessoa", pessoa.getId());
+        return query.getResultList();
+    }
+
 
     public List<CalculoPessoa> recuperarCalculoPessoa(Pessoa pessoa) {
         String sql = " select cp.* " +
@@ -1198,9 +1227,9 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
         carregarCamposPagoPorParcelamento(lista, rp);
         carregarCamposSubvencao(lista, rp);
         carregarCamposAlvara(lista, rp);
-        carregarCamposParcelaAguardandoPagtoBloqueioJudicial(lista, rp);
         carregarCamposProcessoDeProtesto(lista, rp);
         carregarCampoObservacao(lista, rp);
+        carregarCamposParcelaAguardandoPagtoBloqueioJudicial(lista, rp);
         return lista;
     }
 
@@ -1502,21 +1531,11 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
                         lista.add(new ObjetoCampoValor("Certidão Dívida Ativa", cda.getNumero().toString() + "/" + cda.getExercicio().getAno().toString()));
                         ProcessoJudicial ajuizamento = certidaoDividaAtivaFacade.processoAjuizamentoDaCda(cda);
                         if (ajuizamento != null) {
-                            lista.add(new ObjetoCampoValor("Processo", ajuizamento.getNumeroProcessoForum()));
+                            lista.add(new ObjetoCampoValor("Processo", ajuizamento.getNumero()));
                         }
                         cdasInseridas.add(cda);
                     }
                 }
-            }
-        }
-    }
-
-    private void carregarCamposAlvara(List<ObjetoCampoValor> lista, ResultadoParcela rp) {
-        if (rp.getTipoCalculoEnumValue().equals(TipoCalculoDTO.ALVARA)) {
-            ProcessoCalculoAlvara processoCalculoAlvara = calculoAlvaraFacade.buscarProcessoCalculoPeloIdParcela(rp.getIdParcela());
-            if (processoCalculoAlvara != null) {
-                lista.add(new ObjetoCampoValor("Calculo de Alvará", processoCalculoAlvara.getCodigo() + "/" + processoCalculoAlvara.
-                    getExercicio().getAno()));
             }
         }
     }
@@ -1549,6 +1568,15 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
         }
     }
 
+    private void carregarCamposAlvara(List<ObjetoCampoValor> lista, ResultadoParcela rp) {
+        if (rp.getTipoCalculoEnumValue().equals(TipoCalculoDTO.ALVARA)) {
+            ProcessoCalculoAlvara processoCalculoAlvara = calculoAlvaraFacade.buscarProcessoCalculoPeloIdParcela(rp.getIdParcela());
+            if (processoCalculoAlvara != null) {
+                lista.add(new ObjetoCampoValor("Calculo de Alvará", processoCalculoAlvara.getCodigo() + "/" + processoCalculoAlvara.getExercicio().getAno()));
+            }
+        }
+    }
+
     private void carregarCamposProcessoDeProtesto(List<ObjetoCampoValor> lista, ResultadoParcela rp) {
         ProcessoDeProtesto processoDeProtesto = processoDeProtestoFacade.buscarProcessoAtivoDaParcela(rp.getIdParcela());
         if (processoDeProtesto != null) {
@@ -1567,38 +1595,6 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
         q.setParameter("idOpcaoPagamento", opcaoPagamento.getId());
         return ((BigDecimal) q.getSingleResult()).longValue();
 
-    }
-
-    public List<CalculoPessoa> buscarCalculoPessoaPorPessoaAndCadastros(Pessoa pessoa, String idsCadastros) {
-        String sql = " select cp.* " +
-            "    from calculoPessoa cp " +
-            "   inner join calculo on calculo.id = cp.calculo_id " +
-            " where cp.pessoa_id =:idPessoa ";
-        if (idsCadastros != null && !idsCadastros.isEmpty()) {
-            sql += " and (calculo.cadastro_id is null or calculo.cadastro_id in (" + idsCadastros + ")) ";
-        }
-        Query query = em.createNativeQuery(sql, CalculoPessoa.class);
-        query.setParameter("idPessoa", pessoa.getId());
-        return query.getResultList();
-    }
-
-    public String buscarEstadoDaParcela(ParcelaValorDivida parcela) {
-        if (parcela == null) {
-            return " - ";
-        }
-        if (parcela.isDividaAtiva()) {
-            return "DÍVIDA ATIVA";
-        }
-        if (parcela.isDividaAtivaAjuizada()) {
-            return "DÍVIDA ATIVA AJUIZADA";
-        }
-        return "DO EXERCÍCIO";
-    }
-
-    public void alterarVencimentoParcelaValorDivida(ParcelaValorDivida parcelaValorDivida, Date vencimento) {
-        alterarVencimentoDescontoItemParcela(parcelaValorDivida, vencimento);
-        parcelaValorDivida.setVencimento(vencimento);
-        em.merge(parcelaValorDivida);
     }
 
     public List<ParcelaValorDivida> recuperarParcelasDoCalculo(Calculo calculo) {
@@ -1668,6 +1664,13 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
         return null;
     }
 
+    public void alterarVencimentoParcelaValorDivida(ParcelaValorDivida parcelaValorDivida, Date vencimento) {
+        alterarVencimentoDescontoItemParcela(parcelaValorDivida, vencimento);
+        parcelaValorDivida.setVencimento(vencimento);
+        em.merge(parcelaValorDivida);
+
+    }
+
     private void alterarVencimentoDescontoItemParcela(ParcelaValorDivida parcelaValorDivida, Date vencimento) {
         List<DescontoItemParcela> descontos = buscarDescontoItemParcelaVigentes(parcelaValorDivida);
         if (descontos != null) {
@@ -1686,6 +1689,19 @@ public class ConsultaDebitoFacade extends AbstractFacade<ValorDivida> {
         q.setParameter("parcela", parcelaValorDivida.getId());
         q.setParameter("vencimento", parcelaValorDivida.getVencimento());
         return q.getResultList();
+    }
+
+    public String buscarEstadoDaParcela(ParcelaValorDivida parcela) {
+        if (parcela == null) {
+            return " - ";
+        }
+        if (parcela.isDividaAtiva()) {
+            return "DÍVIDA ATIVA";
+        }
+        if (parcela.isDividaAtivaAjuizada()) {
+            return "DÍVIDA ATIVA AJUIZADA";
+        }
+        return "DO EXERCÍCIO";
     }
 
 

@@ -21,7 +21,6 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -42,10 +41,6 @@ public class FaltasFacade extends AbstractFacade<Faltas> {
     private AfastamentoFacade afastamentoFacade;
     @EJB
     private SistemaFacade sistemaFacade;
-    @EJB
-    private PeriodoAquisitivoFLFacade periodoAquisitivoFLFacade;
-    @EJB
-    private ContratoFPFacade contratoFPFacade;
 
     public FaltasFacade() {
         super(Faltas.class);
@@ -62,30 +57,6 @@ public class FaltasFacade extends AbstractFacade<Faltas> {
     @Override
     protected EntityManager getEntityManager() {
         return em;
-    }
-
-    @Override
-    public void salvar(Faltas entity) {
-        entity = em.merge(entity);
-        processarPA(entity.getContratoFP());
-    }
-
-    @Override
-    public void salvarNovo(Faltas entity) {
-        entity = super.salvarRetornando(entity);
-        processarPA(entity.getContratoFP());
-    }
-
-    @Override
-    public void remover(Faltas entity){
-        ContratoFP contratoFP = contratoFPFacade.recuperarSomentePeriodosAquisitivos(entity.getContratoFP().getId());
-        super.remover(entity);
-        processarPA(contratoFP);
-    }
-
-    public void processarPA(ContratoFP contratofp) {
-        periodoAquisitivoFLFacade.excluirPeriodosAquisitivosParaRegerar(contratofp);
-        periodoAquisitivoFLFacade.gerarPeriodosAquisitivos(contratofp, SistemaFacade.getDataCorrente(), null);
     }
 
     public List<Faltas> recuperaFaltasPorContratoPeriodo(ContratoFP contrato, Date inicio, Date fim) {
@@ -371,25 +342,6 @@ public class FaltasFacade extends AbstractFacade<Faltas> {
             return (VwFalta) q.getSingleResult();
         } catch (NoResultException npe) {
             return null;
-        }
-    }
-
-    public List<VwFalta> buscarFaltasInjustificadasNoPeriodoPorContrato(ContratoFP contrato, Date inicio, Date fim) {
-        String sql = " select f.* from VwFalta f" +
-            "       where f.contratoFP_id = :contrato" +
-            "         and ((:inicio between f.inicio and f.fim or :fim between f.inicio and f.fim) or " +
-            "         (f.inicio between :inicio and :fim or f.fim between :inicio and :fim))" +
-            "         and f.tipoFalta = :tipoFalta";
-        Query q = em.createNativeQuery(sql, VwFalta.class);
-        q.setMaxResults(1);
-        q.setParameter("contrato", contrato.getId());
-        q.setParameter("inicio", inicio);
-        q.setParameter("fim", fim);
-        q.setParameter("tipoFalta", TipoFalta.FALTA_INJUSTIFICADA.name());
-        try {
-            return q.getResultList();
-        } catch (NoResultException npe) {
-            return Lists.newArrayList();
         }
     }
 

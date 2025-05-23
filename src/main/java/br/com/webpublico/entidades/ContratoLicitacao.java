@@ -110,13 +110,13 @@ public class ContratoLicitacao extends SuperEntidade implements ObjetoLicitatori
     }
 
     @Override
-    public SolicitacaoMaterial getSolicitacaoMaterial() {
-        return getProcessoDeCompra().getSolicitacaoMaterial();
+    public ProcessoDeCompra getProcessoDeCompra() {
+        return getLicitacao().getProcessoDeCompra();
     }
 
     @Override
-    public ProcessoDeCompra getProcessoDeCompra() {
-        return getLicitacao().getProcessoDeCompra();
+    public SolicitacaoMaterial getSolicitacaoMaterial() {
+        return getProcessoDeCompra().getSolicitacaoMaterial();
     }
 
     @Override

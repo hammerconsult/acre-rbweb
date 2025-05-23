@@ -224,8 +224,8 @@ public class EstornoLibCotaFinanceiraFacade extends SuperFacadeContabil<EstornoL
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getLiberacao().getContaFinanceiraRecebida(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), EstornoLibCotaFinanceira.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getLiberacao().getContaFinanceiraRecebida().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -264,8 +264,8 @@ public class EstornoLibCotaFinanceiraFacade extends SuperFacadeContabil<EstornoL
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getLiberacao().getContaFinanceiraRetirada(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), EstornoLibCotaFinanceira.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getLiberacao().getContaFinanceiraRetirada().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);

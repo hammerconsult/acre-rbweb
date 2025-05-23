@@ -2,7 +2,6 @@ package br.com.webpublico.negocios.rh.esocial;
 
 import br.com.webpublico.entidades.HierarquiaOrganizacional;
 import br.com.webpublico.entidades.PessoaFisica;
-import br.com.webpublico.entidades.VinculoFP;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidades.rh.esocial.RegistroESocial;
 import br.com.webpublico.entidades.rh.esocial.RegistroEventoEsocial;
@@ -81,7 +80,9 @@ public class Registro1202Facade extends AbstractFacade<RegistroEventoEsocial> {
         return prestadorServicosFacade;
     }
 
-    public List<VinculoFPEventoEsocial> getVinculoFPEventoEsocial(RegistroEventoEsocial registroEventoEsocial, PessoaFisica pessoaVinculo, boolean apenasNaoEnviados, HierarquiaOrganizacional hierarquia) {
+    public List<VinculoFPEventoEsocial> getVinculoFPEventoEsocial(RegistroEventoEsocial registroEventoEsocial,
+                                                                  PessoaFisica pessoaVinculo, boolean apenasNaoEnviados,
+                                                                  HierarquiaOrganizacional hierarquia) {
         try {
             ConfiguracaoEmpregadorESocial configuracaoEmpregadorESocial = getConfiguracaoEmpregadorESocialFacade().recuperarPorEntidade(registroEventoEsocial.getEntidade());
             validarConfigEmpregadorESocial(configuracaoEmpregadorESocial, registroEventoEsocial);

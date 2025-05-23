@@ -307,11 +307,6 @@ public class TransferenciaParametrosTributarioControlador implements Serializabl
             future = AsyncExecutor.getInstance().execute(assistenteBarraProgresso,
                 () -> transferenciaParametrosTributarioFacade.transferirParametroMalaDiretaIptu(origem, destino, assistenteBarraProgresso));
         }
-        if (TransferenciaParametroTributario.PARAMETRO_DE_MARCA_A_FOGO.equals(transferencia)) {
-            assistenteBarraProgresso.setDescricaoProcesso(transferencia.getDescricao());
-            future = AsyncExecutor.getInstance().execute(assistenteBarraProgresso,
-                () -> transferenciaParametrosTributarioFacade.transferirParametroMarcaFogo(origem, destino, assistenteBarraProgresso));
-        }
 
         if (TransferenciaParametroTributario.PARAMETRO_LICENCIAMENTO_AMBIENTAL.equals(transferencia)) {
             assistenteBarraProgresso.setDescricaoProcesso(transferencia.getDescricao());
@@ -325,13 +320,18 @@ public class TransferenciaParametrosTributarioControlador implements Serializabl
                 () -> transferenciaParametrosTributarioFacade.transferirCategoriaAssuntoLicenciamentoAmbiental(origem, destino, assistenteBarraProgresso));
         }
 
+        if (TransferenciaParametroTributario.PARAMETRO_DE_MARCA_A_FOGO.equals(transferencia)) {
+            assistenteBarraProgresso.setDescricaoProcesso(transferencia.getDescricao());
+            future = AsyncExecutor.getInstance().execute(assistenteBarraProgresso,
+                () -> transferenciaParametrosTributarioFacade.transferirParametroMarcaFogo(origem, destino, assistenteBarraProgresso));
+        }
+
         if (TransferenciaParametroTributario.PARAMETRO_INFORMACOES_RBTRANS.equals(transferencia)) {
             assistenteBarraProgresso.setDescricaoProcesso(transferencia.getDescricao());
             future = AsyncExecutor.getInstance().execute(assistenteBarraProgresso,
                 () -> transferenciaParametrosTributarioFacade.transferirParametroInformacoesRBTrans(origem, destino, assistenteBarraProgresso));
         }
     }
-
 
     public enum TransferenciaParametroTributario {
         ENQUADRAMENTOS_E_CONTAS_DOS_TRIBUTOS("Enquadramentos e Contas dos Tributos", true),
@@ -351,9 +351,9 @@ public class TransferenciaParametrosTributarioControlador implements Serializabl
         HABITESE_FAIXA_DE_VALORES("Faixa de Valores de Construções Habite-se", true),
         PARAMETRO_ALVARA_IMEDIATO("Parâmetro do Alvará Imediato", true),
         PARAMETRO_MALA_DIRETA_IPTU("Parâmetro da Mala Direta de IPTU", true),
-        PARAMETRO_DE_MARCA_A_FOGO("Parâmetro de Marca a Fogo", true),
         PARAMETRO_LICENCIAMENTO_AMBIENTAL("Parâmetro do Licenciamento Ambiental", true),
         CATEGORIA_ASSUNTO_LICENCIAMENTO_AMBIENTAL("Categorias dos Assuntos do Licenciamento Ambiental", true),
+        PARAMETRO_DE_MARCA_A_FOGO("Parâmetro de Marca a Fogo", true),
         PARAMETRO_INFORMACOES_RBTRANS("Parâmetro de informações do RB Trans", true);
         private String descricao;
         private boolean transferir;

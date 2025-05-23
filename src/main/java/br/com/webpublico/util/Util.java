@@ -7,7 +7,10 @@ package br.com.webpublico.util;
 import br.com.webpublico.BarCode;
 import br.com.webpublico.controle.SistemaControlador;
 import br.com.webpublico.controle.Web;
-import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidades.Arquivo;
+import br.com.webpublico.entidades.ArquivoParte;
+import br.com.webpublico.entidades.SuperEntidade;
+import br.com.webpublico.entidades.UsuarioSistema;
 import br.com.webpublico.entidadesauxiliares.ParametrosRelatorios;
 import br.com.webpublico.enums.SummaryMessages;
 import br.com.webpublico.enums.TipoMascaraUnidadeMedida;
@@ -53,8 +56,6 @@ import org.hibernate.Session;
 import org.hibernate.proxy.HibernateProxy;
 import org.joda.time.DateTime;
 import org.json.JSONObject;
-import org.primefaces.component.tabview.TabView;
-import org.primefaces.event.TabChangeEvent;
 import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
 import org.slf4j.Logger;
@@ -541,94 +542,6 @@ public class Util extends UtilEntidades {
         return lista;
     }
 
-    /**
-     * Método utilizado para adicionar o objeto selecionado
-     * em uma lista auxiliar. Para adicionar todos passe as
-     * listas e o obj nulo. Para adicionar um objeto passe
-     * a segunda lista nula e o objeto a ser adicionado.
-     *
-     * @param lista1 indica a lista que receberá o objeto
-     * @param lista2 indica a lista que contem o objeto
-     * @param obj    indica o objeto a ser adicionado
-     */
-    public static <T> void adicionarSelecionadosNaLista(List<T> lista1, List<T> lista2, T obj) {
-        if (lista1 == null) {
-            lista1 = Lists.newArrayList();
-        }
-        if (obj == null) {
-            if (lista2 == null) {
-                lista2 = Lists.newArrayList();
-            }
-            if (lista1.size() == lista2.size()) {
-                lista1.removeAll(lista2);
-            } else {
-                for (T t : lista2) {
-                    if (!lista1.contains(t)) {
-                        adicionarObjetoEmLista(lista1, t);
-                    }
-                }
-            }
-        } else {
-            if (lista1.contains(obj)) {
-                lista1.remove(obj);
-            } else {
-                adicionarObjetoEmLista(lista1, obj);
-            }
-        }
-    }
-
-    /**
-     * Método utilizado para alternar o icone quando
-     * se adiciona ou remove um item da lista.
-     * Para marcar todos passe as
-     * listas e o obj nulo. Para marcar um objeto passe
-     * a segunda lista nula e o objeto a ser marcado.
-     *
-     * @param lista1 indica a lista que vai receber o objeto
-     * @param lista2 indica a lista que contem o objeto
-     * @param obj    indica o objeto a ser adicionado
-     */
-    public static <T> String alterarIcones(List<T> lista1, List<T> lista2, T obj) {
-        if (lista1 == null) {
-            lista1 = Lists.newArrayList();
-        }
-        if (obj == null) {
-            if (lista2 == null) {
-                lista2 = Lists.newArrayList();
-            }
-            if (lista1.size() == lista2.size()) {
-                return "ui-icon-check";
-            }
-            return "ui-icon-none";
-        } else {
-            if (lista1.contains(obj)) {
-                return "ui-icon-check";
-            }
-            return "ui-icon-none";
-        }
-    }
-
-    /**
-     * Método utilizado para atribuir valor ao index ao
-     * trocar de tab.
-     * Não precisa inicializar o index no controlador.
-     *
-     * @param evt Capturado ao trocar de tab.
-     */
-    public static Integer alterarTabs(TabChangeEvent evt) {
-        TabView tabView = (TabView) evt.getComponent();
-        return tabView.getChildren().indexOf(evt.getTab());
-    }
-
-    public static RevisaoAuditoria criarRevisaoAuditoria(Long id, String loginUsuario, String ip) {
-        RevisaoAuditoria rev = new RevisaoAuditoria();
-        rev.setId(id);
-        rev.setDataHora(new Date());
-        rev.setUsuario(loginUsuario);
-        rev.setIp(ip);
-        return rev;
-    }
-
     public static void limparCampos(Object obj) {
 
         for (Field f : obj.getClass().getDeclaredFields()) {
@@ -976,18 +889,18 @@ public class Util extends UtilEntidades {
         return "";
     }
 
-    public static String formataValorQuatroCasasDecimais(BigDecimal valor) {
-        DecimalFormat df = new DecimalFormat(MASCARA_DECIMAL_QUATRO_DIGITOS);
-        if (valor != null) {
-            return "R$ " + df.format(valor);
-        }
-        return "";
-    }
-
     public static String formataValorSemCifrao(BigDecimal valor) {
         DecimalFormat df = new DecimalFormat(MASCARA_DECIMAL_DOIS_DIGITOS);
         if (valor != null) {
             return df.format(valor);
+        }
+        return "";
+    }
+
+    public static String formataValorQuatroCasasDecimais(BigDecimal valor) {
+        DecimalFormat df = new DecimalFormat(MASCARA_DECIMAL_QUATRO_DIGITOS);
+        if (valor != null) {
+            return "R$ " + df.format(valor);
         }
         return "";
     }
@@ -1434,9 +1347,9 @@ public class Util extends UtilEntidades {
         return c.getTime();
     }
 
-    public static Boolean isFormaterMesValido(String valeu) {
+    public static Boolean isMesValido(String mes) {
         Pattern patter = Pattern.compile("^[1][0-2]|[0][1-9]$");
-        Matcher matcher = patter.matcher(valeu);
+        Matcher matcher = patter.matcher(mes);
         return matcher.matches();
     }
 
@@ -1699,6 +1612,14 @@ public class Util extends UtilEntidades {
         return null;
     }
 
+    public static boolean isNull(Object atributo) {
+        return atributo == null;
+    }
+
+    public static boolean isNotNull(Object atributo) {
+        return !isNull(atributo);
+    }
+
     public static String getIdsDaListaAsString(List lista) {
         String ids = "";
         for (Object obj : lista) {
@@ -1706,14 +1627,6 @@ public class Util extends UtilEntidades {
         }
         ids = (ids.substring(0, ids.length() - 1));
         return ids;
-    }
-
-    public static boolean isNull(Object atributo) {
-        return atributo == null;
-    }
-
-    public static boolean isNotNull(Object atributo) {
-        return !isNull(atributo);
     }
 
     public static boolean isConsecutive(List<Integer> itens, int min) {
@@ -1856,19 +1769,47 @@ public class Util extends UtilEntidades {
         return getFacadeViaLookup(JAVA_MODULE_PATH + nome);
     }
 
-    public static String montarClausulaIn(List registros) {
-        if (registros == null || registros.isEmpty()) return "";
-        StringBuilder in = new StringBuilder();
-        String juncao = "(";
-        for (Object obj : registros) {
-            in.append(juncao);
-            in.append("'");
-            in.append(obj);
-            in.append("'");
-            juncao = ", ";
+    public static Object getFacadeViaLookup(String nome) throws ExcecaoNegocioGenerica {
+        try {
+            return new InitialContext().lookup(nome);
+        } catch (NamingException e) {
+            throw new ExcecaoNegocioGenerica("Erro ao recuperar " + nome + " via lookup {}", e);
         }
-        in.append(") ");
-        return in.toString();
+    }
+
+    public static String getBase64ToString(String arquivo64) {
+        String data = arquivo64.split("base64,")[1];
+        Base64 decoder = new Base64();
+        byte[] decode = decoder.decode(data);
+        return new String(decode);
+    }
+
+    public static InputStream getBase64ToInputStream(String arquivo64) throws IOException {
+        return IOUtils.toInputStream(arquivo64, "UTF-8");
+    }
+
+    public static boolean isMaiorQueZero(BigDecimal value) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public static String converterImgUrlParaBase64(String url) {
+        try {
+            URL imageUrl = new URL(url);
+            URLConnection ucon = imageUrl.openConnection();
+            InputStream is = ucon.getInputStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int read = 0;
+            while ((read = is.read(buffer, 0, buffer.length)) != -1) {
+                baos.write(buffer, 0, read);
+            }
+            baos.flush();
+            Base64 base64 = new Base64();
+            return base64.encodeAsString(baos.toByteArray());
+        } catch (Exception e) {
+            logger.error("Error", e.toString());
+        }
+        return "";
     }
 
     public static String getValorSemPontoEVirgulas(BigDecimal valor) {
@@ -1962,76 +1903,6 @@ public class Util extends UtilEntidades {
         }
     }
 
-    public static Object getFacadeViaLookup(String nome) throws ExcecaoNegocioGenerica {
-        try {
-            return new InitialContext().lookup(nome);
-        } catch (NamingException e) {
-            throw new ExcecaoNegocioGenerica("Erro ao recuperar " + nome + " via lookup {}", e);
-        }
-    }
-
-    public static String getBase64ToString(String arquivo64) {
-        String data = arquivo64.split("base64,")[1];
-        Base64 decoder = new Base64();
-        byte[] decode = decoder.decode(data);
-        return new String(decode);
-    }
-
-    public static InputStream getBase64ToInputStream(String arquivo64) throws IOException {
-        return IOUtils.toInputStream(arquivo64, "UTF-8");
-    }
-
-    public static boolean isMaiorQueZero(BigDecimal value) {
-        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
-    }
-
-    public static String converterImgUrlParaBase64(String url) {
-        try {
-            URL imageUrl = new URL(url);
-            URLConnection ucon = imageUrl.openConnection();
-            InputStream is = ucon.getInputStream();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            byte[] buffer = new byte[1024];
-            int read = 0;
-            while ((read = is.read(buffer, 0, buffer.length)) != -1) {
-                baos.write(buffer, 0, read);
-            }
-            baos.flush();
-            Base64 base64 = new Base64();
-            return base64.encodeAsString(baos.toByteArray());
-        } catch (Exception e) {
-            logger.error("Error", e.toString());
-        }
-        return "";
-    }
-
-    public static Map<String, Object> extrairPropriedadesDeObjetoParaMapa(Object object) {
-        Map<String, Object> map = Maps.newHashMap();
-        Field[] fields = object.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            field.setAccessible(true);
-            try {
-                Object obj = field.get(object);
-                if (obj != null && (!(obj instanceof String) || !((String) obj).isEmpty())) {
-                    map.put(field.getName(), obj);
-                }
-            } catch (IllegalAccessException e) {
-                logger.error("Erro ao extrair propriedade do objeto", e.toString());
-            }
-        }
-        return map;
-    }
-
-    public static <K> boolean validaInicialFinal(Comparable<K> inicial, Comparable<K> finall) {
-        if ((inicial != null && finall == null) || (finall != null && inicial == null)) {
-            return false;
-        }
-        if (inicial != null && finall != null && finall.compareTo((K) inicial) < 0) {
-            return false;
-        }
-        return true;
-    }
-
     public static String gerarSenhaUsuarioPortalWeb() {
         Random r = new Random();
         StringBuffer sb = new StringBuffer();
@@ -2039,6 +1910,10 @@ public class Util extends UtilEntidades {
             sb.append(Integer.toHexString(r.nextInt()));
         }
         return sb.substring(0, 8);
+    }
+
+    public static String quebraLinha() {
+        return "\r\n";
     }
 
     public static InputStream generateQRCodeImage(String text, int width, int height) {
@@ -2088,6 +1963,21 @@ public class Util extends UtilEntidades {
         }
     }
 
+    public static String montarClausulaIn(List registros) {
+        if (registros == null || registros.isEmpty()) return "";
+        StringBuilder in = new StringBuilder();
+        String juncao = "(";
+        for (Object obj : registros) {
+            in.append(juncao);
+            in.append("'");
+            in.append(obj);
+            in.append("'");
+            juncao = ", ";
+        }
+        in.append(") ");
+        return in.toString();
+    }
+
     public static <K> List<List<K>> partitionList(List<K> lista, int sublistSize) {
         if (lista.isEmpty()) {
             List<List<K>> retorno = new ArrayList<>();
@@ -2107,8 +1997,14 @@ public class Util extends UtilEntidades {
         }
     }
 
-    public static String quebraLinha() {
-        return "\r\n";
+    public static String obterIpUsuario() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            WebAuthenticationDetails webAuthDetails = (WebAuthenticationDetails) auth.getDetails();
+            return webAuthDetails.getRemoteAddress();
+        } catch (Exception e) {
+            return "Local";
+        }
     }
 
     public static <T> List<Long> montarIdsList(List<T> lista) {
@@ -2203,16 +2099,6 @@ public class Util extends UtilEntidades {
         return new RestTemplate(clientHttpRequestFactory);
     }
 
-    public static String obterIpUsuario() {
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            WebAuthenticationDetails webAuthDetails = (WebAuthenticationDetails) auth.getDetails();
-            return webAuthDetails.getRemoteAddress();
-        } catch (Exception e) {
-            return "Local";
-        }
-    }
-
     public static <T extends Number> List<Long> converterToLongList(List<T> numberList) {
         try {
             return Lists.transform(numberList, new Function<T, Long>() {
@@ -2224,6 +2110,33 @@ public class Util extends UtilEntidades {
         } catch (Exception e) {
             return Collections.emptyList();
         }
+    }
+
+    public static Map<String, Object> extrairPropriedadesDeObjetoParaMapa(Object object) {
+        Map<String, Object> map = Maps.newHashMap();
+        Field[] fields = object.getClass().getDeclaredFields();
+        for (Field field : fields) {
+            field.setAccessible(true);
+            try {
+                Object obj = field.get(object);
+                if (obj != null && (!(obj instanceof String) || !((String) obj).isEmpty())) {
+                    map.put(field.getName(), obj);
+                }
+            } catch (IllegalAccessException e) {
+                logger.error("Erro ao extrair propriedade do objeto", e.toString());
+            }
+        }
+        return map;
+    }
+
+    public static <K> boolean validaInicialFinal(Comparable<K> inicial, Comparable<K> finall) {
+        if ((inicial != null && finall == null) || (finall != null && inicial == null)) {
+            return false;
+        }
+        if (inicial != null && finall != null && finall.compareTo((K) inicial) < 0) {
+            return false;
+        }
+        return true;
     }
 
     public static List<Field> getFieldsUpTo(Class<?> startClass,
@@ -2247,17 +2160,6 @@ public class Util extends UtilEntidades {
         return ap.getBean(clazz);
     }
 
-    public static String typeToXML(Object type) throws JAXBException {
-        JAXBContext jc = JAXBContext.newInstance(type.getClass());
-
-        Marshaller marshaller = jc.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-        marshaller.setProperty(Marshaller.JAXB_ENCODING, "ISO-8859-1");
-        StringWriter stringWriter = new StringWriter();
-        marshaller.marshal(type, stringWriter);
-        return stringWriter.toString();
-    }
-
     public static byte[] gerarHash(String frase, String algoritmo) {
         try {
             MessageDigest md = MessageDigest.getInstance(algoritmo);
@@ -2279,6 +2181,17 @@ public class Util extends UtilEntidades {
             s.append(Integer.toHexString(parteAlta | parteBaixa));
         }
         return s.toString();
+    }
+
+    public static String typeToXML(Object type) throws JAXBException {
+        JAXBContext jc = JAXBContext.newInstance(type.getClass());
+
+        Marshaller marshaller = jc.createMarshaller();
+        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+        marshaller.setProperty(Marshaller.JAXB_ENCODING, "ISO-8859-1");
+        StringWriter stringWriter = new StringWriter();
+        marshaller.marshal(type, stringWriter);
+        return stringWriter.toString();
     }
 
     public static TransactionTemplate recuperarSpringTransaction(Propagation propagation, int secondsTimeout) {
@@ -2366,16 +2279,6 @@ public class Util extends UtilEntidades {
         return OBJECT_MAPPER.readerFor(clazz).readValue(jsonString);
     }
 
-    public static RestTemplate getRestTemplateWithConnectTimeout() {
-        return getRestTemplateWithConnectTimeout(10000);
-    }
-
-    public static RestTemplate getRestTemplateWithConnectTimeout(long connectTimeout) {
-        HttpComponentsClientHttpRequestFactory httpComponentsClientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
-        httpComponentsClientHttpRequestFactory.setConnectTimeout(10000);
-        return new RestTemplate(httpComponentsClientHttpRequestFactory);
-    }
-
     public static String getTranslate(String campo) {
         return "translate(" + campo + ",'âàãáÁÂÀÃéêÉÊíÍóôõÓÔÕüúÜÚÇç','aaaaaaaaeeeeiioooooouuuucc')";
     }
@@ -2386,6 +2289,16 @@ public class Util extends UtilEntidades {
         } catch (Exception e) {
             return 1;
         }
+    }
+
+    public static RestTemplate getRestTemplateWithConnectTimeout() {
+        return getRestTemplateWithConnectTimeout(10000);
+    }
+
+    public static RestTemplate getRestTemplateWithConnectTimeout(long connectTimeout) {
+        HttpComponentsClientHttpRequestFactory httpComponentsClientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
+        httpComponentsClientHttpRequestFactory.setConnectTimeout(10000);
+        return new RestTemplate(httpComponentsClientHttpRequestFactory);
     }
 
     public static BigDecimal converterValor(String valor) {
@@ -2402,16 +2315,6 @@ public class Util extends UtilEntidades {
         }
     }
 
-    public static boolean isExercicioLogadoDiferenteExercicioAtual(Date dataLogada) {
-        try {
-            Integer exercicioLogado = DataUtil.getAno(dataLogada);
-            Integer exercicioAtual = DataUtil.getAno(new Date());
-            return !exercicioLogado.equals(exercicioAtual);
-        } catch (NullPointerException npe) {
-            return Boolean.FALSE;
-        }
-    }
-
     public static String getUrlPortalContribuinte() {
         String urlPortalContribuinte = System.getenv("URL_PORTAL_CONTRIBUINTE");
         if (Strings.isNullOrEmpty(urlPortalContribuinte)) {
@@ -2421,5 +2324,15 @@ public class Util extends UtilEntidades {
             urlPortalContribuinte = StringUtils.chop(urlPortalContribuinte);
         }
         return urlPortalContribuinte;
+    }
+
+    public static boolean isExercicioLogadoDiferenteExercicioAtual(Date dataLogada) {
+        try {
+            Integer exercicioLogado = DataUtil.getAno(dataLogada);
+            Integer exercicioAtual = DataUtil.getAno(new Date());
+            return !exercicioLogado.equals(exercicioAtual);
+        } catch (NullPointerException npe) {
+            return Boolean.FALSE;
+        }
     }
 }

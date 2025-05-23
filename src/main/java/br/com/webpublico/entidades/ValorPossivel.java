@@ -6,12 +6,11 @@ package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.anotacoes.Etiqueta;
-import br.com.webpublico.util.anotacoes.Obrigatorio;
 import br.com.webpublico.util.anotacoes.Tabelavel;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.math.BigDecimal;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -21,15 +20,13 @@ import java.util.Date;
 @Entity
 
 @Audited
-public class ValorPossivel extends SuperEntidade {
+public class ValorPossivel implements Serializable {
 
+    private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
-    @Obrigatorio
-    @Etiqueta("Valor")
     private String valor;
-    @Obrigatorio
     @Etiqueta("Código")
     @Tabelavel
     private Integer codigo;
@@ -39,14 +36,12 @@ public class ValorPossivel extends SuperEntidade {
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date dataRegistro;
     private boolean valorPadrao;
-    private BigDecimal fator;
 
     public ValorPossivel() {
-        super();
+        dataRegistro = new Date();
     }
 
     public ValorPossivel(String valor, Atributo atributo) {
-        this();
         this.valor = valor;
         this.atributo = atributo;
     }
@@ -104,12 +99,26 @@ public class ValorPossivel extends SuperEntidade {
         return codigo != null && valor != null ? codigo + " - " + valor : codigo != null ? codigo + "" : valor;
     }
 
-    public BigDecimal getFator() {
-        return fator;
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final ValorPossivel other = (ValorPossivel) obj;
+        if (this.dataRegistro != other.dataRegistro && (this.dataRegistro == null || !this.dataRegistro.equals(other.dataRegistro))) {
+            return false;
+        }
+        return true;
     }
 
-    public void setFator(BigDecimal fator) {
-        this.fator = fator;
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 41 * hash + (this.dataRegistro != null ? this.dataRegistro.hashCode() : 0);
+        return hash;
     }
 
     @Override

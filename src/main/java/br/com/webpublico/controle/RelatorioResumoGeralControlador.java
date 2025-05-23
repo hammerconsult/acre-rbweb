@@ -36,7 +36,7 @@ import java.util.List;
 @ViewScoped
 @ManagedBean
 @URLMappings(mappings = {
-        @URLMapping(id = "gerarRelatorioResumoGeral", pattern = "/relatorio/resumo-geral/", viewId = "/faces/rh/relatorios/relatorioresumogeral.xhtml")
+    @URLMapping(id = "gerarRelatorioResumoGeral", pattern = "/relatorio/resumo-geral/", viewId = "/faces/rh/relatorios/relatorioresumogeral.xhtml")
 })
 public class RelatorioResumoGeralControlador extends AbstractReport {
 

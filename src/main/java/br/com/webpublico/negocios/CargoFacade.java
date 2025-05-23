@@ -64,16 +64,16 @@ public class CargoFacade extends AbstractFacade<Cargo> {
         super(Cargo.class);
     }
 
+    public SingletonGeradorCodigo getSingletonGeradorCodigo() {
+        return singletonGeradorCodigo;
+    }
+
     @PostConstruct
     public void init() {
         eSocialService = (ESocialService) Util.getSpringBeanPeloNome("eSocialService");
         s1030Service = (S1030Service) Util.getSpringBeanPeloNome("s1030Service");
         s1035Service = (S1035Service) Util.getSpringBeanPeloNome("s1035Service");
         s1040Service = (S1040Service) Util.getSpringBeanPeloNome("s1040Service");
-    }
-
-    public SingletonGeradorCodigo getSingletonGeradorCodigo() {
-        return singletonGeradorCodigo;
     }
 
 

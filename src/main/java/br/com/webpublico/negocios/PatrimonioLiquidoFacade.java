@@ -117,9 +117,9 @@ public class PatrimonioLiquidoFacade extends SuperFacadeContabil<PatrimonioLiqui
         Preconditions.checkNotNull(enity.getClasse(), "A classe credor não foi preenchida.");
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(enity, item));
-        objetos.add(new ObjetoParametro(enity.getPessoa().getId(), item));
-        objetos.add(new ObjetoParametro(enity.getClasse().getId(), item));
+        objetos.add(new ObjetoParametro(enity.getId().toString(), PatrimonioLiquido.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(enity.getPessoa().getId().toString(), Pessoa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(enity.getClasse().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         return objetos;
     }
 

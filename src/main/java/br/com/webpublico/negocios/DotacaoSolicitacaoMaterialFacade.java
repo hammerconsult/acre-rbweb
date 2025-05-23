@@ -9,7 +9,7 @@ import br.com.webpublico.entidadesauxiliares.AgrupadorReservaSolicitacaoCompraVO
 import br.com.webpublico.entidadesauxiliares.DotacaoSolicitacaoMaterialItemVO;
 import br.com.webpublico.entidadesauxiliares.FiltroDotacaoProcessoCompraVO;
 import br.com.webpublico.entidadesauxiliares.contabil.MovimentoDespesaORCVO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.negocios.contabil.execucao.ExtratoMovimentoDespesaOrcFacade;

@@ -703,7 +703,6 @@ public class LiquidacaoControlador extends PrettyControlador<Liquidacao> impleme
 
         docInt.getDesdobramento().setValor(getValorTotalALiquidarGrupoIntegrador());
         docInt.getDesdobramento().setSaldo(getValorTotalALiquidarGrupoIntegrador());
-
         selecionado.getDoctoFiscais().forEach(doc -> {
             if (doc.getDoctoFiscalLiquidacao().getId().equals(docInt.getDoctoFiscalLiquidacao().getId())) {
                 doc.setValorLiquidado(docInt.getValorALiquidar());

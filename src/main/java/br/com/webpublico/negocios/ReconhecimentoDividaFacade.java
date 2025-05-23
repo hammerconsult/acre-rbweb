@@ -11,7 +11,6 @@ import org.hibernate.Hibernate;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
@@ -235,8 +234,7 @@ public class ReconhecimentoDividaFacade extends AbstractFacade<ReconhecimentoDiv
     public List<ReconhecimentoDivida> buscarReconhecimentoDividaSolicitacaoConcluida(String parte) {
         String sql = " select distinct rec.* from reconhecimentodivida rec " +
             "           inner join solreconhecimentodivida sol on sol.reconhecimentodivida_id = rec.id " +
-            "           inner join solicitacaoempenhorecdiv solrd on solrd.reconhecimentodivida_id = rec.id " +
-            "           inner join solicitacaoempenho solEmp on solEmp.id = solrd.solicitacaoempenho_id " +
+            "           inner join solicitacaoempenho solEmp on solEmp.reconhecimentodivida_id = rec.id " +
             "           inner join empenho emp on emp.id = solEmp.empenho_id " +
             "           inner join pessoafisica pfResp on rec.responsavel_id = pfResp.ID " +
             "           inner join pessoa forn on rec.fornecedor_id = forn.ID " +
@@ -293,39 +291,5 @@ public class ReconhecimentoDividaFacade extends AbstractFacade<ReconhecimentoDiv
         q.setParameter("idUsuario", sistemaFacade.getUsuarioCorrente().getId());
         q.setParameter("concluido", SituacaoSolicitacaoReconhecimentoDivida.CONCLUIDO.name());
         return q.getResultList();
-    }
-
-    public List<ItemReconhecimentoDividaDotacao> buscarItensDotacaoPorItemReconhecimento(ItemReconhecimentoDivida itemReqDiv) {
-        String sql = " select itemdot.* from itemreconhecdividadotacao itemdot " +
-            "           where itemdot.itemreconhecimentodivida_id = :idItem ";
-        Query q = em.createNativeQuery(sql, ItemReconhecimentoDividaDotacao.class);
-        q.setParameter("idItem", itemReqDiv.getId());
-        try {
-            return q.getResultList();
-        } catch (NoResultException nre) {
-            return null;
-        }
-    }
-
-    public List<SolicitacaoEmpenhoReconhecimentoDivida> buscarSolicitacaoReconhecimentoDivida(Long idReconhecimento) {
-        String sql = " select sol.* from solicitacaoempenhorecdiv sol " +
-            "           inner join solicitacaoempenho se on se.id = sol.solicitacaoempenho_id " +
-            "          where sol.reconhecimentoDivida_id = :idReconhecimento " +
-            "           and se.empenho_id is not null ";
-        Query q = em.createNativeQuery(sql, SolicitacaoEmpenhoReconhecimentoDivida.class);
-        q.setParameter("idReconhecimento", idReconhecimento);
-        return q.getResultList();
-    }
-
-    public SolicitacaoEmpenhoReconhecimentoDivida recuperarSolicitacaoEmpReconhecimentoDividaSolicitacaoEm(SolicitacaoEmpenho se) {
-        String sql = "select sol.* from solicitacaoempenhorecdiv sol where sol.solicitacaoEmpenho_id = :idSolEmp ";
-        Query consulta = em.createNativeQuery(sql, SolicitacaoEmpenhoReconhecimentoDivida.class);
-        consulta.setParameter("idSolEmp", se.getId());
-        consulta.setMaxResults(1);
-        try {
-            return (SolicitacaoEmpenhoReconhecimentoDivida) consulta.getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
     }
 }

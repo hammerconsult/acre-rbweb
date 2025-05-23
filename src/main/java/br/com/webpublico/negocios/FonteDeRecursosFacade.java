@@ -9,7 +9,6 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.enums.OperacaoReceita;
 import br.com.webpublico.enums.SituacaoFonteRecurso;
 import br.com.webpublico.enums.TipoFonteRecurso;
-import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 import org.hibernate.Hibernate;
@@ -297,34 +296,6 @@ public class FonteDeRecursosFacade extends AbstractFacade<FonteDeRecursos> {
 
     public FonteDeRecursos salvarRetornando(FonteDeRecursos fonteDeRecursos) {
         return em.merge(fonteDeRecursos);
-    }
-
-    @Override
-    public void salvarNovo(FonteDeRecursos fonteDeRecursos) {
-        validarFonteDeRecursos(fonteDeRecursos);
-        super.salvarNovo(fonteDeRecursos);
-    }
-
-    @Override
-    public void salvar(FonteDeRecursos fonteDeRecursos) {
-        validarFonteDeRecursos(fonteDeRecursos);
-        super.salvar(fonteDeRecursos);
-    }
-
-    private void validarFonteDeRecursos(FonteDeRecursos fonteDeRecursos) {
-        fonteDeRecursos.realizarValidacoes();
-        validarCodigoRepetidoNoExercicio(fonteDeRecursos);
-    }
-
-    private void validarCodigoRepetidoNoExercicio(FonteDeRecursos fonteDeRecursos) {
-        ValidacaoException ve = new ValidacaoException();
-        if (fonteDeRecursos.getCodigo() != null) {
-            FonteDeRecursos f = recuperaPorCodigoExericio(fonteDeRecursos, fonteDeRecursos.getExercicio());
-            if (f != null) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("Existe uma Fonte de Recurso com o mesmo código para o exercício de " + fonteDeRecursos.getExercicio() + ".");
-            }
-        }
-        ve.lancarException();
     }
 
     public ExercicioFacade getExercicioFacade() {

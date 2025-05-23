@@ -122,16 +122,12 @@ public class CreditoReceberFacade extends SuperFacadeContabil<CreditoReceber> {
                     entity.gerarHistoricos();
                     entity = em.merge(entity);
                 }
-                gerarSaldoCreditoReceber(entity);
+                saldoCreditoReceberFacade.gerarSaldoCreditoReceber(entity, true);
                 contabilizarCreditoReceber(entity);
             }
         } catch (ExcecaoNegocioGenerica ex) {
             throw new ExcecaoNegocioGenerica(ex.getMessage());
         }
-    }
-
-    public void gerarSaldoCreditoReceber(CreditoReceber entity) {
-        saldoCreditoReceberFacade.gerarSaldoCreditoReceber(entity, true);
     }
 
     @Override
@@ -175,14 +171,14 @@ public class CreditoReceberFacade extends SuperFacadeContabil<CreditoReceber> {
             item.setOperacaoClasseCredor(classeCredorFacade.recuperaOperacaoAndVigenciaClasseCredor(entity.getPessoa(), entity.getClasseCredor(), entity.getDataCredito()));
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita(), item));
+            objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item));
             if (!simulacao) {
-                objetos.add(new ObjetoParametro(entity, item));
+                objetos.add(new ObjetoParametro(entity.getId().toString(), CreditoReceber.class.getSimpleName(), item));
             }
             if (entity.getClasseCredor() == null) {
                 throw new ExcecaoNegocioGenerica("A Classe Credor está vazia.");
             }
-            objetos.add(new ObjetoParametro(entity.getClasseCredor(), item));
+            objetos.add(new ObjetoParametro(entity.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);

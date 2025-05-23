@@ -297,7 +297,7 @@ public class ComprovanteRendimentosIRRFFonte implements Serializable {
     }
 
     public void setDecimoTerceiro(BigDecimal decimoTerceiro) {
-        this.decimoTerceiro = decimoTerceiro;
+        this.decimoTerceiro = this.decimoTerceiro.add(decimoTerceiro);
     }
 
     public BigDecimal getIrRetidoNaFonte13Salario() {

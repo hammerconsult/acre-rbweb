@@ -93,4 +93,3 @@ public class ReducaoValorBem extends EventoBem implements RedutorValorBem {
         return "Não foi possível realizar o processo de " + getTipoReducaoValorBem().getDescricao() + ". ";
     }
 }
-

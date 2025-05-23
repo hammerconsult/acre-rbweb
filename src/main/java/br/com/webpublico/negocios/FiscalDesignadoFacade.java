@@ -10,16 +10,19 @@ import javax.persistence.Query;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Created by HardRock on 11/04/2017.
+ */
 @Stateless
 public class FiscalDesignadoFacade extends AbstractFacade<FiscalDesignado> {
-
-    @PersistenceContext(unitName = "webpublicoPU")
-    private EntityManager em;
 
     @Override
     protected EntityManager getEntityManager() {
         return em;
     }
+
+    @PersistenceContext(unitName = "webpublicoPU")
+    private EntityManager em;
 
     public FiscalDesignadoFacade() {
         super(FiscalDesignado.class);

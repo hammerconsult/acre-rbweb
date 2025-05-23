@@ -56,6 +56,7 @@ public class SolicitacaoEmpenhoEstornoFacade extends AbstractFacade<SolicitacaoE
         return resultList;
     }
 
+
     public List<SolicitacaoEmpenhoEstorno> buscarSolicitacoesPendentesPorUnidadeAndEmpenho(UnidadeOrganizacional unidadeOrganizacional, Empenho empenho, CategoriaOrcamentaria categoriaOrcamentaria) {
         String sql = " select solest.* from solicitacaoempenho sol " +
             "           inner join empenho emp on emp.id = sol.empenho_id " +

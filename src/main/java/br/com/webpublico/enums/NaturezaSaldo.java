@@ -10,6 +10,7 @@ import br.com.webpublico.interfaces.EnumComDescricao;
  * @author Renato Romanini
  */
 public enum NaturezaSaldo implements EnumComDescricao {
+
     DEVEDOR("Devedor"),
     CREDOR("Credor"),
     QUALQUER("Qualquer");

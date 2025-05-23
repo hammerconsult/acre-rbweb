@@ -25,7 +25,7 @@ public class AssentamentoFuncionalFacade extends AbstractFacade<AssentamentoFunc
     public Long ultimoNumeroMaisUm(ContratoFP contratoFP) {
         Query q = em.createNativeQuery("select coalesce(max(sequencial), 0) + 1 as numero " +
             "from ASSENTAMENTOFUNCIONAL where CONTRATOFP_ID = :idContrato");
-        q.setParameter("idContrato", contratoFP.getId());
+        q.setParameter("idContrato",contratoFP.getId());
         BigDecimal resultado = (BigDecimal) q.getSingleResult();
         return resultado.longValue();
 

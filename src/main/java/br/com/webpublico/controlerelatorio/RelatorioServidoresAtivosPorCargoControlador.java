@@ -14,7 +14,10 @@ import br.com.webpublico.negocios.HierarquiaOrganizacionalFacade;
 import br.com.webpublico.negocios.ModalidadeContratoFPFacade;
 import br.com.webpublico.negocios.comum.ConfiguracaoDeRelatorioFacade;
 import br.com.webpublico.report.ReportService;
-import br.com.webpublico.util.*;
+import br.com.webpublico.util.ConverterAutoComplete;
+import br.com.webpublico.util.DataUtil;
+import br.com.webpublico.util.FacesUtil;
+import br.com.webpublico.util.UtilRH;
 import br.com.webpublico.webreportdto.dto.comum.RelatorioDTO;
 import br.com.webpublico.webreportdto.dto.comum.TipoRelatorioDTO;
 import com.google.common.base.Strings;
@@ -150,7 +153,6 @@ public class RelatorioServidoresAtivosPorCargoControlador implements Serializabl
         if (!todosVinculos && modalidadeContratoFP == null) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Tipo de Cargo é obrigatório");
         }
-        ve.lancarException();
         if (dataFinal != null && dataInicial == null) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("O campo Data Inicial não pode ficar em branco quando uma Data Final é informada");
         }
@@ -255,7 +257,12 @@ public class RelatorioServidoresAtivosPorCargoControlador implements Serializabl
     }
 
     public List<SelectItem> getModalidades() {
-        return Util.getListSelectItem(modalidadeContratoFPFacade.modalidadesAtivas(), true);
+        List<SelectItem> retorno = new ArrayList<>();
+        retorno.add(new SelectItem(null, ""));
+        for (ModalidadeContratoFP modalidade : modalidadeContratoFPFacade.modalidadesAtivas()) {
+            retorno.add(new SelectItem(modalidade, modalidade.toString()));
+        }
+        return retorno;
     }
 
     public void carregarListaDeCargosPorModalidade() {
@@ -271,7 +278,6 @@ public class RelatorioServidoresAtivosPorCargoControlador implements Serializabl
             } else {
                 grupoCargos = cargoFacade.filtraCargosVigentesPorUnidadeOrganizacionalAndUsuario(sistemaControlador.getDataOperacao());
             }
-            setModalidadeContratoFP(null);
         } else {
             grupoCargos = Lists.newArrayList();
         }

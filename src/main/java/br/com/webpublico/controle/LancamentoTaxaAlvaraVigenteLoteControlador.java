@@ -157,8 +157,8 @@ public class LancamentoTaxaAlvaraVigenteLoteControlador implements Serializable 
         cadastroEconomico = null;
         cadastros = Lists.newArrayList();
         cadastrosSelecionados = Lists.newArrayList();
-        setRowsTable(10);
         tipoCalculoLoteAlvara = TipoCalculoLoteAlvara.CMCS_COM_CALCULOS_DE_ALVARAS_VIGENTES;
+        setRowsTable(10);
     }
 
     public List<SelectItem> getGrausDeRisco() {

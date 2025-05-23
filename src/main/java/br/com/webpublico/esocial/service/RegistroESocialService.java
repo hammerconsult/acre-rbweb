@@ -361,15 +361,7 @@ public class RegistroESocialService extends AbstractCadastroService<RegistroESoc
                 } else {
                     afastamento = (Afastamento) instanciaS2230;
                 }
-                prestadorServicos = prestadorServicosFacade
-                    .buscarPrestadorServicosPorIdPessoa(
-                        Optional.ofNullable(afastamento)
-                            .map(Afastamento::getContratoFP)
-                            .map(ContratoFP::getMatriculaFP)
-                            .map(MatriculaFP::getPessoa)
-                            .map(Pessoa::getId)
-                            .orElse(null));
-                s2230Service.enviarS2230(registroESocial.getEmpregador(), afastamento, prestadorServicos);
+                s2230Service.enviarS2230(registroESocial.getEmpregador(), afastamento);
                 break;
             case S2250:
                 s2250Service.enviarS2250(registroESocial.getEmpregador(), (AvisoPrevio) carregarObjeto(registroESocial));
@@ -508,9 +500,7 @@ public class RegistroESocialService extends AbstractCadastroService<RegistroESoc
     }
 
     private void enviarEmailS1010(NotificacaoEmailEsocial notificacaoEmailEsocial, String email) {
-        List<EventoFP> eventos = configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().
-            buscarEventoFPParaEnvioEsocial(notificacaoEmailEsocial.getEmpregador(), null,
-                true, new Date(), null);
+        List<EventoFP> eventos = configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().buscarEventoFPParaEnvioEsocial(notificacaoEmailEsocial.getEmpregador(), null, true, new Date());
         Set<EventoFP> eventosSemConfiguracaoNecessaria = configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().
             getNotificacaoEmailEsocialFacade().buscarEventoFPSemconfiguracaoEmpregador(notificacaoEmailEsocial.getEmpregador());
         StringBuilder conteudo = new StringBuilder();
@@ -627,15 +617,6 @@ public class RegistroESocialService extends AbstractCadastroService<RegistroESoc
         return "";
     }
 
-    public String getDescricaoEventoEsocialVinculoFP(String identificadorWP, String tabela, String coluna) {
-        VinculoFP vinculoFp = configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().
-            getVinculoFpPorTabelaAndColuna(identificadorWP, tabela, coluna);
-        if (vinculoFp != null) {
-            return vinculoFp.toString();
-        }
-        return "";
-    }
-
     public String getDescricaoEventoFP(String identificadorWP) {
         EventoFP eventoFP = configuracaoEmpregadorESocialFacade.getEventoFPFacade().recuperar(Long.parseLong(identificadorWP));
         if (eventoFP != null)
@@ -650,7 +631,7 @@ public class RegistroESocialService extends AbstractCadastroService<RegistroESoc
             List<RegistroESocial> eventos = configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().getRegistroEsocialPagamentosSemDescricao();
             List<EventoESocialDTO> eventosDTO = Lists.newArrayList();
             if (eventos != null) {
-                log.debug("Quantidade de eventos de pagamentos para atualizar " + eventos.size());
+                log.debug("Quantidade de eventos para atualizar " + eventos.size());
                 for (RegistroESocial evento : eventos) {
                     evento.setDescricao(getDescricaoEventoPagamento(evento.getIdentificadorWP()));
                     configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().atualizarDescricaoRegistroEsocial(evento);
@@ -662,28 +643,6 @@ public class RegistroESocialService extends AbstractCadastroService<RegistroESoc
             log.debug("Integrar eventos do E-Social - Não foi possível estabelecer conexão");
         }
     }
-
-    public void atualizarDescricoesEventosEsocialVinculoFP() {
-        log.debug("Atualizar Descrição e-social eventos com VinculoFP");
-        try {
-            List<RegistroESocial> eventos = configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().getRegistroEsocialComVinculoFP();
-            List<EventoESocialDTO> eventosDTO = Lists.newArrayList();
-            if (eventos != null) {
-                log.debug("Quantidade de eventos vinculofp para atualizar " + eventos.size());
-                for (RegistroESocial evento : eventos) {
-                    String tabela = getTabelaEvento(evento);
-                    String coluna = getColunaEvento(evento);
-                    evento.setDescricao(getDescricaoEventoEsocialVinculoFP(evento.getIdentificadorWP(), tabela, coluna));
-                    configuracaoEmpregadorESocialFacade.getRegistroESocialFacade().atualizarDescricaoRegistroEsocial(evento);
-                    eventosDTO.add(RegistroESocial.registroESocialToEventoESocialDTOSomenteID(evento));
-                }
-                eSocialService.enviarEventosAtualizarDescricao(eventosDTO);
-            }
-        } catch (Exception e) {
-            log.debug("Integrar eventos do E-Social - Não foi possível estabelecer conexão");
-        }
-    }
-
 
     public void atualizarDescricoesEventosEsocialS1010() {
         log.debug("Atualizar Descrição e-social evento S1010");
@@ -701,28 +660,6 @@ public class RegistroESocialService extends AbstractCadastroService<RegistroESoc
             }
         } catch (Exception e) {
             log.debug("Integrar eventos do E-Social - Não foi possível estabelecer conexão");
-        }
-    }
-
-    private String getTabelaEvento(RegistroESocial registro) {
-        switch (registro.getTipoArquivoESocial()) {
-            case S2200:
-                return "VinculoFP";
-            case S2299:
-                return "ExoneracaoRescisao";
-            default:
-                return null;
-        }
-    }
-
-    private String getColunaEvento(RegistroESocial registro) {
-        switch (registro.getTipoArquivoESocial()) {
-            case S2200:
-                return "id";
-            case S2299:
-                return "vinculofp_id";
-            default:
-                return null;
         }
     }
 }

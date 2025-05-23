@@ -518,7 +518,7 @@ public class RemessaProtestoFacade extends AbstractFacade<RemessaProtesto> {
                 if (damsAgrupados.isEmpty() || !verificarTotalDamAgrupadoComParcelas(damsAgrupados.get(0), parcelas)) {
                     c = DataUtil.ultimoDiaUtil(c, feriadoFacade);
                     Date vencimentoDam = c.getTime();
-                    return damFacade.gerarDamAgrupado(parcelas, vencimentoDam, assistente.getExercicio(), assistente.getUsuarioSistema());
+                    return damFacade.gerarDamAgrupado(parcelas, vencimentoDam, assistente.getUsuarioSistema());
                 }
                 return damsAgrupados.get(0);
             } else {

@@ -8,7 +8,6 @@ import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CreationHelper;
-import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.WorkbookUtil;
 import org.apache.poi.xssf.usermodel.*;
 import org.primefaces.model.DefaultStreamedContent;
@@ -184,15 +183,12 @@ public class ExcelUtil {
                             criaCell(linha, i).setCellValue(atributo.toString());
                         }
                     }
+                    if (getAjustarTamanhoColuna()) {
+                        sheet.autoSizeColumn(i);
+                    }
                     i++;
                 }
                 linhaInicial++;
-            }
-
-            if (getAjustarTamanhoColuna()) {
-                for (int i = 0; i < titulos.size(); i++) {
-                    sheet.autoSizeColumn(i);
-                }
             }
 
             linhaInicial = linhaInicial + 5;
@@ -574,6 +570,14 @@ public class ExcelUtil {
         return cellStyle;
     }
 
+    public StreamedContent getFileDownload() {
+        return fileDownload;
+    }
+
+    public void setFileDownload(StreamedContent fileDownload) {
+        this.fileDownload = fileDownload;
+    }
+
     public File getFile() {
         return file;
     }
@@ -604,19 +608,6 @@ public class ExcelUtil {
 
     public void setExtensao(String extensao) {
         this.extensao = extensao;
-    }
-
-    public static Integer getNumeroLinhas(XSSFSheet sheet) {
-        Integer numeroLinhas = 0;
-        Iterator<Row> itr = sheet.iterator();
-        if (itr.hasNext()) itr.next();
-        while (itr.hasNext()) {
-            Row row = itr.next();
-            if (row.getCell(0) == null)
-                break;
-            numeroLinhas++;
-        }
-        return numeroLinhas;
     }
 
     public static String[] splitCSV(String linha) {

@@ -32,11 +32,11 @@ public class JdbcDividaAtivaDAO extends JdbcDaoSupport implements Serializable {
     public LivroDividaAtiva findLivroByDividaAndExercicio(Long idDivida, Integer exercicio) {
         try {
             String sql = "SELECT DISTINCT LIVRO.* FROM LIVRODIVIDAATIVA LIVRO " +
-                    "INNER JOIN EXERCICIO ON EXERCICIO.ID = LIVRO.EXERCICIO_ID " +
-                    "INNER JOIN DIVIDA ON divida.nrlivrodividaativa = LIVRO.NUMERO AND livro.tipocadastrotributario = divida.tipocadastro " +
-                    "WHERE EXERCICIO.ANO = ? " +
-                    "AND DIVIDA.ID = ? " +
-                    "AND ROWNUM = 1 ";
+                "INNER JOIN EXERCICIO ON EXERCICIO.ID = LIVRO.EXERCICIO_ID " +
+                "INNER JOIN DIVIDA ON divida.nrlivrodividaativa = LIVRO.NUMERO AND livro.tipocadastrotributario = divida.tipocadastro " +
+                "WHERE EXERCICIO.ANO = ? " +
+                "AND DIVIDA.ID = ? " +
+                "AND ROWNUM = 1 ";
             LivroDividaAtiva livro = (LivroDividaAtiva) getJdbcTemplate().queryForObject(sql, new Object[]{exercicio, idDivida}, new LivroDARowMapper());
             livro.setItensLivros(findItensLivroByLivro(livro.getId()));
             return livro;
@@ -48,7 +48,7 @@ public class JdbcDividaAtivaDAO extends JdbcDaoSupport implements Serializable {
     public List<ItemLivroDividaAtiva> findItensLivroByLivro(Long idLivro) {
         try {
             String sql = "SELECT ITEM.* FROM ITEMLIVRODIVIDAATIVA ITEM " +
-                    " WHERE ITEM.LIVRODIVIDAATIVA_ID = ? ";
+                " WHERE ITEM.LIVRODIVIDAATIVA_ID = ? ";
             return (List<ItemLivroDividaAtiva>) getJdbcTemplate().query(sql, new Object[]{idLivro}, new ItemLivroDARowMapper());
         } catch (EmptyResultDataAccessException e) {
             return null;
@@ -58,14 +58,14 @@ public class JdbcDividaAtivaDAO extends JdbcDaoSupport implements Serializable {
     public List<ValorPorTributoRowMapper.ValorPorTributo> findValoresPorTributoByParcela(Long idParcela, Calculo.TipoCalculo tipoCalculo) {
         try {
             String sql = "select tributo.id ID, sum(ipvd.valor) VALOR from itemparcelavalordivida ipvd\n" +
-                    "inner join itemvalordivida ivd on ivd.id = ipvd.itemvalordivida_id\n" +
-                    "inner join tributo on tributo.id = ivd.tributo_id\n" +
-                    "where ipvd.parcelavalordivida_id = ?\n";
+                "inner join itemvalordivida ivd on ivd.id = ipvd.itemvalordivida_id\n" +
+                "inner join tributo on tributo.id = ivd.tributo_id\n" +
+                "where ipvd.parcelavalordivida_id = ?\n";
             if (Calculo.TipoCalculo.NFSE.equals(tipoCalculo)) {
-                sql += "and tributo.tipoTributo not in ('"+Tributo.TipoTributo.MULTA.name()+"','"+
-                                                           Tributo.TipoTributo.JUROS.name()+"','"+
-                                                           Tributo.TipoTributo.CORRECAO.name()+"','"+
-                                                           Tributo.TipoTributo.HONORARIOS.name()+"')\n";
+                sql += "and tributo.tipoTributo not in ('" + Tributo.TipoTributo.MULTA.name() + "','" +
+                    Tributo.TipoTributo.JUROS.name() + "','" +
+                    Tributo.TipoTributo.CORRECAO.name() + "','" +
+                    Tributo.TipoTributo.HONORARIOS.name() + "')\n";
             }
             sql += "group by tributo.id";
 
@@ -105,17 +105,17 @@ public class JdbcDividaAtivaDAO extends JdbcDaoSupport implements Serializable {
     public UltimoLinhaDaPaginaDoLivroDividaAtiva findUltimaLinhaByLivro(Long idLivro) {
         try {
             String sql = "select max(linha.numeroDaLinha) as LINHA, " +
-                    " max(linha.sequencia) as SEQUENCIA, " +
-                    " linha.pagina AS PAGINA," +
-                    " livro.numero as NUMEROLIVRO " +
-                    " from livrodividaativa livro " +
-                    " inner join itemlivrodividaativa item on item.livrodividaativa_id = livro.id " +
-                    " inner join linhadolivrodividaativa linha on linha.itemlivrodividaativa_id = item.id " +
-                    " where livro.id = ? " +
-                    " and linha.pagina = (select max(l.pagina) from LinhaDoLivroDividaAtiva l " +
-                    " inner join itemlivrodividaativa i on i.id = l.itemlivrodividaativa_id " +
-                    " inner join livrodividaativa lda on lda.id = i.livrodividaativa_id and lda.id = ?)" +
-                    " group by linha.pagina, livro.numero ";
+                " max(linha.sequencia) as SEQUENCIA, " +
+                " linha.pagina AS PAGINA," +
+                " livro.numero as NUMEROLIVRO " +
+                " from livrodividaativa livro " +
+                " inner join itemlivrodividaativa item on item.livrodividaativa_id = livro.id " +
+                " inner join linhadolivrodividaativa linha on linha.itemlivrodividaativa_id = item.id " +
+                " where livro.id = ? " +
+                " and linha.pagina = (select max(l.pagina) from LinhaDoLivroDividaAtiva l " +
+                " inner join itemlivrodividaativa i on i.id = l.itemlivrodividaativa_id " +
+                " inner join livrodividaativa lda on lda.id = i.livrodividaativa_id and lda.id = ?)" +
+                " group by linha.pagina, livro.numero ";
             return (UltimoLinhaDaPaginaDoLivroDividaAtiva) getJdbcTemplate().queryForObject(sql, new Object[]{idLivro, idLivro}, new LinhaLivroDARowMapper());
         } catch (EmptyResultDataAccessException e) {
             return null;
@@ -179,15 +179,15 @@ public class JdbcDividaAtivaDAO extends JdbcDaoSupport implements Serializable {
     }
 
     public IdETipoCalculoParcelaOriginalRowMapper recuperaIdParcelaOriginalETipoCalculo(Long idParcela) {
-        String sql = "select pvdOriginal.id, calculoOriginal.tipocalculo\n" +
-                "from parcelavalordivida pvd \n" +
-                "inner join valordivida vd on vd.id = pvd.valordivida_id\n" +
-                "inner join iteminscricaodividaativa itemda on itemda.id = vd.calculo_id\n" +
-                "inner join inscricaodividaparcela ipvd on ipvd.iteminscricaodividaativa_id = itemda.id\n" +
-                "inner join parcelavalordivida pvdOriginal on pvdOriginal.id = ipvd.parcelavalordivida_id\n" +
-                "inner join valordivida vdOriginal on vdOriginal.id = pvdOriginal.valordivida_id \n" +
-                "inner join calculo calculoOriginal on calculoOriginal.id = vdOriginal.calculo_id\n" +
-                "where pvd.id = ? and rownum = 1";
+        String sql = "SELECT pvdOriginal.id, calculoOriginal.tipocalculo\n" +
+            "FROM parcelavalordivida pvd \n" +
+            "INNER JOIN valordivida vd ON vd.id = pvd.valordivida_id\n" +
+            "INNER JOIN iteminscricaodividaativa itemda ON itemda.id = vd.calculo_id\n" +
+            "INNER JOIN inscricaodividaparcela ipvd ON ipvd.iteminscricaodividaativa_id = itemda.id\n" +
+            "INNER JOIN parcelavalordivida pvdOriginal ON pvdOriginal.id = ipvd.parcelavalordivida_id\n" +
+            "INNER JOIN valordivida vdOriginal ON vdOriginal.id = pvdOriginal.valordivida_id \n" +
+            "INNER JOIN calculo calculoOriginal ON calculoOriginal.id = vdOriginal.calculo_id\n" +
+            "WHERE pvd.id = ? AND rownum = 1";
         return (IdETipoCalculoParcelaOriginalRowMapper) getJdbcTemplate().queryForObject(sql, new Object[]{idParcela}, new IdETipoCalculoParcelaOriginalRowMapper());
     }
 
@@ -270,8 +270,8 @@ public class JdbcDividaAtivaDAO extends JdbcDaoSupport implements Serializable {
 
     public void mergeLivroDividaAtiva(LivroDividaAtiva livro) {
         String sql = "UPDATE LIVRODIVIDAATIVA SET " +
-                " TOTALPAGINAS = ? " +
-                " WHERE ID = ? ";
+            " TOTALPAGINAS = ? " +
+            " WHERE ID = ? ";
         getJdbcTemplate().update(sql, livro.getTotalPaginas(), livro.getId());
 
         persisteItemLivroDividaAtiva(livro);

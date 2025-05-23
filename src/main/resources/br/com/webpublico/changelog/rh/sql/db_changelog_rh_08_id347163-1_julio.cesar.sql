@@ -23,9 +23,9 @@ values (HIBERNATE_SEQUENCE.nextval, '556', null, 'Grat. Controle Interno - RBPRE
 insert into eventofpempregador
 (id, entidade_id, iniciovigencia, fimvigencia, eventofp_id, identificacaotabela, naturezarubrica_id,
  incidenciaprevidencia_id, incidenciatributariairrf_id, incidenciatributariafgts_id, incidenciatributariarpps_id,
- verbadeferias, tetoremuneratorio)
+ verbadeferias, tetoremuneratorio, tipoeventofpempregador)
 values (HIBERNATE_SEQUENCE.nextval, 135799933, timestamp '2023-01-01 00:00:00.000000', null, (select e.id from eventofp e where e.codigo = '556'), 'RBPREV', 803879964,
-        803705760, 803705790, 803705835, 803705841, null, 0);
+        803705760, 803705790, 803705835, 803705841, null, 0, null);
 
 
 insert into eventofpunidade

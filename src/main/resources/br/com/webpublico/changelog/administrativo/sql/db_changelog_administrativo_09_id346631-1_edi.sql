@@ -1,27 +1,9 @@
-insert into movimentoalteracaocont (id, alteracaocontratual_id, finalidade, valor, fontedespesaorc_id, operacao)
-select hibernate_sequence.nextval,
-       mov.alteracaocontratual_id,
-       'ACRESCIMO',
-       mov.valor,
-       mov.fontedespesaorc_id,
-       mov.operacao
-from movimentoalteracaocont mov
-where mov.operacao = 'TRANSFERENCIA_DOTACAO'
-  and mov.dotacaosolicitacaomaterial_id is not null;
+update dotacaosolmatitemfonte f
+set f.gerareservaorc = (select dsm.integroucontabil
+                        from dotsolmat dsm
+                                 inner join dotacaosolmatitem item on item.dotacaosolicitacaomaterial_id = dsm.id
+                                 inner join dotacaosolmatitemfonte fonte on fonte.dotacaosolmatitem_id = item.id
+                        where fonte.id = f.id)
+where f.gerareservaorc is null;
 
-insert into movimentoalteracaocont (id, alteracaocontratual_id, finalidade, valor, fontedespesaorc_id, operacao)
-select hibernate_sequence.nextval,
-       mov.alteracaocontratual_id,
-       'SUPRESSAO',
-       mov.valor,
-       f.fontedespesaorc_id,
-       mov.operacao
-from movimentoalteracaocont mov
-         inner join dotacaosolmatitemfonte f on f.id = mov.dotacaosolicitacaomaterial_id
-where mov.operacao = 'TRANSFERENCIA_DOTACAO'
-  and mov.dotacaosolicitacaomaterial_id is not null;
-
-delete from movimentoalteracaocont mov
-where mov.operacao = 'TRANSFERENCIA_DOTACAO'
-  and mov.finalidade = 'NAO_SE_APLICA'
-  and mov.dotacaosolicitacaomaterial_id is not null;
+update dotacaosolmatitemfonte set gerareservaorc = 0 where gerareservaorc is null;

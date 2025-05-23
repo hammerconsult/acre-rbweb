@@ -5,14 +5,12 @@ import br.com.webpublico.entidades.Faltas;
 import br.com.webpublico.entidades.JustificativaFaltas;
 import br.com.webpublico.util.Util;
 
-import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -29,10 +27,6 @@ public class JustificativaFaltasFacade extends AbstractFacade<JustificativaFalta
 
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
-    @EJB
-    private PeriodoAquisitivoFLFacade periodoAquisitivoFLFacade;
-    @EJB
-    private ContratoFPFacade contratoFPFacade;
 
     @Override
     protected EntityManager getEntityManager() {
@@ -43,35 +37,11 @@ public class JustificativaFaltasFacade extends AbstractFacade<JustificativaFalta
         super(JustificativaFaltas.class);
     }
 
-    @Override
-    public void salvar(JustificativaFaltas entity) {
-        entity = em.merge(entity);
-        processarPA(entity.getFaltas().getContratoFP());
-    }
-
-    @Override
-    public void salvarNovo(JustificativaFaltas entity) {
-        entity = super.salvarRetornando(entity);
-        processarPA(entity.getFaltas().getContratoFP());
-    }
-
-    @Override
-    public void remover(JustificativaFaltas entity) {
-        ContratoFP contratoFP = contratoFPFacade.recuperarSomentePeriodosAquisitivos(entity.getFaltas().getContratoFP().getId());
-        super.remover(entity);
-        processarPA(contratoFP);
-    }
-
-    public void processarPA(ContratoFP contratofp) {
-        periodoAquisitivoFLFacade.excluirPeriodosAquisitivosParaRegerar(contratofp);
-        periodoAquisitivoFLFacade.gerarPeriodosAquisitivos(contratofp, SistemaFacade.getDataCorrente(), null);
-    }
-
     public List<JustificativaFaltas> recuperarJustificativaDeFaltasPorFalta(Faltas falta, JustificativaFaltas justificativaFaltas) {
         String hql = "select justificativa from JustificativaFaltas justificativa " +
             " where justificativa.faltas = :falta ";
         if (justificativaFaltas != null && justificativaFaltas.getId() != null) {
-            hql += " and justificativa != :justificativaFaltas";
+            hql +=  " and justificativa != :justificativaFaltas";
         }
         hql += "  order by justificativa.inicioVigencia ";
         Query q = em.createQuery(hql);

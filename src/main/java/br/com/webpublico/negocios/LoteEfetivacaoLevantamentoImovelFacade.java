@@ -43,7 +43,7 @@ public class LoteEfetivacaoLevantamentoImovelFacade extends AbstractFacade<LoteE
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 1)
     public LoteEfetivacaoLevantamentoImovel salvarAlternativo(LoteEfetivacaoLevantamentoImovel lote, List<LevantamentoBemImovel> itens) {
 
-        ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroComDependenciasEntidadeGeradoCodigo();
+        ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroPatrimonio();
         if (parametroPatrimonio == null) {
             throw new ExcecaoNegocioGenerica("Parâmetro do patrimônio não encontrato para salvar o levantamento.");
         }

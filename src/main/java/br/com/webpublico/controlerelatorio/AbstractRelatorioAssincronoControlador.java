@@ -17,10 +17,18 @@ import java.util.concurrent.Future;
 public abstract class AbstractRelatorioAssincronoControlador extends AbstractReport {
 
     protected Future<ByteArrayOutputStream> futureBytesRelatorio;
+    private byte[] bytes;
 
     public void verificarRelatorio() {
         if (futureBytesRelatorio != null && futureBytesRelatorio.isDone()) {
             FacesUtil.executaJavaScript("terminarRelatorio()");
+            FacesUtil.executaJavaScript("clearInterval(timer)");
+            try {
+                bytes = futureBytesRelatorio.get().toByteArray();
+                futureBytesRelatorio = null;
+            } catch (Exception ex) {
+                logger.error(ex.getMessage());
+            }
         }
     }
 
@@ -52,7 +60,6 @@ public abstract class AbstractRelatorioAssincronoControlador extends AbstractRep
         FacesContext facesContext = FacesContext.getCurrentInstance();
         facesContext.responseComplete();
         try {
-            byte[] bytes = futureBytesRelatorio.get().toByteArray();
             if (bytes != null && bytes.length > 0) {
                 HttpServletResponse response = (HttpServletResponse) facesContext.getExternalContext().getResponse();
                 response.setContentType("application/pdf");

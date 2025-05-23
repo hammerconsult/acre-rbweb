@@ -7,6 +7,7 @@ import com.google.common.collect.Maps;
 import javax.ejb.*;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Map;

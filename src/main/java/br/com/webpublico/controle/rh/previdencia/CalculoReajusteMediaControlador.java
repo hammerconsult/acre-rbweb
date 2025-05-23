@@ -108,7 +108,6 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
             selecionado.setExercicioReferencia(exercicioFacade.getExercicioPorAno((exercicios.get(0).getAno() - 1)));
             selecionado.setInicioVigenciaReajustes(DateUtils.dataSemHorario(DateUtils.getData(1, 1, selecionado.getExercicio().getAno())));
         }
-        selecionado.setDataReferencia(sistemaFacade.getDataOperacao());
     }
 
     @URLAction(mappingId = "ver-calculo-reajuste-media", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -123,7 +122,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
     }
 
     private void buscarReajustesPorExercicio(Exercicio exercicioAplicacao, Exercicio exercicioReferencia) {
-        reajustesMediaAposentadoria = calculoReajusteMediaFacade.buscarReajustesPorExercicio(exercicioAplicacao, exercicioReferencia, selecionado.getDataReferencia());
+        reajustesMediaAposentadoria = calculoReajusteMediaFacade.buscarReajustesPorExercicio(exercicioAplicacao, exercicioReferencia);
         for (ReajusteMediaAposentadoria reajusteMediaAposentadoria : reajustesMediaAposentadoria) {
             if (reajusteMediaAposentadoria.getProcessosCalculo() != null) {
                 ordenarProcessos(reajusteMediaAposentadoria.getProcessosCalculo());
@@ -160,7 +159,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
         try {
             validarReajustes();
             calculos = new LinkedList<>();
-            reajustesMediaAposentadoria = reajusteMediaAposentadoriaFacade.buscarReajustesVigentesPorExercicios(selecionado.getDataReferencia(), selecionado.getExercicio(), selecionado.getExercicioReferencia());
+            reajustesMediaAposentadoria = reajusteMediaAposentadoriaFacade.buscarPorExercicios(selecionado.getExercicio(), selecionado.getExercicioReferencia());
             Collections.sort(reajustesMediaAposentadoria);
             calculoReajusteMediaFacade.iniciarProcessamento(selecionado.getExercicioReferencia(), reajustesMediaAposentadoria, calculos, selecionado.getInicioVigenciaReajustes(), selecionado.getExercicio());
             if (calculos.isEmpty()) {
@@ -178,13 +177,9 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
 
     private void validarReajustes() {
         ValidacaoException ve = new ValidacaoException();
-        if (selecionado.getDataReferencia() == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("O campo Data de Referência deve ser informado");
-        } else {
-            List<ReajusteMediaAposentadoria> reajusteMediaAposentadorias = reajusteMediaAposentadoriaFacade.buscarReajustesVigentesPorExercicios(selecionado.getDataReferencia(), selecionado.getExercicio(), selecionado.getExercicioReferencia());
-            if (reajusteMediaAposentadorias.isEmpty()) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("Percentuais de reajuste não encontradas para o ano de aplicação " + selecionado.getExercicio().getAno() + " e ano de referência " + selecionado.getExercicioReferencia().getAno());
-            }
+        List<ReajusteMediaAposentadoria> reajusteMediaAposentadorias = reajusteMediaAposentadoriaFacade.buscarPorExercicios(selecionado.getExercicio(), selecionado.getExercicioReferencia());
+        if (reajusteMediaAposentadorias.isEmpty()) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("Percentuais de reajuste não encontradas para o ano de aplicação " + selecionado.getExercicio().getAno() + " e ano de referência " + selecionado.getExercicioReferencia().getAno());
         }
         if (selecionado.getInicioVigenciaReajustes() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Início Vigência dos Reajustes deve ser informado");
@@ -222,7 +217,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
 
     public ReajusteAplicado getReajusteAplicadoPorExercicio(ReajusteAplicado reajusteAplicado) {
         try {
-            reajusteAplicado = reajusteAplicadoFacade.buscarPorExercicioEDataReferenciaEInicioVigencia(reajusteAplicado.getExercicio(), reajusteAplicado.getExercicioReferencia(), reajusteAplicado.getDataReferencia(), reajusteAplicado.getInicioVigenciaReajustes());
+            reajusteAplicado = reajusteAplicadoFacade.buscarPorExercicio(reajusteAplicado.getExercicio(), reajusteAplicado.getExercicioReferencia());
         } catch (ExcecaoNegocioGenerica eng) {
             logger.debug(eng.getMessage());
         }
@@ -364,9 +359,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
     public void marcarTodosItens(ReajusteMediaAposentadoria reajuste) {
         if (reajuste.getProcessosCalculo() != null) {
             for (ProcessoCalculoReajuste pcr : reajuste.getProcessosCalculo()) {
-                if (!pcr.getProcessoTransiente()) {
-                    marcarItem(pcr);
-                }
+                marcarItem(pcr);
             }
         }
     }
@@ -376,7 +369,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
             for (ReajusteMediaAposentadoria reajuste : reajustesMediaAposentadoria) {
                 if (reajuste.getProcessosCalculo() != null) {
                     for (ProcessoCalculoReajuste pcr : reajuste.getProcessosCalculo()) {
-                        if (!pcr.getReajusteMediaAposentadoria().getReajusteTransiente() && !pcr.getProcessoTransiente()) {
+                        if (!pcr.getReajusteMediaAposentadoria().getReajusteTransiente()) {
                             marcarItem(pcr);
                         }
                     }
@@ -391,7 +384,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
             for (ReajusteMediaAposentadoria reajuste : reajustesMediaAposentadoria) {
                 if (reajuste.getProcessosCalculo() != null) {
                     for (ProcessoCalculoReajuste pcr : reajuste.getProcessosCalculo()) {
-                        if (!pcr.getReajusteMediaAposentadoria().getReajusteTransiente() && !pcr.getProcessoTransiente()) {
+                        if (!pcr.getReajusteMediaAposentadoria().getReajusteTransiente()) {
                             desmarcarItem(pcr);
                         }
                     }
@@ -404,9 +397,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
 
     public void desmarcarTodosItens(ReajusteMediaAposentadoria reajuste) {
         for (ProcessoCalculoReajuste pcr : reajuste.getProcessosCalculo()) {
-            if (!pcr.getProcessoTransiente()) {
-                desmarcarItem(pcr);
-            }
+            desmarcarItem(pcr);
         }
     }
 
@@ -440,7 +431,7 @@ public class CalculoReajusteMediaControlador extends PrettyControlador<ReajusteA
         Collections.sort(reajustes, new Comparator<ReajusteMediaAposentadoria>() {
             @Override
             public int compare(ReajusteMediaAposentadoria o1, ReajusteMediaAposentadoria o2) {
-                return o1.getMes().getNumeroMes().compareTo(o2.getMes().getNumeroMes());
+                return o2.getMes().getNumeroMes().compareTo(o1.getMes().getNumeroMes());
             }
         });
     }

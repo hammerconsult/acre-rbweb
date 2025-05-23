@@ -196,7 +196,7 @@ public class RelatorioAuditoriaCadastroControlador {
     public void pesquisar() {
         try {
             validarCampos();
-            assistente.setMensagem("Buscando registro de auditoria");
+            assistente.setMensagem("Buscando registros de auditoria");
             iniciarFutures();
             assistente.iniciarAtributosPaginacao();
             FacesUtil.executaJavaScript("reiniciarPaginacao()");

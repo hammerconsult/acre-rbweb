@@ -273,7 +273,11 @@ public class ReportService {
         if (!response.getStatusCode().equals(HttpStatus.BAD_REQUEST)) {
             for (UsuarioSistema usuarioSistema : relatorios.keySet()) {
                 if (relatorios.get(usuarioSistema).containsKey(uuid)) {
-                    finalizarRelatorio(uuid, usuarioSistema, response.getBody());
+                    relatorios.get(usuarioSistema).get(uuid).setConteudo(response.getBody());
+                    relatorios.get(usuarioSistema).get(uuid).setFim(System.currentTimeMillis());
+                    log.debug("Chegou ..." + uuid);
+
+                    Push.sendTo(usuarioSistema, "imprimirRelatorio");
                     break;
                 }
             }
@@ -291,14 +295,6 @@ public class ReportService {
             }
         }
 
-    }
-
-    public void finalizarRelatorio(String uuid, UsuarioSistema usuarioSistema, byte[] conteudo) {
-        relatorios.get(usuarioSistema).get(uuid).setConteudo(conteudo);
-        relatorios.get(usuarioSistema).get(uuid).setPorcentagem(new BigDecimal("100"));
-        relatorios.get(usuarioSistema).get(uuid).setFim(System.currentTimeMillis());
-        log.debug("Chegou ..." + uuid);
-        Push.sendTo(usuarioSistema, "imprimirRelatorio");
     }
 
     public void porcentagemRelatorio(String uuid, BigDecimal porcentagem) {
@@ -350,12 +346,6 @@ public class ReportService {
         }
     }
 
-    public WebReportDTO getRelatorio(UsuarioSistema usuarioSistema, String uuid) {
-        if (relatorios.get(usuarioSistema) != null) {
-           return relatorios.get(usuarioSistema).get(uuid);
-        }
-        return null;
-    }
     public void removerRelatorio(UsuarioSistema usuarioSistema, String uuid) {
         if (relatorios.get(usuarioSistema) != null) {
             relatorios.get(usuarioSistema).remove(uuid);
@@ -378,16 +368,6 @@ public class ReportService {
                 new ParameterizedTypeReference<WebReportRelatorioDTO>() {
                 });
         return exchange.getBody();
-    }
-
-    public String addRelatorio(UsuarioSistema usuarioSistema, RelatorioDTO dto) {
-        if (relatorios.get(usuarioSistema) == null) {
-            instanciarRelatorio(usuarioSistema);
-        }
-        String uuid = UUID.randomUUID().toString();
-        relatorios.get(usuarioSistema).put(uuid, new WebReportDTO(dto.getNomeRelatorio(), usuarioSistema, uuid, calcularHash(dto), dto));
-        Push.sendTo(usuarioSistema, "imprimirRelatorio");
-        return uuid;
     }
 
     public static ReportService getInstance() {

@@ -27,7 +27,6 @@ import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
 import net.sf.jasperreports.engine.JRException;
-import org.primefaces.context.RequestContext;
 
 import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
@@ -39,7 +38,10 @@ import javax.faces.convert.Converter;
 import javax.faces.model.SelectItem;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
 @ManagedBean(name = "exoneracaoRescisaoControlador")
 @ViewScoped
@@ -84,12 +86,6 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
     private ConfiguracaoEmpregadorESocialFacade configuracaoEmpregadorESocialFacade;
     @EJB
     private PessoaFisicaFacade pessoaFisicaFacade;
-    @EJB
-    private ConcessaoFeriasLicencaFacade concessaoFeriasLicencaFacade;
-    @EJB
-    private AposentadoriaFacade apoentadoriaFacade;
-    @EJB
-    private ProvimentoReversaoFacade provimentoReversaoFacade;
 
     @ManagedProperty(name = "sistemaControlador", value = "#{sistemaControlador}")
     private SistemaControlador sistemaControlador;
@@ -105,9 +101,6 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
     private ConverterAutoComplete converterAtoLegalAlteracao;
     private List<OcorrenciaESocialDTO> ocorrencias;
     private String xml;
-    boolean permitirExcluirConcessaoFerias = false;
-    boolean permitirInterromperFerias = false;
-
 
     public ExoneracaoRescisaoControlador() {
         super(ExoneracaoRescisao.class);
@@ -254,7 +247,6 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
         ValidacaoException ve = new ValidacaoException();
         List<Afastamento> afastamentos = exoneracaoRescisaoFacade.hasAfastamentoDataExoneracao(selecionado.getVinculoFP(), selecionado.getDataRescisao());
         List<ConcessaoFeriasLicenca> concessao = exoneracaoRescisaoFacade.hasConcessaoDataExoneracao(selecionado.getVinculoFP(), selecionado.getDataRescisao());
-
         if (afastamentos != null) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("O servidor(a) tem afastamento à vencer na data <b>" + DataUtil.getDataFormatada(afastamentos.get(0).getTermino()) + "</b>" + " não podendo ser exonerado.");
         }
@@ -264,88 +256,35 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
         ve.lancarException();
     }
 
-
     public String mensagemFichaFinanceiraAberta() {
         return (selecionado.getVinculoFP() != null && selecionado.getDataRescisao() != null && exoneracaoRescisaoFacade.buscarFichaFinanceiraParaExclusao(selecionado.getVinculoFP(), selecionado.getDataRescisao()) != null) ? "if (!confirm('ATENÇÃO! Foi encontrada ficha financeira em aberto processada em Folha Normal na competência da exoneração. Essa ficha financeira será excluída.')) return false;" : "aguarde.show()";
     }
 
-    public void aceitarExcluirConcessaoFerias() {
-        this.permitirExcluirConcessaoFerias = true;
-        salvar();
-    }
-    public void aceitarInterromperFerias() {
-        this.permitirInterromperFerias = true;
-        salvar();
-    }
-
-
     @Override
     public void salvar() {
-
         try {
             validarCampos();
-            List<ConcessaoFeriasLicenca> concessoesAposExoneracao = exoneracaoRescisaoFacade.temConcessaoAposDataExoneraca(selecionado.getVinculoFP(), selecionado.getDataRescisao());
-            ConcessaoFeriasLicenca concessaoDuranteExoneracao = exoneracaoRescisaoFacade.temConcessaoNaDataExoneracao(selecionado.getVinculoFP(), selecionado.getDataRescisao());
-
-            // temConcessaoAposDataExoneraca
-            if (selecionado.getVinculoFP().getTipoRegime().getPermitirExonorarEmGozoFerias() && !permitirExcluirConcessaoFerias && concessoesAposExoneracao !=null) {
-                RequestContext.getCurrentInstance().execute("dlgExoneracaoRescisao.show()");
-                return;
-            } else {
-
-
-                if (concessoesAposExoneracao != null && permitirExcluirConcessaoFerias) {
-                    for (ConcessaoFeriasLicenca concAposExone : concessoesAposExoneracao) {
-                        concAposExone.setContratoFP(selecionado.getVinculoFP().getContratoFP());
-                        concessaoFeriasLicencaFacade.realizarTratativasParaExclusaoDeConcessao(concAposExone, selecionado);
-                    }
-                }
-
-            // temConcessaoNaDataExoneracao
-                if (selecionado.getVinculoFP().getTipoRegime().getPermitirExonorarEmGozoFerias() && !permitirInterromperFerias && concessaoDuranteExoneracao != null) {
-                    RequestContext.getCurrentInstance().execute("dialogExonerarDeFerias.show()");
-                    return;
-                } else {
-
-
-                    if (concessaoDuranteExoneracao != null && permitirInterromperFerias) {
-                        concessaoFeriasLicencaFacade.atualizarDadosConcessaoEPeriodoAquisitivoAoExonerarEmFerias(concessaoDuranteExoneracao, selecionado);
-                    }
-
-                    validarAfastamentoAndConcessaoFerias();
-
-                    Date dataFinalVigenciaContratoFP = getFinalVigenciaContratoFP();
-                    if (isOperacaoNovo()) {
-                        ContratoFP contratoFP = selecionado.getVinculoFP().getContratoFP();
-                validarProvimentoReversao(contratoFP);
+            validarAfastamentoAndConcessaoFerias();
+            Date dataFinalVigenciaContratoFP = getFinalVigenciaContratoFP();
+            if (isOperacaoNovo()) {
                 exoneracaoRescisaoFacade.salvarNovo(selecionado, dataFinalVigenciaContratoFP);
-                atualizarProvimentoReversaoSeNecessario(contratoFP);
-                    } else {
-                        exoneracaoRescisaoFacade.salvar(selecionado);
-                    }
-                    permitirInterromperFerias = false;
-                    permitirExcluirConcessaoFerias = false;
-                    FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(SummaryMessages.OPERACAO_REALIZADA.getDescricao(), getMensagemSucessoAoSalvar()));
-                    redireciona();
-                    }
+            } else {
+                exoneracaoRescisaoFacade.salvar(selecionado);
             }
-
-            } catch(SemBasePeriodoAquisitivoException semBaseEx){
-                String url = "<b><a href='" + FacesUtil.getRequestContextPath() + "/cargo/editar/" + selecionado.getVinculoFP().getContratoFP().getCargo().getId() + "' target='_blank'>Cadastro de Cargos</a></b>";
-                FacesUtil.addOperacaoNaoRealizada("O cargo <b>" + selecionado.getVinculoFP().getContratoFP().getCargo() + "</b> não possui bases de período aquisitivo vigentes em <b>" + Util.formatterDiaMesAno.format(UtilRH.getDataOperacao()) + "</b>.<br />Verifique as configurações no " + url);
-                return;
-            } catch(ValidacaoException ex){
-                FacesUtil.printAllFacesMessages(ex.getMensagens());
-                return;
-            } catch(Exception e){
-                FacesUtil.addAtencao("Não foi passivel salvar a exoneração/rescisão: " + e.getMessage());
-                descobrirETratarException(e);
-            }
-
-            redireciona();
-        permitirInterromperFerias = false;
-        permitirExcluirConcessaoFerias = false;
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(SummaryMessages.OPERACAO_REALIZADA.getDescricao(), getMensagemSucessoAoSalvar()));
+        } catch (SemBasePeriodoAquisitivoException semBaseEx) {
+            String url = "<b><a href='" + FacesUtil.getRequestContextPath() + "/cargo/editar/" + selecionado.getVinculoFP().getContratoFP().getCargo().getId() + "' target='_blank'>Cadastro de Cargos</a></b>";
+            FacesUtil.addOperacaoNaoRealizada("O cargo <b>" + selecionado.getVinculoFP().getContratoFP().getCargo() + "</b> não possui bases de período aquisitivo vigentes em <b>" + Util.formatterDiaMesAno.format(UtilRH.getDataOperacao()) + "</b>.<br />Verifique as configurações no " + url);
+            return;
+        } catch (ValidacaoException ex) {
+            FacesUtil.printAllFacesMessages(ex.getMensagens());
+            return;
+        } catch (Exception e) {
+            FacesUtil.addAtencao("Não foi passivel salvar a exoneração/rescisão: " + e.getMessage());
+            descobrirETratarException(e);
         }
+        redireciona();
+    }
 
 
     @Override
@@ -353,16 +292,11 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
         if (validaRegrasParaExcluir()) {
             try {
                 ContratoFP contratoFP = selecionado.getVinculoFP().getContratoFP();
-                ProvimentoReversao provimentoReversao = provimentoReversaoFacade.recuperarUltimoProvimentoReversaoDoContratoFP(contratoFP);
-                voltarVigenciasContratoFPAndAssociacoes(contratoFP, provimentoReversao);
+                voltarVigenciasContratoFPAndAssociacoes(contratoFP);
                 excluirPeriodoAquisitivoFLCriadoAoSalvarExoneracao(contratoFP);
                 criarNovoProvimentoFPEstornoExoneracao();
                 reabrirVigenciaPrevidenciaComplementar();
                 getFacede().remover(selecionado);
-
-                if(provimentoReversao != null){
-                    concessaoFeriasLicencaFacade.reprocessarSituacoesContrato(contratoFP);
-                }
                 redireciona();
                 FacesUtil.addOperacaoRealizada(getMensagemSucessoAoExcluir());
             } catch (Exception e) {
@@ -382,11 +316,8 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
         }
     }
 
-    public void voltarVigenciasContratoFPAndAssociacoes(ContratoFP contratoFP, ProvimentoReversao provimentoReversao) {
-        if (provimentoReversao != null && provimentoReversao.getInicioVigencia().compareTo(selecionado.getDataRescisao()) >= 0) {
-            provimentoReversao = null;
-        }
-        exoneracaoRescisaoFacade.getContratoFPFacade().voltarVigenciasContratoFPAndAssociacoes(contratoFP, provimentoReversao);
+    public void voltarVigenciasContratoFPAndAssociacoes(ContratoFP contratoFP) {
+        exoneracaoRescisaoFacade.getContratoFPFacade().voltarVigenciasContratoFPAndAssociacoes(contratoFP);
     }
 
     public void reabrirVigenciaPrevidenciaComplementar() {
@@ -419,28 +350,6 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
         if (ex.temMensagens())
             throw ex;
     }
-
-    private void validarProvimentoReversao(ContratoFP contratoFP) throws ValidacaoException {
-        ValidacaoException ve = new ValidacaoException();
-        ProvimentoReversao provimentoReversao = provimentoReversaoFacade.recuperarUltimoProvimentoReversaoDoContratoFP(contratoFP);
-
-        if (provimentoReversao != null && provimentoReversao.getInicioVigencia() != null) {
-            if (selecionado.getDataRescisao() != null && selecionado.getDataRescisao().before(provimentoReversao.getInicioVigencia())) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("", "O Final de Vigência não pode ser anterior ao Início de Vigência da Reversão! " + provimentoReversao.getInicioVigencia());
-            }
-        }
-        ve.lancarException();
-    }
-
-    private void atualizarProvimentoReversaoSeNecessario(ContratoFP contratoFP) {
-        ProvimentoReversao provimentoReversao = provimentoReversaoFacade.recuperarUltimoProvimentoReversaoDoContratoFP(contratoFP);
-
-        if (provimentoReversao != null && provimentoReversao.getFinalVigencia() == null) {
-            provimentoReversao.setFinalVigencia(selecionado.getDataRescisao());
-            provimentoReversaoFacade.salvar(provimentoReversao);
-        }
-    }
-
 
     private String getMontarUrlInfo() {
         return "<a href='" + FacesUtil.getRequestContextPath() + "/configuracao/rh/listar/' target='_blank'>Configuração Recursos Humanos</a>";
@@ -575,16 +484,7 @@ public class ExoneracaoRescisaoControlador extends PrettyControlador<ExoneracaoR
         if (isOperacaoNovo()) {
             if (exoneracaoRescisaoFacade.existeExoneracaoRescisaoPorVinculoFP(selecionado.getVinculoFP())) {
                 Reintegracao reintegracao = exoneracaoRescisaoFacade.getReintegracaoFacade().recuperarUltimaReintegracao(selecionado.getVinculoFP());
-                ProvimentoReversao provimentoReversao = null;
-                Aposentadoria aposentadoria = null;
-                if(selecionado.getVinculoFP().getContratoFP() != null) {
-                     provimentoReversao = provimentoReversaoFacade.recuperarUltimoProvimentoReversaoDoContratoFP(selecionado.getVinculoFP().getContratoFP());
-                     aposentadoria = apoentadoriaFacade.recuperarUltimaAposentadoriaPorContratoFP(selecionado.getVinculoFP().getContratoFP());
-                }
-
-                if ((reintegracao == null || (reintegracao.getDataReintegracao().compareTo(selecionado.getDataRescisao()) >= 0)) &&
-                    (provimentoReversao == null || (provimentoReversao.getInicioVigencia().compareTo(selecionado.getDataRescisao()) >= 0))||
-                    (aposentadoria != null)) {
+                if (reintegracao == null || (reintegracao.getDataReintegracao().compareTo(selecionado.getDataRescisao()) >= 0)) {
                     ve.adicionarMensagemDeOperacaoNaoPermitida("O Servidor selecionado já foi exonerado!");
                 }
             }

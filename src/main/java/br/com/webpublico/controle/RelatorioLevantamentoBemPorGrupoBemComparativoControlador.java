@@ -90,7 +90,6 @@ public class RelatorioLevantamentoBemPorGrupoBemComparativoControlador extends A
             RelatorioDTO dto = new RelatorioDTO();
             dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
             String nomeRelatorio = "RELATÓRIO DE LEVANTAMENTO DE BENS MÓVEIS POR GRUPO PATRIMONIAL COMPARATIVO";
-            dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
             dto.adicionarParametro("USUARIO", getSistemaFacade().getUsuarioCorrente().getNome(), false);
             dto.setNomeParametroBrasao("BRASAO");
             dto.adicionarParametro("MODULO", "ADMINISTRATIVO");

@@ -659,7 +659,7 @@ public class LicitacaoFacade extends AbstractFacade<Licitacao> {
                 "  inner join iplv.lancePregao lpv" +
                 "       where lic = :licitacao" +
                 "         and lpv.propostaFornecedor = pf" +
-                "         and iplv.status = :statusVencedor" +
+                "         and lpv.statusLancePregao = :statusVencedor" +
                 "         and ipc.situacaoItemProcessoDeCompra = :situacaoItemProcessoCompra" +
                 "         and pf.fornecedor = :contratado " +
                 "         and ipc = :itemProcessoCompra ";
@@ -679,7 +679,7 @@ public class LicitacaoFacade extends AbstractFacade<Licitacao> {
                 "  inner join iplv.lancePregao lpv" +
                 "       where lic = :licitacao" +
                 "         and lpv.propostaFornecedor = pf" +
-                "         and iplv.status = :statusVencedor" +
+                "         and lpv.statusLancePregao = :statusVencedor" +
                 "         and ipc.situacaoItemProcessoDeCompra = :situacaoItemProcessoCompra" +
                 "         and pf.fornecedor = :contratado " +
                 "         and ipc = :itemProcessoCompra ";
@@ -1095,7 +1095,6 @@ public class LicitacaoFacade extends AbstractFacade<Licitacao> {
         validaPublicacaoAdicionadaAposAdicionarParecerDoTipoJuridicoEdital(ve, licitacao);
         validarDataDeAberturaAposAdicionarParecerDoTipoJuridicoEdital(ve, licitacao);
         validaDataDeAberturaAnteriorDataEmissao(ve, licitacao);
-
         ve.lancarException();
     }
 
@@ -1841,7 +1840,6 @@ public class LicitacaoFacade extends AbstractFacade<Licitacao> {
             + "  INNER JOIN licitacaofornecedor lf ON lf.empresa_id = propforn.fornecedor_id AND lf.licitacao_id = licitacao.ID "
             + "WHERE lf.tipoclassificacaofornecedor = :tipoClassificacaoFornecedor "
             + "AND licitacao.id = :licitacaoId ";
-
         Query q = em.createNativeQuery(query, LicitacaoFornecedor.class);
         q.setParameter("tipoClassificacaoFornecedor", TipoClassificacaoFornecedor.HABILITADO.name());
         q.setParameter("situacaoItemCertame", SituacaoItemCertame.VENCEDOR.name());
@@ -2676,19 +2674,6 @@ public class LicitacaoFacade extends AbstractFacade<Licitacao> {
         return null;
     }
 
-    public Long recuperarIdRevisaoAuditoriaLicitacao(Long idLicitacao) {
-        String sql = " select rev.id from licitacao_aud aud " +
-            " inner join revisaoauditoria rev on rev.id = aud.rev " +
-            " where rev.id = (select rev from licitacao_aud laud where id = :idLicitacao and laud.revtype = 0) ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idLicitacao", idLicitacao);
-        try {
-            return ((BigDecimal) q.getSingleResult()).longValue();
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
     public List<Licitacao> buscarLicitacoesUsuarioGestorUnidade(String parte) {
         String sql = " " +
             "  select distinct lic.* from licitacao lic " +
@@ -2755,6 +2740,19 @@ public class LicitacaoFacade extends AbstractFacade<Licitacao> {
         q.setParameter("item_homologado", SituacaoItemProcessoDeCompra.HOMOLOGADO.name());
         q.setParameter("status_homologada", TipoSituacaoLicitacao.HOMOLOGADA.name());
         return q.getResultList();
+    }
+
+    public Long recuperarIdRevisaoAuditoriaLicitacao(Long idLicitacao) {
+        String sql = " select rev.id from licitacao_aud aud " +
+            " inner join revisaoauditoria rev on rev.id = aud.rev " +
+            " where rev.id = (select rev from licitacao_aud laud where id = :idLicitacao and laud.revtype = 0) ";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("idLicitacao", idLicitacao);
+        try {
+            return ((BigDecimal) q.getSingleResult()).longValue();
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     public List<LicitacaoVO> buscarLicitacoesVO(String condicao, TipoSituacaoLicitacao tipoSituacaoLicitacao) {

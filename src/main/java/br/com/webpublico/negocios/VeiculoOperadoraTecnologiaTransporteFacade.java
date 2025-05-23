@@ -257,7 +257,7 @@ public class VeiculoOperadoraTecnologiaTransporteFacade extends AbstractFacade<V
         return motivoIndeferimento.toString();
     }
 
-    public String enviarEmailAprovacaoVeiculoOtt(VeiculoOperadoraTecnologiaTransporte veiculo){
+    public String enviarEmailAprovacaoVeiculoOtt(VeiculoOperadoraTecnologiaTransporte veiculo) {
         String corpoEmail = montarEmailAprovacaoVeiculoOtt(veiculo);
         enviarEmail(veiculo.getOperadoraTransporte().getEmailResponsavel(), corpoEmail, "OTT - " + veiculo.getOperadoraTransporte() +
             " - Aprovação de cadastro do veículo");
@@ -281,7 +281,7 @@ public class VeiculoOperadoraTecnologiaTransporteFacade extends AbstractFacade<V
         EmailService.getInstance().enviarEmail(email, assunto, corpoEmail);
     }
 
-    public boolean recuperarVistoriaVeiculo(VeiculoOperadoraTecnologiaTransporte veiculo){
+    public boolean recuperarVistoriaVeiculo(VeiculoOperadoraTecnologiaTransporte veiculo) {
         StringBuilder sql = new StringBuilder();
         sql.append("select VEIC.* from VEICULOOTTRANSPORTE VEIC ")
             .append("inner join VISTORIAVEICULOOTT VIST ")

@@ -4,8 +4,6 @@ import br.com.webpublico.entidades.Exercicio;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.util.StringUtil;
 import com.google.common.collect.Maps;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.ejb.*;
 import javax.persistence.EntityManager;
@@ -21,7 +19,6 @@ import java.util.Map;
 @AccessTimeout(value = 20000)
 public class SingletonGeradorCodigoTributario implements Serializable {
 
-    private final Logger logger = LoggerFactory.getLogger(SingletonGeradorCodigoTributario.class);
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
     private Map<Class, Map<Exercicio, Long>> mapaCodigosExercicio;

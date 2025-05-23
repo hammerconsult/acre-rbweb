@@ -582,4 +582,3 @@ public class SubvencaoProcessoFacade extends AbstractFacade<SubvencaoProcesso> {
         return false;
     }
 }
-

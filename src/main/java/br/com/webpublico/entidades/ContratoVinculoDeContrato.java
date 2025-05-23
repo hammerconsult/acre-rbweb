@@ -5,7 +5,6 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.interfaces.ValidadorVigencia;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
@@ -21,7 +20,7 @@ import java.util.Date;
 
 @GrupoDiagrama(nome = "RecursosHumanos")
 @Etiqueta("Vínculo de Contrato")
-public class ContratoVinculoDeContrato implements Serializable, ValidadorVigencia, Comparable {
+public class ContratoVinculoDeContrato implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -71,18 +70,8 @@ public class ContratoVinculoDeContrato implements Serializable, ValidadorVigenci
         return inicioVigencia;
     }
 
-    @Override
-    public Date getFimVigencia() {
-        return this.finalVigencia;
-    }
-
     public void setInicioVigencia(Date inicioVigencia) {
         this.inicioVigencia = inicioVigencia;
-    }
-
-    @Override
-    public void setFimVigencia(Date data) {
-        this.finalVigencia = data;
     }
 
     public VinculoDeContratoFP getVinculoDeContratoFP() {
@@ -140,10 +129,5 @@ public class ContratoVinculoDeContrato implements Serializable, ValidadorVigenci
     public String toString() {
         return getContratoFP() + " - " + getVinculoDeContratoFP() + " - "
                 + getInicioVigencia() + " - " + getFinalVigencia();
-    }
-
-    @Override
-    public int compareTo(Object o) {
-        return this.getInicioVigencia().compareTo(((ContratoVinculoDeContrato) o).getInicioVigencia());
     }
 }

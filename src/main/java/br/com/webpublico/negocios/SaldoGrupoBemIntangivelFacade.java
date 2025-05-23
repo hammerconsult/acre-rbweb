@@ -1,13 +1,9 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoGrupoBemImovelDTO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoGrupoBemIntangiveisDTO;
 import br.com.webpublico.enums.*;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
-import org.joda.time.LocalDate;
 
 import javax.ejb.*;
 import javax.persistence.EntityManager;
@@ -43,39 +39,29 @@ public class SaldoGrupoBemIntangivelFacade implements Serializable {
     public void geraSaldoGrupoBemIntangiveis(UnidadeOrganizacional unidade, GrupoBem grupoBem, BigDecimal valor, TipoGrupo tipoGrupo,
                                              Date data, TipoOperacaoBensIntangiveis operacao, TipoLancamento tipoLancamento,
                                              TipoOperacao tipoOperacao, Boolean validarSaldo) throws ExcecaoNegocioGenerica {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDOGRUPOBEMINTANGIVEISMICROS")) {
-            SaldoGrupoBemIntangiveisDTO dto = new SaldoGrupoBemIntangiveisDTO();
-            dto.setIdUnidadeOrganizacional(unidade.getId());
-            dto.setIdGrupoBem(grupoBem.getId());
-            dto.setValor(valor);
-            dto.setTipoGrupo(tipoGrupo);
-            dto.setTipoLancamento(tipoLancamento);
-            dto.setOperacao(operacao);
-            dto.setTipoOperacao(tipoOperacao);
-            dto.setData(DataUtil.dateToLocalDate(data));
-            dto.setValidarSaldo(validarSaldo);
-            ApiServiceContabil.getService().gerarSaldoGrupoBemIntangivel(dto);
-        } else {
-            NaturezaTipoGrupoBem naturezaTipoGrupoBem = recuperarNaturezaGrupoBem(operacao, tipoOperacao);
-            MovimentoGrupoBensIntangiveis movimento = new MovimentoGrupoBensIntangiveis();
-            movimento.setId(null);
-            movimento.setDataMovimento(data);
-            movimento.setUnidadeOrganizacional(unidade);
-            movimento.setGrupoBem(grupoBem);
-            movimento.setNaturezaTipoGrupoBem(naturezaTipoGrupoBem);
-            movimento.setTipoGrupo(tipoGrupo);
-            movimento.setOperacao(operacao);
-            movimento.setTipoLancamento(tipoLancamento);
-            movimento.setTipoOperacao(tipoOperacao);
-            movimento.setValor(valor);
-            movimento.setValidarSaldo(validarSaldo);
-            alterarValorColunaCredioDebito(movimento, null);
-            SaldoGrupoBemIntangiveis ultimoSaldo = recuperaUltimoSaldoPorData(movimento);
-            List<SaldoGrupoBemIntangiveis> saldosPosterior = recuperaSaldosPosterioresAData(movimento);
-            gerarSaldo(movimento, ultimoSaldo);
-            gerarSaldoPosterior(movimento, saldosPosterior);
-            em.merge(movimento);
-        }
+
+        NaturezaTipoGrupoBem naturezaTipoGrupoBem = recuperarNaturezaGrupoBem(operacao, tipoOperacao);
+
+        MovimentoGrupoBensIntangiveis movimento = new MovimentoGrupoBensIntangiveis();
+        movimento.setId(null);
+        movimento.setDataMovimento(data);
+        movimento.setUnidadeOrganizacional(unidade);
+        movimento.setGrupoBem(grupoBem);
+        movimento.setNaturezaTipoGrupoBem(naturezaTipoGrupoBem);
+        movimento.setTipoGrupo(tipoGrupo);
+        movimento.setOperacao(operacao);
+        movimento.setTipoLancamento(tipoLancamento);
+        movimento.setTipoOperacao(tipoOperacao);
+        movimento.setValor(valor);
+        movimento.setValidarSaldo(validarSaldo);
+        alterarValorColunaCredioDebito(movimento, null);
+
+        SaldoGrupoBemIntangiveis ultimoSaldo = recuperaUltimoSaldoPorData(movimento);
+        List<SaldoGrupoBemIntangiveis> saldosPosterior = recuperaSaldosPosterioresAData(movimento);
+
+        gerarSaldo(movimento, ultimoSaldo);
+        gerarSaldoPosterior(movimento, saldosPosterior);
+        em.merge(movimento);
     }
 
     private void gerarSaldo(MovimentoGrupoBensIntangiveis movimento, SaldoGrupoBemIntangiveis ultimoSaldo) {
@@ -445,7 +431,7 @@ public class SaldoGrupoBemIntangivelFacade implements Serializable {
 
     public void excluirMovimentoPorPeriodo(Date dataInidical, Date dataFinal, GrupoBem grupoBem) {
 
-        String sql = " delete movimentogrupobensmoveis m " +
+        String sql = " delete movimentogrupobensintang m " +
                 " where trunc(m.datamovimento) between to_date(:dataInicial, 'dd/MM/yyyy') and to_date(:dataFinal, 'dd/MM/yyyy') ";
         if (grupoBem != null) {
             sql += " and m.grupobem_id = :idGrupoBem ";

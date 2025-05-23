@@ -68,7 +68,7 @@ public class ServiceIntegracaoTributarioContabil {
         }
         if (mapaContas.get(idTributo).get(anoDataPagamento) == null) {
             Query q = em.createQuery("select conta from ContaTributoReceita conta " +
-                    " where conta.tributo.id = :idTributo " +
+                " where conta.tributo.id = :idTributo " +
                 " and conta.enquadramento.exercicioVigente.ano = :exercicioAtual" +
                 " and :dataReferencia between conta.inicioVigencia and coalesce(conta.fimVigencia ,:dataReferencia)");
             q.setParameter("idTributo", idTributo);
@@ -225,8 +225,8 @@ public class ServiceIntegracaoTributarioContabil {
 
             if (valorAcrescimos.compareTo(BigDecimal.ZERO) > 0 || tributoDAM.getValorOriginal().compareTo(BigDecimal.ZERO) > 0) {
                 IntegraTributoDam tributo = new IntegraTributoDam(tributoDAM.getIdTributo(),
-                        itemDam.getDividaAtiva(), valorAcrescimos, item.getIdLoteBaixa(), item.getDataPagamento(),
-                        itemDam.getIdEntidade(), itemDam.getExercicio(), tributoDAM.getTipoTributo());
+                    itemDam.getDividaAtiva(), valorAcrescimos, item.getIdLoteBaixa(), item.getDataPagamento(),
+                    itemDam.getIdEntidade(), itemDam.getExercicio(), tributoDAM.getTipoTributo());
 
                 if (acrescimos.contains(tributo)) {
                     acrescimos.get(acrescimos.indexOf(tributo)).addValor(tributo.valor);
@@ -252,8 +252,8 @@ public class ServiceIntegracaoTributarioContabil {
 
             if (valorHonorarios.compareTo(BigDecimal.ZERO) > 0 || tributoDAM.getValorOriginal().compareTo(BigDecimal.ZERO) > 0) {
                 IntegraTributoDam tributo = new IntegraTributoDam(tributoDAM.getIdTributo(),
-                        itemDam.getDividaAtiva(), valorHonorarios, item.getIdLoteBaixa(), item.getDataPagamento(),
-                        itemDam.getIdEntidade(), itemDam.getExercicio(), tributoDAM.getTipoTributo());
+                    itemDam.getDividaAtiva(), valorHonorarios, item.getIdLoteBaixa(), item.getDataPagamento(),
+                    itemDam.getIdEntidade(), itemDam.getExercicio(), tributoDAM.getTipoTributo());
 
                 if (honorarios.contains(tributo)) {
                     honorarios.get(honorarios.indexOf(tributo)).addValor(tributo.valor);

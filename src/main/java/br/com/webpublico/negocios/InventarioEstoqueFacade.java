@@ -89,12 +89,12 @@ public class InventarioEstoqueFacade extends AbstractFacade<InventarioEstoque> {
 
     public InventarioEstoque concluirInventario(InventarioEstoque selecionado) throws Exception {
         selecionado.setSituacaoInventario(SituacaoInventarioEstoque.CONCLUIDO);
-        ConsolidadorDeEstoque consolidadorDeEstoque = getNovoConsolidadorSemReservaEstoque(selecionado);
+        ConsolidadorDeEstoque consolidadorDeEstoque = getNovoConsolidadorSemReservaEstoque(selecionado, false);
         bloquearEstoquesItemInventarioEstoque(selecionado.getItensInventarioEstoque(), consolidadorDeEstoque);
         return em.merge(selecionado);
     }
 
-    private ConsolidadorDeEstoque getNovoConsolidadorSemReservaEstoque(InventarioEstoque selecionado) {
+    private ConsolidadorDeEstoque getNovoConsolidadorSemReservaEstoque(InventarioEstoque selecionado, Boolean estoqueBloqueado) {
         ConsolidadorDeEstoque consolidadorDeEstoque = localEstoqueFacade.getNovoConsolidadorSemReservaEstoque(
             selecionado.getLocalEstoque(),
             selecionado.materialSet(),
@@ -126,7 +126,7 @@ public class InventarioEstoqueFacade extends AbstractFacade<InventarioEstoque> {
     }
 
     public void desbloquearEstoque(InventarioEstoque selecionado) {
-        ConsolidadorDeEstoque consolidadorDeEstoque = getNovoConsolidadorSemReservaEstoque(selecionado);
+        ConsolidadorDeEstoque consolidadorDeEstoque = getNovoConsolidadorSemReservaEstoque(selecionado, true);
         for (ItemInventarioEstoque itemInventarioEstoque : selecionado.getItensInventarioEstoque()) {
             List<Estoque> estoques = consolidadorDeEstoque.getEstoques(itemInventarioEstoque.getMaterial());
             for (Estoque e : estoques) {

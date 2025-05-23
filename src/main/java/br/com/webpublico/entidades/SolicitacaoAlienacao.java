@@ -216,16 +216,6 @@ public class SolicitacaoAlienacao extends SuperEntidade implements PossuidorArqu
         this.hierarquiaOrganizacional = hierarquiaOrganizacional;
     }
 
-    public List<Bem> bensDaSolicitacao() {
-        List<Bem> bens = new ArrayList<>();
-        if(itensLoteSolicitacaoAlienacao != null){
-            for (ItemSolicitacaoAlienacao item : itensLoteSolicitacaoAlienacao) {
-                bens.add(item.getBem());
-            }
-        }
-        return bens;
-    }
-
     @Override
     public String toString() {
         return codigo + " - " + descricao + " - " + DataUtil.getDataFormatada(this.dataSolicitacao);

@@ -9,8 +9,6 @@ import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.*;
 import br.com.webpublico.util.ConverterAutoComplete;
 import br.com.webpublico.util.DataUtil;
-import br.com.webpublico.util.Util;
-import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
@@ -26,20 +24,18 @@ import java.util.List;
 @ViewScoped
 @URLMappings(mappings = {
     @URLMapping(id = "novoParametroMonitoramentoFiscal", pattern = "/parametro-monitoramento-fiscal/novo/",
-                viewId = "/faces/tributario/monitoramentofiscal/parametro/edita.xhtml"),
+        viewId = "/faces/tributario/monitoramentofiscal/parametro/edita.xhtml"),
     @URLMapping(id = "editarParametroMonitoramentoFiscal", pattern = "/parametro-monitoramento-fiscal/editar/#{parametroMonitoramentoFiscalControlador.id}/",
-                viewId = "/faces/tributario/monitoramentofiscal/parametro/edita.xhtml"),
+        viewId = "/faces/tributario/monitoramentofiscal/parametro/edita.xhtml"),
     @URLMapping(id = "listarParametroMonitoramentoFiscal", pattern = "/parametro-monitoramento-fiscal/listar/",
-                viewId = "/faces/tributario/monitoramentofiscal/parametro/lista.xhtml"),
+        viewId = "/faces/tributario/monitoramentofiscal/parametro/lista.xhtml"),
     @URLMapping(id = "verParametroMonitoramentoFiscal", pattern = "/parametro-monitoramento-fiscal/ver/#{parametroMonitoramentoFiscalControlador.id}/",
-                viewId = "/faces/tributario/monitoramentofiscal/parametro/visualizar.xhtml")
+        viewId = "/faces/tributario/monitoramentofiscal/parametro/visualizar.xhtml")
 })
 public class ParametroMonitoramentoFiscalControlador extends PrettyControlador<ParametroMonitoramentoFiscal> implements Serializable, CRUD {
 
     @EJB
     private ParametroMonitoramentoFiscalFacade parametroMonitoramentoFiscalFacade;
-    @EJB
-    private SecretariaFiscalizacaoFacade secretariaFiscalizacaoFacade;
     @EJB
     private TipoDoctoOficialFacade tipoDoctoOficialFacade;
     @EJB

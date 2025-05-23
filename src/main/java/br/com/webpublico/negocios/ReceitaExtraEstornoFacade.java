@@ -78,6 +78,10 @@ public class ReceitaExtraEstornoFacade extends SuperFacadeContabil<ReceitaExtraE
         return saldoSubContaFacade;
     }
 
+    public SistemaFacade getSistemaFacade() {
+        return sistemaFacade;
+    }
+
     public NotaOrcamentariaFacade getNotaOrcamentariaFacade() {
         return notaOrcamentariaFacade;
     }
@@ -166,8 +170,7 @@ public class ReceitaExtraEstornoFacade extends SuperFacadeContabil<ReceitaExtraE
             entity.getValor(),
             entity.getReceitaExtra().getContaExtraorcamentaria(),
             entity.getReceitaExtra().getContaDeDestinacao(),
-            entity.getReceitaExtra().getUnidadeOrganizacional(),
-            entity.getId().toString(), entity.getClass().getSimpleName());
+            entity.getReceitaExtra().getUnidadeOrganizacional());
     }
 
     @Override
@@ -216,19 +219,19 @@ public class ReceitaExtraEstornoFacade extends SuperFacadeContabil<ReceitaExtraE
             item.setOperacaoClasseCredor(classeCredorFacade.recuperaOperacaoAndVigenciaClasseCredor(entity.getReceitaExtra().getPessoa(), entity.getReceitaExtra().getClasseCredor(), entity.getDataEstorno()));
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getReceitaExtra().getContaExtraorcamentaria(), item));
-            objetos.add(new ObjetoParametro(entity.getReceitaExtra().getSubConta(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), ReceitaExtraEstorno.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getReceitaExtra().getContaExtraorcamentaria().getId().toString(), ContaExtraorcamentaria.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getReceitaExtra().getSubConta().getId().toString(), SubConta.class.getSimpleName(), item));
             if (entity.getReceitaExtra().getRetencaoPgto() != null) {
-                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getClasseCredor(), item));
-                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa(), item));
-                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos(), item));
+                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa().getId().toString(), ProvisaoPPADespesa.class.getSimpleName(), item));
+                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
                 if (entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getDividaPublica() != null) {
-                    objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica(), item));
-                    objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getDividaPublica(), item));
+                    objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
+                    objetos.add(new ObjetoParametro(entity.getReceitaExtra().getRetencaoPgto().getPagamento().getLiquidacao().getEmpenho().getDividaPublica().getId().toString(), DividaPublica.class.getSimpleName(), item));
                 }
             } else {
-                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getClasseCredor(), item));
+                objetos.add(new ObjetoParametro(entity.getReceitaExtra().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
             }
             item.setObjetoParametros(objetos);
 
@@ -283,10 +286,6 @@ public class ReceitaExtraEstornoFacade extends SuperFacadeContabil<ReceitaExtraE
 
     public SingletonConcorrenciaContabil getSingletonConcorrenciaContabil() {
         return singletonConcorrenciaContabil;
-    }
-
-    public SistemaFacade getSistemaFacade() {
-        return sistemaFacade;
     }
 
     @Override

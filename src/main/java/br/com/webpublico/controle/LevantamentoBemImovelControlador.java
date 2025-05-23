@@ -5,10 +5,9 @@ import br.com.webpublico.enums.Operacoes;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
-import br.com.webpublico.negocios.AbstractFacade;
-import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
-import br.com.webpublico.negocios.LevantamentoBemImovelFacade;
+import br.com.webpublico.negocios.*;
 import br.com.webpublico.util.DataUtil;
+import br.com.webpublico.util.EntidadeMetaData;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.util.Util;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
@@ -44,24 +43,34 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
 
     public static final String CAMINHO_NOVO = "/administrativo/patrimonio/levantamentobemimovel/edita.xhtml";
     @EJB
-    private LevantamentoBemImovelFacade facade;
+    private LevantamentoBemImovelFacade levantamentoBemImovelFacade;
+    @EJB
+    private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
+    @EJB
+    private SistemaFacade sistemaFacade;
+    @EJB
+    private SingletonHierarquiaOrganizacional singletonHO;
+    @EJB
+    private ParametroPatrimonioFacade parametroPatrimonioFacade;
+    @EJB
+    private FaseFacade faseFacade;
+    @EJB
+    private ExercicioFacade exercicioFacade;
+
     private OrigemRecursoBem origemRecursoBemSelecionada;
     private DocumentoComprobatorioLevantamentoBemImovel documentoComprobatorioLevantamentoBemImovelSelecionado;
     private LevantamentoBemImovel levantamentoBemImovelOriginal;
     private boolean bloqueado = false;
     private Boolean segurado = Boolean.FALSE;
     private Boolean garantido = Boolean.FALSE;
-    private List<HierarquiaOrganizacional> unidadesOrcamentarias;
-    private HierarquiaOrganizacional unidadeAdministrativa;
-    private HierarquiaOrganizacional unidadeOrcamentaria;
 
     public LevantamentoBemImovelControlador() {
-        super(LevantamentoBemImovel.class);
+        metadata = new EntidadeMetaData(LevantamentoBemImovel.class);
     }
 
     @Override
     public AbstractFacade getFacede() {
-        return facade;
+        return levantamentoBemImovelFacade;
     }
 
     @Override
@@ -78,13 +87,29 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
     @URLAction(mappingId = "novoLevantamentoBemImovel", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novo() {
         super.novo();
-        selecionado.setDataLevantamento(facade.getSistemaFacade().getDataOperacao());
-        selecionado.setUsuarioLevantamento(facade.getSistemaFacade().getUsuarioCorrente());
+
+        selecionado.setDataLevantamento(sistemaFacade.getDataOperacao());
+        selecionado.setUsuarioLevantamento(sistemaFacade.getUsuarioCorrente());
+
         inicializarAtributos();
         levantamentoBemImovelOriginal = selecionado;
         selecionado.setGarantia(new Garantia());
         novaSeguradora();
     }
+
+    private void inicializarAtributos() {
+        this.origemRecursoBemSelecionada = new OrigemRecursoBem();
+        this.documentoComprobatorioLevantamentoBemImovelSelecionado = new DocumentoComprobatorioLevantamentoBemImovel();
+    }
+
+    private void recuperarHierarquia() {
+        try {
+            selecionado.setHierarquiaOrganizacionalAdministrativa(hierarquiaOrganizacionalFacade.getHierarquiaDaUnidade(TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(), this.selecionado.getUnidadeAdministrativa(), sistemaFacade.getDataOperacao()));
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+    }
+
 
     @Override
     @URLAction(mappingId = "editarLevantamentoBemImovel", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -102,6 +127,11 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
         novaSeguradora();
     }
 
+    public boolean existeEfetivacaoLevantamento() {
+        return levantamentoBemImovelFacade.isExisteEfetivacaoToLevantamentoSelecionado(selecionado.getId());
+    }
+
+
     @URLAction(mappingId = "verLevantamentoBemImovel", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     @Override
     public void ver() {
@@ -117,37 +147,21 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
     public void salvar() {
         try {
             Util.validarCampos(selecionado);
-            Fase fase = facade.getFaseFacade().buscarFase(CAMINHO_NOVO, selecionado.getUnidadeOrcamentaria(), selecionado.getDataAquisicao());
+            Fase fase = faseFacade.buscarFase(CAMINHO_NOVO, selecionado.getUnidadeOrcamentaria(), selecionado.getDataAquisicao());
             String nomeFase = fase != null ? fase.toString() : "Nenhuma configuração (Fase ou Período Fase) encontrada!";
             validarLevantamento(nomeFase);
             if (isOperacaoEditar() && bloqueado) {
                 validarCamposAlterados(nomeFase);
             }
-            selecionado = facade.salvarRetornando(selecionado);
-            FacesUtil.executaJavaScript("iniciarSalvar()");
+            selecionado = levantamentoBemImovelFacade.salvarLevantamento(selecionado);
+            FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + selecionado.getId() + "/");
+            FacesUtil.addOperacaoRealizada(getMensagemSucessoAoSalvar());
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (ExcecaoNegocioGenerica e) {
             FacesUtil.addOperacaoNaoPermitida(e.getMessage());
         } catch (Exception e) {
             descobrirETratarException(e);
-        }
-    }
-
-    public boolean existeEfetivacaoLevantamento() {
-        return facade.isExisteEfetivacaoToLevantamentoSelecionado(selecionado.getId());
-    }
-
-    private void inicializarAtributos() {
-        this.origemRecursoBemSelecionada = new OrigemRecursoBem();
-        this.documentoComprobatorioLevantamentoBemImovelSelecionado = new DocumentoComprobatorioLevantamentoBemImovel();
-    }
-
-    private void recuperarHierarquia() {
-        try {
-            setUnidadeAdministrativa(facade.getHierarquiaOrganizacionalFacade().getHierarquiaDaUnidade(TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(), this.selecionado.getUnidadeAdministrativa(), facade.getSistemaFacade().getDataOperacao()));
-        } catch (Exception e) {
-            logger.error(e.getMessage());
         }
     }
 
@@ -201,7 +215,7 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
             FacesUtil.executaJavaScript("confirmarExclusao.show()");
         } else {
             try {
-                FacesUtil.addOperacaoNaoPermitida("Bloqueado pelo controle de fase: " + facade.getFaseFacade().buscarFase(CAMINHO_NOVO, selecionado.getUnidadeOrcamentaria(), selecionado.getDataAquisicao()));
+                FacesUtil.addOperacaoNaoPermitida("Bloqueado pelo controle de fase: " + faseFacade.buscarFase(CAMINHO_NOVO, selecionado.getUnidadeOrcamentaria(), selecionado.getDataAquisicao()));
             } catch (NullPointerException nu) {
                 FacesUtil.addOperacaoNaoRealizada("Nenhuma configuração (Fase ou Período Fase) encontrada!");
             }
@@ -243,31 +257,26 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
     }
 
     public List<HierarquiaOrganizacional> completaHierarquiaSegundoNivel(String parte) {
-        return facade.getHierarquiaOrganizacionalFacade().filtraPorNivel(parte.trim(), "2", TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(), facade.getSistemaFacade().getDataOperacao());
+        return hierarquiaOrganizacionalFacade.filtraPorNivel(parte.trim(), "2", TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(), sistemaFacade.getDataOperacao());
     }
 
     public List<LevantamentoBemImovel> completarLevantamentoBemImovel(String parte) {
-        return facade.listaFiltrando(parte.trim(), "codigoPatrimonio", "descricaoImovel");
-    }
-
-    public List<CadastroImobiliario> completarCadastroImobiliario(String parte) {
-        return facade.getCadastroImobiliarioFacade().buscarCadastroImobiliarioPorSituacao(parte.trim(), true, "inscricaoCadastral");
+        return levantamentoBemImovelFacade.listaFiltrando(parte.trim(), "codigoPatrimonio", "descricaoImovel");
     }
 
     public List<SelectItem> retornaHierarquiaOrcamentaria() {
-        List<SelectItem> toReturn = new ArrayList<>();
         if (selecionado.getUnidadeAdministrativa() != null) {
+            List<SelectItem> toReturn = new ArrayList<>();
             toReturn.add(new SelectItem(null, ""));
-            for (HierarquiaOrganizacional obj : unidadesOrcamentarias) {
+
+            for (HierarquiaOrganizacional obj : hierarquiaOrganizacionalFacade.retornaHierarquiaOrcamentariaPorUnidadeAdministrativa(selecionado.getUnidadeAdministrativa(), sistemaFacade.getDataOperacao())) {
                 toReturn.add(new SelectItem(obj.getSubordinada(), obj.toString()));
             }
-        }
-        return toReturn;
-    }
 
-    public void listenerUnidadeAdministrativa() {
-        unidadesOrcamentarias = facade.getHierarquiaOrganizacionalFacade().retornaHierarquiaOrcamentariaPorUnidadeAdministrativa(
-            unidadeAdministrativa.getSubordinada(), facade.getSistemaFacade().getDataOperacao());
+            return toReturn;
+        }
+
+        return null;
     }
 
     public List<SelectItem> getListaSelectItemTipoDeAquisicaoBem() {
@@ -292,7 +301,7 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
     }
 
     public boolean bloqueioPorFase(LevantamentoBemImovel levantamentoBemImovel) {
-        return !facade.getFaseFacade().existePeriodoFaseVigenteNaDataDeFechamento("/administrativo/patrimonio/levantamentobemimovel/edita.xhtml", levantamentoBemImovel.getDataAquisicao(), levantamentoBemImovel.getUnidadeOrcamentaria());
+        return !faseFacade.existePeriodoFaseVigenteNaDataDeFechamento("/administrativo/patrimonio/levantamentobemimovel/edita.xhtml", levantamentoBemImovel.getDataAquisicao(), levantamentoBemImovel.getUnidadeOrcamentaria());
     }
 
     public void validarCamposAlterados(String nomeFase) {
@@ -326,24 +335,5 @@ public class LevantamentoBemImovelControlador extends PrettyControlador<Levantam
 
     public void setGarantido(Boolean garantido) {
         this.garantido = garantido;
-    }
-
-    public HierarquiaOrganizacional getUnidadeOrcamentaria() {
-        return unidadeOrcamentaria;
-    }
-
-    public void setUnidadeOrcamentaria(HierarquiaOrganizacional unidadeOrcamentaria) {
-        this.unidadeOrcamentaria = unidadeOrcamentaria;
-    }
-
-    public HierarquiaOrganizacional getUnidadeAdministrativa() {
-        return unidadeAdministrativa;
-    }
-
-    public void setUnidadeAdministrativa(HierarquiaOrganizacional unidadeAdministrativa) {
-        this.unidadeAdministrativa = unidadeAdministrativa;
-        if (this.unidadeAdministrativa != null) {
-            selecionado.setUnidadeAdministrativa(this.unidadeAdministrativa.getSubordinada());
-        }
     }
 }

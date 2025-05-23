@@ -206,4 +206,5 @@ public enum TipoContaDespesa {
     public boolean isPropostaConcessaoDiaria() {
         return isDiariaCivil() || isDiariaCampo() || isSuprimentoFundo();
     }
+
 }

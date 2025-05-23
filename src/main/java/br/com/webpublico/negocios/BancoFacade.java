@@ -44,7 +44,7 @@ public class BancoFacade extends AbstractFacade<Banco> {
         String hql = "from Banco b where trim(b.numeroBanco) = :numeroParametro";
         Query q = getEntityManager().createQuery(hql);
         q.setParameter("numeroParametro", numero.trim());
-        if(!q.getResultList().isEmpty()){
+        if (!q.getResultList().isEmpty()) {
             return (Banco) q.getResultList().get(0);
         }
         return null;
@@ -54,7 +54,7 @@ public class BancoFacade extends AbstractFacade<Banco> {
         String hql = "from Banco b where trim(b.ispb) = :ispb";
         Query q = getEntityManager().createQuery(hql);
         q.setParameter("ispb", ispb.trim());
-        if(!q.getResultList().isEmpty()){
+        if (!q.getResultList().isEmpty()) {
             return (Banco) q.getResultList().get(0);
         }
         return null;
@@ -72,9 +72,9 @@ public class BancoFacade extends AbstractFacade<Banco> {
 
     public List<Banco> listaBancoPorCodigoOuNome(String texto) {
         String hql = "select b from Banco b "
-                + " where (b.numeroBanco = :numero "
-                + " or lower(b.descricao) like :descricao) "
-                + " and b.situacao = :situacao ";
+            + " where (b.numeroBanco = :numero "
+            + " or lower(b.descricao) like :descricao) "
+            + " and b.situacao = :situacao ";
         Query q = em.createQuery(hql);
         q.setParameter("numero", texto);
         q.setParameter("situacao", Situacao.ATIVO);
@@ -91,9 +91,9 @@ public class BancoFacade extends AbstractFacade<Banco> {
 
     public List<Banco> listaBancoPorCodigoOuNomeNoBordero(String texto) {
         String sql = " select b.* from banco b " +
-                " inner join bancoobn ban on ban.numerodobanco = b.numerobanco " +
-                " where (b.numerobanco = :numero or lower(b.descricao) like :descricao ) ";
-        Query q = em.createNativeQuery(sql,Banco.class);
+            " inner join bancoobn ban on ban.numerodobanco = b.numerobanco " +
+            " where (b.numerobanco = :numero or lower(b.descricao) like :descricao ) ";
+        Query q = em.createNativeQuery(sql, Banco.class);
         q.setParameter("numero", texto);
         q.setParameter("descricao", "%" + texto.toLowerCase() + "%");
         q.setMaxResults(10);
@@ -108,8 +108,8 @@ public class BancoFacade extends AbstractFacade<Banco> {
 
     public List<Banco> bancosDasContasCorrenteDosVinculos() {
         String hql = "select distinct banco from VinculoFP vinculo " +
-                " inner join vinculo.contaCorrente.agencia.banco banco " +
-                " order by banco.numeroBanco";
+            " inner join vinculo.contaCorrente.agencia.banco banco " +
+            " order by banco.numeroBanco";
 
         Query q = em.createQuery(hql);
         return q.getResultList();

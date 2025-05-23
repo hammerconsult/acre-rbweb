@@ -1,7 +1,5 @@
 package br.com.webpublico.negocios.tributario.rest;
 
-import br.com.webpublico.dte.dto.RegisterDteDTO;
-import br.com.webpublico.dte.dto.UsuarioWebDTO;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.comum.UsuarioWeb;
 import br.com.webpublico.negocios.CadastroEconomicoFacade;
@@ -177,7 +175,7 @@ public class UsuarioWebResource implements Serializable {
     public ResponseEntity<UserNfseDTO> registerAccount(@RequestBody RegisterNfseDTO registerDTO) {
         log.debug("registerDTO [{}] ", registerDTO);
         try {
-            hasDadosUsuarioRegistrado(registerDTO.getLogin());
+            hasDadosUsuarioRegistrado(registerDTO);
             registerDTO.validarDadosPessoaisUsuario();
             UsuarioWeb userInformation = usuarioWebFacade.registrarUsuario(registerDTO);
             UserNfseDTO nfseDTO = userInformation.toNfseDto();
@@ -185,23 +183,6 @@ public class UsuarioWebResource implements Serializable {
             return new ResponseEntity<>(nfseDTO, HttpStatus.CREATED);
         } catch (NfseOperacaoNaoPermitidaException ex) {
             return nfseExceptionToResponseEntity(ex);
-        }
-    }
-
-    @RequestMapping(value = "/register-dte",
-        method = RequestMethod.POST,
-        produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<UsuarioWebDTO> registerAccount(@RequestBody RegisterDteDTO registerDTO) {
-        log.debug("registerDTO [{}] ", registerDTO);
-        try {
-            hasDadosUsuarioRegistrado(registerDTO.getLogin());
-            registerDTO.validarDadosPessoaisUsuario();
-            UsuarioWeb usuarioWeb = usuarioWebFacade.registrarUsuarioDTE(registerDTO);
-            usuarioWebFacade.enviarEmailAtivacaoUsuarioDTE(usuarioWeb);
-            return new ResponseEntity<>(usuarioWeb.toDteDto(), HttpStatus.CREATED);
-        } catch (NfseOperacaoNaoPermitidaException ex) {
-            HttpHeaders headers = HeaderUtil.setMessageError(ex.getMensagens().toArray(new String[0]));
-            return new ResponseEntity<>(null, headers, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -225,7 +206,7 @@ public class UsuarioWebResource implements Serializable {
         method = RequestMethod.POST,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SimpleValidationSuccessNfseDTO> requestPasswordReset(@RequestParam(value = "cpf") String cpf) {
-        UsuarioWeb nfseUser = usuarioWebFacade.buscarUsuarioWebPorLogin(Util.removerCaracteresEspeciais(cpf));
+        UsuarioWeb nfseUser = usuarioWebFacade.buscarNfseUserPorLogin(Util.removerCaracteresEspeciais(cpf));
         if (nfseUser != null) {
             nfseUser.setResetKey(RandomUtil.generateResetKey());
             nfseUser.setResetDate(new Date());
@@ -241,28 +222,6 @@ public class UsuarioWebResource implements Serializable {
             }
         }
         throw new NfseOperacaoNaoPermitidaException("Verifique o cpf ou cnpj informado, o mesmo não se encontra cadastrado");
-    }
-
-    @RequestMapping(value = "/account/reset_password-dte/init",
-        method = RequestMethod.POST,
-        produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<SimpleValidationSuccessNfseDTO> requestPasswordResetDte(@RequestParam(value = "cnpj") String cnpj) {
-        UsuarioWeb usuarioWeb = usuarioWebFacade.buscarUsuarioWebPorLogin(Util.removerCaracteresEspeciais(cnpj));
-        if (usuarioWeb != null) {
-            usuarioWeb.setResetKey(RandomUtil.generateResetKey());
-            usuarioWeb.setResetDate(new Date());
-            usuarioWeb = usuarioWebFacade.salvarRetornando(usuarioWeb);
-            if (usuarioWeb.isActivated()) {
-                usuarioWebFacade.enviarEmailResetarSenhaDte(usuarioWeb);
-                return new ResponseEntity<>(new SimpleValidationSuccessNfseDTO("Operação Realizada",
-                    "Verifique a caixa de entrada do seu e-mail (" + usuarioWeb.getEmail() + "), você receberá os detalhes para gerar uma nova senha."), HttpStatus.OK);
-            } else {
-                usuarioWebFacade.enviarEmailAtivacaoUsuarioDTE(usuarioWeb);
-                return new ResponseEntity<>(new SimpleValidationSuccessNfseDTO("Operação Realizada",
-                    "Verifique a caixa de entrada do seu e-mail (" + usuarioWeb.getEmail() + "), você receberá os detalhes para ativação da sua conta."), HttpStatus.OK);
-            }
-        }
-        throw new NfseOperacaoNaoPermitidaException("Verifique o cnpj informado, o mesmo não se encontra cadastrado");
     }
 
     @RequestMapping(value = "/account/reset_password/finish",
@@ -299,11 +258,18 @@ public class UsuarioWebResource implements Serializable {
     }
 
 
-    private void hasDadosUsuarioRegistrado(String login) throws NfseValidacaoException {
-        if (usuarioWebFacade.buscarUsuarioWebPorLogin(login) != null) {
-            throw new NfseValidacaoException("O usuário informado já está em uso.", "Verifique se os dados digitados estão corretos.",
-                "Caso os dados digitados estejam corretos, entre em contato com o suporte ou siga os passos do esqueci minha senha na página inicial.");
+    private void hasDadosUsuarioRegistrado(UserNfseDTO usuario) throws NfseValidacaoException {
+        if (usuarioWebFacade.buscarNfseUserPorLogin(usuario.getLogin()) != null) {
+            throw new NfseValidacaoException("O CPF informado já está em uso.", "Verifique se o CPF informado está correto.", "Caso o CPF informado esteja correto, entre em contato com o suporte ou siga os passos do esqueci minha senha na página inicial.");
         }
+
+//        if (usuarioWebFacade.buscarNfseUserPorEmail(usuario.getEmail()) != null) {
+//            throw new NfseValidacaoException("O email informado já está em uso.", "Verifique se o email informado está correto.", "Caso o email informado esteja correto, entre em contato com o suporte ou siga os passos do esqueci minha senha na página inicial.");
+//        }
+//      TODO Será que vai ficar assim?
+//        if (pessoaFacade.buscarPessoaPorCpfOrCnpj(usuario.getLogin()) != null) {
+//            throw new NfseValidacaoException("Seu cadastro já consta na base de dados unificada do municipio.", "Verifique se o CPF informado está correto.", "Caso o CPF informado esteja correto, entre em contato com o suporte para continuar o cadastro do seu usuário.");
+//        }
     }
 
 
@@ -346,8 +312,8 @@ public class UsuarioWebResource implements Serializable {
                                 @RequestParam(value = "loginResponsavel") String loginResponsavel,
                                 @RequestParam(value = "login") String login) {
 
-        UsuarioWeb nfseUserResponsavel = usuarioWebFacade.buscarUsuarioWebPorLogin(loginResponsavel);
-        UsuarioWeb nfseUser = usuarioWebFacade.buscarUsuarioWebPorLogin(login);
+        UsuarioWeb nfseUserResponsavel = usuarioWebFacade.buscarNfseUserPorLogin(loginResponsavel);
+        UsuarioWeb nfseUser = usuarioWebFacade.buscarNfseUserPorLogin(login);
 
         CadastroEconomico cadastro = cadastroEconomicoService.recuperar(id);
         for (UserNfseCadastroEconomico userNfseCadastroEconomico : nfseUser.getUserNfseCadastroEconomicos()) {

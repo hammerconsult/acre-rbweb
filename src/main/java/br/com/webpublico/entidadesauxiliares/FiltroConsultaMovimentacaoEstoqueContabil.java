@@ -20,6 +20,7 @@ public class FiltroConsultaMovimentacaoEstoqueContabil {
     private Long idMaterial;
     private Long idLocalEstoque;
 
+
     public FiltroConsultaMovimentacaoEstoqueContabil() {
         saidaIntegrada = false;
         notaFiscal = false;
@@ -100,7 +101,6 @@ public class FiltroConsultaMovimentacaoEstoqueContabil {
     public void setGrupoMaterial(GrupoMaterial grupoMaterial) {
         this.grupoMaterial = grupoMaterial;
     }
-
 
     public Long getIdMaterial() {
         return idMaterial;

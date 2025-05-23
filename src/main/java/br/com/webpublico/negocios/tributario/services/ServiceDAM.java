@@ -41,9 +41,9 @@ public class ServiceDAM {
     public void alterarSituacaoDamsDaParcela(SituacaoParcelaValorDivida situacao) {
         naoPodemSerCancelados = Lists.newArrayList();
         if (PAGO.equals(situacao.getSituacaoParcela())
-                || PAGO_REFIS.equals(situacao.getSituacaoParcela())
-                || PAGO_SUBVENCAO.equals(situacao.getSituacaoParcela())
-                || BAIXADO.equals(situacao.getSituacaoParcela())) {
+            || PAGO_REFIS.equals(situacao.getSituacaoParcela())
+            || PAGO_SUBVENCAO.equals(situacao.getSituacaoParcela())
+            || BAIXADO.equals(situacao.getSituacaoParcela())) {
             pagaDamsQueEstaoNaArrecadacaoCancelaOsDemais(situacao.getParcela());
         } else {
             StringBuilder hql = new StringBuilder();
@@ -64,7 +64,7 @@ public class ServiceDAM {
                 } else if ((EM_ABERTO.equals(situacao.getSituacaoParcela()) && DAM.Situacao.CANCELADO.equals(dam.getSituacao()))) {
                     alterarSituacaoDAM(dam, DAM.Situacao.ABERTO);
                     break;
-                } else if (!EM_ABERTO.equals(situacao.getSituacaoParcela()) && !PAGO_BLOQUEIO_JUDICIAL.equals(situacao.getSituacaoParcela()) && !DAM.Tipo.SUBVENCAO.equals(dam.getTipo()) && !DAM.Situacao.PAGO.equals(dam.getSituacao())) {
+                } else if (!EM_ABERTO.equals(situacao.getSituacaoParcela()) && !DAM.Tipo.SUBVENCAO.equals(dam.getTipo()) && !DAM.Situacao.PAGO.equals(dam.getSituacao()) && !PAGO_BLOQUEIO_JUDICIAL.equals(situacao.getSituacaoParcela())) {
                     alterarSituacaoDAM(dam, DAM.Situacao.CANCELADO);
                     break;
                 }
@@ -89,12 +89,12 @@ public class ServiceDAM {
     private void pagaDamsQueEstaoNaArrecadacao(ParcelaValorDivida parcela) {
         StringBuilder sql = new StringBuilder();
         sql.append("select dam.* from DAM dam ")
-                .append(" inner join ItemDAM item on item.dam_id = dam.id ")
-                .append(" where item.parcela_id = :idParcela ")
-                .append(" and exists (select itemBaixa.id from ItemLoteBaixa itemBaixa ")
-                .append(" inner join LoteBaixa lote on lote.id = itemBaixa.loteBaixa_id ")
-                .append(" where itemBaixa.dam_id = dam.id ")
-                .append(" and lote.situacaoLoteBaixa in (:situacoes))");
+            .append(" inner join ItemDAM item on item.dam_id = dam.id ")
+            .append(" where item.parcela_id = :idParcela ")
+            .append(" and exists (select itemBaixa.id from ItemLoteBaixa itemBaixa ")
+            .append(" inner join LoteBaixa lote on lote.id = itemBaixa.loteBaixa_id ")
+            .append(" where itemBaixa.dam_id = dam.id ")
+            .append(" and lote.situacaoLoteBaixa in (:situacoes))");
         Query q = em.createNativeQuery(sql.toString(), DAM.class);
         q.setParameter("idParcela", parcela.getId());
         q.setParameter("situacoes", Lists.newArrayList(SituacaoLoteBaixa.BAIXADO.name(), SituacaoLoteBaixa.BAIXADO_INCONSITENTE.name()));
@@ -108,13 +108,13 @@ public class ServiceDAM {
     private void pagaPrimeiroDamECancelaDemaisDamsQueEstaoNoProcessoDeBaixa(ParcelaValorDivida parcela) {
         StringBuilder sql = new StringBuilder();
         sql.append("select dam.* from DAM dam ")
-                .append(" inner join ItemDAM item on item.dam_id = dam.id ")
-                .append(" where item.parcela_id = :idParcela ")
-                .append(" and exists (select itemProcesso.id from ItemProcessoDebito itemProcesso ")
-                .append(" inner join ProcessoDebito processo on processo.id = itemProcesso.processoDebito_id ")
-                .append(" where itemProcesso.parcela_id = item.parcela_id ")
-                .append(" and processo.tipo = :tipoProcesso and processo.situacao in (:situacoesProcesso))")
-                .append(" order by dam.situacao asc, dam.emissao desc ");
+            .append(" inner join ItemDAM item on item.dam_id = dam.id ")
+            .append(" where item.parcela_id = :idParcela ")
+            .append(" and exists (select itemProcesso.id from ItemProcessoDebito itemProcesso ")
+            .append(" inner join ProcessoDebito processo on processo.id = itemProcesso.processoDebito_id ")
+            .append(" where itemProcesso.parcela_id = item.parcela_id ")
+            .append(" and processo.tipo = :tipoProcesso and processo.situacao in (:situacoesProcesso))")
+            .append(" order by dam.situacao asc, dam.emissao desc ");
         Query q = em.createNativeQuery(sql.toString(), DAM.class);
         q.setParameter("idParcela", parcela.getId());
         q.setParameter("tipoProcesso", TipoProcessoDebito.BAIXA.name());
@@ -183,12 +183,12 @@ public class ServiceDAM {
     private void pagaPrimeiroDamECancelaDemaisDamsQueEstaoNoPagamentoAvulso(ParcelaValorDivida parcela) {
         StringBuilder sql = new StringBuilder();
         sql.append("select dam.* from DAM dam ")
-                .append(" inner join ItemDAM item on item.dam_id = dam.id ")
-                .append(" where item.parcela_id = :idParcela ")
-                .append(" and exists (select avulso.id from PagamentoAvulso avulso ")
-                .append(" where avulso.parcelaValorDivida_id = item.parcela_id ")
-                .append(" and coalesce(avulso.ativo,1) = 1) ")
-                .append(" order by dam.situacao asc, dam.emissao desc ");
+            .append(" inner join ItemDAM item on item.dam_id = dam.id ")
+            .append(" where item.parcela_id = :idParcela ")
+            .append(" and exists (select avulso.id from PagamentoAvulso avulso ")
+            .append(" where avulso.parcelaValorDivida_id = item.parcela_id ")
+            .append(" and coalesce(avulso.ativo,1) = 1) ")
+            .append(" order by dam.situacao asc, dam.emissao desc ");
         Query q = em.createNativeQuery(sql.toString(), DAM.class);
         q.setParameter("idParcela", parcela.getId());
         LinkedList<DAM> dams = Lists.newLinkedList(q.getResultList());
@@ -198,13 +198,13 @@ public class ServiceDAM {
     private void cancelaDamsAbertosQueNaoEstaoNaArrecadacao(ParcelaValorDivida parcela) {
         StringBuilder sql = new StringBuilder();
         sql.append("select dam.* from DAM dam ")
-                .append(" inner join ItemDAM item on item.dam_id = dam.id ")
-                .append(" where item.parcela_id = :idParcela ")
-                .append(" and dam.situacao = :situacaoDam ")
-                .append(" and not exists (select itemBaixa.id from ItemLoteBaixa itemBaixa ")
-                .append(" inner join LoteBaixa lote on lote.id = itemBaixa.loteBaixa_id ")
-                .append(" where itemBaixa.dam_id = dam.id ")
-                .append(" and lote.situacaoLoteBaixa in (:situacoes)) ");
+            .append(" inner join ItemDAM item on item.dam_id = dam.id ")
+            .append(" where item.parcela_id = :idParcela ")
+            .append(" and dam.situacao = :situacaoDam ")
+            .append(" and not exists (select itemBaixa.id from ItemLoteBaixa itemBaixa ")
+            .append(" inner join LoteBaixa lote on lote.id = itemBaixa.loteBaixa_id ")
+            .append(" where itemBaixa.dam_id = dam.id ")
+            .append(" and lote.situacaoLoteBaixa in (:situacoes)) ");
         if (!naoPodemSerCancelados.isEmpty()) {
             sql.append(" and dam.id not in (:dams) ");
         }

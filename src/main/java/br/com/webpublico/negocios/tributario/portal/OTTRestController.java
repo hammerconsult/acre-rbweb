@@ -654,23 +654,6 @@ public class OTTRestController extends PortalRestController {
         return new ResponseEntity<>(HttpStatus.EXPECTATION_FAILED);
     }
 
-    @RequestMapping(value = "/editar-cadastro-operadora-ott-arquivos/{id}",
-        method = RequestMethod.GET,
-        produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public ResponseEntity<List<ArquivoDTO>> recuperarOperadoraArquivos(@PathVariable("id") Long id) {
-        List<ArquivoDTO> operadoraArquivos = Lists.newArrayList();
-
-        OperadoraTecnologiaTransporteDTO operadora = getPortalContribunteFacade().getOttFacade().recuperar(id).toDTO();
-
-        try {
-            operadoraArquivos = getPortalContribunteFacade().recuperarArquivosOperadora(operadora);
-        } catch (Exception e) {
-            getLogger().error("Exception", e);
-        }
-        return new ResponseEntity<>(operadoraArquivos, HttpStatus.OK);
-    }
-
     @Transactional(timeout = 10000, propagation = Propagation.REQUIRES_NEW)
     @RequestMapping(value = "/operadora-ott-por-cnpj",
         method = RequestMethod.GET,

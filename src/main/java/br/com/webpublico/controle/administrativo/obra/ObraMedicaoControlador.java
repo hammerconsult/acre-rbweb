@@ -20,7 +20,6 @@ import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import javax.faces.model.SelectItem;
-import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +35,7 @@ import java.util.List;
     @URLMapping(id = "ver-obra-medicao", pattern = "/obra/medicao/ver/#{obraMedicaoControlador.id}/", viewId = "/faces/administrativo/obras/medicaoobra/visualizar.xhtml"),
     @URLMapping(id = "listar-obra-medicao", pattern = "/obra/medicao/listar/", viewId = "/faces/administrativo/obras/medicaoobra/listar.xhtml")
 })
-public class ObraMedicaoControlador extends PrettyControlador<ObraMedicao> implements Serializable, CRUD {
+public class ObraMedicaoControlador extends PrettyControlador<ObraMedicao> implements CRUD {
 
     @EJB
     private ObraMedicaoFacade obraMedicaoFacade;
@@ -77,13 +76,15 @@ public class ObraMedicaoControlador extends PrettyControlador<ObraMedicao> imple
     @URLAction(mappingId = "ver-obra-medicao", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     @Override
     public void ver() {
-        super.ver();
+        recuperarObjeto();
+        setTipoDocumentoAnexo(null);
     }
 
     @Override
     public AbstractFacade getFacede() {
         return obraMedicaoFacade;
     }
+
 
     @Override
     public void salvar() {

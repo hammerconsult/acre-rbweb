@@ -87,10 +87,7 @@ public class ItemLevantamentoEstoque extends SuperEntidade implements AgrupadorL
     }
 
     public BigDecimal getQuantidade() {
-        if (quantidade != null) {
-            return quantidade;
-        }
-        return BigDecimal.ZERO;
+        return quantidade;
     }
 
     public void setQuantidade(BigDecimal quantidade) {
@@ -106,6 +103,9 @@ public class ItemLevantamentoEstoque extends SuperEntidade implements AgrupadorL
     }
 
     public void setValorUnitario(BigDecimal valorUnitario) {
+        if (valorUnitario == null) {
+            this.valorUnitario = BigDecimal.ZERO;
+        }
         this.valorUnitario = valorUnitario;
     }
 

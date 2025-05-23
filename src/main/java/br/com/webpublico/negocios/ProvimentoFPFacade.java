@@ -165,23 +165,19 @@ public class ProvimentoFPFacade extends AbstractFacade<ProvimentoFP> {
         return ((Integer) q.getSingleResult()) + 1;
     }
 
-    public ProvimentoFP recuperaProvimento(VinculoFP vinculoFP, TipoProvimento tipo, Date data) {
+    public ProvimentoFP recuperaProvimento(VinculoFP vinculoFP, TipoProvimento tipo) {
         try {
             Query q = em.createQuery(" from ProvimentoFP provimento "
                 + " where provimento.tipoProvimento = :tipo "
-                + " and provimento.vinculoFP = :vinculo "
-                + "and to_char(provimento.dataProvimento,'dd/MM/yyyy') = :dataInicioVigencia order by provimento.dataProvimento desc");
+                + " and provimento.vinculoFP = :vinculo ");
             q.setParameter("tipo", tipo);
             q.setParameter("vinculo", vinculoFP);
-            q.setParameter("dataInicioVigencia", DataUtil.getDataFormatada(data));
-            q.setMaxResults(1);
             return (ProvimentoFP) q.getSingleResult();
         } catch (NoResultException nre) {
             logger.debug("nenhum provimento encontrado para recuperaProvimento " + vinculoFP + " - " + tipo + " erro: " + nre.getMessage());
             return null;
         }
     }
-
 
     public ProvimentoFP recuperaProvimentoByTipoAndDataProvimentoDesc(VinculoFP vinculoFP, TipoProvimento tipo) {
         try {

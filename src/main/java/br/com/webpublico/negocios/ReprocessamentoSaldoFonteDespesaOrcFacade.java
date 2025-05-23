@@ -8,7 +8,7 @@ import br.com.webpublico.entidadesauxiliares.AssistenteReprocessamento;
 import br.com.webpublico.entidadesauxiliares.ReprocessamentoSaldoFonteDespesaOrc;
 import br.com.webpublico.entidadesauxiliares.SaldoFonteDespesaOrcReprocessamento;
 import br.com.webpublico.entidadesauxiliares.contabil.IdentificadorFonteDespesaORC;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.OperacaoORC;
 import br.com.webpublico.enums.TipoOperacaoORC;
 import br.com.webpublico.negocios.contabil.reprocessamento.ReprocessamentoHistoricoFacade;

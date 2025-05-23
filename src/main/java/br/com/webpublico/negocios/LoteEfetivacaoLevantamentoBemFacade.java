@@ -462,7 +462,7 @@ public class LoteEfetivacaoLevantamentoBemFacade extends AbstractFacade<LoteEfet
 
         List<EfetivacaoLevantamentoBem> retorno = new ArrayList<>();
         Entidade entidade = entidadeFacade.recuperarEntidadePorUnidadeOrcamentaria(lote.getUnidadeOrcamentaria());
-        ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroComDependenciasEntidadeGeradoCodigo();
+        ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroPatrimonio();
         for (LevantamentoBemPatrimonial levantamento : levantamentos) {
             BigDecimal valorDepreciacao = levantamento.getDepreciacao();
             levantamento = em.find(LevantamentoBemPatrimonial.class, levantamento.getId());

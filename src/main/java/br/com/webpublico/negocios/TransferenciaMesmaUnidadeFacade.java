@@ -237,8 +237,8 @@ public class TransferenciaMesmaUnidadeFacade extends SuperFacadeContabil<Transfe
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getSubContaDeposito(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), TransferenciaMesmaUnidade.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getSubContaDeposito().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -277,8 +277,8 @@ public class TransferenciaMesmaUnidadeFacade extends SuperFacadeContabil<Transfe
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getSubContaRetirada(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), TransferenciaMesmaUnidade.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getSubContaRetirada().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);

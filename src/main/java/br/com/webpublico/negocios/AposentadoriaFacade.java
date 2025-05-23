@@ -17,7 +17,6 @@ import br.com.webpublico.esocial.service.S2400Service;
 import br.com.webpublico.esocial.service.S2405Service;
 import br.com.webpublico.esocial.service.S2410Service;
 import br.com.webpublico.exception.ValidacaoException;
-import br.com.webpublico.interfaces.EntidadePagavelRH;
 import br.com.webpublico.interfaces.ItemValorPrevidencia;
 import br.com.webpublico.negocios.rh.esocial.ConfiguracaoEmpregadorESocialFacade;
 import br.com.webpublico.util.DataUtil;
@@ -296,13 +295,11 @@ public class AposentadoriaFacade extends AbstractFacade<Aposentadoria> {
     }
 
     public void removerProvimentoAposentadoria(Aposentadoria entity) {
-        if(entity.getProvimentoFP() != null){
-            ProvimentoFP provimento = em.find(ProvimentoFP.class, entity.getProvimentoFP().getId());
-            entity.setProvimentoFP(null);
-            em.merge(entity);
-            provimento.setVinculoFP(null);
-            em.remove(provimento);
-        }
+        ProvimentoFP provimento = em.find(ProvimentoFP.class, entity.getProvimentoFP().getId());
+        entity.setProvimentoFP(null);
+        em.merge(entity);
+        provimento.setVinculoFP(null);
+        em.remove(provimento);
     }
 
     public boolean temAposentadoriaCalculada(Aposentadoria ap) {
@@ -352,62 +349,6 @@ public class AposentadoriaFacade extends AbstractFacade<Aposentadoria> {
             return null;
         }
     }
-
-
-    public List<Aposentadoria> recuperaTodasAposentadoriasPorContratoFP(ContratoFP contratoFP) {
-        try {
-            Query q = em.createQuery(" from Aposentadoria a where a.contratoFP = :parametroContrato ");
-            q.setParameter("parametroContrato", contratoFP);
-            return (List<Aposentadoria>) q.getResultList();
-        } catch (Exception e) {
-            //e.printStackTrace();
-            return new ArrayList<>();
-        }
-    }
-
-
-    public Aposentadoria recuperarUltimaAposentadoriaPorContratoFP(ContratoFP contratoFP) {
-        try {
-            Query q = em.createQuery(" from Aposentadoria a " +
-                " where a.contratoFP = :parametroContrato" +
-                " and (:dataAtual between trunc(a.inicioVigencia) and coalesce(trunc(a.finalVigencia), :dataAtual) " +
-                " or a.inicioVigencia > :dataAtual )" +
-                " order by a.inicioVigencia desc");
-            q.setMaxResults(1);
-            q.setParameter("parametroContrato", contratoFP);
-            q.setParameter("dataAtual", new Date());
-            return (Aposentadoria) q.getSingleResult();
-        } catch (Exception e) {
-            //e.printStackTrace();
-            return null;
-        }
-    }
-
-
-    public boolean aposentadoriaPosteriorAoProvimentoReversao(Aposentadoria aposentadoria) {
-
-        Query q = em.createQuery(" from Aposentadoria a " +
-            " where a.matriculaFP.matricula = :matriculaAposentadoria" +
-            " and a.numero > :contratoAposentadoria " +
-            " order by a.inicioVigencia desc");
-        q.setMaxResults(1);
-        q.setParameter("matriculaAposentadoria", aposentadoria.getMatriculaFP().getMatricula());
-        q.setParameter("contratoAposentadoria", aposentadoria.getNumero());
-        return !q.getResultList().isEmpty();
-
-    }
-
-    public Aposentadoria recuperarUltimaAposentadoriaPosteriorAoProvimentoReversao(String matrincula) {
-
-        Query q = em.createQuery(" from Aposentadoria a " +
-            " where a.matriculaFP.matricula = :matriculaContrato" +
-            " order by a.numero desc");
-        q.setMaxResults(1);
-        q.setParameter("matriculaContrato", matrincula);
-        return (Aposentadoria) q.getSingleResult();
-
-    }
-
     public List<ContratoFP> recuperaContratos(List<ContratoFP> contratos) {
         Query q = em.createQuery("select contrato from Aposentadoria aposentadoria "
             + "inner join aposentadoria.contratoFP contrato "
@@ -433,18 +374,14 @@ public class AposentadoriaFacade extends AbstractFacade<Aposentadoria> {
         return q.getResultList();
     }
 
-    public List<Aposentadoria> recuperaAposentadoInvalidez(String s) {
-        String sql = "  select * from Aposentadoria ap " +
-            "  inner join vinculofp vinculo on ap.id = vinculo.id  " +
-            "  inner join matriculafp mat on vinculo.matriculafp_id = mat.id  " +
-            "  inner join pessoafisica pf on mat.pessoa_id = pf.id  " +
-            "  inner join TipoAposentadoria tipo on tipo.id = ap.tipoaposentadoria_id  " +
-            "             where tipo.codigo = 3 " +
-            " and not exists(select 1 from provimentoreversao pr where pr.aposentadoria_id = ap.id)" +
-            "             and ((lower(pf.nome) like :filtro) or (lower(mat.matricula) like :filtro)or (lower(pf.cpf) like :filtro))";
-        Query q = em.createNativeQuery(sql, Aposentadoria.class);
+    public List<Aposentadoria> recuperaAposentadoSemReversaoFiltrandoPessoaFisica(String s) {
+        StringBuilder queryString = new StringBuilder();
+
+        queryString.append("select aposentadoria from Aposentadoria aposentadoria");
+        queryString.append(" where (lower(aposentadoria.matriculaFP.pessoa.nome) like :filtro) or (lower(aposentadoria.numero) like :filtro)");
+        queryString.append(" and aposentadoria not in (select rev.aposentadoria from ProvimentoReversao rev)");
+        Query q = em.createQuery(queryString.toString());
         q.setParameter("filtro", "%" + s.toLowerCase() + "%");
-        q.setMaxResults(10);
         return q.getResultList();
     }
 
@@ -521,7 +458,7 @@ public class AposentadoriaFacade extends AbstractFacade<Aposentadoria> {
     }
 
     public List<Long> buscarAposentadoriasArquivoAtuarial(Date dataReferencia) {
-        String hql = "  select distinct v.id from VinculoFP v, Aposentadoria a"
+        String hql = "  select v.id from VinculoFP v, Aposentadoria a"
             + " inner join v.fichasFinanceiraFP ffp "
             + " inner join ffp.folhaDePagamento fp  "
             + "      where fp.mes = :mes            "
@@ -639,43 +576,5 @@ public class AposentadoriaFacade extends AbstractFacade<Aposentadoria> {
             return BigDecimal.ZERO;
         }
         return (BigDecimal) resultList.get(0);
-    }
-
-    public boolean existeAposentadoriaParaOContratoFP(ContratoFP contratoFP, Aposentadoria aposentadoria, Date dataAposentadoria){
-            if(contratoFP == null || contratoFP.getId() == null){
-                return false;
-            }
-
-            String sql = "select 1 from vinculofp vinculo " +
-                " inner join aposentadoria ap on ap.id = vinculo.id " +
-                " where ap.contratofp_id = :contratoID ";
-                if(aposentadoria.getId() != null){
-                    sql +=" and ap.id <> :aposentadoriaID";
-                }
-                sql += " and :dataAposentadoria <= coalesce(vinculo.finalvigencia, :dataAposentadoria) ";
-            Query q = em.createNativeQuery(sql);
-            q.setParameter("contratoID", contratoFP.getId());
-            if(aposentadoria.getId() != null){
-                q.setParameter("aposentadoriaID", aposentadoria.getId());
-            }
-
-            q.setParameter("dataAposentadoria", dataAposentadoria);
-            q.setMaxResults(1);
-            return !q.getResultList().isEmpty();
-        }
-
-    public Date aposentadoriaPosterior(ContratoFP contratoFP, Aposentadoria aposentadoria) {
-
-        String sql = "select trunc(vinculo.inicioVigencia) from vinculofp vinculo " +
-            " inner join aposentadoria ap on ap.id = vinculo.id " +
-            " where ap.contratofp_id = :contratoID " +
-            " and vinculo.numero > :numeroVinculo";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("contratoID", contratoFP.getId());
-        q.setParameter("numeroVinculo", aposentadoria.getNumero());
-        if (q.getResultList().isEmpty()) {
-            return null;
-        }
-        return (Date) q.getResultList().get(0);
     }
 }

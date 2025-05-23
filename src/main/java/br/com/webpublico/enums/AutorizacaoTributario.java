@@ -34,7 +34,6 @@ public enum AutorizacaoTributario {
     PERMITIR_REATIVAR_PARCELAMENTO("Permitir reativar Processos de Parcelamento cancelados", true),
     EMISSAO_LAUDO_ITBI("Emissão de Laudo de ITBI", true),
     PERMITIR_CANCELAR_INSCRICAO_DIVIDA_ATIVA_AJUIZADA("Cancelamento de Inscrição de Débitos em Dívida Ativa Ajuizada", true),
-    PERMITIR_GERENCIAR_NFSE("Permitir Gerenciar a Nfse", true),
     PERMITIR_ALTERAR_ENQUADRAMENTO_FISCAL("Permitir alterar Enquandramento Fiscal", true),
     PERMITIR_EFETIVAR_PROCESSO_BLOQUEIO_JUDICIAL("Permitir efetivar Processo de Bloqueio Judicial", true),
     PERMITIR_LANCAMENTO_DIVIDA_DIVERSA_EXERCICIOS_ANTERIORES("Permitir Lançamento de Dívidas Diversas em Exercícios Anteriores", true),

@@ -5,18 +5,14 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoDividaPublicaDTO;
 import br.com.webpublico.enums.Intervalo;
 import br.com.webpublico.enums.OperacaoDiarioDividaPublica;
 import br.com.webpublico.enums.OperacaoMovimentoDividaPublica;
 import br.com.webpublico.enums.TipoLancamento;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
-import org.joda.time.LocalDate;
 
-import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -31,8 +27,6 @@ public class SaldoDividaPublicaFacade extends AbstractFacade<SaldoDividaPublica>
 
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
-    @EJB
-    private ConfiguracaoContabilFacade configuracaoContabilFacade;
     private final String MENSAGEM_CONCORRENCIA = "Erro de concorrência com movimentações do mesmo registro com usuários diferentes. Efetue a mesma operação e caso o problema persistir, entre em contato com o suporte.";
 
     public SaldoDividaPublicaFacade() {
@@ -48,52 +42,37 @@ public class SaldoDividaPublicaFacade extends AbstractFacade<SaldoDividaPublica>
                                DividaPublica dividaPublica, OperacaoMovimentoDividaPublica operacaoMovimentoDividaPublica,
                                boolean isEstorno, OperacaoDiarioDividaPublica operacaoDiarioDividaPublica,
                                Intervalo intervalo, ContaDeDestinacao contaDeDestinacao, boolean validarValorNegativo) {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDODIVIDAPUBLICAMICROSERVICE")) {
-            SaldoDividaPublicaDTO dto = new SaldoDividaPublicaDTO();
-            dto.setIdUnidadeOrganizacional(unidadeOrganizacional.getId());
-            dto.setIdContaDeDestinacao(contaDeDestinacao.getId());
-            dto.setIdDividaPublica(dividaPublica.getId());
-            dto.setValor(valor);
-            dto.setEstorno(isEstorno);
-            dto.setOperacaoMovimentoDividaPublica(operacaoMovimentoDividaPublica);
-            dto.setOperacaoDiarioDividaPublica(operacaoDiarioDividaPublica);
-            dto.setDataSaldo(DataUtil.dateToLocalDate(data));
-            dto.setIntervalo(intervalo);
-            dto.setValidarValorNegativo(validarValorNegativo);
-            ApiServiceContabil.getService().gerarSaldoDividaPublica(dto);
-        } else {
-            try {
-                SaldoDividaPublica ultimoSaldo = recuperarSaldoPorDividaPublicaAndDataAndUnidadeOrganizacionalAndIntervaloAndContaDeDestinacao(data, unidadeOrganizacional, dividaPublica, intervalo, contaDeDestinacao);
-                Intervalo intervaloContrario = intervalo.isCurtoPrazo() ? Intervalo.LONGO_PRAZO : Intervalo.CURTO_PRAZO;
-                SaldoDividaPublica saldoIntervaloContrario = recuperarSaldoPorDividaPublicaAndDataAndUnidadeOrganizacionalAndIntervaloAndContaDeDestinacao(data, unidadeOrganizacional, dividaPublica, intervaloContrario, contaDeDestinacao);
-                if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
+        try {
+            SaldoDividaPublica ultimoSaldo = recuperarSaldoPorDividaPublicaAndDataAndUnidadeOrganizacionalAndIntervaloAndContaDeDestinacao(data, unidadeOrganizacional, dividaPublica, intervalo, contaDeDestinacao);
+            Intervalo intervaloContrario = intervalo.isCurtoPrazo() ? Intervalo.LONGO_PRAZO : Intervalo.CURTO_PRAZO;
+            SaldoDividaPublica saldoIntervaloContrario = recuperarSaldoPorDividaPublicaAndDataAndUnidadeOrganizacionalAndIntervaloAndContaDeDestinacao(data, unidadeOrganizacional, dividaPublica, intervaloContrario, contaDeDestinacao);
+            if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
+                SaldoDividaPublica novoSaldo = new SaldoDividaPublica(data, unidadeOrganizacional, dividaPublica, intervalo, contaDeDestinacao);
+                novoSaldo = isEstorno ? alterarValorEstorno(novoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario) : alterarValorNormal(novoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario);
+                if (validarValorIndividual(valor, novoSaldo, operacaoMovimentoDividaPublica, validarValorNegativo)) {
+                    salvarSaldo(novoSaldo, dividaPublica, saldoIntervaloContrario);
+                }
+            } else {
+                if (DataUtil.dataSemHorario(ultimoSaldo.getData()).compareTo(DataUtil.dataSemHorario(data)) == 0) {
+                    ultimoSaldo = isEstorno ? alterarValorEstorno(ultimoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario) : alterarValorNormal(ultimoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario);
+                    if (validarValorIndividual(valor, ultimoSaldo, operacaoMovimentoDividaPublica, validarValorNegativo)) {
+                        salvarSaldo(ultimoSaldo, dividaPublica, saldoIntervaloContrario);
+                    }
+                } else {
                     SaldoDividaPublica novoSaldo = new SaldoDividaPublica(data, unidadeOrganizacional, dividaPublica, intervalo, contaDeDestinacao);
+                    atribuirValorApartirUltimoSaldo(ultimoSaldo, novoSaldo);
                     novoSaldo = isEstorno ? alterarValorEstorno(novoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario) : alterarValorNormal(novoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario);
                     if (validarValorIndividual(valor, novoSaldo, operacaoMovimentoDividaPublica, validarValorNegativo)) {
                         salvarSaldo(novoSaldo, dividaPublica, saldoIntervaloContrario);
                     }
-                } else {
-                    if (DataUtil.dataSemHorario(ultimoSaldo.getData()).compareTo(DataUtil.dataSemHorario(data)) == 0) {
-                        ultimoSaldo = isEstorno ? alterarValorEstorno(ultimoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario) : alterarValorNormal(ultimoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario);
-                        if (validarValorIndividual(valor, ultimoSaldo, operacaoMovimentoDividaPublica, validarValorNegativo)) {
-                            salvarSaldo(ultimoSaldo, dividaPublica, saldoIntervaloContrario);
-                        }
-                    } else {
-                        SaldoDividaPublica novoSaldo = new SaldoDividaPublica(data, unidadeOrganizacional, dividaPublica, intervalo, contaDeDestinacao);
-                        atribuirValorApartirUltimoSaldo(ultimoSaldo, novoSaldo);
-                        novoSaldo = isEstorno ? alterarValorEstorno(novoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario) : alterarValorNormal(novoSaldo, operacaoMovimentoDividaPublica, valor, validarValorNegativo, dividaPublica, saldoIntervaloContrario);
-                        if (validarValorIndividual(valor, novoSaldo, operacaoMovimentoDividaPublica, validarValorNegativo)) {
-                            salvarSaldo(novoSaldo, dividaPublica, saldoIntervaloContrario);
-                        }
-                    }
                 }
-                atualizarSaldosFuturos(data, unidadeOrganizacional, dividaPublica, valor, operacaoMovimentoDividaPublica, isEstorno, intervalo, contaDeDestinacao, validarValorNegativo);
-                gerarMovimentacaoDiario(data, unidadeOrganizacional, dividaPublica, isEstorno, operacaoDiarioDividaPublica, valor, intervalo, contaDeDestinacao);
-            } catch (OptimisticLockException optex) {
-                throw new ExcecaoNegocioGenerica("O Saldo da dívida pública está sendo movimentado por outro usuário. Por favor, tente salvar o movimento em alguns instantes.");
-            } catch (Exception ex) {
-                throw new ExcecaoNegocioGenerica(ex.getMessage());
             }
+            atualizarSaldosFuturos(data, unidadeOrganizacional, dividaPublica, valor, operacaoMovimentoDividaPublica, isEstorno, intervalo, contaDeDestinacao, validarValorNegativo);
+            gerarMovimentacaoDiario(data, unidadeOrganizacional, dividaPublica, isEstorno, operacaoDiarioDividaPublica, valor, intervalo, contaDeDestinacao);
+        } catch (OptimisticLockException optex) {
+            throw new ExcecaoNegocioGenerica("O Saldo da dívida pública está sendo movimentado por outro usuário. Por favor, tente salvar o movimento em alguns instantes.");
+        } catch (Exception ex) {
+            throw new ExcecaoNegocioGenerica(ex.getMessage());
         }
     }
 

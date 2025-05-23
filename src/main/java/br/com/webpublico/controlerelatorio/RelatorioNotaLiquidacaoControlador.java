@@ -95,15 +95,15 @@ public class RelatorioNotaLiquidacaoControlador implements Serializable {
     }
 
     public void geraRelatorioFiltro() {
-       try {
-           validarCampos();
-           List<NotaExecucaoOrcamentaria> notas = liquidacaoFacade.buscarNotaLiquidacao(montarCondicao(), CategoriaOrcamentaria.NORMAL, "NOTA DE LIQUIDAÇÃO");
-           documentoOficialFacade.gerarRelatorioDasNotasOrcamentarias(notas, ModuloTipoDoctoOficial.NOTA_LIQUIDACAO);
-       } catch (ValidacaoException ve) {
-           FacesUtil.printAllFacesMessages(ve.getMensagens());
-       } catch (Exception ex) {
-           FacesUtil.addErroAoGerarRelatorio(ex.getMessage());
-       }
+        try {
+            validarCampos();
+            List<NotaExecucaoOrcamentaria> notas = liquidacaoFacade.buscarNotaLiquidacao(montarCondicao(), CategoriaOrcamentaria.NORMAL, "NOTA DE LIQUIDAÇÃO");
+            documentoOficialFacade.gerarRelatorioDasNotasOrcamentarias(notas, ModuloTipoDoctoOficial.NOTA_LIQUIDACAO);
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve.getMensagens());
+        } catch (Exception ex) {
+            FacesUtil.addErroAoGerarRelatorio(ex.getMessage());
+        }
     }
 
     private void validarCampos() {

@@ -10,7 +10,18 @@ import br.com.webpublico.util.anotacoes.Tabelavel;
 import com.google.common.collect.Lists;
 import org.hibernate.envers.Audited;
 
-import javax.persistence.*;
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -107,8 +118,6 @@ public class AcaoFiscal extends SuperEntidade implements Serializable {
     @Temporal(TemporalType.DATE)
     private Date dataArbitramento;
     private BigDecimal ufmArbitramento;
-    @OneToMany(mappedBy = "acaoFiscal", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<AlteracaoDataArbitramento> alteracoesDataArbitramento;
 
     public AcaoFiscal() {
         inicializa();
@@ -385,14 +394,6 @@ public class AcaoFiscal extends SuperEntidade implements Serializable {
 
     public void setUfmArbitramento(BigDecimal ufmArbitramento) {
         this.ufmArbitramento = ufmArbitramento;
-    }
-
-    public List<AlteracaoDataArbitramento> getAlteracoesDataArbitramento() {
-        return alteracoesDataArbitramento;
-    }
-
-    public void setAlteracoesDataArbitramento(List<AlteracaoDataArbitramento> alteracoesDataArbitramento) {
-        this.alteracoesDataArbitramento = alteracoesDataArbitramento;
     }
 
     @Override

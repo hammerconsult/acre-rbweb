@@ -5,13 +5,15 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
+import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
-import org.hibernate.envers.Audited;
 
-import javax.persistence.*;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import javax.persistence.*;
+import org.hibernate.envers.Audited; import javax.persistence.Cacheable;
 
 /**
  *
@@ -21,7 +23,7 @@ import java.util.List;
 @GrupoDiagrama(nome = "Segurança")
 @Audited
 @Entity
-public class VigenciaTribUsuario extends SuperEntidade {
+public class VigenciaTribUsuario implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -39,8 +41,11 @@ public class VigenciaTribUsuario extends SuperEntidade {
     private List<LotacaoTribUsuario> lotacaoTribUsuarios;
     @OneToMany(mappedBy = "vigenciaTribUsuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AutorizacaoTributarioUsuario> autorizacaoTributarioUsuarios;
+    @Transient
+    private Long criadoEm;
 
     public VigenciaTribUsuario() {
+        this.criadoEm = System.nanoTime();
         this.tipoUsuarioTribUsuarios = new ArrayList<TipoUsuarioTribUsuario>();
         this.lotacaoTribUsuarios = new ArrayList<LotacaoTribUsuario>();
         this.autorizacaoTributarioUsuarios = new ArrayList<AutorizacaoTributarioUsuario>();
@@ -78,6 +83,14 @@ public class VigenciaTribUsuario extends SuperEntidade {
         this.vigenciaFinal = vigenciaFinal;
     }
 
+    public Long getCriadoEm() {
+        return criadoEm;
+    }
+
+    public void setCriadoEm(Long criadoEm) {
+        this.criadoEm = criadoEm;
+    }
+
     public List<TipoUsuarioTribUsuario> getTipoUsuarioTribUsuarios() {
         return tipoUsuarioTribUsuarios;
     }
@@ -100,6 +113,16 @@ public class VigenciaTribUsuario extends SuperEntidade {
 
     public void setAutorizacaoTributarioUsuarios(List<AutorizacaoTributarioUsuario> autorizacaoTributarioUsuarios) {
         this.autorizacaoTributarioUsuarios = autorizacaoTributarioUsuarios;
+    }
+
+    @Override
+    public int hashCode() {
+        return IdentidadeDaEntidade.calcularHashCode(this);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+       return IdentidadeDaEntidade.calcularEquals(this, object);
     }
 
     @Override

@@ -369,7 +369,7 @@ public class ParecerBaixaPatrimonialControlador extends PrettyControlador<Parece
         }
     }
 
-    public void finalizarProcessoSalvar() {
+    public void finalizarProcesssoSalvar() {
         FacesUtil.addOperacaoRealizada(getMensagemSucessoAoSalvar());
         redirecionarParaVer();
     }

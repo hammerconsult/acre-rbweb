@@ -1,7 +1,7 @@
 package br.com.webpublico.entidades.rh.configuracao;
 
 import br.com.webpublico.entidades.SuperEntidade;
-import br.com.webpublico.entidades.RegraAposentadoria;
+import br.com.webpublico.enums.RegraAposentadoria;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Obrigatorio;
@@ -29,7 +29,7 @@ public class ConfiguracaoAposentadoria extends SuperEntidade {
     @Obrigatorio
     @Tabelavel
     @Etiqueta("Regra de Aposentadoria")
-    @ManyToOne
+    @Enumerated(value = EnumType.STRING)
     @Pesquisavel
     private RegraAposentadoria regraAposentadoria;
     @Tabelavel

@@ -9,7 +9,6 @@ import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.ExercicioFacade;
 import br.com.webpublico.negocios.rh.configuracao.ReajusteMediaAposentadoriaFacade;
 import br.com.webpublico.util.ConverterAutoComplete;
-import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.FacesUtil;
 import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
@@ -24,7 +23,6 @@ import javax.faces.bean.ViewScoped;
 import javax.faces.model.SelectItem;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,7 +32,7 @@ import java.util.List;
     @URLMapping(id = "novo-reajuste-media-aposentadoria", pattern = "/reajuste-media-aposentadoria/novo/", viewId = "/faces/rh/configuracao/reajuste-media-aposentadoria/edita.xhtml"),
     @URLMapping(id = "editar-reajuste-media-aposentadoria", pattern = "/reajuste-media-aposentadoria/editar/#{reajusteMediaAposentadoriaControlador.id}/", viewId = "/faces/rh/configuracao/reajuste-media-aposentadoria/edita.xhtml"),
     @URLMapping(id = "listar-reajuste-media-aposentadoria", pattern = "/reajuste-media-aposentadoria/listar/", viewId = "/faces/rh/configuracao/reajuste-media-aposentadoria/lista.xhtml"),
-    @URLMapping(id = "ver-reajuste-media-aposentadoria", pattern = "/reajuste-media-aposentadoria/ver/#{reajusteMediaAposentadoriaControlador.id}/", viewId = "/faces/rh/configuracao/reajuste-media-aposentadoria/visualizar.xhtml"),
+    @URLMapping(id = "ver-reajuste-media-aposentadoria", pattern = "/reajuste-media-aposentadoria/ver/#{reajusteMediaAposentadoriaControlador.id}/", viewId = "/faces/rh/configuracao/reajuste-media-aposentadoria/edita.xhtml"),
 })
 public class ReajusteMediaAposentadoriaControlador extends PrettyControlador<ReajusteMediaAposentadoria> implements Serializable, CRUD {
 
@@ -43,10 +41,6 @@ public class ReajusteMediaAposentadoriaControlador extends PrettyControlador<Rea
     @EJB
     private ExercicioFacade exercicioFacade;
     List<Exercicio> exercicios = Lists.newArrayList();
-    private Integer mesInicioVigencia;
-    private Integer anoInicioVigencia;
-    private Integer mesFinalVigencia;
-    private Integer anoFinalVigencia;
 
 
     public ReajusteMediaAposentadoriaControlador() {
@@ -79,7 +73,6 @@ public class ReajusteMediaAposentadoriaControlador extends PrettyControlador<Rea
     @Override
     public void editar() {
         super.editar();
-        recuperarMesEAno();
     }
 
     @URLAction(mappingId = "ver-reajuste-media-aposentadoria", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -123,43 +116,10 @@ public class ReajusteMediaAposentadoriaControlador extends PrettyControlador<Rea
         return new ConverterAutoComplete(Exercicio.class, exercicioFacade);
     }
 
-    public Integer getMesInicioVigencia() {
-        return mesInicioVigencia;
-    }
-
-    public void setMesInicioVigencia(Integer mesInicioVigencia) {
-        this.mesInicioVigencia = mesInicioVigencia;
-    }
-
-    public Integer getAnoInicioVigencia() {
-        return anoInicioVigencia;
-    }
-
-    public void setAnoInicioVigencia(Integer anoInicioVigencia) {
-        this.anoInicioVigencia = anoInicioVigencia;
-    }
-
-    public Integer getMesFinalVigencia() {
-        return mesFinalVigencia;
-    }
-
-    public void setMesFinalVigencia(Integer mesFinalVigencia) {
-        this.mesFinalVigencia = mesFinalVigencia;
-    }
-
-    public Integer getAnoFinalVigencia() {
-        return anoFinalVigencia;
-    }
-
-    public void setAnoFinalVigencia(Integer anoFinalVigencia) {
-        this.anoFinalVigencia = anoFinalVigencia;
-    }
-
     @Override
     public void salvar() {
         try {
             validarCampos();
-            atribuirVigencia();
             validarReajuste();
             super.salvar();
         } catch (ValidacaoException ve) {
@@ -167,28 +127,6 @@ public class ReajusteMediaAposentadoriaControlador extends PrettyControlador<Rea
         } catch (Exception e) {
             logger.error("Erro ao salvar Reajuste de Média de Aposentadoria {}", e);
             FacesUtil.addOperacaoNaoPermitida(e.getMessage());
-        }
-    }
-
-    private void atribuirVigencia() {
-        if (mesInicioVigencia != null && anoInicioVigencia != null) {
-            selecionado.setInicioVigencia(DataUtil.primeiroDiaMes(mesInicioVigencia, anoInicioVigencia));
-        }
-        if (mesFinalVigencia != null && anoFinalVigencia != null) {
-            selecionado.setFinalVigencia(DataUtil.getUltimoDiaMes(mesFinalVigencia, anoFinalVigencia));
-        }
-    }
-
-    private void recuperarMesEAno() {
-        if (selecionado.getInicioVigencia() != null) {
-            LocalDate inicio = DataUtil.dateToLocalDate(selecionado.getInicioVigencia());
-            mesInicioVigencia = inicio.getMonthValue();
-            anoInicioVigencia = inicio.getYear();
-        }
-        if (selecionado.getFinalVigencia() != null) {
-            LocalDate fim = DataUtil.dateToLocalDate(selecionado.getFinalVigencia());
-            mesFinalVigencia = fim.getMonthValue();
-            anoFinalVigencia = fim.getYear();
         }
     }
 
@@ -206,47 +144,15 @@ public class ReajusteMediaAposentadoriaControlador extends PrettyControlador<Rea
         if (selecionado.getValorReajuste() == null || selecionado.getValorReajuste().equals(BigDecimal.ZERO)) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Percentual deve ser informado.");
         }
-        if (mesInicioVigencia == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("O campo mês do início de vigência deve ser informado.");
-        } else if (mesInicioVigencia < 1 || mesInicioVigencia > 12) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("O campo mês do início de vigência informado é inválido!");
-        }
-        if (anoInicioVigencia == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("O campo ano do início de vigência deve ser informado.");
-        }
-        if (mesFinalVigencia != null && (mesFinalVigencia < 1 || mesFinalVigencia > 12)) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("O campo mês do final de vigência informado é inválido!");
-        }
         ve.lancarException();
     }
 
     public void validarReajuste() {
         ValidacaoException ve = new ValidacaoException();
         List<ReajusteMediaAposentadoria> reajustes = reajusteMediaAposentadoriaFacade.buscarReajustePorAnoReajusteAnoReferenciEMes(selecionado.getExercicio(), selecionado.getExercicioReferencia(), selecionado.getMes());
-        if (reajustes != null && !reajustes.isEmpty()) {
-            for (ReajusteMediaAposentadoria reajuste : reajustes) {
-                if ((selecionado.getId() == null || !reajuste.getId().equals(selecionado.getId())) && isPeriodoConcomitante(reajuste)) {
-                    ve.adicionarMensagemDeOperacaoNaoPermitida("Já existe registro de percentual de reajuste para a vigência escolhida. Por favor, encerre a vigência atual para Ano de Reajuste, Ano de Referência e Mês selecionados.");
-                    break;
-                }
-            }
-
+        if (reajustes != null && !reajustes.isEmpty() && (selecionado.getId() == null || (!reajustes.get(0).getId().equals(selecionado.getId())))) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("Já existe Percentual registrado para esse Ano de Reajuste, Ano de Referência e Mês.");
         }
         ve.lancarException();
-    }
-
-    public boolean isPeriodoConcomitante(ReajusteMediaAposentadoria reajuste) {
-        LocalDate inicioVigenciaAdicionado = DataUtil.dateToLocalDate(selecionado.getInicioVigencia());
-        LocalDate finalVigenciaAdicionado = selecionado.getFinalVigencia() != null ? DataUtil.dateToLocalDate(selecionado.getFinalVigencia()) : null;
-
-        LocalDate inicioVigencia = DataUtil.dateToLocalDate(reajuste.getInicioVigencia());
-        LocalDate finalVigencia = reajuste.getFinalVigencia() != null ? DataUtil.dateToLocalDate(reajuste.getFinalVigencia()) : null;
-
-        if ((inicioVigenciaAdicionado.compareTo(inicioVigencia) <= 0 && (finalVigenciaAdicionado == null || finalVigenciaAdicionado.compareTo(inicioVigencia) >= 0))
-            || (inicioVigenciaAdicionado.isAfter(inicioVigencia) && (finalVigencia == null || inicioVigenciaAdicionado.compareTo(finalVigencia) <= 0))
-            || (finalVigenciaAdicionado != null && finalVigenciaAdicionado.compareTo(inicioVigencia) >= 0 && (finalVigencia == null || (finalVigenciaAdicionado.isAfter(inicioVigencia) && finalVigenciaAdicionado.isBefore(finalVigencia))))) {
-            return true;
-        }
-        return false;
     }
 }

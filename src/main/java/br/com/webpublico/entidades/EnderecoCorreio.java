@@ -109,20 +109,6 @@ public class EnderecoCorreio extends SuperEntidade implements ValidadorEntidade 
         return null;
     }
 
-    public static List<br.com.webpublico.tributario.dto.EnderecoCorreioDTO> toEnderecoCorreioDTOsTributario(List<EnderecoCorreio> enderecoCorreios) {
-        if (enderecoCorreios != null && !enderecoCorreios.isEmpty()) {
-            List<br.com.webpublico.tributario.dto.EnderecoCorreioDTO> dtos = Lists.newLinkedList();
-            for (EnderecoCorreio enderecoCorreio : enderecoCorreios) {
-                br.com.webpublico.tributario.dto.EnderecoCorreioDTO dto = toEnderecoCorreioDTOTributario(enderecoCorreio);
-                if (dto != null) {
-                    dtos.add(dto);
-                }
-            }
-            return dtos;
-        }
-        return null;
-    }
-
     public static EnderecoCorreioDTO toEnderecoCorreioDTO(EnderecoCorreio endereco) {
         if (endereco == null) {
             return null;
@@ -137,25 +123,6 @@ public class EnderecoCorreio extends SuperEntidade implements ValidadorEntidade 
         dto.setUf(endereco.getUf());
         dto.setNumero(endereco.getNumero());
         dto.setTipoEndereco(endereco.getTipoEndereco() != null ? br.com.webpublico.pessoa.enumeration.TipoEndereco.valueOf(endereco.getTipoEndereco().name()) : null);
-        dto.setPrincipal(endereco.getPrincipal());
-        dto.setMigracaoChave(endereco.getMigracaoChave());
-        return dto;
-    }
-
-    public static br.com.webpublico.tributario.dto.EnderecoCorreioDTO toEnderecoCorreioDTOTributario(EnderecoCorreio endereco) {
-        if (endereco == null) {
-            return null;
-        }
-        br.com.webpublico.tributario.dto.EnderecoCorreioDTO dto = new br.com.webpublico.tributario.dto.EnderecoCorreioDTO();
-        dto.setId(endereco.getId());
-        dto.setCep(endereco.getCep());
-        dto.setLogradouro(endereco.getLogradouro());
-        dto.setComplemento(endereco.getComplemento());
-        dto.setBairro(endereco.getBairro());
-        dto.setLocalidade(endereco.getLocalidade());
-        dto.setUf(endereco.getUf());
-        dto.setNumero(endereco.getNumero());
-        dto.setTipoEndereco(endereco.getTipoEndereco() != null ? br.com.webpublico.tributario.enumeration.TipoEndereco.valueOf(endereco.getTipoEndereco().name()): null);
         dto.setPrincipal(endereco.getPrincipal());
         dto.setMigracaoChave(endereco.getMigracaoChave());
         return dto;

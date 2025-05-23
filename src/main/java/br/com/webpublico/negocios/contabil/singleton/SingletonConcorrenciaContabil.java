@@ -10,10 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.AccessTimeout;
-import javax.ejb.ConcurrencyManagement;
-import javax.ejb.ConcurrencyManagementType;
-import javax.ejb.Singleton;
+import javax.ejb.*;
 import java.io.Serializable;
 import java.util.Set;
 
@@ -39,6 +36,9 @@ public class SingletonConcorrenciaContabil implements Serializable {
     private Set<LiberacaoCotaFinanceira> liberacoesFinanceira;
     private Set<SolicitacaoCotaFinanceira> solicitacoesFinanceira;
     private Set<Bordero> borderos;
+    private Set<UnidadeOrganizacional> unidadesOrganizacionaisEmpenho;
+    private Set<UnidadeOrganizacional> unidadesOrganizacionaisPagamento;
+    private Set<UnidadeOrganizacional> unidadesOrganizacionaisDespesaExtra;
     private Set<BloqueioMovimentoContabil> bloqueiosMovimentosContabeis;
 
     @PostConstruct
@@ -52,11 +52,26 @@ public class SingletonConcorrenciaContabil implements Serializable {
         reiniciarLiberacoesFinanceiras();
         reiniciarSolicitacoesFinanceiras();
         reiniciarBorderos();
+        reiniciarUnidadesEmpenho();
+        reiniciarUnidadesPagamento();
+        reiniciarUnidadesDespesaExtra();
         reiniciarBloqueioMovimentosContabeis();
     }
 
     public void reiniciarBloqueioMovimentosContabeis() {
         bloqueiosMovimentosContabeis = Sets.newHashSet();
+    }
+
+    public void reiniciarUnidadesDespesaExtra() {
+        unidadesOrganizacionaisDespesaExtra = Sets.newHashSet();
+    }
+
+    public void reiniciarUnidadesPagamento() {
+        unidadesOrganizacionaisPagamento = Sets.newHashSet();
+    }
+
+    public void reiniciarUnidadesEmpenho() {
+        unidadesOrganizacionaisEmpenho = Sets.newHashSet();
     }
 
     public void reiniciarBorderos() {
@@ -100,160 +115,208 @@ public class SingletonConcorrenciaContabil implements Serializable {
     }
 
     //EMPENHO
-
+    @Lock(LockType.WRITE)
     public void bloquear(Empenho empenho) {
         empenhos.add(empenho);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(Empenho empenho) {
         empenhos.remove(empenho);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(Empenho empenho) {
         return !empenhos.contains(empenho);
     }
 
     //LIQUIDACAO
-
+    @Lock(LockType.WRITE)
     public void bloquear(Liquidacao liquidacao) {
         liquidacoes.add(liquidacao);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(Liquidacao liquidacao) {
         liquidacoes.remove(liquidacao);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(Liquidacao liquidacao) {
         return !liquidacoes.contains(liquidacao);
     }
 
     //PAGAMENTO
-
+    @Lock(LockType.WRITE)
     public void bloquear(Pagamento pagamento) {
         pagamentos.add(pagamento);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(Pagamento pagamento) {
         pagamentos.remove(pagamento);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(Pagamento pagamento) {
         return !pagamentos.contains(pagamento);
     }
 
-    //DESPESA EXTRA
+    //    PAGAMENTO UNIDADE
+    @Lock(LockType.WRITE)
+    public void bloquearUnidadePagamento(UnidadeOrganizacional unidadeOrganizacional) {
+        unidadesOrganizacionaisPagamento.add(unidadeOrganizacional);
+    }
 
+    @Lock(LockType.WRITE)
+    public void desbloquearUnidadePagamento(UnidadeOrganizacional unidadeOrganizacional) {
+        unidadesOrganizacionaisPagamento.remove(unidadeOrganizacional);
+    }
+
+    @Lock(LockType.WRITE)
+    public boolean isDisponivelUnidadePagamento(UnidadeOrganizacional unidadeOrganizacional) {
+        return !unidadesOrganizacionaisPagamento.contains(unidadeOrganizacional);
+    }
+
+    //    DESPESA EXTRA UNIDADE
+    @Lock(LockType.WRITE)
+    public void bloquearUnidadeDespesaExtra(UnidadeOrganizacional unidadeOrganizacional) {
+        unidadesOrganizacionaisDespesaExtra.add(unidadeOrganizacional);
+    }
+
+    @Lock(LockType.WRITE)
+    public void desbloquearUnidadeDespesaExtra(UnidadeOrganizacional unidadeOrganizacional) {
+        unidadesOrganizacionaisDespesaExtra.remove(unidadeOrganizacional);
+    }
+
+    @Lock(LockType.WRITE)
+    public boolean isDisponivelUnidadeDespesaExtra(UnidadeOrganizacional unidadeOrganizacional) {
+        return !unidadesOrganizacionaisDespesaExtra.contains(unidadeOrganizacional);
+    }
+
+    //EMPENHO - UNIDADE
+    @Lock(LockType.WRITE)
+    public void bloquear(UnidadeOrganizacional unidadeOrganizacional) {
+        unidadesOrganizacionaisEmpenho.add(unidadeOrganizacional);
+    }
+
+    @Lock(LockType.WRITE)
+    public void desbloquear(UnidadeOrganizacional unidadeOrganizacional) {
+        unidadesOrganizacionaisEmpenho.remove(unidadeOrganizacional);
+    }
+
+    @Lock(LockType.WRITE)
+    public boolean isDisponivel(UnidadeOrganizacional unidadeOrganizacional) {
+        return !unidadesOrganizacionaisEmpenho.contains(unidadeOrganizacional);
+    }
+
+    //DESPESA EXTRA
+    @Lock(LockType.WRITE)
     public void bloquear(PagamentoExtra pagamentoExtra) {
         pagamentoExtras.add(pagamentoExtra);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(PagamentoExtra pagamentoExtra) {
         pagamentoExtras.remove(pagamentoExtra);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(PagamentoExtra pagamentoExtra) {
         return !pagamentoExtras.contains(pagamentoExtra);
     }
 
     //RECEITA EXTRA
-
+    @Lock(LockType.WRITE)
     public void bloquear(ReceitaExtra receitaExtra) {
         receitaExtras.add(receitaExtra);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(ReceitaExtra receitaExtra) {
         receitaExtras.remove(receitaExtra);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(ReceitaExtra receitaExtra) {
         return !receitaExtras.contains(receitaExtra);
     }
 
     //TRANSFERÊNCIA
-
+    @Lock(LockType.WRITE)
     public void bloquear(TransferenciaContaFinanceira transferencia) {
         transferenciasFinanceira.add(transferencia);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(TransferenciaContaFinanceira transferencia) {
         transferenciasFinanceira.remove(transferencia);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(TransferenciaContaFinanceira transferencia) {
         return !transferenciasFinanceira.contains(transferencia);
     }
 
     //LIBERAÇÃO FINANCEIRA
-
+    @Lock(LockType.WRITE)
     public void bloquear(LiberacaoCotaFinanceira liberacao) {
         liberacoesFinanceira.add(liberacao);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(LiberacaoCotaFinanceira liberacao) {
         liberacoesFinanceira.remove(liberacao);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(LiberacaoCotaFinanceira liberacao) {
         return !liberacoesFinanceira.contains(liberacao);
     }
 
     //SOLICITAÇÃO FINANCEIRA
-
+    @Lock(LockType.WRITE)
     public void bloquear(SolicitacaoCotaFinanceira solicitacao) {
         solicitacoesFinanceira.add(solicitacao);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(SolicitacaoCotaFinanceira solicitacao) {
         solicitacoesFinanceira.remove(solicitacao);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(SolicitacaoCotaFinanceira solicitacao) {
         return !solicitacoesFinanceira.contains(solicitacao);
     }
 
-
+    @Lock(LockType.WRITE)
     public void bloquear(Bordero bordero) {
         borderos.add(bordero);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquear(Bordero bordero) {
         borderos.remove(bordero);
     }
 
-
+    @Lock(LockType.WRITE)
     public boolean isDisponivel(Bordero bordero) {
         return !borderos.contains(bordero);
     }
 
-
+    @Lock(LockType.WRITE)
     public void bloquearMovimentoContabil(BloqueioMovimentoContabil bloqueioMovimentoContabil) throws BloqueioMovimentoContabilException {
         validarBloqueioMovimentoContabil(bloqueioMovimentoContabil);
         bloqueiosMovimentosContabeis.add(bloqueioMovimentoContabil);
     }
 
-
+    @Lock(LockType.WRITE)
     public void desbloquearMovimentoContabil(BloqueioMovimentoContabil bloqueioMovimentoContabil) {
         bloqueiosMovimentosContabeis.remove(bloqueioMovimentoContabil);
     }
 
-
+    @Lock(LockType.WRITE)
     public void validarBloqueioMovimentoContabil(BloqueioMovimentoContabil bloqueioMovimentoContabil) throws BloqueioMovimentoContabilException {
         if (bloqueiosMovimentosContabeis.contains(bloqueioMovimentoContabil)) {
             throw new BloqueioMovimentoContabilException(bloqueioMovimentoContabil.getMensagemBloqueioMovimentoContabil());
@@ -310,5 +373,17 @@ public class SingletonConcorrenciaContabil implements Serializable {
 
     public Set<Bordero> getBorderos() {
         return borderos;
+    }
+
+    public Set<UnidadeOrganizacional> getUnidadesOrganizacionaisEmpenho() {
+        return unidadesOrganizacionaisEmpenho;
+    }
+
+    public Set<UnidadeOrganizacional> getUnidadesOrganizacionaisPagamento() {
+        return unidadesOrganizacionaisPagamento;
+    }
+
+    public Set<UnidadeOrganizacional> getUnidadesOrganizacionaisDespesaExtra() {
+        return unidadesOrganizacionaisDespesaExtra;
     }
 }

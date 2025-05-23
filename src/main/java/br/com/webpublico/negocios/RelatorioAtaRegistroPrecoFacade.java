@@ -315,8 +315,7 @@ public class RelatorioAtaRegistroPrecoFacade implements Serializable {
             "         left join itemprocessodecompra ipc on ipc.id = ipf.itemprocessodecompra_id " +
             "         left join itemsolicitacao isol on isol.id = ipc.itemsolicitacaomaterial_id " +
             "         left join unidademedida um on um.id = isol.unidademedida_id " +
-            "         left join itemsolicitacaomaterial ism on ism.itemsolicitacao_id = isol.id " +
-            "         left join objetocompra ob on ob.id = ism.objetocompra_id " +
+            "         left join objetocompra ob on ob.id = isol.objetocompra_id " +
             "         left join unidadecontrato uc on uc.contrato_id = c.id " +
             "         left join vwhierarquiaadministrativa vw on vw.subordinada_id = uc.unidadeadministrativa_id " +
             " where c.id  = :idContrato " +

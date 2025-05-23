@@ -343,15 +343,15 @@ public class RelatorioMaterialSuperControlador extends AbstractReport {
         this.futureBytesRelatorio = futureBytesRelatorio;
     }
 
+    public HierarquiaOrganizacionalFacade getHierarquiaOrganizacionalFacade() {
+        return hierarquiaOrganizacionalFacade;
+    }
+
     public FiltroMateriais getFiltroMateriais() {
         return filtroMateriais;
     }
 
     public void setFiltroMateriais(FiltroMateriais filtroMateriais) {
         this.filtroMateriais = filtroMateriais;
-    }
-
-    public HierarquiaOrganizacionalFacade getHierarquiaOrganizacionalFacade() {
-        return hierarquiaOrganizacionalFacade;
     }
 }

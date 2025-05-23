@@ -11,30 +11,12 @@ public class DescontoItemRequisicaoCompra {
     private BigDecimal descontoUnitario;
     private BigDecimal descontoTotal;
     private Boolean selecionado;
-    private String mascaraUnitario;
-    private String mascaraTotal;
 
     public DescontoItemRequisicaoCompra(TipoDescontoItemRequisicao tipoDesconto, BigDecimal descontoUnitario, BigDecimal descontoTotal) {
         this.descontoUnitario = descontoUnitario;
         this.descontoTotal = descontoTotal;
         this.tipoDesconto = tipoDesconto;
         this.selecionado = false;
-    }
-
-    public String getMascaraUnitario() {
-        return mascaraUnitario;
-    }
-
-    public void setMascaraUnitario(String mascaraUnitario) {
-        this.mascaraUnitario = mascaraUnitario;
-    }
-
-    public String getMascaraTotal() {
-        return mascaraTotal;
-    }
-
-    public void setMascaraTotal(String mascaraTotal) {
-        this.mascaraTotal = mascaraTotal;
     }
 
     public BigDecimal getDescontoTotal() {
@@ -67,21 +49,6 @@ public class DescontoItemRequisicaoCompra {
 
     public void setDescontoUnitario(BigDecimal descontoUnitario) {
         this.descontoUnitario = descontoUnitario;
-    }
-
-    public String montarMascara(BigDecimal valor) {
-        String mascara = "#,##0.00";
-        if (getTipoDesconto() != null && getTipoDesconto().isNaoArredondar()) {
-            String valorStr = valor.toString();
-            String valorDecimal = valorStr.substring(valorStr.indexOf(".") + 1);
-
-            String qtdeDecimal = "";
-            for (int x = 0; x < valorDecimal.length(); x++) {
-                qtdeDecimal += "0";
-            }
-            mascara = "#,##0." + qtdeDecimal;
-        }
-        return mascara;
     }
 
     @Override

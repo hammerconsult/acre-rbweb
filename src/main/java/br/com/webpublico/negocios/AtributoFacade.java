@@ -207,12 +207,4 @@ public class AtributoFacade extends AbstractFacade<Atributo> {
                 .setParameter("parte", "%" + parte.trim().toLowerCase() + "%")
                 .getResultList();
     }
-
-    public List<Atributo> buscarAtributosAtivos(String parte) {
-        return em.createQuery(" select a from Atributo a " +
-                " where lower(a.identificacao) like :parte or lower(a.nome) like :parte " +
-                " order by a.grupoAtributo, a.sequenciaapresentacao ")
-            .setParameter("parte", "%" + parte.trim().toLowerCase() + "%")
-            .getResultList();
-    }
 }

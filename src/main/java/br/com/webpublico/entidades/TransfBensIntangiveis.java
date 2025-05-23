@@ -1,15 +1,16 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.entidades.contabil.financeiro.SuperEntidadeContabilFinanceira;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.TipoGrupo;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.enums.TipoLancamento;
 import br.com.webpublico.enums.TipoOperacaoBensIntangiveis;
 import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.negocios.HierarquiaOrganizacionalFacade;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
+import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
@@ -18,6 +19,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.TreeMap;
 
 /**
  * Created with IntelliJ IDEA.
@@ -30,7 +32,7 @@ import java.util.Date;
 @Audited
 
 @Etiqueta("Transferência de Bens Intangíveis")
-public class TransfBensIntangiveis extends SuperEntidadeContabilFinanceira implements Serializable, EntidadeContabil {
+public class TransfBensIntangiveis extends SuperEntidadeContabilFinanceira implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -341,11 +343,62 @@ public class TransfBensIntangiveis extends SuperEntidadeContabilFinanceira imple
     }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
-        if (ParametroEvento.ComplementoId.CONCEDIDO.equals(complementoId)) {
-            return new GeradorContaAuxiliarDTO(unidadeOrigem);
-        } else if (ParametroEvento.ComplementoId.RECEBIDO.equals(complementoId)) {
-            return new GeradorContaAuxiliarDTO(unidadeDestino);
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(unidadeDestino);
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(unidadeDestino, contaContabil.getSubSistema());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(unidadeOrigem);
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(unidadeOrigem, contaContabil.getSubSistema());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(unidadeDestino);
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(unidadeDestino,
+                    contaContabil.getSubSistema());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(unidadeOrigem);
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(unidadeOrigem,
+                    contaContabil.getSubSistema());
         }
         return null;
     }

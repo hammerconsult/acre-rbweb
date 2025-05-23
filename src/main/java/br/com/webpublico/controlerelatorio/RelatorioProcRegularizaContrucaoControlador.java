@@ -453,7 +453,7 @@ public class RelatorioProcRegularizaContrucaoControlador {
             }
             if (situacaoAlvara != null) {
                 retorno.append(whereOuAnd(retorno));
-                retorno.append(" PROC.ID IN (SELECT AC.PROCREGULARIZACONSTRUCAO_ID FROM ALVARACONSTRUCAO AC WHERE AC.SITUACAO = '")
+                retorno.append(" PROC.ID IN (SELECT AC.PROCREGULARIZACONSTRUCAO_ID FROM ALVARACONSTRUCAO AC WHERE AC.DATAVENCIMENTOCARTAZ = '")
                     .append(situacaoAlvara.name()).append("') ");
             }
             if (codigoHabitese != null) {

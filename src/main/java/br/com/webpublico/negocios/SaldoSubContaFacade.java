@@ -5,15 +5,12 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoSubContaDTO;
 import br.com.webpublico.enums.MovimentacaoFinanceira;
 import br.com.webpublico.enums.TipoOperacao;
-import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,66 +33,48 @@ public class SaldoSubContaFacade implements Serializable {
     protected static final Logger logger = LoggerFactory.getLogger(SaldoSubContaFacade.class);
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
-    @EJB
-    private ConfiguracaoContabilFacade configuracaoContabilFacade;
 
 
     @Lock(LockType.WRITE)
     public void gerarSaldoFinanceiro(UnidadeOrganizacional unidade, SubConta subConta, ContaDeDestinacao contaDeDestinacao, BigDecimal valor,
                                      TipoOperacao operacao, Date data, EventoContabil eventoContabil, String historicoRazao,
                                      MovimentacaoFinanceira tipoDeMovimento, String uuid, Boolean realizarValidacoes) {
-        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDOSUBCONTAMICROSERVICE")) {
-            SaldoSubContaDTO dto = new SaldoSubContaDTO();
-            dto.setIdSubConta(subConta.getId());
-            dto.setIdUnidade(unidade.getId());
-            dto.setIdContaDeDestinacao(contaDeDestinacao.getId());
-            dto.setValor(valor);
-            dto.setOperacao(operacao);
-            dto.setData(DataUtil.dateToLocalDate(data));
-            dto.setIdEventoContabil(eventoContabil.getId());
-            dto.setHistoricoRazao(historicoRazao);
-            dto.setTipoDeMovimento(tipoDeMovimento);
-            dto.setUuid(uuid);
-            dto.setRealizarValidacoes(realizarValidacoes);
-            ApiServiceContabil.getService().gerarSaldoSubConta(dto);
-        } else {
-            try {
-                if (uuid == null || uuid.trim().isEmpty()) {
-                    try {
-                        uuid = UUID.randomUUID().toString();
-                    } catch (Exception e) {
-                        logger.error("Erro ao gerar UUID Saldo Financeiro : " + e.getMessage());
-                    }
+        try {
+            if (uuid == null || uuid.trim().isEmpty()) {
+                try {
+                    uuid = UUID.randomUUID().toString();
+                } catch (Exception e) {
+                    logger.error("Erro ao gerar UUID Saldo Financeiro : " + e.getMessage());
                 }
-                if (uuid == null || uuid.trim().isEmpty()) {
-                    logger.error("UUID Saldo Financeiro nulo sem exceção " + unidade + " " + subConta + " " + tipoDeMovimento);
-                }
-                MovimentoContaFinanceira movimento = gerarMovimentoSaldoFinanceiro(unidade, subConta, contaDeDestinacao, valor, operacao, data, eventoContabil, historicoRazao, tipoDeMovimento, uuid);
-                SaldoSubConta ultimoSaldo = getUltimoSaldoPorDataUnidadeConta(movimento);
-
-                if (validarSaldoDisponivel(movimento, valor, ultimoSaldo, realizarValidacoes)) {
-                    if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
-                        ultimoSaldo = definirValorSaldoSubConta(movimento);
-                        ultimoSaldo = alterarValorSaldo(ultimoSaldo, operacao, valor);
-                        em.persist(ultimoSaldo);
-                    } else {
-                        if (DataUtil.dataSemHorario(ultimoSaldo.getDataSaldo()).compareTo(DataUtil.dataSemHorario(data)) == 0) {
-                            ultimoSaldo = alterarValorSaldo(ultimoSaldo, operacao, valor);
-                            em.merge(ultimoSaldo);
-                        } else {
-                            SaldoSubConta novoSaldo = definirValorSaldoSubConta(movimento);
-                            novoSaldo = copiarValoresDoSaldoRecuperado(ultimoSaldo, novoSaldo);
-                            novoSaldo = alterarValorSaldo(novoSaldo, operacao, valor);
-                            em.persist(novoSaldo);
-                        }
-                    }
-                    gerarSaldoPosteriores(valor, operacao, movimento, realizarValidacoes);
-                }
-            } catch (OptimisticLockException optex) {
-                throw new ExcecaoNegocioGenerica("Saldo financeiro está sendo movimentado por outro usuário. Por favor, tente salvar o movimento em alguns instantes.");
-            } catch (Exception ex) {
-                throw new ExcecaoNegocioGenerica(" " + ex.getMessage());
             }
+            if (uuid == null || uuid.trim().isEmpty()) {
+                logger.error("UUID Saldo Financeiro nulo sem exceção " + unidade + " " + subConta + " " + tipoDeMovimento);
+            }
+            MovimentoContaFinanceira movimento = gerarMovimentoSaldoFinanceiro(unidade, subConta, contaDeDestinacao, valor, operacao, data, eventoContabil, historicoRazao, tipoDeMovimento, uuid);
+            SaldoSubConta ultimoSaldo = getUltimoSaldoPorDataUnidadeConta(movimento);
+
+            if (validarSaldoDisponivel(movimento, valor, ultimoSaldo, realizarValidacoes)) {
+                if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
+                    ultimoSaldo = definirValorSaldoSubConta(movimento);
+                    ultimoSaldo = alterarValorSaldo(ultimoSaldo, operacao, valor);
+                    em.persist(ultimoSaldo);
+                } else {
+                    if (DataUtil.dataSemHorario(ultimoSaldo.getDataSaldo()).compareTo(DataUtil.dataSemHorario(data)) == 0) {
+                        ultimoSaldo = alterarValorSaldo(ultimoSaldo, operacao, valor);
+                        em.merge(ultimoSaldo);
+                    } else {
+                        SaldoSubConta novoSaldo = definirValorSaldoSubConta(movimento);
+                        novoSaldo = copiarValoresDoSaldoRecuperado(ultimoSaldo, novoSaldo);
+                        novoSaldo = alterarValorSaldo(novoSaldo, operacao, valor);
+                        em.persist(novoSaldo);
+                    }
+                }
+                gerarSaldoPosteriores(valor, operacao, movimento, realizarValidacoes);
+            }
+        } catch (OptimisticLockException optex) {
+            throw new ExcecaoNegocioGenerica("Saldo financeiro está sendo movimentado por outro usuário. Por favor, tente salvar o movimento em alguns instantes.");
+        } catch (Exception ex) {
+            throw new ExcecaoNegocioGenerica(" " + ex.getMessage());
         }
     }
 

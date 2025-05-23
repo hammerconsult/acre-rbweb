@@ -8,7 +8,7 @@ import br.com.webpublico.controle.portaltransparencia.PortalTransparenciaNovoFac
 import br.com.webpublico.controle.portaltransparencia.entidades.AlteracaoOrcPortal;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AssistenteAlteracaoOrc;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidaLDOExeption;
 import br.com.webpublico.exception.ValidacaoException;
@@ -47,6 +47,8 @@ public class AlteracaoORCFacade extends SuperFacadeContabil<AlteracaoORC> {
     private SaldoFonteDespesaORCFacade saldoFonteDespesaORCFacade;
     @EJB
     private EmpenhoFacade empenhoFacade;
+    @EJB
+    private EntidadeFacade entidadeFacade;
     @EJB
     private ReservaFonteDespesaOrcFacade reservaFonteDespesaOrcFacade;
     @EJB
@@ -630,11 +632,11 @@ public class AlteracaoORCFacade extends SuperFacadeContabil<AlteracaoORC> {
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa(), item));
-            objetos.add(new ObjetoParametro(entity.getOrigemSuplemtacao(), item));
-            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC(), item));
-            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), SuplementacaoORC.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getOrigemSuplemtacao().name(), OrigemSuplementacaoORC.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getId().toString(), FonteDespesaORC.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -672,10 +674,10 @@ public class AlteracaoORCFacade extends SuperFacadeContabil<AlteracaoORC> {
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa(), item));
-            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC(), item));
-            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos(), item));
-            objetos.add(new ObjetoParametro(entity, item));
+            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getId().toString(), FonteDespesaORC.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), AnulacaoORC.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -713,8 +715,8 @@ public class AlteracaoORCFacade extends SuperFacadeContabil<AlteracaoORC> {
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita(), item));
-            objetos.add(new ObjetoParametro(entity, item));
+            objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), ReceitaAlteracaoORC.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);

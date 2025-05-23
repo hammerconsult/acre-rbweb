@@ -250,8 +250,8 @@ public class TransferenciaContaFinanceiraFacade extends SuperFacadeContabil<Tran
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getSubContaDeposito(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), TransferenciaContaFinanceira.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getSubContaDeposito().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -298,8 +298,8 @@ public class TransferenciaContaFinanceiraFacade extends SuperFacadeContabil<Tran
 
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getSubContaRetirada(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), TransferenciaContaFinanceira.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getSubContaRetirada().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);

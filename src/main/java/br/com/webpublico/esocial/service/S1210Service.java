@@ -105,7 +105,7 @@ public class S1210Service {
 
             if (fichaFinanceiraFP != null) {
                 eventoS1210.setDescricao(fichaFinanceiraFP.getVinculoFP().toString());
-                adicionarInformacoesServidorComVinculo(registro, vinculo, eventoS1210, fichaFinanceiraFP, config, dataPgto, validacao);
+                adicionarInformacoesServidorComVinculo(registro, vinculo, eventoS1210, fichaFinanceiraFP, config, dataPgto);
             } else {
                 eventoS1210.setDescricao(fichaRPA.getPrestadorServicos().getPrestador().toString());
                 adicionarInformacoesPrestadorServico(registro, eventoS1210, fichaRPA, dataPgto, validacao);
@@ -114,7 +114,7 @@ public class S1210Service {
     }
 
     private void adicionarInformacoesServidorComVinculo(RegistroEventoEsocial registro, VinculoFPEventoEsocial vinculo, EventosESocialDTO.S1210 eventoS1210,
-                                                        FichaFinanceiraFP fichaFinanceiraFP, ConfiguracaoEmpregadorESocial config, Date dataPgto, ValidacaoException validacao) {
+                                                        FichaFinanceiraFP fichaFinanceiraFP, ConfiguracaoEmpregadorESocial config, Date dataPgto) {
         EventoS1210.InfoPgto infoPgto = null;
 
         if (TipoFolhaDePagamento.SALARIO_13.equals(fichaFinanceiraFP.getFolhaDePagamento().getTipoFolhaDePagamento())) {
@@ -124,24 +124,17 @@ public class S1210Service {
             infoPgto = eventoS1210.addInfoPgto();
             infoPgto.setDtPgto(DataUtil.removerDias(dataPgto, 1));
             atribuirRentencoesNormalOrFerias(registro, fichaFinanceiraFP, infoPgto);
-            preencherVerbasNormais(registro, vinculo, config, infoPgto, fichaFinanceiraFP, validacao);
+            preencherVerbasNormais(registro, vinculo, config, infoPgto, fichaFinanceiraFP);
         }
     }
 
 
     private void preencherVerbasNormais(RegistroEventoEsocial registro, VinculoFPEventoEsocial vinculo,
                                         ConfiguracaoEmpregadorESocial config, EventoS1210.InfoPgto
-                                            infoPgto, FichaFinanceiraFP fichaFinanceiraFP, ValidacaoException validacao) {
+                                            infoPgto, FichaFinanceiraFP fichaFinanceiraFP) {
         boolean isExoneracao = false;
-        VinculoFP vinculoFicha = folhaDePagamentoFacade.getVinculoFPFacade().recuperarSimples(fichaFinanceiraFP.getVinculoFP().getId());
-        if (vinculoFicha instanceof Aposentadoria) {
-            List<RegistroESocial> registroESocial = registroESocialFacade.buscarRegistroEsocialPorTipoIdentificadorWPEmpregador(TipoArquivoESocial.S2410, vinculoFicha.getId().toString(), 1, config);
-            if (registroESocial == null || registroESocial.isEmpty()) {
-                validacao.adicionarMensagemDeOperacaoNaoRealizada("O aposentado(a) " + vinculoFicha + " não tem o evento S-2410 enviado com sucesso.");
-            }
-        }
         if (TipoFolhaDePagamento.RESCISAO.equals(fichaFinanceiraFP.getFolhaDePagamento().getTipoFolhaDePagamento())) {
-            ExoneracaoRescisao exoneracaoRescisao = exoneracaoRescisaoFacade.buscarExoneracaoRescisaoPorVinculoFP(vinculoFicha);
+            ExoneracaoRescisao exoneracaoRescisao = exoneracaoRescisaoFacade.buscarExoneracaoRescisaoPorVinculoFP(vinculo.getVinculoFP());
             if (exoneracaoRescisao != null) {
                 infoPgto.setTpPgto(2);
                 infoPgto.setPerRef(DataUtil.getAno(exoneracaoRescisao.getDataRescisao()), DataUtil.getMes(exoneracaoRescisao.getDataRescisao()));
@@ -150,7 +143,7 @@ public class S1210Service {
                 infoPgto.setPerRef(registro.getExercicio().getAno(), registro.getMes().getNumeroMes());
             }
         }
-        infoPgto.setTpPgto(atribuirTipoDePagamento(registro, vinculo, fichaFinanceiraFP, isExoneracao, vinculoFicha));
+        infoPgto.setTpPgto(atribuirTipoDePagamento(registro, vinculo, fichaFinanceiraFP, isExoneracao));
     }
 
 
@@ -186,7 +179,7 @@ public class S1210Service {
         infoPgto.setVrLiq(atribuirValorLiquido(itensFicha));
     }
 
-    private Integer atribuirTipoDePagamento(RegistroEventoEsocial registro, VinculoFPEventoEsocial vinculo, FichaFinanceiraFP fichaFinanceiraFP, boolean isExoneracao, VinculoFP vinculoFicha) {
+    private Integer atribuirTipoDePagamento(RegistroEventoEsocial registro, VinculoFPEventoEsocial vinculo, FichaFinanceiraFP fichaFinanceiraFP, boolean isExoneracao) {
         List<TipoArquivoESocial> tipos = registroESocialFacade.getRegistrosEsocialPorIdentificadorWP(fichaFinanceiraFP.getId().toString());
 
         for (TipoArquivoESocial tipo : tipos) {
@@ -215,7 +208,7 @@ public class S1210Service {
 
         ExoneracaoRescisao exoneracaoRescisao = exoneracaoRescisaoFacade.buscarExoneracaoRescisaoPorVinculoFP(vinculo.getVinculoFP());
         if (exoneracaoRescisao == null || !TipoFolhaDePagamento.RESCISAO.equals(fichaFinanceiraFP.getFolhaDePagamento().getTipoFolhaDePagamento())) {
-            return atribuirCodigoDeInformacaoPagamento(registro, vinculo, vinculoFicha);
+            return atribuirCodigoDeInformacaoPagamento(registro, vinculo);
         }
 
         List<RegistroESocial> registroESocial = registroESocialFacade.buscarRegistroEsocialPorTipoAndIdentificador(TipoArquivoESocial.S2299, exoneracaoRescisao.getId().toString(), 1);
@@ -228,7 +221,7 @@ public class S1210Service {
                 if (mes == registro.getMes().getNumeroMes() && ano == registro.getExercicio().getAno()) {
                     return 2;
                 } else {
-                    return atribuirCodigoDeInformacaoPagamento(registro, vinculo, vinculoFicha);
+                    return atribuirCodigoDeInformacaoPagamento(registro, vinculo);
                 }
 
             } catch (Exception e) {
@@ -240,25 +233,28 @@ public class S1210Service {
         return 1;
     }
 
-    private Integer atribuirCodigoDeInformacaoPagamento(RegistroEventoEsocial registro, VinculoFPEventoEsocial vinculo, VinculoFP vinculoFicha) {
+    private Integer atribuirCodigoDeInformacaoPagamento(RegistroEventoEsocial registro, VinculoFPEventoEsocial vinculo) {
 
         if (folhaDePagamentoFacade.isServidorPrevidenciaPorTipoRegime(vinculo.getVinculoFP().getId(), registro.getMes().getNumeroMesIniciandoEmZero(),
             registro.getExercicio().getAno(), TipoRegimePrevidenciario.RGPS)) {
             return 1;
         }
 
-        if (vinculoFicha.getCategoriaTrabalhador() != null &&
-            ((TipoGrupoCategoriaTrabalhador.AGENTE_PUBLICO.equals(vinculoFicha.getCategoriaTrabalhador().getTipo())) || vinculoFicha.getCategoriaTrabalhador().getCodigo() == CATEGORIA_S1202)) {
+        if (vinculo.getVinculoFP().getCategoriaTrabalhador() != null &&
+            (TipoGrupoCategoriaTrabalhador.AGENTE_PUBLICO.equals(vinculo.getVinculoFP().getCategoriaTrabalhador().getTipo()))
+            || vinculo.getVinculoFP().getCategoriaTrabalhador().getCodigo() == CATEGORIA_S1202) {
             return 4;
         }
         if (vinculo.getPrestadorServico() != null) {
             return 1;
         }
 
-        if (vinculoFicha instanceof Aposentadoria) {
-            return 5;
+        if (vinculo.getIdVinculo() != null) {
+            VinculoFP v = folhaDePagamentoFacade.getVinculoFPFacade().recuperarSimples(vinculo.getIdVinculo());
+            if (v instanceof Aposentadoria) {
+                return 5;
+            }
         }
-
         return 1;
     }
 
@@ -328,8 +324,9 @@ public class S1210Service {
         List<ItemFichaRPA> itensFicha = Lists.newArrayList();
         itensFicha.addAll(fichaRPA.getItemFichaRPAs());
         BigDecimal vrLiq = atribuirValorLiquidoFichaRPA(itensFicha);
-        if (vrLiq.compareTo(BigDecimal.ZERO) < 0) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("Valor zerado para o prestador " + fichaRPA.getPrestadorServicos().getPrestador());
+        if (vrLiq.compareTo(BigDecimal.ZERO) <= 0) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("Valor zerado ou negativo para o prestador "
+                + fichaRPA.getPrestadorServicos().getPrestador() + " Valor: " + vrLiq);
             ve.lancarException();
         } else {
             infoPgto.setVrLiq(vrLiq);

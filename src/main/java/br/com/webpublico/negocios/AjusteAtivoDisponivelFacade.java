@@ -229,10 +229,10 @@ public class AjusteAtivoDisponivelFacade extends SuperFacadeContabil<AjusteAtivo
         item.setOperacaoClasseCredor(classeCredorFacade.recuperaOperacaoAndVigenciaClasseCredor(entity.getPessoa(), entity.getClasseCredor(), entity.getDataAjuste()));
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getContaFinanceira(), item));
-        objetos.add(new ObjetoParametro(entity.getClasseCredor(), item));
-        objetos.add(new ObjetoParametro(entity.getFonteDeRecursos(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), AjusteAtivoDisponivel.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getContaFinanceira().getId().toString(), SubConta.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
 
 

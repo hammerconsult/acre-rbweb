@@ -2,7 +2,7 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.ImportacaoDebitosIPTU;
 import br.com.webpublico.entidades.ItemImportacaoDebitosIPTU;
-import br.com.webpublico.enums.InconsistenciaImportacaoDebitoIPTU;
+import br.com.webpublico.enums.ListaDeInconsistencias;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
@@ -67,10 +67,10 @@ public class ImportacaoDebitosIPTUControlador extends PrettyControlador<Importac
     @Override
     public void novo() {
         super.novo();
-        carregarNovo();
+        setarNovo();
     }
 
-    private void carregarNovo() {
+    private void setarNovo() {
         selecionado.setResponsavel(sistemaFacade.getUsuarioCorrente());
         selecionado.setDataRegistro(sistemaFacade.getDataOperacao());
         uploadFile = new DefaultUploadedFile();
@@ -123,7 +123,7 @@ public class ImportacaoDebitosIPTUControlador extends PrettyControlador<Importac
 
                     itemImportacaoDebitosIPTU.setCpf(cpfCnpf);
                     itemImportacaoDebitosIPTU.setCodigoRetorno(codRetorno);
-                    itemImportacaoDebitosIPTU.setInconsistencia(InconsistenciaImportacaoDebitoIPTU.getInconcistenciaPorCodigo(codRetorno));
+                    itemImportacaoDebitosIPTU.setListaDeInconsistencias(ListaDeInconsistencias.getInconcistenciaPorCodigo(codRetorno));
                     itemImportacaoDebitosIPTU.setImportacaoDebitosIPTU(selecionado);
                     itemImportacaoDebitosIPTU.setLinhaDoArquivo(linha);
 
@@ -134,7 +134,7 @@ public class ImportacaoDebitosIPTUControlador extends PrettyControlador<Importac
             buffread.close();
             FacesUtil.addOperacaoRealizada("Arquivo lido com sucesso !");
         } catch (Exception ex) {
-            logger.error("Erro: ", ex);
+            FacesUtil.addOperacaoNaoRealizada("Erro ao ler o arquivo !");
         }
     }
 
@@ -151,7 +151,7 @@ public class ImportacaoDebitosIPTUControlador extends PrettyControlador<Importac
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception e) {
-            logger.error("Erro: ", e);
+            e.printStackTrace();
         }
 
     }

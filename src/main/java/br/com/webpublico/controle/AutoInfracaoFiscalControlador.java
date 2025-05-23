@@ -201,7 +201,7 @@ public class AutoInfracaoFiscalControlador extends PrettyControlador<AutoInfraca
     }
 
     public boolean desabilitaCiencia() {
-        return ((!SituacaoAutoInfracao.GERADO.equals(selecionado.getSituacaoAutoInfracao()) && !SituacaoAutoInfracao.RETIFICADO.equals(selecionado.getSituacaoAutoInfracao())) ||
+        return (!SituacaoAutoInfracao.GERADO.equals(selecionado.getSituacaoAutoInfracao()) ||
             !RegistroLancamentoContabil.Situacao.AUTO_INFRACAO.equals(selecionado.getRegistro().getSituacao()) ||
             temDebitosPagos());
     }
@@ -229,7 +229,7 @@ public class AutoInfracaoFiscalControlador extends PrettyControlador<AutoInfraca
     }
 
     public boolean desabilitaRevelia() {
-        return ((!SituacaoAutoInfracao.GERADO.equals(selecionado.getSituacaoAutoInfracao()) && !SituacaoAutoInfracao.RETIFICADO.equals(selecionado.getSituacaoAutoInfracao())) ||
+        return (!SituacaoAutoInfracao.GERADO.equals(selecionado.getSituacaoAutoInfracao()) ||
             !RegistroLancamentoContabil.Situacao.AUTO_INFRACAO.equals(selecionado.getRegistro().getSituacao()) ||
             temDebitosPagos());
     }

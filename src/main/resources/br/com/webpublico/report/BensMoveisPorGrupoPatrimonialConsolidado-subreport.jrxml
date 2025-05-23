@@ -3,36 +3,50 @@
 	<property name="ireport.zoom" value="4.0"/>
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
+	<parameter name="UNIDADE_ID" class="java.lang.Long">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="CODIGO_HIERARQUIA_LIKE_SUBREPORT" class="java.lang.String"/>
 	<parameter name="CONDICAO" class="java.lang.String">
 		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
 	</parameter>
 	<queryString>
-		<![CDATA[SELECT
-  grupobem.codigo                                                                              AS codigo,
-  grupobem.descricao                                                                           AS grupo,
-  SUM(vwbem.valororiginal)                                                                     AS valor,
-  SUM(coalesce(vwbem.VALORACUMULADODAAMORTIZACAO, 0) + coalesce(vwbem.VALORACUMULADODADEPRECIACAO, 0) +
-      coalesce(vwbem.VALORACUMULADODAEXAUSTAO, 0) + coalesce(vwbem.VALORACUMULADODEAJUSTE, 0)) AS valorAjuste,
-  COUNT(vwbem.id)                                                                              AS QUANTIDADE
+		<![CDATA[WITH
+  filho (id) AS
+  (
+    SELECT
+      vw.subordinada_id AS id
+    FROM
+      vwhierarquiaadministrativa vw
+    WHERE
+      SYSDATE BETWEEN vw.iniciovigencia AND COALESCE(vw.fimvigencia, SYSDATE)
+    AND vw.codigo LIKE $P{CODIGO_HIERARQUIA_LIKE_SUBREPORT}
+  )
+SELECT
+  grupobem.codigo          AS codigo,
+  grupobem.descricao       AS grupo,
+  SUM(vwbem.valororiginal) AS valor,
+  SUM(coalesce(vwbem.VALORACUMULADODAAMORTIZACAO, 0) + coalesce(vwbem.VALORACUMULADODADEPRECIACAO, 0) + coalesce(vwbem.VALORACUMULADODAEXAUSTAO, 0) + coalesce(vwbem.VALORACUMULADODEAJUSTE, 0)) AS valorAjuste,
+  COUNT(vwbem.id)          AS QUANTIDADE
 FROM
   grupobem
-  INNER JOIN estadobem estado ON estado.grupobem_id = grupobem.id
-  INNER JOIN vwbem ON vwbem.ID_ULTIMO_ESTADO_BEM = estado.id
-  LEFT JOIN vwhierarquiaadministrativa VWADM ON VWADM.subordinada_id = estado.detentoraadministrativa_id
-  LEFT JOIN VWHIERARQUIAORCAMENTARIA VWORC ON VWORC.SUBORDINADA_ID = estado.detentoraorcamentaria_id
-  LEFT JOIN EVENTOBEM ev ON ev.BEM_ID = vwbem.ID
-  LEFT JOIN ITEMEFETIVACAOBAIXA itemEfetivacaoBaixa ON ev.ID = itemEfetivacaoBaixa.ID
-  LEFT JOIN EFETIVACAOBAIXAPATRIMONIAL efetivacao ON itemEfetivacaoBaixa.EFETIVACAOBAIXA_ID = efetivacao.ID
+INNER JOIN estadobem estado ON estado.grupobem_id = grupobem.id
+INNER JOIN vwbem ON vwbem.ID_ULTIMO_ESTADO_BEM = estado.id
+INNER JOIN vwhierarquiaadministrativa VWADM ON VWADM.subordinada_id = estado.detentoraadministrativa_id
+INNER JOIN VWHIERARQUIAORCAMENTARIA VWORC ON VWORC.SUBORDINADA_ID = estado.detentoraorcamentaria_id
+INNER JOIN filho f ON  f.id = estado.detentoraadministrativa_id
+  left join EVENTOBEM ev on ev.BEM_ID = vwbem.ID
+  left join ITEMEFETIVACAOBAIXA itemEfetivacaoBaixa on ev.ID = itemEfetivacaoBaixa.ID
+  left join EFETIVACAOBAIXAPATRIMONIAL efetivacao on itemEfetivacaoBaixa.EFETIVACAOBAIXA_ID = efetivacao.ID
 WHERE
   SYSDATE BETWEEN VWADM.iniciovigencia AND COALESCE(VWADM.fimvigencia, SYSDATE)
-  AND SYSDATE BETWEEN VWORC.iniciovigencia AND COALESCE(VWORC.fimvigencia,
-                                                        SYSDATE) AND GRUPOBEM.TIPOBEM = 'MOVEIS'
- $P!{CONDICAO}
+AND SYSDATE BETWEEN VWORC.iniciovigencia AND COALESCE(VWORC.fimvigencia,
+  SYSDATE) AND GRUPOBEM.TIPOBEM = 'MOVEIS' $P!{CONDICAO}
 GROUP BY
-grupobem.codigo,
-grupobem.descricao
+  grupobem.codigo,
+  grupobem.descricao
 ORDER BY
-grupobem.descricao]]>
+  grupobem.descricao]]>
 	</queryString>
 	<field name="CODIGO" class="java.lang.String"/>
 	<field name="GRUPO" class="java.lang.String"/>

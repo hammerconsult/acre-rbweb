@@ -80,24 +80,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
     private EmendaEmpenho emendaEmpenho;
     private Empenho empenhoDeRP;
 
-    private List<ClasseCredor> classesDoFornecedor;
-    private List<EmpenhoEstorno> listaEmpenhoEstorno;
-    private List<Liquidacao> listaLiquidacao;
-    private List<LiquidacaoEstorno> listaLiquidacaoEstorno;
-    private List<Pagamento> listaPagamento;
-    private List<PagamentoEstorno> listaPagamentoEstorno;
-
-    private BigDecimal valorEstornosEmpenhos;
-    private BigDecimal valorLiquidacao;
-    private BigDecimal valorLiquidacaoEstorno;
-    private BigDecimal valorPagamento;
-    private BigDecimal valorPagamentoEstorno;
-    private BigDecimal saldoLiquidacao;
-    private BigDecimal saldoPagamento;
-    private BigDecimal saldoAnterior;
-    private BigDecimal saldoAtual;
-    private BigDecimal saldoCotaOrcamentaria;
-
     public EmpenhoControlador() {
         super(Empenho.class);
     }
@@ -145,8 +127,8 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
     }
 
     private void redirecionarParaLista() {
-        FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "listar/");
         cleanScoped();
+        FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "listar/");
     }
 
     public void redirecionarParaVer(Empenho empenho) {
@@ -243,7 +225,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
         } else {
             atualizarExtensaoDaFonte(null);
         }
-        calcularSaldos();
     }
 
     private void atualizarExtensaoDaFonte(ExtensaoFonteRecurso extensaoFonteRecurso) {
@@ -278,7 +259,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
         if (solicitacoesPendentes == null) {
             recuperarSolicitacoesPendentes();
         }
-        this.classesDoFornecedor = Lists.newArrayList();
     }
 
     private void parametrosIniciaisRestoPagar() {
@@ -312,8 +292,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
         }
         buscarExecucaoSolicitacaoEmpenho();
         pertenceEmenda = (selecionado.getEmendas() != null && !selecionado.getEmendas().isEmpty());
-        buscarMovimentosExecucaoOrcamentaria();
-        this.classesDoFornecedor = Lists.newArrayList();
         buscarEmpenhoDeRPDoEmpenhoDeOrigem();
     }
 
@@ -341,11 +319,13 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
             selecionado.setMovimentoDespesaORC(null);
             logger.debug("salvarNovo {}", e);
             FacesUtil.executaJavaScript("aguarde.hide()");
+            facade.getSingletonConcorrenciaContabil().desbloquear(selecionado.getUnidadeOrganizacional());
             FacesUtil.addOperacaoNaoPermitida(e.getMessage());
         } catch (Exception ex) {
             selecionado.setMovimentoDespesaORC(null);
             logger.debug("salvarNovo {}", ex);
             FacesUtil.executaJavaScript("aguarde.hide()");
+            facade.getSingletonConcorrenciaContabil().desbloquear(selecionado.getUnidadeOrganizacional());
             FacesUtil.addOperacaoNaoRealizada(ex.getMessage());
         }
     }
@@ -660,7 +640,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
             Util.adicionarObjetoEmLista(selecionado.getDesdobramentos(), desdobramento);
             selecionado.setValor(selecionado.getValorTotalDetalhamento());
             cancelarDesdobramento();
-            calcularSaldos();
         } catch (ExcecaoNegocioGenerica ex) {
             FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
         } catch (ValidacaoException ve) {
@@ -738,7 +717,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
             validarDesdobramentoIntegracao();
             selecionado.getDesdobramentos().remove(obj);
             selecionado.setValor(selecionado.getValorTotalDetalhamento());
-            calcularSaldos();
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
         }
@@ -905,9 +883,8 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
     }
 
     private void variaveisReconhecimentoDivida(SolicitacaoEmpenho se, Empenho e) {
-        SolicitacaoEmpenhoReconhecimentoDivida solEmpRecDiv = facade.getReconhecimentoDividaFacade().recuperarSolicitacaoEmpReconhecimentoDividaSolicitacaoEm(se);
-        if (solEmpRecDiv != null) {
-            e.setReconhecimentoDivida(solEmpRecDiv.getReconhecimentoDivida());
+        if (se.getReconhecimentoDivida() != null) {
+            e.setReconhecimentoDivida(se.getReconhecimentoDivida());
         }
     }
 
@@ -1007,6 +984,130 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
         }
     }
 
+    public BigDecimal getCalculaValorLiquidado() {
+        BigDecimal valor = BigDecimal.ZERO;
+        if (!selecionado.getLiquidacoes().isEmpty()) {
+            for (Liquidacao li : selecionado.getLiquidacoes()) {
+                valor = valor.add(li.getValor());
+            }
+            return valor.subtract(getCalculaEstornosLiquidacoes());
+        }
+        return valor;
+    }
+
+    public BigDecimal getCalculaValorPago() {
+        BigDecimal valor = BigDecimal.ZERO;
+        if (selecionado.getId() != null) {
+            List<Pagamento> pagamentos = facade.getPagamentoFacade().listaPorEmpenho(selecionado);
+            for (Pagamento p : pagamentos) {
+                valor = valor.add(p.getValor());
+            }
+        }
+        return valor.subtract(getCalculaEstornosPagamentos());
+    }
+
+    public BigDecimal getCalculaSaldoPagar() {
+        Empenho e = ((Empenho) selecionado);
+        return e.getSaldo().subtract(getCalculaValorPago());
+    }
+
+    public BigDecimal getCalculaEstornosEmpenhos() {
+        BigDecimal estornoEmpenho = new BigDecimal(BigInteger.ZERO);
+        for (EmpenhoEstorno ee : ((Empenho) selecionado).getEmpenhoEstornos()) {
+            estornoEmpenho = estornoEmpenho.add(ee.getValor());
+        }
+        return estornoEmpenho;
+    }
+
+    public BigDecimal getCalculaLiquidacoes() {
+        BigDecimal total = new BigDecimal(BigInteger.ZERO);
+        for (Liquidacao liq : getListaLiquidacoes()) {
+            total = total.add(liq.getValor());
+        }
+        return total;
+    }
+
+    public BigDecimal getCalculaPagamentos() {
+        BigDecimal total = new BigDecimal(BigInteger.ZERO);
+        for (Pagamento pag : getPagamentos()) {
+            total = total.add(pag.getValor());
+        }
+        return total;
+    }
+
+    private List<Liquidacao> getListaLiquidacoes() {
+        if (selecionado.getId() != null) {
+            return facade.buscarLiquidacoesPorEmpenho(selecionado);
+        } else {
+            return new ArrayList<>();
+        }
+    }
+
+    public BigDecimal getCalculaEstornosLiquidacoes() {
+        BigDecimal estornoLiqui = new BigDecimal(BigInteger.ZERO);
+        if (selecionado.getId() != null) {
+            for (LiquidacaoEstorno le : facade.getLiquidacaoEstornoFacade().listaPorEmpenho(selecionado)) {
+                estornoLiqui = estornoLiqui.add(le.getValor());
+            }
+        }
+        return estornoLiqui;
+    }
+
+    public BigDecimal getCalculaEstornosPagamentos() {
+        BigDecimal estornoPagto = new BigDecimal(BigInteger.ZERO);
+        if (selecionado.getId() != null) {
+            for (PagamentoEstorno pe : facade.getPagamentoEstornoFacade().listaPorEmpenho(selecionado)) {
+                estornoPagto = estornoPagto.add(pe.getValor());
+            }
+        }
+        return estornoPagto;
+    }
+
+    public BigDecimal calculaSaldoAtual() {
+        BigDecimal saldoAtual = BigDecimal.ZERO;
+        if (selecionado.getId() == null) {
+            saldoAtual = getSaldoFonteDespesaORC().subtract(selecionado.getValor());
+        } else {
+            saldoAtual = selecionado.getSaldoDisponivel().subtract(selecionado.getValor());
+        }
+        return saldoAtual;
+    }
+
+    public BigDecimal getSaldoCotaOrcamentaria() {
+        BigDecimal saldoAtual = BigDecimal.ZERO;
+        try {
+            if (selecionado != null && selecionado.getFonteDespesaORC() != null) {
+                Calendar data = Calendar.getInstance();
+                data.setTime(selecionado.getDataEmpenho());
+                int mes = (data.get(Calendar.MONTH)) + 1;
+                saldoAtual = facade.getCotaOrcamentariaFacade().buscarValorDaCotaPorFonteDespesaORC(selecionado.getFonteDespesaORC(), mes);
+            }
+        } catch (ExcecaoNegocioGenerica e) {
+            FacesUtil.addOperacaoNaoRealizada(e.getMessage());
+        } catch (Exception e) {
+            FacesUtil.addOperacaoNaoRealizada("Erro ao tentar recuperar o Saldo dispónivel da Cota Orçamentária.");
+        }
+        return saldoAtual;
+    }
+
+    public BigDecimal calculaSaldoAnterior() {
+        BigDecimal saldoAnterior = BigDecimal.ZERO;
+        if (selecionado.getId() == null) {
+            saldoAnterior = getSaldoFonteDespesaORC();
+        } else {
+            saldoAnterior = selecionado.getSaldoDisponivel();
+        }
+        return saldoAnterior;
+    }
+
+    private BigDecimal getSaldoFonteDespesaORC() {
+        try {
+            return facade.getSaldoFonteDespesaORC(selecionado);
+        } catch (ExcecaoNegocioGenerica ex) {
+            FacesUtil.addError(SummaryMessages.OPERACAO_NAO_REALIZADA.getDescricao(), ex.getMessage());
+        }
+        return BigDecimal.ZERO;
+    }
 
     public void validaSaldoFonteDespesa(FacesContext context, UIComponent component, Object value) {
         FacesMessage message = new FacesMessage();
@@ -1068,7 +1169,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
     }
 
     public void definirNullParaClasseCredor() {
-        buscarClassesCredor();
         selecionado.setClasseCredor(null);
         FacesUtil.executaJavaScript("setaFoco('Formulario:tabGeral:classeCredor')");
     }
@@ -1620,35 +1720,49 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
         return toReturn;
     }
 
-    public void buscarClassesCredor() {
-        this.classesDoFornecedor = Lists.newArrayList();
-        if (selecionado.getTipoContaDespesa() != null && selecionado.getSubTipoDespesa() != null && selecionado.getFornecedor() != null) {
-            ConfiguracaoTipoContaDespesaClasseCredor configClasseCredor = facade.getConfiguracaoTipoContaDespesaClasseCredorFacade().buscarConfiguracaoVigente(
-                selecionado.getTipoContaDespesa(),
-                selecionado.getSubTipoDespesa(),
-                selecionado.getDataEmpenho());
-            List<ClasseCredor> classes = facade.getClasseCredorFacade().buscarClassesPorPessoa("", selecionado.getFornecedor());
-            if (configClasseCredor != null) {
-                for (TipoContaDespesaClasseCredor tipoContaDespesaClasseCredor : configClasseCredor.getListaDeClasseCredor()) {
-                    for (ClasseCredor classeCredor : classes) {
-                        if (classeCredor.equals(tipoContaDespesaClasseCredor.getClasseCredor())) {
-                            classesDoFornecedor.add(tipoContaDespesaClasseCredor.getClasseCredor());
-                        }
-                    }
-                }
-            } else {
-                for (ClasseCredor classeCredor : classes) {
-                    classesDoFornecedor.add(classeCredor);
-                }
-            }
+    public List<LiquidacaoEstorno> getLiquidacaoEstornos() {
+        if (selecionado.getId() != null) {
+            return facade.getLiquidacaoEstornoFacade().listaPorEmpenho(selecionado);
         }
+        return new ArrayList<>();
+    }
+
+    public List<PagamentoEstorno> getPagamentoEstornos() {
+        if (selecionado.getId() != null) {
+            return facade.getPagamentoEstornoFacade().listaPorEmpenho(selecionado);
+        }
+        return new ArrayList<>();
+    }
+
+    public List<Pagamento> getPagamentos() {
+        if (selecionado.getId() != null) {
+            return facade.getPagamentoFacade().listaPorEmpenho(selecionado);
+        }
+        return new ArrayList<>();
     }
 
     public List<SelectItem> getClassesCredor() {
         List<SelectItem> list = new ArrayList<>();
         list.add(new SelectItem(null, ""));
-        for (ClasseCredor classeCredor : classesDoFornecedor) {
-            list.add(new SelectItem(classeCredor));
+        if (selecionado.getTipoContaDespesa() != null && selecionado.getSubTipoDespesa() != null && selecionado.getFornecedor() != null) {
+            ConfiguracaoTipoContaDespesaClasseCredor configClasseCredor = facade.getConfiguracaoTipoContaDespesaClasseCredorFacade().buscarConfiguracaoVigente(
+                selecionado.getTipoContaDespesa(),
+                selecionado.getSubTipoDespesa(),
+                selecionado.getDataEmpenho());
+            List<ClasseCredor> classesDoFornecedor = facade.getClasseCredorFacade().buscarClassesPorPessoa("", selecionado.getFornecedor());
+            if (configClasseCredor != null) {
+                for (TipoContaDespesaClasseCredor tipoContaDespesaClasseCredor : configClasseCredor.getListaDeClasseCredor()) {
+                    for (ClasseCredor classeCredor : classesDoFornecedor) {
+                        if (classeCredor.equals(tipoContaDespesaClasseCredor.getClasseCredor())) {
+                            list.add(new SelectItem(tipoContaDespesaClasseCredor.getClasseCredor()));
+                        }
+                    }
+                }
+            } else {
+                for (ClasseCredor classeCredor : classesDoFornecedor) {
+                    list.add(new SelectItem(classeCredor));
+                }
+            }
         }
         return list;
     }
@@ -1710,6 +1824,12 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
         return facade.getPessoaFacade().listaTodasPessoasAtivas(parte.trim());
     }
 
+    public List<EmpenhoEstorno> getEmpenhoEstornos() {
+        if (selecionado.getId() != null) {
+            return selecionado.getEmpenhoEstornos();
+        }
+        return new ArrayList<>();
+    }
 
     public List<SolicitacaoEmpenho> getSolicitacoesPendentes() {
         if (solicitacoesPendentes == null) {
@@ -2051,257 +2171,6 @@ public class EmpenhoControlador extends PrettyControlador<Empenho> implements Se
         integracaoContabilAdministrativo = null;
         pertenceEmenda = null;
         emendaEmpenho = null;
-    }
-
-    public void buscarMovimentosExecucaoOrcamentaria() {
-        listaEmpenhoEstorno = Lists.newArrayList();
-        listaLiquidacao = Lists.newArrayList();
-        listaLiquidacaoEstorno = Lists.newArrayList();
-        listaPagamento = Lists.newArrayList();
-        listaPagamentoEstorno = Lists.newArrayList();
-        if (selecionado.getId() != null) {
-            for (EmpenhoEstorno empenhoEstorno : selecionado.getEmpenhoEstornos()) {
-                listaEmpenhoEstorno.add(empenhoEstorno);
-            }
-
-            for (Liquidacao liquidacao : selecionado.getLiquidacoes()) {
-                listaLiquidacao.add(liquidacao);
-            }
-
-            for (LiquidacaoEstorno le : facade.getLiquidacaoEstornoFacade().listaPorEmpenho(selecionado)) {
-                listaLiquidacaoEstorno.add(le);
-            }
-
-            for (Pagamento pag : facade.getPagamentoFacade().listaPorEmpenho(selecionado)) {
-                listaPagamento.add(pag);
-            }
-            for (PagamentoEstorno pe : facade.getPagamentoEstornoFacade().listaPorEmpenho(selecionado)) {
-                listaPagamentoEstorno.add(pe);
-            }
-        }
-        calcularValoresAbaExecucao();
-    }
-
-    public void calcularValoresAbaExecucao() {
-        if (selecionado.getId() != null) {
-            calcularValorEstornosEmpenhos();
-            calcularValorLiquidacoes();
-            calcularValorEstornosLiquidacoes();
-            calcularValorPagamento();
-            calcularValorPagamentoEstorno();
-            this.saldoLiquidacao = valorLiquidacao.subtract(valorLiquidacaoEstorno);
-            this.saldoPagamento = valorPagamento.subtract(valorPagamentoEstorno);
-        } else {
-            this.saldoLiquidacao = BigDecimal.ZERO;
-            this.saldoPagamento = BigDecimal.ZERO;
-        }
-    }
-
-    public void calcularSaldos() {
-        calcularSaldoAnterior();
-        calcularSaldoAtual();
-        calcularSaldoCotaOrcamentaria();
-    }
-
-    private void calcularValorEstornosEmpenhos() {
-        valorEstornosEmpenhos = new BigDecimal(BigInteger.ZERO);
-        for (EmpenhoEstorno ee : this.listaEmpenhoEstorno) {
-            valorEstornosEmpenhos = valorEstornosEmpenhos.add(ee.getValor());
-        }
-    }
-
-    public void calcularValorEstornosLiquidacoes() {
-        valorLiquidacaoEstorno = BigDecimal.ZERO;
-        for (LiquidacaoEstorno le : this.listaLiquidacaoEstorno) {
-            valorLiquidacaoEstorno = valorLiquidacaoEstorno.add(le.getValor());
-        }
-    }
-
-    public void calcularValorLiquidacoes() {
-        valorLiquidacao = new BigDecimal(BigInteger.ZERO);
-        for (Liquidacao liq : this.listaLiquidacao) {
-            valorLiquidacao = valorLiquidacao.add(liq.getValor());
-        }
-    }
-
-    public void calcularValorPagamento() {
-        valorPagamento = new BigDecimal(BigInteger.ZERO);
-        for (Pagamento pag : this.listaPagamento) {
-            valorPagamento = valorPagamento.add(pag.getValor());
-        }
-    }
-
-
-    public void calcularValorPagamentoEstorno() {
-        valorPagamentoEstorno = BigDecimal.ZERO;
-        for (PagamentoEstorno pe : listaPagamentoEstorno) {
-            valorPagamentoEstorno = valorPagamentoEstorno.add(pe.getValor());
-        }
-    }
-
-
-    public void calcularSaldoAnterior() {
-        this.saldoAnterior = BigDecimal.ZERO;
-        if (selecionado.getId() == null) {
-            saldoAnterior = buscarSaldoFonteDespesaORC();
-        } else {
-            saldoAnterior = selecionado.getSaldoDisponivel();
-        }
-    }
-
-
-    public void calcularSaldoAtual() {
-        this.saldoAtual = BigDecimal.ZERO;
-        if (selecionado.getId() == null) {
-            saldoAtual = saldoAnterior.subtract(selecionado.getValor());
-        } else {
-            saldoAtual = selecionado.getSaldoDisponivel().subtract(selecionado.getValor());
-        }
-    }
-
-    private BigDecimal buscarSaldoFonteDespesaORC() {
-        try {
-            return facade.getSaldoFonteDespesaORC(selecionado);
-        } catch (ExcecaoNegocioGenerica ex) {
-            FacesUtil.addError(SummaryMessages.OPERACAO_NAO_REALIZADA.getDescricao(), ex.getMessage());
-        }
-        return BigDecimal.ZERO;
-    }
-
-    public void calcularSaldoCotaOrcamentaria() {
-        this.saldoCotaOrcamentaria = BigDecimal.ZERO;
-        try {
-            if (selecionado != null && selecionado.getFonteDespesaORC() != null) {
-                Calendar data = Calendar.getInstance();
-                data.setTime(selecionado.getDataEmpenho());
-                int mes = (data.get(Calendar.MONTH)) + 1;
-                this.saldoCotaOrcamentaria = facade.getCotaOrcamentariaFacade().buscarValorDaCotaPorFonteDespesaORC(selecionado.getFonteDespesaORC(), mes);
-            }
-        } catch (ExcecaoNegocioGenerica e) {
-            FacesUtil.addOperacaoNaoRealizada(e.getMessage());
-        } catch (Exception e) {
-            FacesUtil.addOperacaoNaoRealizada("Erro ao tentar recuperar o Saldo dispónivel da Cota Orçamentária.");
-        }
-    }
-
-    public List<EmpenhoEstorno> getListaEmpenhoEstorno() {
-        return listaEmpenhoEstorno;
-    }
-
-    public void setListaEmpenhoEstorno(List<EmpenhoEstorno> listaEmpenhoEstorno) {
-        this.listaEmpenhoEstorno = listaEmpenhoEstorno;
-    }
-
-    public List<Liquidacao> getListaLiquidacao() {
-        return listaLiquidacao;
-    }
-
-    public void setListaLiquidacao(List<Liquidacao> listaLiquidacao) {
-        this.listaLiquidacao = listaLiquidacao;
-    }
-
-    public List<LiquidacaoEstorno> getListaLiquidacaoEstorno() {
-        return listaLiquidacaoEstorno;
-    }
-
-    public void setListaLiquidacaoEstorno(List<LiquidacaoEstorno> listaLiquidacaoEstorno) {
-        this.listaLiquidacaoEstorno = listaLiquidacaoEstorno;
-    }
-
-    public List<Pagamento> getListaPagamento() {
-        return listaPagamento;
-    }
-
-    public void setListaPagamento(List<Pagamento> listaPagamento) {
-        this.listaPagamento = listaPagamento;
-    }
-
-    public List<PagamentoEstorno> getListaPagamentoEstorno() {
-        return listaPagamentoEstorno;
-    }
-
-    public void setListaPagamentoEstorno(List<PagamentoEstorno> listaPagamentoEstorno) {
-        this.listaPagamentoEstorno = listaPagamentoEstorno;
-    }
-
-    public BigDecimal getSaldoAnterior() {
-        return saldoAnterior;
-    }
-
-    public void setSaldoAnterior(BigDecimal saldoAnterior) {
-        this.saldoAnterior = saldoAnterior;
-    }
-
-    public BigDecimal getSaldoAtual() {
-        return saldoAtual;
-    }
-
-    public void setSaldoAtual(BigDecimal saldoAtual) {
-        this.saldoAtual = saldoAtual;
-    }
-
-    public BigDecimal getSaldoCotaOrcamentaria() {
-        return saldoCotaOrcamentaria;
-    }
-
-    public void setSaldoCotaOrcamentaria(BigDecimal saldoCotaOrcamentaria) {
-        this.saldoCotaOrcamentaria = saldoCotaOrcamentaria;
-    }
-
-    public BigDecimal getSaldoLiquidacao() {
-        return saldoLiquidacao;
-    }
-
-    public void setSaldoLiquidacao(BigDecimal saldoLiquidacao) {
-        this.saldoLiquidacao = saldoLiquidacao;
-    }
-
-    public BigDecimal getSaldoPagamento() {
-        return saldoPagamento;
-    }
-
-    public void setSaldoPagamento(BigDecimal saldoPagamento) {
-        this.saldoPagamento = saldoPagamento;
-    }
-
-    public BigDecimal getValorEstornosEmpenhos() {
-        return valorEstornosEmpenhos;
-    }
-
-    public void setValorEstornosEmpenhos(BigDecimal valorEstornosEmpenhos) {
-        this.valorEstornosEmpenhos = valorEstornosEmpenhos;
-    }
-
-    public BigDecimal getValorLiquidacao() {
-        return valorLiquidacao;
-    }
-
-    public void setValorLiquidacao(BigDecimal valorLiquidacao) {
-        this.valorLiquidacao = valorLiquidacao;
-    }
-
-    public BigDecimal getValorLiquidacaoEstorno() {
-        return valorLiquidacaoEstorno;
-    }
-
-    public void setValorLiquidacaoEstorno(BigDecimal valorLiquidacaoEstorno) {
-        this.valorLiquidacaoEstorno = valorLiquidacaoEstorno;
-    }
-
-    public BigDecimal getValorPagamento() {
-        return valorPagamento;
-    }
-
-    public void setValorPagamento(BigDecimal valorPagamento) {
-        this.valorPagamento = valorPagamento;
-    }
-
-    public BigDecimal getValorPagamentoEstorno() {
-        return valorPagamentoEstorno;
-    }
-
-    public void setValorPagamentoEstorno(BigDecimal valorPagamentoEstorno) {
-        this.valorPagamentoEstorno = valorPagamentoEstorno;
     }
 
     public Empenho getEmpenhoDeRP() {

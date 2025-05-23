@@ -7,7 +7,6 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.rh.administracaodepagamento.BloqueioFuncionalidade;
 import br.com.webpublico.entidades.rh.administracaodepagamento.EventoFPTipoFolha;
-import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidades.rh.previdencia.ItemPrevidenciaComplementar;
 import br.com.webpublico.entidadesauxiliares.EventoTotalItemFicha;
 import br.com.webpublico.entidadesauxiliares.ReferenciaFPFuncao;
@@ -588,7 +587,7 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
         boolean resultado = false;
         try {
             String regra = "function formula(){\n" + evento.getRegraCalculo() + "\n}\nformula();";
-            resultado = avaliarRegrasPrimarias(evento);
+            resultado = avaliarRegraTipoFolhaEvento(evento);
             if (resultado) {
                 resultado = (boolean) engine.eval(regra);
             }
@@ -610,38 +609,7 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
     /**
      * Método avalia se o evento pode ser executado para aquele tipo de folha
      */
-    public boolean avaliarRegrasPrimarias(EventoFP evento) {
-        boolean podeCalcularParaTipoFolha = avaliarRegraTipoFolha(evento);
-        if (podeCalcularParaTipoFolha) {
-            //return avaliarRegraEmpregador(evento);
-            return true; //TODO aguardando melhor definição do esocial
-        }
-        return podeCalcularParaTipoFolha;
-    }
-
-    private boolean avaliarRegraEmpregador(EventoFP evento) {
-
-        if (evento.getEntidade() == null) {
-            return true; //quando entidade é nula(não tem configuração de empregador), processa para todos os empregadores/entidade
-        }
-        Map<ConfiguracaoEmpregadorESocial, List<HierarquiaOrganizacional>> empregadores = detalheProcessamentoFolha.getEmpregadores();
-        if (empregadores.isEmpty()) {
-            return true;
-        }
-        for (Map.Entry<ConfiguracaoEmpregadorESocial, List<HierarquiaOrganizacional>> entry : empregadores.entrySet()) {
-            if (evento.getEntidade().equals(entry.getKey().getEntidade())) {
-                for (HierarquiaOrganizacional ho : entry.getValue()) {
-                    if (verificarOrgaoServidor(ho.getCodigoDo2NivelDeHierarquia())) {
-                        return true;
-                    }
-                }
-            }
-
-        }
-        return false;
-    }
-
-    private boolean avaliarRegraTipoFolha(EventoFP evento) {
+    public boolean avaliarRegraTipoFolhaEvento(EventoFP evento) {
         List<EventoFPTipoFolha> eventoFPTipoFolhas = Lists.newLinkedList();
         if (detalheProcessamentoFolha.getEventoFPTiposFolha().containsKey(evento.getCodigo())) {
             eventoFPTipoFolhas = detalheProcessamentoFolha.getEventoFPTiposFolha().get(evento.getCodigo());
@@ -985,7 +953,6 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
             memoriaCalculoEventosBases.put("calculaBase('" + codigoBase + "')", listaEventosBase);
         }
         if (LOG_BASE) logger.debug("============================##========================");
-        engine.put("EVENTO", null);
         return soma.doubleValue();
     }
 
@@ -3355,6 +3322,17 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
         return valor;
     }
 
+    @DescricaoMetodo("buscarQuantidadeLancamentoEventosNoPeriodoAquisitoFerias(eventos)")
+    public Double buscarQuantidadeLancamentoEventosNoPeriodoAquisitoFerias(String[] eventos) {
+        String metodo = "buscarQuantidadeLancamentoEventosNoPeriodoAquisitoFerias".concat(Arrays.toString(eventos));
+        if (valorMetodo.containsKey(metodo)) {
+            return (Double) valorMetodo.get(metodo);
+        }
+        Double valor = funcoesFolhaFacade.buscarQuantidadeLancamentoEventosNoPeriodoAquisitoFerias(getEp(), getMes(), getAno(), this, eventos);
+        valorMetodo.put(metodo, valor);
+        return valor;
+    }
+
     @DescricaoMetodo("somarReferenciaHorasPagasNoAno(eventos)")
     public Double somarReferenciaHorasPagasNoAno(String[] eventos) {
         String metodo = "somarReferenciaHorasPagasNoAno".concat(Arrays.toString(eventos));
@@ -4265,21 +4243,6 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
         return valor;
     }
 
-    @DescricaoMetodo("verificarOrgaoServidor()")
-    public boolean verificarOrgaoServidor(String codigo) {
-        String metodo = "verificarOrgaoServidor".concat(codigo);
-        if (valorMetodo.containsKey(metodo)) {
-            return (boolean) valorMetodo.get(metodo);
-        }
-        boolean valor = false;
-        Map<EntidadePagavelRH, String> vinculoOrgao = detalheProcessamentoFolha.getVinculoOrgao();
-        if (vinculoOrgao.containsKey(ep)) {
-            valor = vinculoOrgao.get(ep).equalsIgnoreCase(codigo);
-        }
-        valorMetodo.put(metodo, valor);
-        return valor;
-    }
-
     public void preencheLacamentosCache(List<LancamentoFP> lista) {
         if (lancamentos == null) return;
         for (LancamentoFP l : lista) {
@@ -4299,6 +4262,27 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
         }
     }
 
+    public enum ModoBusca {
+        ULTIMOSMESES,
+        SALARIO_13,
+        FERIAS,
+        FERIASPROP,
+        FERIASVENC,
+        FERIASDOBR,
+        FERIASAUT13;
+
+        public static ModoBusca getTipoPorName(String descricao) {
+            if (descricao != null) {
+                for (ModoBusca modoBusca : ModoBusca.values()) {
+                    if (descricao.equals(modoBusca.name())) {
+                        return modoBusca;
+                    }
+                }
+            }
+            return null;
+        }
+
+    }
 
     @DescricaoMetodo(value = "buscarTotalBases('ULTIMOSMESES', 'VALOR', new Array('NORMAL'), codigo Base FP, true, 12, true, )", documentacao = "Função:\n" +
         "\tcalculador.buscarTotalBases(String modoBusca, String tipoBusca, String[] tiposFolha, String[] eventos, Boolean limitarAno, Integer quantidadeMes, considerarMesAtual);\n" +
@@ -4364,14 +4348,13 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
         if (limitarAno == null) {
             limitarAno = false;
         }
-
+        List<MemoriaCalculoRHDTO> listaEventosBase = Lists.newLinkedList();
         TipoBusca tipo = TipoBusca.getTipoPorName(tipoBusca);
         ModoBusca modo = ModoBusca.getTipoPorName(modoBusca);
 
         if (modo == null) {
             return 0.0;
         }
-        List<MemoriaCalculoRHDTO> listaEventosBase = Lists.newLinkedList();
 
         EventoTotalItemFicha totalItemFicha = null;
         List<ItemBaseFP> eventosFP = Arrays.asList(obterItensBaseFP(base));
@@ -4402,14 +4385,6 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
             memoriaCalculoEventosBases.put("buscarTotalBases('" + base + "')", listaEventosBase);
         }
         valorMetodo.put(metodo, valor.doubleValue());
-        if (!listaEventosBase.isEmpty() && getFolhaDePagamento().isGravarMemoriaCalculo()) {
-            for (MemoriaCalculoRHDTO memoriaCalculoRHDTO : listaEventosBase) {
-                memoriaCalculoRHDTO.setCodigoBase(base);
-            }
-            EventoFP evento = (EventoFP) engine.get("EVENTO");
-            EventoFP eventoFP = evento == null ? eventoCalculandoAgora : evento;
-            memoriaCalculoEventosBases.put(eventoFP != null ? eventoFP.getCodigo() : base, listaEventosBase);
-        }
         return valor.doubleValue();
     }
 
@@ -4571,7 +4546,7 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
                 if (eventoTotalItemFicha.getEvento().getCodigo().equals(evento.getCodigo()) && evento.getTipoCalculoFP().equals(eventoTotalItemFicha.getTipoCalculoFP())) {
                     total.setTotal(total.getTotal().add(eventoTotalItemFicha.getTotal()));
                     total.setReferencia(total.getReferencia().add(eventoTotalItemFicha.getReferencia()));
-                    if (eventoTotalItemFicha.getEvento() != null && eventoTotalItemFicha.getTotal().compareTo(BigDecimal.ZERO) != 0) {
+                    if (eventoTotalItemFicha.getTotal() != null && eventoTotalItemFicha.getTotal().compareTo(BigDecimal.ZERO) != 0) {
                         memoriasCalculo.add(new MemoriaCalculoRHDTO(null, eventoTotalItemFicha.getEvento(), TipoMemoriaCalculo.BASEFP, eventoTotalItemFicha.getEvento().getTipoEventoFP().equals(TipoEventoFP.DESCONTO) ? OperacaoFormula.SUBTRACAO : OperacaoFormula.ADICAO, eventoTotalItemFicha.getTotal()));
                     }
                 }
@@ -4727,28 +4702,6 @@ public class FolhaDePagamentoNovoCalculador implements Serializable {
         public static TipoBusca getTipoPorName(String descricao) {
             if (descricao != null) {
                 for (TipoBusca modoBusca : TipoBusca.values()) {
-                    if (descricao.equals(modoBusca.name())) {
-                        return modoBusca;
-                    }
-                }
-            }
-            return null;
-        }
-
-    }
-
-    public enum ModoBusca {
-        ULTIMOSMESES,
-        FERIAS,
-        SALARIO_13,
-        FERIASPROP,
-        FERIASVENC,
-        FERIASDOBR,
-        FERIASAUT13;
-
-        public static ModoBusca getTipoPorName(String descricao) {
-            if (descricao != null) {
-                for (ModoBusca modoBusca : ModoBusca.values()) {
                     if (descricao.equals(modoBusca.name())) {
                         return modoBusca;
                     }

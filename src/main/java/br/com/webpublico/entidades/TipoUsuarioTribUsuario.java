@@ -6,10 +6,12 @@ package br.com.webpublico.entidades;
 
 import br.com.webpublico.enums.TipoUsuarioTributario;
 import br.com.webpublico.geradores.GrupoDiagrama;
+import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 /**
  * @author Fabio
@@ -18,8 +20,7 @@ import javax.persistence.*;
 @GrupoDiagrama(nome = "Segurança")
 @Audited
 @Entity
-
-public class TipoUsuarioTribUsuario extends SuperEntidade {
+public class TipoUsuarioTribUsuario implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -30,8 +31,11 @@ public class TipoUsuarioTribUsuario extends SuperEntidade {
     @Enumerated(EnumType.STRING)
     private TipoUsuarioTributario tipoUsuarioTributario;
     private Boolean supervisor;
+    @Transient
+    private Long criadoEm;
 
     public TipoUsuarioTribUsuario() {
+        this.criadoEm = System.nanoTime();
     }
 
     public Long getId() {
@@ -43,7 +47,7 @@ public class TipoUsuarioTribUsuario extends SuperEntidade {
     }
 
     public Boolean getSupervisor() {
-        return supervisor != null ? supervisor : Boolean.FALSE;
+        return supervisor;
     }
 
     public void setSupervisor(Boolean supervisor) {
@@ -66,8 +70,27 @@ public class TipoUsuarioTribUsuario extends SuperEntidade {
         this.vigenciaTribUsuario = vigenciaTribUsuario;
     }
 
+    public Long getCriadoEm() {
+        return criadoEm;
+    }
+
+    public void setCriadoEm(Long criadoEm) {
+        this.criadoEm = criadoEm;
+    }
+
+    @Override
+    public int hashCode() {
+        return IdentidadeDaEntidade.calcularHashCode(this);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        return IdentidadeDaEntidade.calcularEquals(this, object);
+    }
+
     @Override
     public String toString() {
         return "br.com.webpublico.entidades.TipoUsuarioTribUsuario[ id=" + id + " ]";
     }
+
 }

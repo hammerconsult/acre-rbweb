@@ -901,20 +901,4 @@ public class AvaliacaoAlienacaoControlador extends PrettyControlador<AvaliacaoAl
     public void setFiltroPesquisaBem(FiltroPesquisaBem filtroPesquisaBem) {
         this.filtroPesquisaBem = filtroPesquisaBem;
     }
-
-    @Override
-    public RevisaoAuditoria getUltimaRevisao() {
-        if (ultimaRevisao == null) {
-            ultimaRevisao = buscarUltimaAuditoria();
-            if (!selecionado.getLotes().isEmpty()) {
-                for (LoteAvaliacaoAlienacao lote : selecionado.getLotes()) {
-                    RevisaoAuditoria revisaoAuditoria = buscarUltimaAuditoria(Lote.class, lote.getId());
-                    if (ultimaRevisao == null || (revisaoAuditoria != null && revisaoAuditoria.getDataHora().after(ultimaRevisao.getDataHora()))) {
-                        ultimaRevisao = revisaoAuditoria;
-                    }
-                }
-            }
-        }
-        return ultimaRevisao;
-    }
 }

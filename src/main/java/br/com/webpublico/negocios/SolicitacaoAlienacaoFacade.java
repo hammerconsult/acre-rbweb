@@ -193,7 +193,6 @@ public class SolicitacaoAlienacaoFacade extends AbstractFacade<SolicitacaoAliena
         q.executeUpdate();
     }
 
-
     public void concluirSolicitacaoAlienacao(SolicitacaoAlienacao solicitacaoAlienacao, SituacaoAlienacao situacaoAlienacao) {
         String sql = " update solicitacaoAlienacao sol set sol.situacao = :situacao where sol.id = :idSolicitacao ";
         Query q = em.createNativeQuery(sql);
@@ -201,7 +200,6 @@ public class SolicitacaoAlienacaoFacade extends AbstractFacade<SolicitacaoAliena
         q.setParameter("situacao", situacaoAlienacao.name());
         q.executeUpdate();
     }
-
 
     public LoteAvaliacaoAlienacao recuperarLoteSolicitacaoAlienacao(Object id) {
         LoteAvaliacaoAlienacao loteAvaliacaoAlienacao = getEntityManager().find(LoteAvaliacaoAlienacao.class, id);

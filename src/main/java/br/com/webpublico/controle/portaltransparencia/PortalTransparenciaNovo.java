@@ -53,15 +53,15 @@ public class PortalTransparenciaNovo {
     private Boolean enviarFinanceiro;
     private Boolean enviarDadosRh;
     private Boolean enviarObra;
-    private Boolean enviarBem;
     private Boolean enviarCalamidadePublica;
+    private Boolean enviarBem;
     private Boolean enviarDicionarioDeDados;
     private Boolean enviarLOA;
     private Boolean enviarLDO;
     private Boolean enviarPPA;
     private Boolean enviarItensLotesMapaComparativo;
-    private Boolean enviarEmendaParlamentar;
     private Boolean enviarInstitucional;
+    public static String WS_EMENDA_PARLAMENTAR = "/ws/api/emenda-parlamentar";
 
     //DADOS DA PREFEITURA
     private List<PrefeituraPortal> prefeituras;
@@ -197,13 +197,12 @@ public class PortalTransparenciaNovo {
     public static String WS_LIBERACAO_FINANCEIRA = "/ws/api/liberacao-financeira";
     public static String WS_LIBERACAO_FINANCEIRA_ESTORNO = "/ws/api/liberacao-financeira-estorno";
     public static String WS_BEM = "/ws/api/bem";
-    public static String WS_EMENDA_PARLAMENTAR = "/ws/api/emenda-parlamentar";
     public static String WS_RESPONSAVEL_LOTACAO = "/ws/api/lotacao-responsavel";
     public static String WS_AGENDA_RESPONSAVEL_LOTACAO = "/ws/api/agenda-lotacao-responsavel";
     public static String WS_ANEXO_RESPONSAVEL_LOTACAO = "/ws/api/anexo-lotacao-responsavel";
     public static String WS_ANEXO_LOTACAO = "/ws/api/lotacao-arquivo";
-
     public static String URL_PORTAL_HOMOLOGACAO = "http://172.16.0.76:8080";
+    private Boolean enviarEmendaParlamentar;
 
     public PortalTransparenciaNovo(Date dataOperacao, Exercicio exercicio) {
         this.url = URL_PORTAL_HOMOLOGACAO;
@@ -238,8 +237,8 @@ public class PortalTransparenciaNovo {
         enviarFinanceiro = Boolean.TRUE;
         enviarDadosRh = Boolean.TRUE;
         enviarObra = Boolean.TRUE;
-        enviarBem = Boolean.TRUE;
         enviarCalamidadePublica = Boolean.TRUE;
+        enviarBem = Boolean.TRUE;
         enviarDicionarioDeDados = Boolean.TRUE;
         enviarLOA = Boolean.TRUE;
         enviarLDO = Boolean.TRUE;

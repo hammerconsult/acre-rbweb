@@ -106,13 +106,13 @@ public class LayoutObn350 implements Serializable {
         if (linha.startsWith("0")) {
             headerObn350 = new HeaderObn350(linha);
         } else if (linha.startsWith("2")) {
-            this.registroObn350TipoDois.add(new RegistroObn350TipoDois(linha, headerObn350));
+            registroObn350TipoDois.add(new RegistroObn350TipoDois(linha));
         } else if (linha.startsWith("3")) {
             registrosObn350TipoTres.add(new RegistroObn350TipoTres(linha));
         } else if (linha.startsWith("4")) {
-            this.registroObn350TipoQuatro.add(new RegistroObn350TipoQuatro(linha, headerObn350));
+            registroObn350TipoQuatro.add(new RegistroObn350TipoQuatro(linha));
         } else if (linha.startsWith("5")) {
-            this.registroObn350TipoCinco.add(new RegistroObn350TipoCinco(linha, headerObn350));
+            registroObn350TipoCinco.add(new RegistroObn350TipoCinco(linha));
         } else if (linha.startsWith("9")) {
             trailerObn350 = new TrailerObn350(linha);
         } else {

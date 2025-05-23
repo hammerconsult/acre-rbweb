@@ -213,14 +213,14 @@ public class DividaAtivaContabilFacade extends SuperFacadeContabil<DividaAtivaCo
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
             if (entity.getOperacaoDividaAtiva().equals(OperacaoDividaAtiva.INSCRICAO)) {
-                objetos.add(new ObjetoParametro(((ContaReceita) entity.getReceitaLOA().getContaDeReceita()).getCorrespondente(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
-                objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
+                objetos.add(new ObjetoParametro(((ContaReceita) entity.getReceitaLOA().getContaDeReceita()).getCorrespondente().getId().toString(), ContaReceita.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
+                objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
             } else {
-                objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita(), item));
+                objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item));
             }
-            objetos.add(new ObjetoParametro(entity.getClasseCredorPessoa(), item));
+            objetos.add(new ObjetoParametro(entity.getClasseCredorPessoa().getId().toString(), ClasseCredor.class.getSimpleName(), item));
             if (!simulacao) {
-                objetos.add(new ObjetoParametro(entity, item));
+                objetos.add(new ObjetoParametro(entity.getId().toString(), DividaAtivaContabil.class.getSimpleName(), item));
             }
             item.setObjetoParametros(objetos);
 

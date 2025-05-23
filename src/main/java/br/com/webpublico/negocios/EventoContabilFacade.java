@@ -89,10 +89,6 @@ public class EventoContabilFacade extends AbstractFacade<EventoContabil> {
         return ec;
     }
 
-    public EventoContabil recuperarSemDependencias(Object id) {
-        return em.find(EventoContabil.class, id);
-    }
-
     public List<EventoContabil> listaEventoContabilPorTipoEvento(String parte, TipoEventoContabil tec) {
         String hql = "from EventoContabil where (lower (descricao) like :parte) and " + (tec != null ? " tipoEventoContabil = :param " : " tipoEventoContabil is not null ");
         Query q = em.createQuery(hql);

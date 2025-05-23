@@ -17,9 +17,9 @@ import java.util.List;
 public enum EstadoConservacaoBem implements EnumComDescricao {
 
     OPERACIONAL("Operacional", EstadoConservacaoBemDTO.OPERACIONAL),
-    INSERVIVEL("Inservível", EstadoConservacaoBemDTO.OPERACIONAL),
-    BAIXADO("Baixado", EstadoConservacaoBemDTO.OPERACIONAL),
-    EM_MANUTENCAO("Em Manutenção", EstadoConservacaoBemDTO.EM_MANUTENCAO);
+    INSERVIVEL("Inservível", EstadoConservacaoBemDTO.INSERVIVEL),
+    BAIXADO("Baixado", EstadoConservacaoBemDTO.BAIXADO);
+
     private final String descricao;
     private final List<SituacaoConservacaoBem> situacoes;
     private final EstadoConservacaoBemDTO toDto;

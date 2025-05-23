@@ -95,8 +95,6 @@ public class ObraFacade extends AbstractFacade<Obra> {
         if (entity.getCadastroImobiliario() != null) {
             entity.setCadastroImobiliario(getCadastroImobiliarioFacade().recuperar(entity.getCadastroImobiliario().getId()));
         }
-        entity.setInicioExecucao(entity.getContrato().getInicioVigencia());
-        entity.setPrazoEntrega(entity.getContrato().getPrazoEntrega());
         entity.getSituacoes().add(montarSituacaoEmAndamento(entity));
         getEntityManager().persist(entity);
         salvarPortal(entity);
@@ -120,7 +118,6 @@ public class ObraFacade extends AbstractFacade<Obra> {
         if (entity.getCadastroImobiliario() != null) {
             entity.setCadastroImobiliario(getCadastroImobiliarioFacade().recuperar(entity.getCadastroImobiliario().getId()));
         }
-
 
         entity.setContrato(mergeContrato(entity.getContrato()));
         entity.setInicioExecucao(entity.getContrato().getInicioVigencia());
@@ -194,14 +191,6 @@ public class ObraFacade extends AbstractFacade<Obra> {
             os.getFilhos().size();
         }
         obra.getSituacoes().size();
-        return obra;
-    }
-
-    public Obra recuperarPortal(Object id) {
-        Obra obra = super.recuperar(id);
-        obra.getServicos().size();
-        obra.getItemObraTermo().size();
-        obra.setContrato(getContratoFacade().recuperarSomenteItens(obra.getContrato().getId()));
         return obra;
     }
 
@@ -362,17 +351,9 @@ public class ObraFacade extends AbstractFacade<Obra> {
         context.put(TipoModeloDocto.TagRecebimentoTermoObra.DATA_TERMINO_RECIBIMENTO.name(), DataUtil.getDataFormatada(new Date()));
         if (responsavelTecnicoFiscal != null) {
             context.put(TipoModeloDocto.TagRecebimentoTermoObra.FISCAL_OBRA.name(), responsavelTecnicoFiscal.getResponsavel());
-            if (responsavelTecnicoFiscal.getProfissionalConfea() == null) {
-                context.put(TipoModeloDocto.TagRecebimentoTermoObra.PROFISSAO_FISCAL_OBRA.name(), "");
-            } else {
-                context.put(TipoModeloDocto.TagRecebimentoTermoObra.PROFISSAO_FISCAL_OBRA.name(), responsavelTecnicoFiscal.getProfissionalConfea().getModalidadeConfea().getDescricao());
-            }
+            context.put(TipoModeloDocto.TagRecebimentoTermoObra.PROFISSAO_FISCAL_OBRA.name(), responsavelTecnicoFiscal.getProfissionalConfea().getModalidadeConfea().getDescricao());
             context.put(TipoModeloDocto.TagRecebimentoTermoObra.CREA_FISCAL_OBRA.name(), responsavelTecnicoFiscal.getCreaCau());
-            if (responsavelTecnicoFiscal.getContratoFP() != null && responsavelTecnicoFiscal.getContratoFP().getId() != null) {
-                context.put(TipoModeloDocto.TagRecebimentoTermoObra.CPF_FISCAL_OBRA.name(), responsavelTecnicoFiscal.getContratoFP().getMatriculaFP().getPessoa().getCpf());
-            } else {
-                context.put(TipoModeloDocto.TagRecebimentoTermoObra.CPF_FISCAL_OBRA.name(), "");
-            }
+            context.put(TipoModeloDocto.TagRecebimentoTermoObra.CPF_FISCAL_OBRA.name(), responsavelTecnicoFiscal.getContratoFP().getMatriculaFP().getPessoa().getCpf());
         } else {
             context.put(TipoModeloDocto.TagRecebimentoTermoObra.FISCAL_OBRA.name(), "");
             context.put(TipoModeloDocto.TagRecebimentoTermoObra.PROFISSAO_FISCAL_OBRA.name(), "");

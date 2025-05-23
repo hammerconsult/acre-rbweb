@@ -15,7 +15,6 @@ import br.com.webpublico.entidades.rh.esocial.TipoBeneficioEsocial;
 import br.com.webpublico.entidades.rh.esocial.TipoBeneficioPrevidenciario;
 import br.com.webpublico.entidadesauxiliares.ObjetoPesquisa;
 import br.com.webpublico.enums.*;
-import br.com.webpublico.entidades.RegraAposentadoria;
 import br.com.webpublico.enums.rh.esocial.TipoMotivoDesligamentoESocial;
 import br.com.webpublico.enums.rh.estudoatuarial.TipoBeneficioEstudoAtuarial;
 import br.com.webpublico.enums.rh.esocial.TipoPlanoSegregacaoMassa;
@@ -170,25 +169,12 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
     private AvisoPrevioFacade avisoPrevioFacade;
     @EJB
     private ExoneracaoRescisaoFacade exoneracaoRescisaoFacade;
-
-    @EJB
-    private ProvimentoReversaoFacade provimentoReversaoFacade;
-    @EJB
-    private ConcessaoFeriasLicencaFacade concessaoFeriasLicencaFacade;
-
-    @EJB
-    private RegraAposentadoriaFacade regraAposentadoriaFacade;
-    private ConverterGenerico converterRegraAposentadoria;
     private Boolean renderizarSalvar;
     private ExoneracaoRescisao exoneracaoRescisao;
-    private ProvimentoReversao provimentoReversao;
-    private Boolean temProvimentoReversao ;
-
 
     public AposentadoriaControlador() {
         super(Aposentadoria.class);
         renderizarSalvar = false;
-        temProvimentoReversao = false;
     }
 
     public List<CID> getCids() {
@@ -288,7 +274,6 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
     public void ver() {
         super.ver();
         ordenarItemAposentadoria(selecionado.getItemAposentadorias());
-        recuperarUltimoprovimentoReversaoDaAposentadoria();
     }
 
     @URLAction(mappingId = "editarAposentadoria", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -306,7 +291,7 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
         if (invalidezAposentado == null) {
             invalidezAposentado = new InvalidezAposentado();
         }
-        recuperarUltimoprovimentoReversaoDaAposentadoria();
+
 
         cids = new LinkedList<>();
         listInvalidezMedico = new LinkedList<>();
@@ -328,21 +313,13 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
     public void salvar() {
         try {
             validarCampos();
-            temProvimentoReversaoVigente();
-            existeAposentadoriaParaOContratoFP();
-
             validarTipoAposentadoria();
             for (InvalidezAposentado ia : selecionado.getInvalidezAposentados()) {
                 validarVigenciaInvalidezAposentado(ia);
             }
-
-            if(!temProvimentoReversaoPorContrato()){
-                //O novo vinculo de aposentado recebe o mesmo numero do vinculo de contrato
-                getAposentadoria().setNumero(getAposentadoria().getContratoFP().getNumero());
-            }
+            //O novo vinculo de aposentado recebe o mesmo numero do vinculo de contrato
+            getAposentadoria().setNumero(getAposentadoria().getContratoFP().getNumero());
             getAposentadoria().setMatriculaFP(getAposentadoria().getContratoFP().getMatriculaFP());
-
-
             if (isOperacaoNovo()) {
                 criarExoneracao();
             } else {
@@ -380,9 +357,6 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
     public void salvarAposentadoriaNovo() {
         try {
             aposentadoriaFacade.salvarNovo(selecionado);
-            if(temProvimentoReversaoPorContrato()){
-                concessaoFeriasLicencaFacade.reprocessarSituacoesContrato(selecionado.getContratoFP());
-            }
             if (renderizarSalvar) {
                 FacesUtil.addWarn("Atenção!", "Por favor, verifique os registros de Pensão Alimentícia migrados.");
             }
@@ -493,19 +467,64 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
         toReturn.add(new SelectItem(null, ""));
 
         if (getAposentadoria().getTipoAposentadoria() != null) {
-            List<RegraAposentadoria> regraAposentadoria = regraAposentadoriaFacade.buscarRegraAposentadoriaPorTipoAposentadoria(getAposentadoria().getTipoAposentadoria().getId());
-            for (RegraAposentadoria object : regraAposentadoria) {
-                    toReturn.add(new SelectItem(object, object.getDescricao()));
+            for (RegraAposentadoria object : RegraAposentadoria.values()) {
+                // Quando o tipo de aposentadoria for igual a TipoAposentadoria.INVALIDEZ
+                // incluir apenas as regras RegraAposentadoria.INVALIDEZ e RegraAposentadoria.INVALIDEZ_ART40_2012
+                if (object.equals(RegraAposentadoria.INVALIDEZ) || object.equals(RegraAposentadoria.INVALIDEZ_ART40_2012) || object.equals(RegraAposentadoria.INVALIDEZ_ART23_2009)) {
+                    if (getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.INVALIDEZ)) {
+                        toReturn.add(new SelectItem(object, object.getDescricao()));
+                    }
+                } else if (object.equals(RegraAposentadoria.COMPULSORIA)) {
+                    if (getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.COMPULSORIA)) {
+                        toReturn.add(new SelectItem(object, object.getDescricao()));
+                    }
+                } else if (object.equals(RegraAposentadoria.VOLUNTARIA_POR_IDADE)) {
+                    if (getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.IDADE)) {
+                        toReturn.add(new SelectItem(object, object.getDescricao()));
+                    }
+                } else if (!getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.INVALIDEZ)
+                    && !getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.COMPULSORIA)
+                    && !getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.IDADE)
+                    && getAposentadoria().getContratoFP() != null) {
+                    Calendar c = Calendar.getInstance();
+                    c.set(Calendar.YEAR, 2004);
+                    c.set(Calendar.MONTH, 1);
+                    c.set(Calendar.DAY_OF_MONTH, 1);
+
+                    // Para os demais tipos de aposentadoria com data de início de vigência do contratoFP após 01/01/2004
+                    // incluir apenas as regras abaixo
+                    // ou se 01/01/2004 for maior que a data de inicio de averbação
+                    AverbacaoTempoServico averbacaoTempoServico = averbacaoTempoServicoFacade.averbacaoAposentado(((Aposentadoria) selecionado).getContratoFP());
+                    if (averbacaoTempoServico == null || averbacaoTempoServico.getId() == null) {
+                        averbacaoTempoServico = new AverbacaoTempoServico();
+                        averbacaoTempoServico.setInicioVigencia(new Date());
+                    }
+                    if (averbacaoTempoServico.getInicioVigencia() != null && averbacaoTempoServico.getInicioVigencia().after(c.getTime()) && getAposentadoria().getContratoFP().getInicioVigencia().after(c.getTime())) {
+                        if (getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.TEMPO_DE_CONTRIBUICAO) && ((object.equals(RegraAposentadoria.VOLUNTARIA_INTEGRAL_COMNUM_ART_2005)
+                            //                                || object.equals(RegraAposentadoria.COMPULSORIA)
+                            || object.equals(RegraAposentadoria.VOLUNTARIA_INTEGRAL)
+                            //                                || object.equals(RegraAposentadoria.VOLUNTARIA_POR_IDADE)
+                            || object.equals(RegraAposentadoria.VOLUNTARIA_ESPECIAL_MAGISTERIO)
+                            || object.equals(RegraAposentadoria.VOLUNTARIA_PROPORCIONAL)))) {
+                            toReturn.add(new SelectItem(object, object.getDescricao()));
+                        }
+                        if (getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.COMPULSORIA)
+                            && (object.equals(RegraAposentadoria.COMPULSORIA))) {
+                            toReturn.add(new SelectItem(object, object.getDescricao()));
+                        }
+                        if (getAposentadoria().getTipoAposentadoria().getCodigo().equals(TipoAposentadoria.IDADE)
+                            && (object.equals(RegraAposentadoria.VOLUNTARIA_POR_IDADE))) {
+                            toReturn.add(new SelectItem(object, object.getDescricao()));
+                            continue;
+                        }
+                    } else {
+                        toReturn.add(new SelectItem(object, object.getDescricao()));
+                    }
+
+                }
             }
         }
         return toReturn;
-    }
-
-    public ConverterGenerico getConverterRegraAposentadoria() {
-        if (converterRegraAposentadoria == null) {
-            converterRegraAposentadoria = new ConverterGenerico(RegraAposentadoria.class, regraAposentadoriaFacade);
-        }
-        return converterRegraAposentadoria;
     }
 
     public ConverterGenerico getConverterTipoAposentadoria() {
@@ -611,7 +630,7 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
     public void sugerirTipoReajuste() {
         Aposentadoria aposentadoria = (Aposentadoria) selecionado;
         if (aposentadoria.getRegraAposentadoria() != null) {
-            if (TipoReajusteAposentadoria.PARIDADE.equals(aposentadoria.getRegraAposentadoria().getTipoReajusteAposentadoria())) {
+            if (isParidade(aposentadoria)) {
                 aposentadoria.setTipoReajusteAposentadoria(TipoReajusteAposentadoria.PARIDADE);
                 aposentadoria.setPercentual(BigDecimal.valueOf(Aposentadoria.PERCENTUAL_MAXIMO.longValue()));
             } else {
@@ -621,6 +640,14 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
         } else {
             aposentadoria.setTipoReajusteAposentadoria(null);
         }
+    }
+
+    private boolean isParidade(Aposentadoria aposentadoria) {
+        return (aposentadoria.getRegraAposentadoria() == RegraAposentadoria.VOLUNTARIA_INTEGRAL_COMNUM_ART_2005)
+            || (aposentadoria.getRegraAposentadoria() == RegraAposentadoria.VOLUNTARIA_INTEGRAL_COMNUM_TRANSICAO_ART6_2003)
+            || (aposentadoria.getRegraAposentadoria() == RegraAposentadoria.VOLUNTARIA_INTEGRAL_ESPECIAL_MAGISTERIO_ART6_2003)
+            || (aposentadoria.getRegraAposentadoria() == RegraAposentadoria.INVALIDEZ_ART40_2012)
+            || (aposentadoria.getRegraAposentadoria() == RegraAposentadoria.VOLUNTARIA_INTEGRAL);
     }
 
     public void sugereValorBeneficio() {
@@ -1043,7 +1070,7 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
         return retorno;
     }
 
-    public void verificarCargoConfiancaFuncaoGratificadaEProvimentoReversao() {
+    public void verificarCargoConfiancaFuncaoGratificada() {
         carregarContrato();
         if (((Aposentadoria) selecionado).getContratoFP() != null && ((Aposentadoria) selecionado).getContratoFP().getId() != null) {
             if (emCargoConfianca()) {
@@ -1054,95 +1081,10 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
                 mostraDialog();
             }
         }
-
-        if(temProvimentoReversaoPorContratoFPeContratoAposentadoria()){
-            FacesUtil.addWarn("Atenção !", "Já existe uma aposentadoria que ainda não tem um provimento de revesão!");
-            return ;
-        }
-
-
-        //verificar se tem Provimento de Reversão
-        if(operacao.equals(Operacoes.NOVO)) {
-            if (temProvimentoReversaoPorContrato()) {
-
-                Aposentadoria aposentadoria = aposentadoriaFacade.recuperarUltimaAposentadoriaPosteriorAoProvimentoReversao(selecionado.getContratoFP().getMatriculaFP().getMatricula());
-
-                if(aposentadoria != null) {
-                    if (temProvimentoReversao) {
-                        FacesUtil.addWarn("Atenção !", "Esse contrato possui Provimento de reversão, será gerado uma nova aposentadoria, com um novo numero de contrato!");
-                        String numeroContrato = aposentadoria.getNumero();
-                        int numero = Integer.parseInt(numeroContrato);
-                        numero += 1;
-                        getAposentadoria().setNumero(String.valueOf(numero));
-
-                        RequestContext.getCurrentInstance().update("Formulario");
-                    }
-                }
-            } else {
-                temProvimentoReversao = false;
-                RequestContext.getCurrentInstance().update("Formulario");
-            }
-        }
-
     }
-
-    public boolean temProvimentoReversaoPorContrato(){
-        if(selecionado != null && selecionado.getContratoFP() !=  null) {
-            ProvimentoReversao provimentoReversao = provimentoReversaoFacade.recuperarUltimoProvimentoReversaoDoContratoFP(selecionado.getContratoFP());
-            temProvimentoReversao = provimentoReversao != null;
-            return provimentoReversao != null;
-        }
-        return false;
-    }
-
-    public boolean temProvimentoReversaoPorContratoFPeContratoAposentadoria() {
-        if (selecionado != null && selecionado.getContratoFP() != null) {
-            ProvimentoReversao provimentoReversao = provimentoReversaoFacade.recuperarUltimoProvimentoReversaoDoContratoFP(selecionado.getContratoFP());
-            if (provimentoReversao != null) {
-                if (provimentoReversao.getAposentadoria() != null) {
-                    return aposentadoriaFacade.aposentadoriaPosteriorAoProvimentoReversao(provimentoReversao.getAposentadoria());
-                }
-            }
-        }
-        return false;
-    }
-
 
     public void mostraDialog() {
         RequestContext.getCurrentInstance().execute("dlgCargoConfiancaFuncaoGratificada.show()");
-    }
-
-    public void temProvimentoReversaoVigente() {
-
-        try {
-            if(selecionado != null && selecionado.getContratoFP() != null && selecionado.getInicioVigencia() != null) {
-                if (provimentoReversaoFacade.temProvimentoReversaoVigentePorContratoFP(selecionado.getContratoFP(), selecionado.getInicioVigencia())) {
-                    FacesUtil.addOperacaoNaoPermitida("Foi encontrado registro de Reversão de Aposentadoria vigente na data de início da aposentadoria. Por favor, efetue o encerramendo do registro, e escolha uma data posterior ao fim da reversão.");
-
-                    selecionado.setInicioVigencia(null);
-                    RequestContext.getCurrentInstance().update("Formulario");
-                }
-            }
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve.getMensagens());
-        }
-
-    }
-
-
-    public void existeAposentadoriaParaOContratoFP() {
-
-        try {
-            if (selecionado != null && selecionado.getContratoFP() != null && selecionado.getInicioVigencia() != null) {
-                if (aposentadoriaFacade.existeAposentadoriaParaOContratoFP(selecionado.getContratoFP(), selecionado , selecionado.getInicioVigencia())) {
-                    FacesUtil.addOperacaoNaoPermitida("Já existe uma Aposentadoria vigente na data de início da aposentadoria. Por favor, escolha uma data posterior.");
-                    selecionado.setInicioVigencia(null);
-                    RequestContext.getCurrentInstance().update("Formulario");
-                }
-            }
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve.getMensagens());
-        }
     }
 
     public boolean emCargoConfianca() {
@@ -1506,13 +1448,8 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
         selecionado.getRecursosDoVinculoFP().add(recursoDoVinculoFP);
     }
 
-    public void sugereDatasEValidarProvimentoReversaoEAposentadoria() {
-
+    public void sugereDatas() {
         if (selecionado.getInicioVigencia() != null) {
-            //validar se tem ReversaoVigente ou aposentadoria vigente na data
-            temProvimentoReversaoVigente();
-            existeAposentadoriaParaOContratoFP();
-
             itemAposentadoria.setInicioVigencia(selecionado.getInicioVigencia());
             lotacaoFuncional.setInicioVigencia(selecionado.getInicioVigencia());
             recursoDoVinculoFP.setInicioVigencia(selecionado.getInicioVigencia());
@@ -1695,10 +1632,6 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
             } else {
                 aposentadoriaFacade.removerProvimentoAposentadoria(selecionado);
                 validarDependencias();
-
-                if(temProvimentoReversaoPorContrato()){
-                    concessaoFeriasLicencaFacade.reprocessarSituacoesContrato(selecionado.getContratoFP());
-                }
 
                 aposentadoriaFacade.remover(selecionado);
                 redireciona();
@@ -1958,26 +1891,4 @@ public class AposentadoriaControlador extends PrettyControlador<Aposentadoria> i
             }
         });
     }
-
-    public ProvimentoReversao getProvimentoReversao() {
-        return provimentoReversao;
-    }
-
-    public void setProvimentoReversao(ProvimentoReversao provimentoReversao) {
-        this.provimentoReversao = provimentoReversao;
-    }
-
-    private void recuperarUltimoprovimentoReversaoDaAposentadoria(){
-        provimentoReversao = provimentoReversaoFacade.recuperarUltimoprovimentoReversaoDaAposentadoria(selecionado);
-    }
-
-
-    public Boolean getTemProvimentoReversao() {
-        return temProvimentoReversao;
-    }
-
-    public void setTemProvimentoReversao(Boolean temProvimentoReversao) {
-        this.temProvimentoReversao = temProvimentoReversao;
-    }
-
 }

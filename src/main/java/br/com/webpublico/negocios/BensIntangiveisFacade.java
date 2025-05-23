@@ -188,10 +188,10 @@ public class BensIntangiveisFacade extends SuperFacadeContabil<BensIntangiveis> 
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetosParametro = Lists.newArrayList();
-            objetosParametro.add(new ObjetoParametro(entity, item));
-            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem(), item));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoOperacaoBemEstoque(), item));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getId().toString(), BensIntangiveis.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem().getId().toString(), GrupoBem.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoOperacaoBemEstoque().toString(), TipoOperacaoBensImoveis.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo().name(), TipoGrupo.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetosParametro);
 

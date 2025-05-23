@@ -10,9 +10,9 @@ import br.com.webpublico.esocial.enums.ClasseWP;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.negocios.AposentadoriaFacade;
 import br.com.webpublico.negocios.EnderecoCorreioFacade;
-import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.StringUtil;
 import br.com.webpublico.util.Util;
+import br.com.webpublico.util.DataUtil;
 import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +25,9 @@ import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import java.math.BigDecimal;
 import java.util.*;
+import java.math.BigDecimal;
+import java.util.List;
 
 import static br.com.webpublico.util.StringUtil.retornaApenasNumeros;
 

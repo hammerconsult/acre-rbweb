@@ -115,7 +115,6 @@ public class SolicitacaoEmpenho extends SuperEntidade {
     @ManyToOne
     private Contrato contrato;
 
-    @Deprecated
     @ManyToOne
     private ReconhecimentoDivida reconhecimentoDivida;
 
@@ -328,6 +327,14 @@ public class SolicitacaoEmpenho extends SuperEntidade {
 
     public void setOrigemSolicitacaoEmpenho(OrigemSolicitacaoEmpenho origemSolicitacaoEmpenho) {
         this.origemSolicitacaoEmpenho = origemSolicitacaoEmpenho;
+    }
+
+    public ReconhecimentoDivida getReconhecimentoDivida() {
+        return reconhecimentoDivida;
+    }
+
+    public void setReconhecimentoDivida(ReconhecimentoDivida reconhecimentoDivida) {
+        this.reconhecimentoDivida = reconhecimentoDivida;
     }
 
     public Boolean getEstornada() {

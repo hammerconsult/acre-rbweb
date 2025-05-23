@@ -159,12 +159,12 @@ public class UnidadeGestoraControlador extends PrettyControlador<UnidadeGestora>
         if (selecionado.getUnidadeGestoraUnidadesOrganizacionais() == null || selecionado.getUnidadeGestoraUnidadesOrganizacionais().isEmpty()) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("É obrigatório informar ao menos uma Unidade Organizacional (Orçamentária).");
         }
+        ve.lancarException();
         if (TipoUnidadeGestora.ADMINISTRATIVO.equals(selecionado.getTipoUnidadeGestora())) {
             Set<UnidadeGestoraUnidadeOrganizacional> unidades = new HashSet<>();
             for (UnidadeGestoraUnidadeOrganizacional unidade : selecionado.getUnidadeGestoraUnidadesOrganizacionais()) {
                 unidades.addAll(facade.buscarUnidadeGestoraPorUnidadeOrcamentariaAndTipo(selecionado, unidade.getUnidadeOrganizacional()));
             }
-
             if (!unidades.isEmpty()) {
                 for (UnidadeGestoraUnidadeOrganizacional ug : unidades) {
                     HierarquiaOrganizacional hierarquiaUnidade = recuperarHierarquiaOrcamentariaDaUnidadeVigente(ug);

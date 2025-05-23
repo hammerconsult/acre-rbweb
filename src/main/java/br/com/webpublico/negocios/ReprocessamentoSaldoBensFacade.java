@@ -56,8 +56,6 @@ public class ReprocessamentoSaldoBensFacade {
     @EJB
     private ConfigBensMoveisFacade configBensMoveisFacade;
     @EJB
-    private EventoContabilFacade eventoContabilFacade;
-    @EJB
     private ReprocessamentoHistoricoFacade reprocessamentoHistoricoFacade;
 
     public void excluirSaldosGrupoBensMoveis(Date dataInicial, Date dataFinal, GrupoBem grupoBem) {
@@ -381,8 +379,7 @@ public class ReprocessamentoSaldoBensFacade {
                 item.setTipoGrupo(TipoGrupo.valueOf((String) obj[4]));
                 item.setTipoOperacaoBensMoveis(TipoOperacaoBensMoveis.valueOf((String) obj[5]));
                 item.setValor((BigDecimal) obj[6]);
-                item.setEventoContabil(obj[7] != null ? eventoContabilFacade.recuperarSemDependencias(((BigDecimal) obj[7]).longValue()) : null);
-                item.setReceitaRealizada(((BigDecimal) obj[8]).compareTo(BigDecimal.ONE) == 0);
+                item.setReceitaRealizada(((BigDecimal) obj[7]).compareTo(BigDecimal.ONE) == 0);
                 retorno.add(item);
             }
             return retorno;

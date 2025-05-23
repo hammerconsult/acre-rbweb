@@ -62,11 +62,11 @@ public class AdesaoFacade extends AbstractFacade<Adesao> {
 
     public List<Adesao> recuperarAdesaoDaAtaDeRegistroDePreco(AtaRegistroPreco ataDeRegistroDePreco) {
         String hql = "select "
-                   + "  ade "
-                   + "from Adesao ade "
-                   + "inner join ade.ataDeRegistroDePreco ata "
-                   + "where ata = :param "
-                   + "order by ade.id desc";
+            + "  ade "
+            + "from Adesao ade "
+            + "inner join ade.ataDeRegistroDePreco ata "
+            + "where ata = :param "
+            + "order by ade.id desc";
 
         Query q = em.createQuery(hql);
         q.setParameter("param", ataDeRegistroDePreco);

@@ -443,37 +443,6 @@ public class AuditoriaJDBC extends JdbcDaoSupport implements Serializable {
         return getJdbcTemplate().queryForList(select, Long.class);
     }
 
-
-    public Map<Long, Date> buscarDatasMaisRecentesDosFilhos(Class<?> classe, List<Long> ids) {
-        Map<Long, Date> resultados = Maps.newHashMap();
-        if (ids.isEmpty()) return resultados;
-
-        String sql = "select a.id, max(r.datahora) as data " +
-            "from " + getNomeTabela(classe) + "_aud a " +
-            "join revisaoauditoria r on a.rev = r.id " +
-            "where a.id in (" + StringUtils.join(ids, ",") + ") " +
-            "group by a.id";
-
-        getJdbcTemplate().query(sql, (ResultSet rs) -> {
-            resultados.put(rs.getLong("id"), rs.getTimestamp("data"));
-        });
-
-        return resultados;
-    }
-
-    public Date buscarDataMaisRecente(Class<?> classe, Long id) {
-        try {
-            String sql = "select max(r.datahora) as data_mais_recente " +
-                "from " + getNomeTabela(classe) + "_aud a " +
-                "join revisaoauditoria r on a.rev = r.id " +
-                "where a.id = ?";
-
-            return getJdbcTemplate().queryForObject(sql, new Object[]{id}, Date.class);
-        } catch (EmptyResultDataAccessException e) {
-            return null;
-        }
-    }
-
     public String buscarNomeUsuario(String usuario) {
         try {
             String sql = " select pf.nome from usuariosistema us " +

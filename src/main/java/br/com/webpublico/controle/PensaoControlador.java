@@ -6,7 +6,6 @@ package br.com.webpublico.controle;
 
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.RegraAposentadoria;
 import br.com.webpublico.entidades.rh.PensaoAtoLegal;
 import br.com.webpublico.entidadesauxiliares.ObjetoPesquisa;
 import br.com.webpublico.enums.*;
@@ -930,7 +929,7 @@ public class PensaoControlador extends PrettyControlador<Pensao> implements Seri
         if (aposentadoriaFacade.isAposentado(c)) {
             Aposentadoria ap = aposentadoriaFacade.recuperaAposentadoriaPorContratoFP(c);
             aposentadoria = ap;
-            if (ap.getRegraAposentadoria().getDecisaoJudicial()) {
+            if (RegraAposentadoria.VOLUNTARIA_INTEGRAL_COMNUM_ART_2005.equals(ap.getRegraAposentadoria())) {
                 mostraPainelDados = true;
             }
         }

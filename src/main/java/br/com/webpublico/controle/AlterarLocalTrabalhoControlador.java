@@ -5,6 +5,7 @@
 package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
+import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.enums.rh.TipoAutorizacaoRH;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
@@ -352,7 +353,6 @@ public class AlterarLocalTrabalhoControlador extends PrettyControlador<ContratoF
         }
         return false;
     }
-
     public boolean desabilitarRemocaoPorRecursoDoVinculoFP(RecursoDoVinculoFP recursoDoVinculoFP) {
         return recursoDoVinculoFP.temId() && !podeAlterarRecursoHorarioLotacao;
     }
@@ -395,7 +395,6 @@ public class AlterarLocalTrabalhoControlador extends PrettyControlador<ContratoF
             lotacaoFuncional.setUnidadeOrganizacional(ho.getSubordinada());
             atualizarFinalVigenciaHorarioContratoFPPorLotacaoFuncional();
             atualizarUnidadeContratoFP();
-            atualizarHierarquiaContratoFPComNivel2();
 
             Util.adicionarObjetoEmLista(selecionado.getLotacaoFuncionals(), lotacaoFuncional);
             FacesUtil.atualizarComponente("Formulario:tab-view-geral:panel-horarios");
@@ -419,18 +418,6 @@ public class AlterarLocalTrabalhoControlador extends PrettyControlador<ContratoF
                     UtilRH.getDataOperacao());
             if (orgao != null) {
                 selecionado.setUnidadeOrganizacional(orgao.getSubordinada());
-            }
-        }
-    }
-
-    public void atualizarHierarquiaContratoFPComNivel2() {
-
-        if(lotacaoFuncional.getUnidadeOrganizacional() != null){
-            HierarquiaOrganizacional orgao = alteracaoLocalTrabalhoFacade.getHierarquiaOrganizacionalFacade()
-                .buscarOrgaoAdministrativoPorUnidadeAndVigencia(lotacaoFuncional.getUnidadeOrganizacional(),
-                    UtilRH.getDataOperacao());
-            if (orgao != null) {
-                this.selecionado.setHierarquiaOrganizacional(orgao);
             }
         }
     }

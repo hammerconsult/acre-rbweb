@@ -6,7 +6,6 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.Arquivo;
 import br.com.webpublico.negocios.ArquivoFacade;
-import br.com.webpublico.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

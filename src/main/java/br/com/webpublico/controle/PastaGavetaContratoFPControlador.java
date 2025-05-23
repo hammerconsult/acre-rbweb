@@ -30,10 +30,10 @@ import java.util.List;
 @ManagedBean(name = "pastaGavetaContratoFPControlador")
 @ViewScoped
 @URLMappings(mappings = {
-        @URLMapping(id = "novoFicharioContrato", pattern = "/servidor-fichario/novo/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/edita.xhtml"),
-        @URLMapping(id = "editarFicharioContrato", pattern = "/servidor-fichario/editar/#{pastaGavetaContratoFPControlador.id}/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/edita.xhtml"),
-        @URLMapping(id = "listarFicharioContrato", pattern = "/servidor-fichario/listar/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/lista.xhtml"),
-        @URLMapping(id = "verFicharioContrato", pattern = "/servidor-fichario/ver/#{pastaGavetaContratoFPControlador.id}/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/visualizar.xhtml")
+    @URLMapping(id = "novoFicharioContrato", pattern = "/servidor-fichario/novo/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/edita.xhtml"),
+    @URLMapping(id = "editarFicharioContrato", pattern = "/servidor-fichario/editar/#{pastaGavetaContratoFPControlador.id}/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/edita.xhtml"),
+    @URLMapping(id = "listarFicharioContrato", pattern = "/servidor-fichario/listar/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/lista.xhtml"),
+    @URLMapping(id = "verFicharioContrato", pattern = "/servidor-fichario/ver/#{pastaGavetaContratoFPControlador.id}/", viewId = "/faces/rh/administracaodepagamento/fichariocontrato/visualizar.xhtml")
 })
 public class PastaGavetaContratoFPControlador extends PrettyControlador<PastaGavetaContratoFP> implements Serializable, CRUD {
 
@@ -160,6 +160,7 @@ public class PastaGavetaContratoFPControlador extends PrettyControlador<PastaGav
     public void trocarGaveta() {
         pastaGavetaSelecionado = null;
     }
+
     public void atribuirPasta() {
         selecionado.setPastaGaveta(pastaGavetaSelecionado);
     }
@@ -170,7 +171,7 @@ public class PastaGavetaContratoFPControlador extends PrettyControlador<PastaGav
             selecionado.setContratoFP(contratoFPSelecionado);
             selecionado.setPastaGaveta(pastaGavetaSelecionado);
             validarCamposObrigatorios();
-            if (validarVigencias()){
+            if (validarVigencias()) {
                 return;
             }
             super.salvar();
@@ -210,7 +211,7 @@ public class PastaGavetaContratoFPControlador extends PrettyControlador<PastaGav
             ve.adicionarMensagemDeCampoObrigatorio("O campo Pasta é obrigatório.");
         }
 
-        if (selecionado.getInicioVigencia() == null){
+        if (selecionado.getInicioVigencia() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Inicio de Vigência é obrigatório.");
         }
 
@@ -221,7 +222,7 @@ public class PastaGavetaContratoFPControlador extends PrettyControlador<PastaGav
         ve.lancarException();
     }
 
-    public void buscarPastaDoContratoAnterior(){
+    public void buscarPastaDoContratoAnterior() {
         if (contratoFPSelecionado != null) {
             PastaGavetaContratoFP pastaDoContratoAnterior = pastaGavetaContratoFPFacade.buscarPastaDoContratoAnterior(contratoFPSelecionado);
             if (pastaDoContratoAnterior != null) {

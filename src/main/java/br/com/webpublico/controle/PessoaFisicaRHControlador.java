@@ -1150,6 +1150,12 @@ public class PessoaFisicaRHControlador extends PrettyControlador<PessoaFisica> i
             if (!selecionado.getPerfis().contains(PerfilEnum.PERFIL_RH)) {
                 selecionado.getPerfis().add(PerfilEnum.PERFIL_RH);
             }
+            if (!selecionado.getPerfis().contains(PerfilEnum.PERFIL_DEPENDENTE)) {
+                selecionado.getPerfis().add(PerfilEnum.PERFIL_DEPENDENTE);
+            }
+            if (!selecionado.getPerfis().contains(PerfilEnum.PERFIL_PENSIONISTA)) {
+                selecionado.getPerfis().add(PerfilEnum.PERFIL_PENSIONISTA);
+            }
         }
         carteiraVacinacao = new CarteiraVacinacao();
         enderecoAux = new Endereco();
@@ -1673,8 +1679,7 @@ public class PessoaFisicaRHControlador extends PrettyControlador<PessoaFisica> i
         }
 
         if (Util.valida_CpfCnpj(selecionado.getCpf())) {
-            if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, true)) {
-            } else if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, false)) {
+            if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, false)) {
                 ve.adicionarMensagemDeOperacaoNaoPermitida("Este CPF já pertence a " + getDescricaoConcatenada(pessoaFacade.getPessoasComMesmoCPF(selecionado)));
             }
         } else {
@@ -1822,12 +1827,7 @@ public class PessoaFisicaRHControlador extends PrettyControlador<PessoaFisica> i
         if (!Util.validarCpf((selecionado).getCpf())) {
             FacesUtil.addOperacaoNaoPermitida("O CPF digitado é inválido");
         } else if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, false)) {
-            FacesUtil.addAtencao("O CPF digitado já pertence a " + getDescricaoConcatenada(pessoaFacade.getPessoasComMesmoCPF((PessoaFisica) selecionado))
-                + " já possui cadastro no sistema. Os dados existentes foram carregados. Por favor, atente para o devido preenchimento de campos obrigatórios antes do salvamento.");
-        }
-        if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, true)) {
-            setId(pessoaFacade.recuperarIdPessoaFisicaPorCPF(selecionado.getCpf().trim()));
-            FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "editar/" + getId() + "/");
+            FacesUtil.addOperacaoNaoPermitida("O CPF digitado já pertence a " + getDescricaoConcatenada(pessoaFacade.getPessoasComMesmoCPF((PessoaFisica) selecionado)));
         }
     }
 

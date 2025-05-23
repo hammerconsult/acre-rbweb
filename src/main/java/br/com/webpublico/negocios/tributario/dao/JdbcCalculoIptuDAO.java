@@ -326,8 +326,7 @@ public class JdbcCalculoIptuDAO extends JdbcDaoSupport implements Serializable {
     }
 
     public String getQueryAtributos(String from, String where) {
-        return new StringBuilder("select atributo.identificacao, vt.valordata, vt.valordecimal, vt.valorinteiro, " +
-            " vt.valorstring, vp.codigo valorpossivel, vp.fator, vp.id, coalesce(atributo.ativo, 1) as ativo ")
+        return new StringBuilder("select atributo.identificacao, vt.valordata, vt.valordecimal, vt.valorinteiro, vt.valorstring, vp.codigo valorpossivel, vp.id, coalesce(atributo.ativo, 1) as ativo ")
             .append(" from ").append(from).append(" atr ")
             .append(" inner join atributo on atributo.id = atr.atributos_key ")
             .append(" inner join valoratributo vt on vt.id = atr.atributos_id ")
@@ -473,7 +472,7 @@ public class JdbcCalculoIptuDAO extends JdbcDaoSupport implements Serializable {
         }
     }
 
-    public ProcessoCalculoIPTU gerarProcessoCalculo(ProcessoCalculoIPTU processo) {
+    public ProcessoCalculoIPTU geraProcessoCalculo(ProcessoCalculoIPTU processo) {
         String sql = "INSERT INTO PROCESSOCALCULO " +
             "(ID, EXERCICIO_ID, DIVIDA_ID, DATALANCAMENTO, DESCRICAO, USUARIOSISTEMA_ID, NUMEROPROTOCOLO, ANOPROTOCOLO) " +
             "VALUES (?,?,?,?,?,?,?,?)";

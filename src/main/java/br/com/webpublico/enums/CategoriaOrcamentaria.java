@@ -27,15 +27,15 @@ public enum CategoriaOrcamentaria implements EnumComDescricao {
         return descricao;
     }
 
+    public CategoriaOrcamentariaDTO getToDto() {
+        return toDto;
+    }
+
     public boolean isNormal() {
         return NORMAL.equals(this);
     }
 
     public boolean isResto() {
         return RESTO.equals(this);
-    }
-
-    public CategoriaOrcamentariaDTO getToDto() {
-        return toDto;
     }
 }

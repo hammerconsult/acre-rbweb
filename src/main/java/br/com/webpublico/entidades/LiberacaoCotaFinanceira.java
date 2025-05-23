@@ -5,21 +5,23 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.entidades.contabil.financeiro.SuperEntidadeContabilFinanceira;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.StatusPagamento;
 import br.com.webpublico.enums.TipoDocPagto;
 import br.com.webpublico.enums.TipoLiberacaoFinanceira;
 import br.com.webpublico.enums.TipoOperacaoPagto;
 import br.com.webpublico.geradores.GrupoDiagrama;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
+import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.TreeMap;
 import java.util.UUID;
 
 /**
@@ -29,7 +31,7 @@ import java.util.UUID;
 @Audited
 @GrupoDiagrama(nome = "Orcamentario")
 @Etiqueta("Liberação Financeira")
-public class LiberacaoCotaFinanceira extends SuperEntidadeContabilFinanceira {
+public class LiberacaoCotaFinanceira extends SuperEntidadeContabilFinanceira implements IGeraContaAuxiliar {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -487,13 +489,96 @@ public class LiberacaoCotaFinanceira extends SuperEntidadeContabilFinanceira {
     }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
-        if (ParametroEvento.ComplementoId.CONCEDIDO.equals(complementoId)) {
-            return new GeradorContaAuxiliarDTO(getUnidadeRetirada(),
-                getContaDeDestinacaoRetirada(), getExercicio());
-        } else if (ParametroEvento.ComplementoId.RECEBIDO.equals(complementoId)) {
-            return new GeradorContaAuxiliarDTO(getUnidadeRecebida(),
-                getContaDeDestinacaoRecebida(), getExercicio());
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeRecebida());
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(getUnidadeRecebida(),
+                    contaContabil.getSubSistema());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(getUnidadeRecebida(),
+                    contaContabil.getSubSistema(),
+                    getContaDeDestinacaoRecebida(),
+                    solicitacaoCotaFinanceira.getExercicio());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(getUnidadeRecebida(),
+                    getContaDeDestinacaoRecebida(),
+                    solicitacaoCotaFinanceira.getExercicio());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeRetirada());
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(getUnidadeRetirada(),
+                    contaContabil.getSubSistema());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(getUnidadeRetirada(),
+                    contaContabil.getSubSistema(),
+                    getContaDeDestinacaoRetirada(),
+                    getExercicio());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(getUnidadeRetirada(),
+                    getContaDeDestinacaoRetirada(),
+                    getExercicio());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeRecebida());
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(getUnidadeRecebida(),
+                    contaContabil.getSubSistema());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(getUnidadeRecebida(),
+                    contaContabil.getSubSistema(),
+                    getContaDeDestinacaoRecebida());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(getUnidadeRecebida(),
+                    getContaDeDestinacaoRecebida());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeRetirada());
+            case "92":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(getUnidadeRetirada(),
+                    contaContabil.getSubSistema());
+            case "94":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(getUnidadeRetirada(),
+                    contaContabil.getSubSistema(),
+                    getContaDeDestinacaoRetirada());
+            case "95":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(getUnidadeRetirada(),
+                    getContaDeDestinacaoRetirada());
         }
         return null;
     }

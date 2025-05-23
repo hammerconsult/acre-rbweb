@@ -90,9 +90,19 @@ public class FolhaDePagamentoSimulacao extends SuperEntidade implements Serializ
     private boolean processarCalculoTransient;
 
     @Override
+    public boolean isGravarMemoriaCalculo() {
+        return gravarMemoriaCalculo;
+    }
+
+    public void setGravarMemoriaCalculo(boolean gravarMemoriaCalculo) {
+        this.gravarMemoriaCalculo = gravarMemoriaCalculo;
+    }
+
+    @Override
     public boolean isImprimeLogEmArquivo() {
         return imprimeLogEmArquivo;
     }
+
 
     public boolean isProcessarCalculoTransient() {
         return processarCalculoTransient;
@@ -103,17 +113,10 @@ public class FolhaDePagamentoSimulacao extends SuperEntidade implements Serializ
     }
 
     @Override
-    public boolean isGravarMemoriaCalculo() {
-        return gravarMemoriaCalculo;
-    }
-
-    public void setGravarMemoriaCalculo(boolean gravarMemoriaCalculo) {
-        this.gravarMemoriaCalculo = gravarMemoriaCalculo;
-    }
-
     public void setImprimeLogEmArquivo(boolean imprimeLogEmArquivo) {
         this.imprimeLogEmArquivo = imprimeLogEmArquivo;
     }
+
 
     public Boolean getSelecionado() {
         return selecionado;

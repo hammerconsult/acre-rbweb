@@ -494,30 +494,6 @@ public class BemFacade extends AbstractFacade<Bem> {
         return Bem.preencherListaDeBensApartirArrayObject(q.getResultList());
     }
 
-    public List<Bem> preencherListaDeBensApartirArrayObject(List<Object[]> objetosDaConsulta) {
-        List<Bem> retornaBens = new ArrayList<>();
-        for (Object[] bem : objetosDaConsulta) {
-            BigDecimal id = (BigDecimal) bem[0];
-            Bem b = new Bem();
-            b.setId(id.longValue());
-            b.setIdentificacao((String) bem[1]);
-            b.setDescricao((String) bem[2]);
-            b.setIdUltimoEstado(((BigDecimal) bem[3]).longValue());
-            b.setDataAquisicao(((Date) bem[4]));
-            b.setOrcamentaria((String) bem[5]);
-            b.setRegistroAnterior((String) bem[6]);
-            retornaBens.add(b);
-        }
-        for (Bem bem : retornaBens) {
-            try {
-                Bem.preencherDadosTrasientsDoBem(bem, recuperarEstadoBemPorId(bem.getIdUltimoEstado()));
-            } catch (Exception e) {
-                logger.error(e.getMessage());
-            }
-        }
-        return retornaBens;
-    }
-
     public SingletonWPEntities getSingletonWPEntities() {
         return SingletonWPEntities.getINSTANCE(getEntityManager().getMetamodel().getEntities());
     }
@@ -737,7 +713,7 @@ public class BemFacade extends AbstractFacade<Bem> {
             "   INNER JOIN ENTIDADEGERADORA_QUERY EGQ ON EGQ.ENTIDADEGERADORA_ID = ESA.ENTIDADESEQUENCIAPROPRIA_ID " +
             "    where eg.tipoBem = :tipoGeracao) " +
             "   SELECT " +
-            "        MAX(TO_NUMBER(regexp_replace(bem.IDENTIFICACAO, '[^0-9]'))) " +
+            "       MAX(TO_NUMBER(regexp_replace(bem.IDENTIFICACAO, '[^0-9]'))) " +
             "     FROM EVENTOBEM EV " +
             "    inner join bem on ev.bem_id = bem.id " +
             "   INNER JOIN ESTADOBEM ESTADO ON ESTADO.ID = EV.ESTADORESULTANTE_ID " +
@@ -930,12 +906,10 @@ public class BemFacade extends AbstractFacade<Bem> {
 
     public String preencherCampo(Object objeto, AtributoRelatorioGenerico atributo) {
         try {
-            if (atributo.getField() != null) {
-                atributo.getField().setAccessible(true);
-                if (atributo.getField().isAnnotationPresent(CodigoGeradoAoConcluir.class)) {
-                    if (atributo.getField().get(objeto) == null) {
-                        return "Código gerado ao concluir.";
-                    }
+            atributo.getField().setAccessible(true);
+            if (atributo.getField().isAnnotationPresent(CodigoGeradoAoConcluir.class)) {
+                if (atributo.getField().get(objeto) == null) {
+                    return "Código gerado ao concluir.";
                 }
             }
             return recuperadorFacade.preencherCampo(objeto, atributo);
@@ -1169,7 +1143,7 @@ public class BemFacade extends AbstractFacade<Bem> {
             "           AND EVB.DATAOPERACAO = (select max(ev.dataoperacao) " +
             "                                                   from eventobem ev " +
             "                                                   where ev.bem_id = evb.bem_id)" +
-            "          and mov.datamovimento = (select max(mov2.datamovimento) from movimentobloqueiobem mov2 where  b.id = mov2.bem_id) ";
+            "          and mov.datamovimento = (select max(mov2.datamovimento) from movimentobloqueiobem mov2 where  bem.id = mov2.bem_id) ";
         Query q = em.createNativeQuery(sql, Bem.class);
         q.setParameter("registroPatrimonial", registroPatrimonial);
         q.setParameter("unidadeOrganizacional", unidadeOrganizacional.getId());
@@ -1400,15 +1374,15 @@ public class BemFacade extends AbstractFacade<Bem> {
         query.setParameter("tipoBem", tipoBem.name());
         if (camposPesquisa != null) {
             for (DataTablePesquisaGenerico campo : camposPesquisa) {
-                if ("Ingressado por Incorporação".equals(campo.getItemPesquisaGenerica().getLabel().trim())) {
+                if (campo.getItemPesquisaGenerica().getLabel().equals("Ingressado por Incorporação")) {
                     query.setParameter("ingressadoPorIncorporacao", TipoEventoBem.INCORPORACAOBEM.name());
                     break;
                 }
-                if ("Ingressado por Aquisição".equals(campo.getItemPesquisaGenerica().getLabel().trim())) {
+                if (campo.getItemPesquisaGenerica().getLabel().equals("Ingressado por Aquisição")) {
                     query.setParameter("ingressadoPorAquisicao", TipoEventoBem.ITEMAQUISICAO.name());
                     break;
                 }
-                if ("Ingressado por Levantamento".equals(campo.getItemPesquisaGenerica().getLabel().trim())) {
+                if (campo.getItemPesquisaGenerica().getLabel().equals("Ingressado por Levantamento")) {
                     if (tipoBem.isMovel()) {
                         query.setParameter("ingressadoPorLevantamento", TipoEventoBem.EFETIVACAOLEVANTAMENTOBEM.name());
                     } else {

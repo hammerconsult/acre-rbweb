@@ -9,7 +9,15 @@ import br.com.webpublico.util.anotacoes.Pesquisavel;
 import br.com.webpublico.util.anotacoes.Tabelavel;
 import org.hibernate.envers.Audited;
 
-import javax.persistence.*;
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import java.util.Date;
 
 /**
@@ -47,7 +55,7 @@ public class PrazoCessao extends SuperEntidade implements Comparable<PrazoCessao
     @Tabelavel
     @Obrigatorio
     @Etiqueta("Cessão")
-    @ManyToOne(cascade = CascadeType.MERGE)
+    @ManyToOne(cascade = CascadeType.ALL)
     private LoteCessao loteCessao;
 
     @Pesquisavel

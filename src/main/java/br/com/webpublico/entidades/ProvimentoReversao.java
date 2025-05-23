@@ -1,15 +1,24 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidades.usertype.ModalidadeContratoFPData;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.IdentidadeDaEntidade;
-import br.com.webpublico.util.anotacoes.*;
+import br.com.webpublico.util.anotacoes.Etiqueta;
+import br.com.webpublico.util.anotacoes.Obrigatorio;
+import br.com.webpublico.util.anotacoes.Pesquisavel;
+import br.com.webpublico.util.anotacoes.Tabelavel;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * Created with IntelliJ IDEA.
+ * User: Claudio
+ * Date: 19/07/13
+ * Time: 09:39
+ * To change this template use File | Settings | File Templates.
+ */
 @Entity
 @Etiqueta("Provimento de Reversão")
 @GrupoDiagrama(nome = "Recursos Humanos")
@@ -28,7 +37,7 @@ public class ProvimentoReversao implements Serializable {
     @ManyToOne
     @Etiqueta("Novo Contrato")
     @Tabelavel
-    private ContratoFP contratoFP;
+    private ContratoFP novoContratoFP;
     @Temporal(TemporalType.DATE)
     @Etiqueta("Início de Vigência")
     @Tabelavel
@@ -52,74 +61,6 @@ public class ProvimentoReversao implements Serializable {
     private TipoAposentadoria tipoAposentadoria;
     @Transient
     private Long criadoEm;
-    @Temporal(TemporalType.DATE)
-    private Date fimVigenciaAnterior;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private EnquadramentoFuncional enquadramentoFuncional;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private ModalidadeContratoFPData modalidadeContratoFPData;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private PrevidenciaVinculoFP previdenciaVinculoFP;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private OpcaoValeTransporteFP opcaoValeTransporteFP;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private HorarioContratoFP horarioContratoFP;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private LotacaoFuncional lotacaoFuncional;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private SindicatoVinculoFP sindicatoVinculoFP;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private AssociacaoVinculoFP associacaoVinculoFP;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private ContratoVinculoDeContrato contratoVinculoDeContrato;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private RecursoDoVinculoFP recursoDoVinculoFP;
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @Invisivel
-    private ContratoFPCargo contratoFPCargo;
-    @Transient
-    @Invisivel
-    private ModalidadeContratoFPData modalidadeContratoFPDataAnterior;
-    @Transient
-    @Invisivel
-    private EnquadramentoFuncional enquadramentoFuncionalAnterior;
-    @Transient
-    @Invisivel
-    private PrevidenciaVinculoFP previdenciaAnterior;
-    @Transient
-    @Invisivel
-    private OpcaoValeTransporteFP opcaoValeTransporteAnterior;
-    @Transient
-    @Invisivel
-    private HorarioContratoFP horarioAnterior;
-    @Transient
-    @Invisivel
-    private LotacaoFuncional lotacaoFuncionalAnterior;
-    @Transient
-    @Invisivel
-    private SindicatoVinculoFP sindicatoAnterior;
-    @Transient
-    @Invisivel
-    private AssociacaoVinculoFP associacaoAnterior;
-    @Transient
-    @Invisivel
-    private ContratoVinculoDeContrato contratoVinculoDeContratoAnterior;
-    @Transient
-    @Invisivel
-    private RecursoDoVinculoFP recursoDoVinculoFPAnterior;
-    @Transient
-    @Invisivel
-    private ContratoFPCargo contratoFPCargoAnterior;
 
     public ProvimentoReversao() {
         this.criadoEm = System.nanoTime();
@@ -142,12 +83,12 @@ public class ProvimentoReversao implements Serializable {
         this.aposentadoria = aposentadoria;
     }
 
-    public ContratoFP getContratoFP() {
-        return contratoFP;
+    public ContratoFP getNovoContratoFP() {
+        return novoContratoFP;
     }
 
-    public void setContratoFP(ContratoFP contratoFP) {
-        this.contratoFP = contratoFP;
+    public void setNovoContratoFP(ContratoFP novoContratoFP) {
+        this.novoContratoFP = novoContratoFP;
     }
 
     public Date getInicioVigencia() {
@@ -206,189 +147,5 @@ public class ProvimentoReversao implements Serializable {
     @Override
     public boolean equals(Object object) {
         return IdentidadeDaEntidade.calcularEquals(this, object);
-    }
-
-    public EnquadramentoFuncional getEnquadramentoFuncional() {
-        return enquadramentoFuncional;
-    }
-
-    public void setEnquadramentoFuncional(EnquadramentoFuncional enquadramentoFuncional) {
-        this.enquadramentoFuncional = enquadramentoFuncional;
-    }
-
-    public EnquadramentoFuncional getEnquadramentoFuncionalAnterior() {
-        return enquadramentoFuncionalAnterior;
-    }
-
-    public void setEnquadramentoFuncionalAnterior(EnquadramentoFuncional enquadramentoFuncionalAnterior) {
-        this.enquadramentoFuncionalAnterior = enquadramentoFuncionalAnterior;
-    }
-
-    public ModalidadeContratoFPData getModalidadeContratoFPData() {
-        return modalidadeContratoFPData;
-    }
-
-    public void setModalidadeContratoFPData(ModalidadeContratoFPData modalidadeContratoFPData) {
-        this.modalidadeContratoFPData = modalidadeContratoFPData;
-    }
-
-    public Date getFimVigenciaAnterior() {
-        return fimVigenciaAnterior;
-    }
-
-    public void setFimVigenciaAnterior(Date fimVigenciaAnterior) {
-        this.fimVigenciaAnterior = fimVigenciaAnterior;
-    }
-
-    public ModalidadeContratoFPData getModalidadeContratoFPDataAnterior() {
-        return modalidadeContratoFPDataAnterior;
-    }
-
-    public void setModalidadeContratoFPDataAnterior(ModalidadeContratoFPData modalidadeContratoFPDataAnterior) {
-        this.modalidadeContratoFPDataAnterior = modalidadeContratoFPDataAnterior;
-    }
-
-    public PrevidenciaVinculoFP getPrevidenciaVinculoFP() {
-        return previdenciaVinculoFP;
-    }
-
-    public void setPrevidenciaVinculoFP(PrevidenciaVinculoFP previdenciaVinculoFP) {
-        this.previdenciaVinculoFP = previdenciaVinculoFP;
-    }
-
-    public PrevidenciaVinculoFP getPrevidenciaAnterior() {
-        return previdenciaAnterior;
-    }
-
-    public void setPrevidenciaAnterior(PrevidenciaVinculoFP previdenciaAnterior) {
-        this.previdenciaAnterior = previdenciaAnterior;
-    }
-
-    public OpcaoValeTransporteFP getOpcaoValeTransporteFP() {
-        return opcaoValeTransporteFP;
-    }
-
-    public void setOpcaoValeTransporteFP(OpcaoValeTransporteFP opcaoValeTransporteFP) {
-        this.opcaoValeTransporteFP = opcaoValeTransporteFP;
-    }
-
-    public OpcaoValeTransporteFP getOpcaoValeTransporteAnterior() {
-        return opcaoValeTransporteAnterior;
-    }
-
-    public void setOpcaoValeTransporteAnterior(OpcaoValeTransporteFP opcaoValeTransporteAnterior) {
-        this.opcaoValeTransporteAnterior = opcaoValeTransporteAnterior;
-    }
-
-    public HorarioContratoFP getHorarioContratoFP() {
-        return horarioContratoFP;
-    }
-
-    public void setHorarioContratoFP(HorarioContratoFP horarioContratoFP) {
-        this.horarioContratoFP = horarioContratoFP;
-    }
-
-    public HorarioContratoFP getHorarioAnterior() {
-        return horarioAnterior;
-    }
-
-    public void setHorarioAnterior(HorarioContratoFP horarioAnterior) {
-        this.horarioAnterior = horarioAnterior;
-    }
-
-    public LotacaoFuncional getLotacaoFuncional() {
-        return lotacaoFuncional;
-    }
-
-    public void setLotacaoFuncional(LotacaoFuncional lotacaoFuncional) {
-        this.lotacaoFuncional = lotacaoFuncional;
-    }
-
-    public LotacaoFuncional getLotacaoFuncionalAnterior() {
-        return lotacaoFuncionalAnterior;
-    }
-
-    public void setLotacaoFuncionalAnterior(LotacaoFuncional lotacaoFuncionalAnterior) {
-        this.lotacaoFuncionalAnterior = lotacaoFuncionalAnterior;
-    }
-
-    public SindicatoVinculoFP getSindicatoVinculoFP() {
-        return sindicatoVinculoFP;
-    }
-
-    public void setSindicatoVinculoFP(SindicatoVinculoFP sindicatoVinculoFP) {
-        this.sindicatoVinculoFP = sindicatoVinculoFP;
-    }
-
-    public SindicatoVinculoFP getSindicatoAnterior() {
-        return sindicatoAnterior;
-    }
-
-    public void setSindicatoAnterior(SindicatoVinculoFP sindicatoAnterior) {
-        this.sindicatoAnterior = sindicatoAnterior;
-    }
-
-    public AssociacaoVinculoFP getAssociacaoVinculoFP() {
-        return associacaoVinculoFP;
-    }
-
-    public void setAssociacaoVinculoFP(AssociacaoVinculoFP associacaoVinculoFP) {
-        this.associacaoVinculoFP = associacaoVinculoFP;
-    }
-
-    public AssociacaoVinculoFP getAssociacaoAnterior() {
-        return associacaoAnterior;
-    }
-
-    public void setAssociacaoAnterior(AssociacaoVinculoFP associacaoAnterior) {
-        this.associacaoAnterior = associacaoAnterior;
-    }
-
-    public ContratoVinculoDeContrato getContratoVinculoDeContrato() {
-        return contratoVinculoDeContrato;
-    }
-
-    public void setContratoVinculoDeContrato(ContratoVinculoDeContrato contratoVinculoDeContrato) {
-        this.contratoVinculoDeContrato = contratoVinculoDeContrato;
-    }
-
-    public ContratoVinculoDeContrato getContratoVinculoDeContratoAnterior() {
-        return contratoVinculoDeContratoAnterior;
-    }
-
-    public void setContratoVinculoDeContratoAnterior(ContratoVinculoDeContrato contratoVinculoDeContratoAnterior) {
-        this.contratoVinculoDeContratoAnterior = contratoVinculoDeContratoAnterior;
-    }
-
-    public RecursoDoVinculoFP getRecursoDoVinculoFP() {
-        return recursoDoVinculoFP;
-    }
-
-    public void setRecursoDoVinculoFP(RecursoDoVinculoFP recursoDoVinculoFP) {
-        this.recursoDoVinculoFP = recursoDoVinculoFP;
-    }
-
-    public RecursoDoVinculoFP getRecursoDoVinculoFPAnterior() {
-        return recursoDoVinculoFPAnterior;
-    }
-
-    public void setRecursoDoVinculoFPAnterior(RecursoDoVinculoFP recursoDoVinculoFPAnterior) {
-        this.recursoDoVinculoFPAnterior = recursoDoVinculoFPAnterior;
-    }
-
-    public ContratoFPCargo getContratoFPCargo() {
-        return contratoFPCargo;
-    }
-
-    public void setContratoFPCargo(ContratoFPCargo contratoFPCargo) {
-        this.contratoFPCargo = contratoFPCargo;
-    }
-
-    public ContratoFPCargo getContratoFPCargoAnterior() {
-        return contratoFPCargoAnterior;
-    }
-
-    public void setContratoFPCargoAnterior(ContratoFPCargo contratoFPCargoAnterior) {
-        this.contratoFPCargoAnterior = contratoFPCargoAnterior;
     }
 }

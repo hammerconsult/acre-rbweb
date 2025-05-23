@@ -1,8 +1,6 @@
 package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.tributario.regularizacaoconstrucao.HabiteseClassesConstrucao;
-import br.com.webpublico.entidades.tributario.regularizacaoconstrucao.ServicoConstrucao;
 import br.com.webpublico.entidades.tributario.regularizacaoconstrucao.ItemServicoConstrucao;
 import br.com.webpublico.entidades.tributario.regularizacaoconstrucao.ParametroRegularizacao;
 import br.com.webpublico.entidades.tributario.regularizacaoconstrucao.ServicoConstrucao;

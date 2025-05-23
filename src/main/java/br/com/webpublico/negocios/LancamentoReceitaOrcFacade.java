@@ -92,13 +92,13 @@ public class LancamentoReceitaOrcFacade extends SuperFacadeContabil<LancamentoRe
     @EJB
     private PortalTransparenciaNovoFacade portalTransparenciaNovoFacade;
     @EJB
+    private SaldoDividaPublicaFacade saldoDividaPublicaFacade;
+    @EJB
     private ConfigAlienacaoAtivosFacade configAlienacaoAtivosFacade;
     @EJB
     private ConfigReceitaRealizadaGrupoPatrimonialFacade configReceitaRealizadaGrupoPatrimonialFacade;
     @EJB
     private SaldoGrupoBemMovelFacade saldoGrupoBemMovelFacade;
-    @EJB
-    private SaldoDividaPublicaFacade saldoDividaPublicaFacade;
     @EJB
     private CodigoCOFacade codigoCOFacade;
     @PersistenceContext(unitName = "webpublicoPU")
@@ -107,7 +107,6 @@ public class LancamentoReceitaOrcFacade extends SuperFacadeContabil<LancamentoRe
     public LancamentoReceitaOrcFacade() {
         super(LancamentoReceitaOrc.class);
     }
-
 
     public void gerarSaldoDividaAtivaAndCreditoReceber(LancamentoReceitaOrc entity) throws ExcecaoNegocioGenerica {
         ContaReceita contaReceita = (ContaReceita) entity.getReceitaLOA().getContaDeReceita();
@@ -434,16 +433,16 @@ public class LancamentoReceitaOrcFacade extends SuperFacadeContabil<LancamentoRe
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
             if (!simulacao) {
-                objetos.add(new ObjetoParametro(entity, item));
+                objetos.add(new ObjetoParametro(entity.getId().toString(), LancReceitaFonte.class.getSimpleName(), item));
             }
-            objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getReceitaLOA().getContaDeReceita(), item));
-            objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getSubConta(), item));
-            objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getClasseCredor(), item));
-            objetos.add(new ObjetoParametro(((ContaDeDestinacao) entity.getReceitaLoaFonte().getDestinacaoDeRecursos()).getFonteDeRecursos(), item));
+            objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getSubConta().getId().toString(), SubConta.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(((ContaDeDestinacao) entity.getReceitaLoaFonte().getDestinacaoDeRecursos()).getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
 
             if (entity.getLancReceitaOrc().getDividaPublica() != null) {
-                objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getDividaPublica(), item));
-                objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getDividaPublica().getCategoriaDividaPublica(), item));
+                objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getDividaPublica().getId().toString(), DividaPublica.class.getSimpleName(), item));
+                objetos.add(new ObjetoParametro(entity.getLancReceitaOrc().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
             }
 
             configAlienacaoAtivosFacade.adicionarObjetoParametro(entity.getEventoContabil(), entity.getLancReceitaOrc().getDataLancamento(), objetos, item, ObjetoParametro.TipoObjetoParametro.AMBOS);

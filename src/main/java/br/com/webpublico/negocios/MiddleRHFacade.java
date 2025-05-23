@@ -5,7 +5,10 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.rh.administracaodepagamento.*;
+import br.com.webpublico.entidades.rh.administracaodepagamento.EventoFPTipoFolha;
+import br.com.webpublico.entidades.rh.administracaodepagamento.FichaFinanceiraFPSimulacao;
+import br.com.webpublico.entidades.rh.administracaodepagamento.FilaProcessamentoFolha;
+import br.com.webpublico.entidades.rh.administracaodepagamento.SituacaoCalculoFP;
 import br.com.webpublico.enums.TipoExecucaoEP;
 import br.com.webpublico.enums.TipoFolhaDePagamento;
 import br.com.webpublico.interfaces.FolhaCalculavel;
@@ -105,7 +108,8 @@ public class MiddleRHFacade implements Serializable {
 
     @Asynchronous
 //    @TransactionAttribute(TransactionAttributeType.SUPPORTS)
-    public Future<DetalheProcessamentoFolha> calculoGeralNovo(FolhaCalculavel folhaCalculando, List<VinculoFP> vinculos, DetalheProcessamentoFolha detalheProcessamentoFolha, UsuarioSistema usuario, Map<VinculoFP, FilaProcessamentoFolha> filas, AssistenteBarraProgresso assistente, FiltroFolhaDePagamento filtroFolhaDePagamento) {
+    public Future<DetalheProcessamentoFolha> calculoGeralNovo(FolhaCalculavel folhaCalculando, List<VinculoFP> vinculos, DetalheProcessamentoFolha detalheProcessamentoFolha,
+                                                              UsuarioSistema usuario, Map<VinculoFP, FilaProcessamentoFolha> filas, AssistenteBarraProgresso assistente) {
         AsyncResult<DetalheProcessamentoFolha> future = new AsyncResult<>(detalheProcessamentoFolha);
         try {
             boolean mostra = false;
@@ -188,9 +192,7 @@ public class MiddleRHFacade implements Serializable {
                 if (!vinculos.isEmpty() && TipoFolhaDePagamento.NORMAL.equals(folhaCalculando.getTipoFolhaDePagamento())) {
                     executarRotinasPosCalculo(folhaCalculando, detalheProcessamentoFolha, usuario, filas, assistente);
                 }
-                FolhaCalculavel folha = salvarFolha(folhaCalculando);
-
-                atualizarDetalhesFila(filas, folha, folhaCalculando, filtroFolhaDePagamento);
+                salvarFolha(folhaCalculando);
             }
         }
         return future;
@@ -200,37 +202,6 @@ public class MiddleRHFacade implements Serializable {
         FilaProcessamentoFolha filaProcessamentoFolha = filas.get(vinculo);
         if (filaProcessamentoFolha != null) {
             filaProcessamentoFolhaFacade.updateSituacao(filaProcessamentoFolha, SituacaoCalculoFP.PROCESSADO);
-        }
-    }
-
-    private void atualizarDetalhesFila(Map<VinculoFP, FilaProcessamentoFolha> filas, FolhaCalculavel folha, FolhaCalculavel folhaCalculavel, FiltroFolhaDePagamento filtroFolhaDePagamento) {
-        if (folha instanceof FolhaDePagamento) {
-            FolhaDePagamento folhaDePagamento = (FolhaDePagamento) folha;
-            DetalhesCalculoRH detalhe = null;
-            FiltroFolhaDePagamento filtro = null;
-
-
-            for (DetalhesCalculoRH detalhesCalculoRH : folhaDePagamento.getDetalhesCalculoRHList()) {
-                if (folhaCalculavel.getDetalhesCalculoRHAtual().getDataCalculo().equals(detalhesCalculoRH.getDataCalculo())) {
-                    detalhe = detalhesCalculoRH;
-                }
-            }
-
-
-            for (FiltroFolhaDePagamento filtroFolha : folhaDePagamento.getFiltros()) {
-                if (filtroFolhaDePagamento.getCalculadaEm().equals(filtroFolha.getCalculadaEm())) {
-                    filtro = filtroFolha;
-                }
-            }
-
-            if(filtro != null && detalhe != null) {
-                detalhe.setFiltroFolhaDePagamento(filtro);
-
-            }
-
-            for (FilaProcessamentoFolha fila : filas.values()) {
-                filaProcessamentoFolhaFacade.updateDetalhe(fila, detalhe);
-            }
         }
     }
 
@@ -269,8 +240,8 @@ public class MiddleRHFacade implements Serializable {
         detalheProcessamentoFolha.setContadorNaoGerados(detalheProcessamentoFolha.getContadorNaoGerados() + 1);
     }
 
-    private FolhaCalculavel salvarFolha(FolhaCalculavel folhaCalculando) {
-        return folhaDePagamentoFacade.salvarNovaFolha(folhaCalculando);
+    private void salvarFolha(FolhaCalculavel folhaCalculando) {
+        folhaDePagamentoFacade.salvarNovaFolha(folhaCalculando);
     }
 
     public void liberaSingleton() {

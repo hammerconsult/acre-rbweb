@@ -39,9 +39,7 @@ import java.util.List;
 @ManagedBean
 @ViewScoped
 @URLMappings(mappings = {
-    @URLMapping(id = "novaRelacaoLancamentoRendas",
-        pattern = "/tributario/rendaspatrimoniais/relacao-lancamento-rendas/",
-        viewId = "/faces/tributario/rendaspatrimoniais/relatorio/relacaolancamentorendas.xhtml")})
+    @URLMapping(id = "novaRelacaoLancamentoRendas", pattern = "/tributario/rendaspatrimoniais/relacao-lancamento-rendas/", viewId = "/faces/tributario/rendaspatrimoniais/relatorio/relacaolancamentorendas.xhtml")})
 public class RelacaoLancamentoRendasControlador {
 
     @EJB

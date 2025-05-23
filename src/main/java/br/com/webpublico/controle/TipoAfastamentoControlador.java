@@ -12,7 +12,10 @@ import br.com.webpublico.enums.rh.previdencia.TipoSituacaoBBPrev;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.*;
-import br.com.webpublico.util.*;
+import br.com.webpublico.util.ConverterAutoComplete;
+import br.com.webpublico.util.ConverterGenerico;
+import br.com.webpublico.util.FacesUtil;
+import br.com.webpublico.util.Util;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
@@ -22,12 +25,9 @@ import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import javax.faces.convert.Converter;
 import javax.faces.model.SelectItem;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @ManagedBean(name = "tipoAfastamentoControlador")
 @ViewScoped
@@ -47,10 +47,6 @@ public class TipoAfastamentoControlador extends PrettyControlador<TipoAfastament
     private MotivoAfastamentoRaisFacade motivoAfastamentoRaisFacade;
     @EJB
     private TipoPrevidenciaFPFacade tipoPrevidenciaFPFacade;
-    @EJB
-    private SistemaFacade sistemaFacade;
-    @EJB
-    private AfastamentoFacade afastamentoFacade;
     private ConverterAutoComplete converterMovimento;
     private ConverterGenerico converterMotivoAfastamentoRais;
     private FaixaReferenciaFP faixaReferenciaFPSelecionada;
@@ -129,6 +125,14 @@ public class TipoAfastamentoControlador extends PrettyControlador<TipoAfastament
                 ve.adicionarMensagemWarn(SummaryMessages.ATENCAO, "Se a classe do afastamento for uma falta, não pode haver carência !");
             }
         }
+        if (!selecionado.getNaoGerarPeriodoAquisitivo()) {
+            if (selecionado.isPeriodoAquisitivoAlongado() && (selecionado.getCarenciaAlongamento() == null || selecionado.getCarenciaAlongamento().compareTo(0) < 0)) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo carência para início do alongamento deve ser informado com um valor maior ou igual a zero!");
+            }
+            if (selecionado.getPerderPAFerias() && (selecionado.getMaximoPerdaPeriodoAquisitivo() == null || selecionado.getMaximoPerdaPeriodoAquisitivo().compareTo(0) < 0)) {
+                ve.adicionarMensagemDeCampoObrigatorio("O campo de perca do período aquisitivo deve ser informado com um valor maior ou igual a zero! ");
+            }
+        }
         if (isAcidenteTransito() && selecionado.getTipoAcidenteTransito() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("Para o Tipo Afastamento E-Social escolhido é necessário informar o Tipo Acidente de Trânsito");
         }
@@ -166,7 +170,8 @@ public class TipoAfastamentoControlador extends PrettyControlador<TipoAfastament
         super.novo();
         Long novoCodigo = tipoAfastamentoFacade.retornaUltimoCodigoLong();
         selecionado.setCodigo(novoCodigo.intValue());
-        selecionado.setMaximoPerdaPeriodoAquisitivo(0);
+        selecionado.setCarenciaAlongamento(null);
+        selecionado.setMaximoPerdaPeriodoAquisitivo(null);
         selecionado.setAlongarPeriodoAquisitivo(false);
         selecionado.setAtivo(Boolean.TRUE);
     }
@@ -189,12 +194,9 @@ public class TipoAfastamentoControlador extends PrettyControlador<TipoAfastament
     public void salvar() {
         try {
             validarCampos();
-            super.salvar();
+                super.salvar();
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
-        } catch (Exception ex){
-            logger.error("Erro ao salvar o tipo de afastamento {}", ex);
-            descobrirETratarException(ex);
         }
     }
 
@@ -226,6 +228,12 @@ public class TipoAfastamentoControlador extends PrettyControlador<TipoAfastament
 
     public void cancelaFaixaReferenciaFP() {
         faixaReferenciaFPSelecionada = null;
+    }
+
+    public void definirCarenciaAndPerdaPeriodoAquisitivo() {
+        if (selecionado.isPeriodoAquisitivoAlongado()) {
+            selecionado.setCarenciaAlongamento(null);
+        }
     }
 
     public List<SelectItem> getTipoAfastamentoESocial() {

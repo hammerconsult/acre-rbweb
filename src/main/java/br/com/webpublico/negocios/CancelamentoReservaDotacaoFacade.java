@@ -1,7 +1,7 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.CancelamentoReservaDotacao;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.OperacaoORC;
 import br.com.webpublico.enums.OrigemReservaFonte;
 import br.com.webpublico.enums.SituacaoSolicitacaoCancelamentoReservaDotacao;

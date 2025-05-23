@@ -19,8 +19,8 @@ import br.com.webpublico.enums.rh.TipoInformacaoEnvioRBPonto;
 import br.com.webpublico.enums.rh.esocial.TipoAfastamentoESocial;
 import br.com.webpublico.esocial.service.S2230Service;
 import br.com.webpublico.exception.ValidacaoException;
-import br.com.webpublico.negocios.rh.integracaoponto.EnvioDadosRBPontoFacade;
 import br.com.webpublico.negocios.rh.configuracao.ConfiguracaoRHFacade;
+import br.com.webpublico.negocios.rh.integracaoponto.EnvioDadosRBPontoFacade;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilRH;
@@ -36,7 +36,6 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.*;
@@ -69,10 +68,6 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
     private EnvioDadosRBPontoFacade envioDadosRBPontoFacade;
     @EJB
     private PrestadorServicosFacade prestadorServicosFacade;
-    @EJB
-    private PeriodoAquisitivoFLFacade periodoAquisitivoFLFacade;
-    @EJB
-    private ContratoFPFacade contratoFPFacade;
 
     private S2230Service s2230Service;
 
@@ -147,7 +142,6 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
             entity.setTipoEnvioDadosRBPonto(TipoEnvioDadosRBPonto.NAO_ENVIADO);
         }
         entity = getEntityManager().merge(entity);
-        processarPA(entity.getContratoFP());
 
         if (configuracaoRH.getEnvioAutomaticoDadosPonto() != null && configuracaoRH.getEnvioAutomaticoDadosPonto()) {
             EnvioDadosRBPonto envioDadosRBPonto = new EnvioDadosRBPonto();
@@ -192,14 +186,7 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
         }
         entity = em.merge(entity);
         entity = getEntityManager().merge(entity);
-        processarPA(entity.getContratoFP());
     }
-
-    public void processarPA(ContratoFP contratofp) {
-        periodoAquisitivoFLFacade.excluirPeriodosAquisitivosParaRegerar(contratofp);
-        periodoAquisitivoFLFacade.gerarPeriodosAquisitivos(contratofp, SistemaFacade.getDataCorrente(), null);
-    }
-
 
     public void salvarAfastamentoRetorno(Afastamento entity) {
         try {
@@ -595,9 +582,8 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
             " OR  (afastamento.TERMINO between :inicio and :fim )" +
             " OR  (:inicio between afastamento.inicio and afastamento.termino)" +
             " OR  (:fim between afastamento.inicio and afastamento.termino) ) " +
-            " AND (tipo.alongarperiodoaquisitivo = 1 or tipo.maximoperdaperiodoaquisitivo > 0 OR tipo.reiniciarContagem = 1 " +
-            "       or tipo.alongarperaquisitivolicenca = 1 or tipo.maximoperdaperaquisitlicenca > 0 or tipo.reiniciarperaquisitlicenca = 1) " +
-            " order by afastamento.inicio asc ";
+            " AND (tipo.ALONGARPERIODOAQUISITIVO = 1 or tipo.perderPAFerias = 1 OR tipo.naoGerarPeriodoAquisitivo = 1 " +
+            " OR  tipo.reiniciarContagem = 1 ) order by afastamento.inicio asc ";
 
 
         Query q = em.createNativeQuery(sql, Afastamento.class);
@@ -697,33 +683,12 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
         } catch (Exception e) {
             logger.error("Erro ao tentar reverter situação funcional ao excluir o afastamento " + entity, e);
         }
-        ContratoFP contratoFP = contratoFPFacade.recuperarSomentePeriodosAquisitivos(entity.getContratoFP().getId());
+
         super.remover(entity);
-        processarPA(contratoFP);
     }
 
     public void enviarS2230ESocial(ConfiguracaoEmpregadorESocial empregador, Afastamento afastamento) throws ValidacaoException {
-        PrestadorServicos prestadorServicos = prestadorServicosFacade
-            .buscarPrestadorServicosPorIdPessoa(
-                Optional.ofNullable(afastamento)
-                    .map(Afastamento::getContratoFP)
-                    .map(ContratoFP::getMatriculaFP)
-                    .map(MatriculaFP::getPessoa)
-                    .map(Pessoa::getId)
-                    .orElse(null));
-        s2230Service.enviarS2230(empregador, afastamento, prestadorServicos);
-    }
-
-    public Afastamento recuperaAfastamentoVigente(ContratoFP contratoFP, Date dataOperacao) {
-        Query q = em.createQuery("from Afastamento af where af.contratoFP = :contratoFP and :dataOperacao between af.inicio and coalesce(af.termino,:dataOperacao)");
-        q.setParameter("contratoFP", contratoFP);
-        q.setParameter("dataOperacao", dataOperacao);
-        q.setMaxResults(1);
-        try {
-            return (Afastamento) q.getSingleResult();
-        } catch (NoResultException nr) {
-            return null;
-        }
+        s2230Service.enviarS2230(empregador, afastamento);
     }
 
     public Afastamento recuperarAfastadoLicencaMaternidadePorPeridodo(ContratoFP contratoFP, Date inicio, Date fim) {
@@ -746,18 +711,6 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
         }
     }
 
-    public Afastamento buscarAfastamentoVigenteDataReferencia(ContratoFP contratoFP, Date dataReferencia) {
-        Query q = em.createQuery("from Afastamento af where af.contratoFP = :contratoFP and :dataOperacao between af.inicio and coalesce(af.termino,:dataOperacao)");
-        q.setParameter("contratoFP", contratoFP);
-        q.setParameter("dataOperacao", dataReferencia);
-        q.setMaxResults(1);
-        try {
-            return (Afastamento) q.getSingleResult();
-        } catch (NoResultException nr) {
-            return null;
-        }
-    }
-
     public List<Afastamento> recuperarTodosAfastamentos(Long idVinculo) {
         StringBuilder sql = new StringBuilder();
         sql.append(" select afastamento.* ");
@@ -773,6 +726,18 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
             return resultList;
         }
         return Lists.newArrayList();
+    }
+
+    public Afastamento buscarAfastamentoVigenteDataReferencia(ContratoFP contratoFP, Date dataReferencia) {
+        Query q = em.createQuery("from Afastamento af where af.contratoFP = :contratoFP and :dataOperacao between af.inicio and coalesce(af.termino,:dataOperacao)");
+        q.setParameter("contratoFP", contratoFP);
+        q.setParameter("dataOperacao", dataReferencia);
+        q.setMaxResults(1);
+        try {
+            return (Afastamento) q.getSingleResult();
+        } catch (NoResultException nr) {
+            return null;
+        }
     }
 
     public void validarCampos(Afastamento selecionado) {
@@ -962,18 +927,6 @@ public class AfastamentoFacade extends AbstractFacade<Afastamento> {
             return afastamentos;
         }
         return Lists.newArrayList();
-    }
-
-    public List<ContratoFP> buscarContratosAfastadosPorTipoAfastamento(TipoAfastamento tipo, Date dataOperacao) {
-        String hql = " select distinct contrato from Afastamento afas " +
-            " inner join afas.contratoFP contrato " +
-            " inner join afas.tipoAfastamento tipo " +
-            " where tipo.codigo = :codigoTipo " +
-            "   and :dataOperacao between contrato.inicioVigencia and coalesce(contrato.finalVigencia, :dataOperacao)";
-        Query q = getEntityManager().createQuery(hql);
-        q.setParameter("codigoTipo", tipo.getCodigo());
-        q.setParameter("dataOperacao", dataOperacao);
-        return q.getResultList();
     }
 
     public boolean isAfastamentoProrrogacao(Long IdCalculo, Date dataIntervaloSubtraida, Date dataIntervaloSomada, Date inicioAfastamentoReferencia, Date termino, String codigo) {

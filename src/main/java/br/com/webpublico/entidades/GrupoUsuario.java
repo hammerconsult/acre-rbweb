@@ -32,43 +32,38 @@ import java.util.List;
 @Audited
 @Etiqueta("Grupo de Usuário")
 @TypeDefs({
-    @TypeDef(name = "tipoGrupoUsuario", typeClass = TipoGrupoUsuarioUserType.class),
-    @TypeDef(name = "direitos", typeClass = DireitosUserType.class)})
-public class GrupoUsuario extends SuperEntidade {
+        @TypeDef(name = "tipoGrupoUsuario", typeClass = TipoGrupoUsuarioUserType.class),
+        @TypeDef(name = "direitos", typeClass = DireitosUserType.class)})
+public class GrupoUsuario implements Serializable {
 
     private static final long serialVersionUID = 1L;
     protected static final Logger LOGGER = LoggerFactory.getLogger(GrupoUsuario.class);
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @Etiqueta("Código")
     @Invisivel
     private Long id;
-
     @Tabelavel
     @Etiqueta("Nome")
     @Pesquisavel
     @Column(length = 45, unique = true)
     private String nome;
-
     @Type(type = "tipoGrupoUsuario")
     private TipoGrupoUsuario tipo = TipoGrupoUsuario.AUTORIZACAO;
-
     @OrderBy("login")
     @ManyToMany
     @JoinTable(name = "GRUPOUSUARIOSISTEMA", joinColumns =
     @JoinColumn(name = "GRUPOUSUARIO_ID", referencedColumnName = "ID"), inverseJoinColumns =
     @JoinColumn(name = "USUARIOSISTEMA_ID", referencedColumnName = "ID"))
     private List<UsuarioSistema> usuarios = Lists.newLinkedList();
-
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("diaDaSemana")
     @JoinTable(name = "GRUPOUSUARIOPERIODO", joinColumns =
     @JoinColumn(name = "GRUPOUSUARIO_ID", referencedColumnName = "ID"), inverseJoinColumns =
     @JoinColumn(name = "PERIODO_ID", referencedColumnName = "ID"))
     private List<Periodo> periodos = Lists.newLinkedList();
-
     @OneToMany(mappedBy = "grupoUsuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemGrupoUsuario> itens = Lists.newLinkedList();
-
     @OneToMany(mappedBy = "grupoUsuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GrupoUsuarioNotificacao> notificacoes;
 

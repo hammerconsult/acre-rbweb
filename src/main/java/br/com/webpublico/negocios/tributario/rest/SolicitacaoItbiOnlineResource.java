@@ -32,6 +32,20 @@ public class SolicitacaoItbiOnlineResource {
         }
     }
 
+    @RequestMapping(value = "/homologar", method = RequestMethod.GET)
+    public void homologarSolicitacao(@RequestParam Long idSolicitacao,
+                                     @RequestParam String usuario) {
+        try {
+            SolicitacaoItbiOnline solicitacaoItbiOnline = solicitacaoItbiOnlineFacade.recuperar(idSolicitacao);
+            AssistenteBarraProgresso assistente = new AssistenteBarraProgresso();
+            assistente.setSelecionado(solicitacaoItbiOnline);
+            solicitacaoItbiOnlineFacade.homologarSolicitacao(assistente, usuario, null, null, null);
+        } catch (Exception e) {
+            logger.error("Erro ao homologar solicitação de itbi online.", e);
+        }
+    }
+
+
     @RequestMapping(value = "/imprimir-laudo-itbi", method = RequestMethod.GET)
     public ResponseEntity<byte[]> imprimirLaudoItbi(@RequestParam Long idSolicitacao) {
         try {

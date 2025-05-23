@@ -5,7 +5,6 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.datajud.RegistroDatajud;
 import br.com.webpublico.enums.SituacaoCertidaoDA;
 import br.com.webpublico.enums.SituacaoJudicial;
 import br.com.webpublico.enums.SituacaoParcela;
@@ -18,26 +17,18 @@ import br.com.webpublico.negocios.tributario.procuradoria.VaraFacade;
 import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
 import br.com.webpublico.util.StringUtil;
 import br.com.webpublico.ws.procuradoria.IntegraSoftplanFacade;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.core.util.Throwables;
 import org.hibernate.Hibernate;
 import org.jboss.ejb3.annotation.TransactionTimeout;
-import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -56,8 +47,6 @@ public class ProcessoJudicialFacade extends AbstractFacade<ProcessoJudicial> {
     private GeraValorDividaDividaAtiva valorDividaFacade;
     @EJB
     private ConsultaDebitoFacade consultaDebitoFacade;
-    @EJB
-    private ConfiguracaoTributarioFacade configuracaoTributarioFacade;
     @EJB
     private IntegraSoftplanFacade integraSoftplanFacade;
     @EJB
@@ -380,47 +369,6 @@ public class ProcessoJudicialFacade extends AbstractFacade<ProcessoJudicial> {
     public void removerProcessoCDA(ProcessoJudicialCDA processoJudicialCDA) {
         processoJudicialCDA = em.find(ProcessoJudicialCDA.class, processoJudicialCDA.getId());
         em.remove(processoJudicialCDA);
-    }
-
-    public List<RegistroDatajud> buscarDadosDatajud(String numeroProcesso) throws IOException {
-        ConfiguracaoTributario configuracaoTributario = configuracaoTributarioFacade.retornaUltimo();
-        if (Strings.isNullOrEmpty(configuracaoTributario.getEndpointDatajus())) {
-            throw new ExcecaoNegocioGenerica("O Endpoint do datajus não está definido nas configurações do tributário.");
-        }
-        if (Strings.isNullOrEmpty(configuracaoTributario.getEndpointDatajus())) {
-            throw new ExcecaoNegocioGenerica("A API Key do datajus não está definido nas configurações do tributário.");
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("Authorization", configuracaoTributario.getApiKeyDatajus());
-        String jsonFiltro = "{\n" +
-            "    \"query\": {\n" +
-            "        \"match\": {\n" +
-            "            \"numeroProcesso\": \"" + StringUtil.retornaApenasNumeros(numeroProcesso) + "\"\n" +
-            "        }\n" +
-            "    }\n" +
-            "}";
-        HttpEntity<String> request = new HttpEntity<>(jsonFiltro, headers);
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> exchange = restTemplate.exchange(configuracaoTributario.getEndpointDatajus(),
-            HttpMethod.POST, request, String.class);
-        return converterDadosDatajud(exchange.getBody());
-    }
-
-    private List<RegistroDatajud> converterDadosDatajud(String dados) throws IOException {
-        List<RegistroDatajud> registrosDatajud = Lists.newArrayList();
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        JsonNode jsonNode = objectMapper.readTree(dados);
-        if (jsonNode.get("hits") != null && jsonNode.get("hits").get("hits") != null) {
-            JsonNode jsonNodeHits = jsonNode.get("hits").get("hits");
-            Iterator<JsonNode> elements = jsonNodeHits.elements();
-            while (elements.hasNext()) {
-                JsonNode source = elements.next().get("_source");
-                registrosDatajud.add(objectMapper.readValue(source.toString(), RegistroDatajud.class));
-            }
-        }
-        return registrosDatajud;
     }
 
     public List<ProcessoJudicialCDA> buscarCDAsPorNumeroProcessoForum(String numeroProcessoForum) {

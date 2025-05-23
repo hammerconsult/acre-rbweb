@@ -397,7 +397,7 @@ public class PropostaFornecedorFacade extends AbstractFacade<PropostaFornecedor>
                 "    or (lower(translate(pf.nome,'âàãáÁÂÀÃéêÉÊíÍóôõÓÔÕüúÜÚÇç','aaaaaaaaeeeeiioooooouuuucc')) like translate(:filtro,'âàãáÁÂÀÃéêÉÊíÍóôõÓÔÕüúÜÚÇç','aaaaaaaaeeeeiioooooouuuucc')" +
                 "    or replace(replace(replace(pf.cpf,'.',''),'-',''),'/','') like :filtro))" +
                 " and p.SITUACAOCADASTRALPESSOA = :ativo" +
-                " and f.licitacao_id = :lic" ;
+                " and f.licitacao_id = :lic";
         Query q = em.createNativeQuery(sql, LicitacaoFornecedor.class);
         q.setParameter("lic", licitacao.getId());
         q.setParameter("filtro", "%" + filtro.trim() + "%");

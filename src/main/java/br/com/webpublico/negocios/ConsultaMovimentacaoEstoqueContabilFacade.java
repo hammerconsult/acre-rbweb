@@ -8,7 +8,6 @@ import br.com.webpublico.entidadesauxiliares.VOLiquidacaoDocumentoFiscal;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.enums.administrativo.SituacaoDocumentoFiscalEntradaMaterial;
 import br.com.webpublico.util.DataUtil;
-import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 
 import javax.ejb.EJB;
@@ -199,7 +198,7 @@ public class ConsultaMovimentacaoEstoqueContabilFacade implements Serializable {
             for (Object[] obj : resultList) {
                 MovimentoEstoqueContabil mov = new MovimentoEstoqueContabil();
                 mov.setId(((BigDecimal) obj[0]).longValue());
-                mov.setNumero(((BigDecimal) obj[1]).longValue());
+                mov.setNumero(obj[1] != null ? ((BigDecimal) obj[1]).longValue() : null);
                 mov.setData((Date) obj[2]);
                 mov.setNumeroEntradaLevantamento(obj[3] != null ? ((BigDecimal) obj[3]).longValue() : null);
                 mov.setDataEntradaLevantamento(obj[4] != null ? (Date) obj[4] : null);

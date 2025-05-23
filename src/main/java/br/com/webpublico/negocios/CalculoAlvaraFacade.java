@@ -46,7 +46,6 @@ import java.util.stream.Collectors;
 @Stateless
 public class CalculoAlvaraFacade extends CalculoExecutorDepoisDePagar<ProcessoCalculoAlvara> {
 
-    public static final int PRIMEIRA_PARCELA = 1;
     public final String SEM_ASSINATURA = "SEM ASSINATURA NA ORIGEM";
 
     @PersistenceContext(unitName = "webpublicoPU")
@@ -242,26 +241,6 @@ public class CalculoAlvaraFacade extends CalculoExecutorDepoisDePagar<ProcessoCa
         q.setParameter("situacoes", Lists.newArrayList(SituacaoCalculoAlvara.EFETIVADO.name(), SituacaoCalculoAlvara.RECALCULADO.name()));
 
         return !q.getResultList().isEmpty();
-    }
-
-    public List<ProcessoCalculoAlvara> buscarProcessosEfetivadosNoExercicio(Long idCmc, Long idExercicio) {
-        String sql = "select pc.id from processocalculoalvara proc " +
-            " inner join processocalculo pc on pc.id = proc.id " +
-            " where proc.cadastroeconomico_id = :idCmc " +
-            " and pc.exercicio_id = :idExercicio " +
-            " and proc.situacaocalculoalvara in :situacoes " +
-            " order by proc.codigo ";
-
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idCmc", idCmc);
-        q.setParameter("idExercicio", idExercicio);
-        q.setParameter("situacoes", Lists.newArrayList(SituacaoCalculoAlvara.EFETIVADO.name(), SituacaoCalculoAlvara.RECALCULADO.name()));
-        List<BigDecimal> result = q.getResultList();
-        List<ProcessoCalculoAlvara> retorno = Lists.newArrayList();
-        for (BigDecimal idProcesso : result) {
-            retorno.add(recuperar(idProcesso.longValue()));
-        }
-        return retorno;
     }
 
     public ProcessoCalculoAlvara buscarProcessoCalculoPeloIdParcela(Long idParcela) {
@@ -586,7 +565,7 @@ public class CalculoAlvaraFacade extends CalculoExecutorDepoisDePagar<ProcessoCa
             if (resultadoParcela.isVencidoEEmAberto(new Date())) {
                 esteValorDividaTemParcelaVencida = true;
             }
-            if (resultadoParcela.isPago() && resultadoParcela.getSequenciaParcela() == PRIMEIRA_PARCELA) {
+            if (resultadoParcela.isPago() && resultadoParcela.getSequenciaParcela() == 1) {
                 esteValorDividaTemParcelaPaga = true;
             }
         }

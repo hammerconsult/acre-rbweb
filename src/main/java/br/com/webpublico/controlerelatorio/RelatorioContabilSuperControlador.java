@@ -825,6 +825,18 @@ public abstract class RelatorioContabilSuperControlador extends AbstractReport i
         this.funcao = funcao;
     }
 
+    public TipoLancamento getTipoLancamento() {
+        return tipoLancamento;
+    }
+
+    public void setTipoLancamento(TipoLancamento tipoLancamento) {
+        this.tipoLancamento = tipoLancamento;
+    }
+
+    public boolean isLancamentoNormal() {
+        return tipoLancamento != null && TipoLancamento.NORMAL.equals(tipoLancamento);
+    }
+
     public enum Mes {
         JANEIRO("Janeiro", 1),
         FEVEREIRO("Fevereiro", 2),
@@ -863,18 +875,6 @@ public abstract class RelatorioContabilSuperControlador extends AbstractReport i
         public void setNumeroMes(int numeroMes) {
             this.numeroMes = numeroMes;
         }
-    }
-
-    public TipoLancamento getTipoLancamento() {
-        return tipoLancamento;
-    }
-
-    public void setTipoLancamento(TipoLancamento tipoLancamento) {
-        this.tipoLancamento = tipoLancamento;
-    }
-
-    public boolean isLancamentoNormal() {
-        return tipoLancamento != null && TipoLancamento.NORMAL.equals(tipoLancamento);
     }
 
     protected void adicionarFontes(List<ParametrosRelatorios> parametros, String nomeAtributo, String campo, Integer local) {

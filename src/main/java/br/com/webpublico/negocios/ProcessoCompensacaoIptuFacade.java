@@ -159,7 +159,7 @@ public class ProcessoCompensacaoIptuFacade extends AbstractFacade<ProcessoCompen
             processo.setCadastroInical(processoCompensacaoIptu.getCadastroImobiliario().getInscricaoCadastral());
             processo.setCadastroFinal(processoCompensacaoIptu.getCadastroImobiliario().getInscricaoCadastral());
 
-            processo = calculoDAO.gerarProcessoCalculo(processo);
+            processo = calculoDAO.geraProcessoCalculo(processo);
             AssistenteCalculadorIPTU assistente = new AssistenteCalculadorIPTU(processo, 1);
 
             CalculadorIPTU calculador = new CalculadorIPTU();

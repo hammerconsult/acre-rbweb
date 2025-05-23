@@ -5,6 +5,7 @@ import br.com.webpublico.entidades.Cidade;
 import br.com.webpublico.negocios.CidadeFacade;
 import br.com.webpublico.nfse.domain.dtos.MunicipioNfseDTO;
 import br.com.webpublico.nfse.util.PaginationUtil;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.annotation.PostConstruct;
 import javax.naming.InitialContext;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.util.List;
 
 @RequestMapping("/nfse")
@@ -52,7 +55,11 @@ public class CidadeResource implements Serializable {
         method = RequestMethod.GET,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MunicipioNfseDTO>> buscarCidadesComCodigoPorParametro(Pageable pageable,
-                                                                                     @RequestParam(value = "param", required = false) String param) throws URISyntaxException {
+                                                                                     @RequestParam(value = "param", required = false) String param) throws URISyntaxException, UnsupportedEncodingException {
+        if (!Strings.isNullOrEmpty(param)) {
+            param = URLDecoder.decode(param, "UTF-8");
+            param = URLDecoder.decode(param, "UTF-8");
+        }
         Page<Cidade> cidades = cidadeFacade.buscarListarApenasComCodigo(pageable, param);
         List<MunicipioNfseDTO> dtos = Lists.newArrayList();
         for (Cidade cidade : cidades) {

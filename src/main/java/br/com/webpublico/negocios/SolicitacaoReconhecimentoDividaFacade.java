@@ -3,7 +3,7 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AgrupadorSolicitacaoEmpenho;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoVo;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.singletons.SingletonGeradorCodigoContabil;
 import br.com.webpublico.util.DataUtil;
@@ -124,15 +124,10 @@ public class SolicitacaoReconhecimentoDividaFacade extends AbstractFacade<Solici
             " Fonte de Recurso: " + fonteDespesaORC.getDescricaoFonteDeRecurso().trim() + ",";
     }
 
-    private void gerarSolicitacaoEmpenho(SolicitacaoReconhecimentoDivida solicitacao, List<AgrupadorSolicitacaoEmpenho> agrupadores) {
-        for (AgrupadorSolicitacaoEmpenho agrupador : agrupadores) {
+    private void gerarSolicitacaoEmpenho(SolicitacaoReconhecimentoDivida solicitacao, List<AgrupadorSolicitacaoEmpenho> agrupadoresSolicitacaoEmpenho) {
+        for (AgrupadorSolicitacaoEmpenho agrupador : agrupadoresSolicitacaoEmpenho) {
             SolicitacaoEmpenhoVo solicitacaoEmpenhoVo = criarVoSolicitacaoEmpenho(solicitacao, agrupador);
-            SolicitacaoEmpenho solicitacaoEmpenho = solicitacaoEmpenhoFacade.gerarSolicitacaoEmpenhoSalvando(solicitacaoEmpenhoVo);
-
-            SolicitacaoEmpenhoReconhecimentoDivida solEmpDivida = new SolicitacaoEmpenhoReconhecimentoDivida();
-            solEmpDivida.setReconhecimentoDivida(solicitacao.getReconhecimentoDivida());
-            solEmpDivida.setSolicitacaoEmpenho(solicitacaoEmpenho);
-            em.merge(solEmpDivida);
+            solicitacaoEmpenhoFacade.gerarSolicitacaoEmpenhoSalvando(solicitacaoEmpenhoVo);
         }
     }
 
@@ -319,6 +314,7 @@ public class SolicitacaoReconhecimentoDividaFacade extends AbstractFacade<Solici
         solicitacaoEmpenhoVo.setFornecedor(entity.getReconhecimentoDivida().getFornecedor());
         solicitacaoEmpenhoVo.setGerarReserva(true);
         solicitacaoEmpenhoVo.setClasseCredor(entity.getClasseCredor());
+        solicitacaoEmpenhoVo.setReconhecimentoDivida(entity.getReconhecimentoDivida());
         solicitacaoEmpenhoVo.setUsuarioSistema(sistemaFacade.getUsuarioCorrente());
         solicitacaoEmpenhoVo.setOrigemSocilicitacao(OrigemSolicitacaoEmpenho.RECONHECIMENTO_DIVIDA_EXERCICIO);
         return solicitacaoEmpenhoVo;

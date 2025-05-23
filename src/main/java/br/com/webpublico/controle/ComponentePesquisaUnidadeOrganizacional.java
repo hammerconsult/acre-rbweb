@@ -10,6 +10,7 @@ import br.com.webpublico.entidades.UnidadeGestora;
 import br.com.webpublico.entidades.UnidadeGestoraUnidadeOrganizacional;
 import br.com.webpublico.enums.SummaryMessages;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
+import br.com.webpublico.enums.TipoUnidadeGestora;
 import br.com.webpublico.negocios.HierarquiaOrganizacionalFacade;
 import br.com.webpublico.negocios.UnidadeGestoraFacade;
 import br.com.webpublico.util.ConverterAutoComplete;

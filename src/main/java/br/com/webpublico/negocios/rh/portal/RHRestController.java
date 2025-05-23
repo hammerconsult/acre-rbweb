@@ -486,11 +486,11 @@ public class RHRestController extends SuperPortalRHRestController {
             }
         }
         Integer anoAtual = DateTime.now().getYear();
-        List<FichaFinanceiraFP> fichaFinanceiraFPS = getFichaFinanceiraFPFacade().buscarFichaPorCpf(filtro.getCpf(), anoAtual);
+        List<FichaFinanceiraFP> fichaFinanceiraFPS = getFichaFinanceiraFPFacade().buscarFichaPorMatriculaAndCpf(filtro.getMatricula(), filtro.getCpf(), anoAtual);
         if (fichaFinanceiraFPS == null || fichaFinanceiraFPS.isEmpty()) {
             while ((fichaFinanceiraFPS == null || fichaFinanceiraFPS.isEmpty()) && anoAtual > DateTime.now().getYear() - 10) {
                 anoAtual = anoAtual - 1;
-                fichaFinanceiraFPS = getFichaFinanceiraFPFacade().buscarFichaPorCpf(filtro.getCpf(), anoAtual);
+                fichaFinanceiraFPS = getFichaFinanceiraFPFacade().buscarFichaPorMatriculaAndCpf(filtro.getMatricula(), filtro.getCpf(), anoAtual);
             }
         }
         List<WSFichaFinanceira> wsFichaFinanceiras = WSFichaFinanceira.convertFichaFinanceiraToWSFichaFinanceiraList(fichaFinanceiraFPS);

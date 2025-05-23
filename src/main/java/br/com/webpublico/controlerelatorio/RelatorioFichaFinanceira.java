@@ -126,11 +126,6 @@ public class RelatorioFichaFinanceira extends AbstractReport implements Serializ
         limpaCampos();
     }
 
-    @URLAction(mappingId = "novoRelatorioFichaFinanceiraAnual", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
-    public void novoRelatorioFichaFinanceiraAnual() {
-        limpaCampos();
-    }
-
     public void limpaCampos() {
         mes = null;
         mesFinal = null;

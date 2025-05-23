@@ -111,8 +111,6 @@ public class ProcessoParcelamentoFacade extends CalculoExecutorDepoisDePagar<Pro
     private DAMFacade damFacade;
     @EJB
     private SingletonConcorrenciaParcela concorrenciaParcela;
-    @EJB
-    private ArquivoFacade arquivoFacade;
     @Inject
     private Event<NovoParcelamentoEvento> novoParcelamentoEvento;
 
@@ -1423,46 +1421,6 @@ public class ProcessoParcelamentoFacade extends CalculoExecutorDepoisDePagar<Pro
         q.setParameter("idCalculo", parcelamento.getId());
         q.setParameter("situacaoAberto", SituacaoParcela.EM_ABERTO.name());
         return q.getResultList().isEmpty();
-    }
-
-    public BigDecimal quantidadeParcelasDoParcelamentoPorSituacao(ProcessoParcelamento parcelamento, SituacaoParcela situacaoParcela) {
-        String sql = " select count(pvd.id) from parcelavalordivida pvd " +
-            " inner join valordivida vd on vd.id = pvd.valordivida_id " +
-            " inner join calculo on calculo.id = vd.calculo_id " +
-            " inner join situacaoparcelavalordivida spvd on spvd.id = pvd.situacaoatual_id " +
-            " where calculo.id = :id " +
-            " and spvd.situacaoparcela = :situacao ";
-
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("id", parcelamento.getId());
-        q.setParameter("situacao", situacaoParcela.name());
-
-        List<BigDecimal> qtdParcelas = q.getResultList();
-        return (qtdParcelas != null && !qtdParcelas.isEmpty() && qtdParcelas.get(0) != null) ? qtdParcelas.get(0) : BigDecimal.ZERO;
-    }
-
-
-    public Date buscarDataUltimoPagamento(ProcessoParcelamento parcelamento) {
-        Query q = em.createNativeQuery("select max(lb.datapagamento) " +
-                " from parcelavalordivida pvd " +
-                "inner join valordivida vd on vd.id = pvd.valordivida_id " +
-                "inner join calculo on calculo.id = vd.calculo_id " +
-                "inner join itemdam on itemdam.parcela_id = pvd.id " +
-                "inner join dam on dam.id = itemdam.dam_id " +
-                "inner join itemlotebaixa ilb on ilb.dam_id = dam.id " +
-                "inner join lotebaixa lb on lb.id = ilb.lotebaixa_id " +
-                "where calculo.id = :id " +
-                "and lb.situacaolotebaixa in (:situacoes)")
-            .setParameter("id", parcelamento.getId())
-            .setParameter("situacoes", Lists.newArrayList(SituacaoLoteBaixa.BAIXADO.name(),
-                SituacaoLoteBaixa.BAIXADO_INCONSITENTE.name()));
-        List resultList = q.getResultList();
-        return !resultList.isEmpty() ? (Date) resultList.get(0) : null;
-    }
-
-    private Exercicio getExercicioCorrente() {
-        Calendar c = GregorianCalendar.getInstance();
-        return exercicioFacade.getExercicioPorAno(c.get(Calendar.YEAR));
     }
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)

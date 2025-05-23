@@ -21,7 +21,6 @@ import br.com.webpublico.singletons.CacheTributario;
 import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
 import br.com.webpublico.util.AssistenteBarraProgresso;
 import br.com.webpublico.util.DataUtil;
-import br.com.webpublico.util.StringUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -31,13 +30,14 @@ import org.jboss.ejb3.annotation.TransactionTimeout;
 import org.joda.time.LocalDate;
 import org.springframework.web.client.RestTemplate;
 
-import javax.ejb.*;
+import javax.ejb.AsyncResult;
+import javax.ejb.Asynchronous;
+import javax.ejb.EJB;
+import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.Future;
@@ -48,12 +48,61 @@ import java.util.concurrent.TimeUnit;
 public class NotaFiscalFacade extends AbstractFacade<NotaFiscal> {
 
 
-    private final String SQL_BASE_NOTA = " from NotaFiscal nota " +
-        " inner join DeclaracaoPrestacaoServico  dec on dec.id = nota.declaracaoPrestacaoServico_id " +
-        " left join CANCDECLAPRESTACAOSERVICO ca on dec.cancelamento_id = ca.id " +
-        " left join DadosPessoaisNfse dadosPessoais on dadosPessoais.id = dec.dadosPessoaisTomador_id " +
-        " left join Rps rps on rps.id = nota.rps_id " +
-        " where nota.prestador_id = :empresaId ";
+    public final String SQL_PRINCIPAL_RELATORIO_ISS_PAGO = " select 'Emitida' as operacao,  " +
+        "       formatacpfcnpj(coalesce(pf.cpf, pj.cnpj)) || ' - ' || coalesce(pf.nome, pj.razaosocial) as cadastroEconomico,  " +
+        "       dec.competencia,  " +
+        "       item.quantidade as quantidade,  " +
+        "       item.iss,  " +
+        "       item.baseCalculo,  " +
+        "       item.deducoes,  " +
+        "       item.descontosIncondicionados,  " +
+        "       item.descontosCondicionados,  " +
+        "       item.valorServico,  " +
+        "       item.aliquotaServico,  " +
+        "       nf.numero,  " +
+        "       serv.nome as servico,  " +
+        "       serv.id as idServico,  " +
+        "       cad.id as idCadastroEconomico, " +
+        "       calculo.id as idCalculo " +
+        "  from DeclaracaoPrestacaoServico dec  " +
+        " inner join ItemDeclaracaoServico item on dec.id = item.DeclaracaoPrestacaoServico_id  " +
+        " inner join notafiscal nf on dec.id = nf.declaracaoPrestacaoServico_id  " +
+        " inner join CadastroEconomico cad on nf.prestador_id = cad.id  " +
+        "  left join pessoaFisica pf on pf.id = cad.pessoa_id  " +
+        "  left join pessoaJuridica pj on pj.id = cad.pessoa_id  " +
+        " inner join servico  serv on item.servico_id = serv.id " +
+        " inner join notadeclarada notadec on notadec.declaracaoPrestacaoServico_id = dec.id " +
+        " inner join declaracaomensalservico dms on dms.id = notadec.declaracaoMensalServico_id " +
+        " inner join processoCalculoISS proc on proc.id = dms.processoCalculoISS_id " +
+        " inner join calculo on calculo.processocalculo_id = proc.id " +
+        " union all  " +
+        "select 'Recebida' as operacao,  " +
+        "       formatacpfcnpj(coalesce(pf.cpf, pj.cnpj)) || ' - ' || coalesce(pf.nome, pj.razaosocial) as cadastroEconomico,  " +
+        "       dec.competencia,  " +
+        "       coalesce(item.quantidade, 1) as quantidade,  " +
+        "       item.iss,  " +
+        "       item.baseCalculo,  " +
+        "       item.deducoes,  " +
+        "       item.descontosIncondicionados,  " +
+        "       item.descontosCondicionados,  " +
+        "       item.valorServico,  " +
+        "       item.aliquotaServico,  " +
+        "       doc.numero,  " +
+        "       serv.nome as servico,  " +
+        "       serv.id as idServico, " +
+        "       cad.id as idCadastroEconomico, " +
+        "       calculo.id as idCalculo " +
+        "  from DeclaracaoPrestacaoServico dec  " +
+        " inner join ItemDeclaracaoServico item on dec.id = item.DeclaracaoPrestacaoServico_id  " +
+        " inner join servicodeclarado doc on dec.id = doc.declaracaoPrestacaoServico_id  " +
+        " inner join CadastroEconomico cad on doc.cadastroeconomico_id = cad.id  " +
+        "  left join pessoaFisica pf on pf.id = cad.pessoa_id  " +
+        "  left join pessoaJuridica pj on pj.id = cad.pessoa_id  " +
+        " inner join servico  serv on item.servico_id = serv.id " +
+        " inner join notadeclarada notadec on notadec.declaracaoPrestacaoServico_id = dec.id " +
+        " inner join declaracaomensalservico dms on dms.id = notadec.declaracaoMensalServico_id " +
+        " inner join processoCalculoISS proc on proc.id = dms.processoCalculoISS_id " +
+        " inner join calculo on calculo.processocalculo_id = proc.id ";
     private final String CAMPOS_SQL_RELATORIO_NOTA = " select " +
         "       nota.id, " +
         "       nota.numero, " +
@@ -83,6 +132,7 @@ public class NotaFiscalFacade extends AbstractFacade<NotaFiscal> {
         "       ce.classificacaoatividade, " +
         "       s.codigo as codigo_servico, " +
         "       s.nome as nome_servico ";
+
     private final String SQL_RELATORIO_NOTA = " from declaracaoprestacaoservico  dec " +
         "  inner join itemdeclaracaoservico ids on ids.id = (select max(s.id) " +
         "                                                       from itemdeclaracaoservico s " +
@@ -200,201 +250,6 @@ public class NotaFiscalFacade extends AbstractFacade<NotaFiscal> {
         }
     }
 
-    @TransactionTimeout(unit = TimeUnit.HOURS, value = 1)
-    public List<RelatorioNotasFiscaisDTO> buscarNotasFiscais(AbstractFiltroNotaFiscal filtro) {
-        String whereOrAnd = " where ";
-        String sql = CAMPOS_SQL_RELATORIO_NOTA +
-            SQL_RELATORIO_NOTA;
-        if (filtro.getDataInicial() != null) {
-            sql += whereOrAnd + " nota.emissao >= to_date(:dataInicial, 'dd/mm/yyyy') ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getDataFinal() != null) {
-            sql += whereOrAnd + " nota.emissao <= to_date(:dataFinal, 'dd/mm/yyyy') ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getExercicioInicial() != null && filtro.getMesInicial() != null) {
-            sql += whereOrAnd + " (extract(year from dec.competencia) > :exercicioInicial or " +
-                " (extract(year from dec.competencia) = :exercicioInicial and extract(month from dec.competencia) >= :mesInicial)) ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getExercicioFinal() != null && filtro.getMesFinal() != null) {
-            sql += whereOrAnd + " (extract(year from dec.competencia) < :exercicioFinal or " +
-                " (extract(year from dec.competencia) = :exercicioFinal and extract(month from dec.competencia) <= :mesFinal)) ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getNumero() != null && !filtro.getNumero().isEmpty()) {
-            sql += whereOrAnd + " nota.numero = cast(:numero as number) ";
-            whereOrAnd = " and ";
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCnpjInicial())) {
-            sql += whereOrAnd + " dpp.cpfcnpj >= :cnpjInicial ";
-            whereOrAnd = " and ";
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCnpjFinal())) {
-            sql += whereOrAnd + " dpp.cpfcnpj <= :cnpjFinal ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getTipoContribuinte() != null) {
-            sql += whereOrAnd + " case when length(dpt.cpfcnpj) = 14 then 'JURIDICA' else 'FISICA' end = :tipoTomador ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getContribuinte() != null) {
-            sql += whereOrAnd + " dpt.cpfcnpj = :tomador ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getCadastroEconomico() != null) {
-            sql += whereOrAnd + " ce.id = :prestador ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getExigibilidades() != null && !filtro.getExigibilidades().isEmpty()) {
-            sql += whereOrAnd + " dec.naturezaOperacao in (:naturezas) ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getSituacoes() != null && !filtro.getSituacoes().isEmpty()) {
-            sql += whereOrAnd + " dec.situacao in (:situacoes) ";
-            whereOrAnd = " and ";
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCpfCnpjTomadorInicial())) {
-            sql += whereOrAnd + " dpt.cpfcnpj >= :cpfCnpjTomadorInicial ";
-            whereOrAnd = " and ";
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCpfCnpjTomadorFinal())) {
-            sql += whereOrAnd + " dpt.cpfcnpj <= :cpfCnpjTomadorFinal ";
-            whereOrAnd = " and ";
-        }
-        if (filtro.getServicos() != null && !filtro.getServicos().isEmpty()) {
-            sql += whereOrAnd + " ids.servico_id in (:servicos) ";
-            whereOrAnd = " and ";
-        }
-        sql += " order by extract(year from dec.competencia) desc, extract(month from dec.competencia), nota.numero ";
-
-        Query q = em.createNativeQuery(sql);
-        if (filtro.getNumero() != null && !filtro.getNumero().isEmpty()) {
-            q.setParameter("numero", filtro.getNumero());
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCnpjInicial())) {
-            q.setParameter("cnpjInicial", StringUtil.retornaApenasNumeros(filtro.getCnpjInicial()));
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCnpjFinal())) {
-            q.setParameter("cnpjFinal", StringUtil.retornaApenasNumeros(filtro.getCnpjFinal()));
-        }
-        if (filtro.getTipoContribuinte() != null) {
-            q.setParameter("tipoTomador", filtro.getTipoContribuinte().name());
-        }
-        if (filtro.getContribuinte() != null) {
-            q.setParameter("tomador", StringUtil.retornaApenasNumeros(filtro.getContribuinte().getCpf_Cnpj()));
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCpfCnpjTomadorInicial())) {
-            q.setParameter("cpfCnpjTomadorInicial", StringUtil.retornaApenasNumeros(filtro.getCpfCnpjTomadorInicial()));
-        }
-        if (!Strings.isNullOrEmpty(filtro.getCpfCnpjTomadorFinal())) {
-            q.setParameter("cpfCnpjTomadorFinal", StringUtil.retornaApenasNumeros(filtro.getCpfCnpjTomadorFinal()));
-        }
-        if (filtro.getDataInicial() != null) {
-            q.setParameter("dataInicial", DataUtil.getDataFormatada(filtro.getDataInicial()));
-        }
-        if (filtro.getDataFinal() != null) {
-            q.setParameter("dataFinal", DataUtil.getDataFormatada(filtro.getDataFinal()));
-        }
-        if (filtro.getExercicioInicial() != null && filtro.getMesInicial() != null) {
-            q.setParameter("exercicioInicial", filtro.getExercicioInicial().getAno());
-            q.setParameter("mesInicial", filtro.getMesInicial().getNumeroMes());
-        }
-        if (filtro.getExercicioFinal() != null && filtro.getMesFinal() != null) {
-            q.setParameter("exercicioFinal", filtro.getExercicioFinal().getAno());
-            q.setParameter("mesFinal", filtro.getMesFinal().getNumeroMes());
-        }
-        if (filtro.getCadastroEconomico() != null) {
-            q.setParameter("prestador", filtro.getCadastroEconomico().getId());
-        }
-        if (filtro.getExigibilidades() != null && !filtro.getExigibilidades().isEmpty()) {
-            q.setParameter("naturezas", filtro.getNamesExigibilidades());
-        }
-        if (filtro.getSituacoes() != null && !filtro.getSituacoes().isEmpty()) {
-            List<String> situacoes = Lists.newArrayList();
-            for (SituacaoNota s : filtro.getSituacoes()) {
-                situacoes.add(s.name());
-            }
-            q.setParameter("situacoes", situacoes);
-        }
-        if (filtro.getServicos() != null && !filtro.getServicos().isEmpty()) {
-            q.setParameter("servicos", filtro.getIdsServicos());
-        }
-        return RelatorioNotasFiscaisDTO.popular((List<Object[]>) q.getResultList());
-    }
-
-    @Asynchronous
-    @TransactionTimeout(unit = TimeUnit.HOURS, value = 10)
-    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-    public Future<List<RelatorioNotasFiscaisDTO>> buscarNotasFiscaisPorAtividade(AssistenteBarraProgresso assistenteBarraProgresso,
-                                                                                 AbstractFiltroNotaFiscal filtro) {
-        assistenteBarraProgresso.setDescricaoProcesso("Buscando notas fiscais...");
-        assistenteBarraProgresso.setTotal(0);
-
-        StringBuilder sql = new StringBuilder();
-
-        sql.append(CAMPOS_SQL_RELATORIO_NOTA);
-        sql.append(SQL_RELATORIO_NOTA);
-        sql.append(" where (extract(year from dec.competencia) >= :exercicioInicial and extract(month from dec.competencia) >= :mesInicial) ");
-        sql.append("   and (extract(year from dec.competencia) <= :exercicioFinal and extract(month from dec.competencia) <= :mesFinal) ");
-
-        if (filtro.getClassificacoesAtividade() != null && !filtro.getClassificacoesAtividade().isEmpty()) {
-            sql.append("   and ce.classificacaoatividade in (:classificacoes) ");
-        }
-        if (filtro.getContribuinte() != null) {
-            sql.append(" and dpt.cpfcnpj = :tomador ");
-        }
-        if (filtro.getCadastroEconomico() != null) {
-            sql.append(" and nota.prestador_id = :prestador ");
-        }
-        if (filtro.getServicos() != null && !filtro.getServicos().isEmpty()) {
-            sql.append(" and s.id in (:servicos) ");
-        }
-        if (filtro.getSituacoes() != null && !filtro.getSituacoes().isEmpty()) {
-            sql.append(" and dec.situacao in (:situacoes) ");
-        }
-
-        if (filtro.getValorTotalInicial() != null) {
-            sql.append(" and dec.totalservicos >= :valorinicial ");
-        }
-        if (filtro.getValorTotalFinal() != null) {
-            sql.append(" and dec.totalservicos <= :valorfinal ");
-        }
-        sql.append(" order by s.codigo, ce.classificacaoatividade, nota.numero ");
-
-        Query q = em.createNativeQuery(sql.toString());
-        q.setParameter("exercicioInicial", filtro.getExercicioInicial().getAno());
-        q.setParameter("mesInicial", filtro.getMesInicial().getNumeroMes());
-        q.setParameter("exercicioFinal", filtro.getExercicioFinal().getAno());
-        q.setParameter("mesFinal", filtro.getMesFinal().getNumeroMes());
-        if (filtro.getClassificacoesAtividade() != null && !filtro.getClassificacoesAtividade().isEmpty()) {
-            q.setParameter("classificacoes", filtro.getNamesClassificacoesAtividade());
-        }
-        if (filtro.getNumero() != null && !filtro.getNumero().isEmpty()) {
-            q.setParameter("numero", filtro.getNumero());
-        }
-        if (filtro.getContribuinte() != null) {
-            q.setParameter("tomador", filtro.getContribuinte().getCpf_Cnpj());
-        }
-        if (filtro.getCadastroEconomico() != null) {
-            q.setParameter("prestador", filtro.getCadastroEconomico().getId());
-        }
-        if (filtro.getServicos() != null && !filtro.getServicos().isEmpty()) {
-            q.setParameter("servicos", filtro.getIdsServicos());
-        }
-        if (filtro.getSituacoes() != null && !filtro.getSituacoes().isEmpty()) {
-            q.setParameter("situacoes", filtro.getNamesSituacoes());
-        }
-        if (filtro.getValorTotalInicial() != null) {
-            q.setParameter("valorinicial", filtro.getValorTotalInicial());
-        }
-        if (filtro.getValorTotalFinal() != null) {
-            q.setParameter("valorfinal", filtro.getValorTotalFinal());
-        }
-        return new AsyncResult<>(RelatorioNotasFiscaisDTO.popular((List<Object[]>) q.getResultList()));
-    }
-
     public List<RelatorioNotasFiscaisDTO> buscarNotasFiscaisPorRPS(AbstractFiltroNotaFiscal filtro) {
         StringBuilder sql = new StringBuilder();
         sql.append(CAMPOS_SQL_RELATORIO_NOTA);
@@ -441,6 +296,93 @@ public class NotaFiscalFacade extends AbstractFacade<NotaFiscal> {
             q.setParameter("numeroLote", filtro.getNumeroLote());
         }
         return RelatorioNotasFiscaisDTO.popular((List<Object[]>) q.getResultList());
+    }
+
+    public List<RelatorioContaReceitaBancariaDTO> buscarContasDeReceitaBancaria(String where) {
+        String sql = "select " +
+            " conta, " +
+            " descricao, " +
+            " funcao, " +
+            " codigo, " +
+            " cadastroeconomico " +
+            " from " +
+            " (" +
+            " select " +
+            "  ipci.conta, " +
+            "  ipci.descricao, " +
+            "  ipci.funcao, " +
+            "  s.codigo, " +
+            "  ce.inscricaocadastral||' - '||coalesce(pf.cpf, pj.cnpj)||' - '||coalesce(pf.nome, pj.razaosocial) as cadastroeconomico " +
+            " from cadastroeconomico ce " +
+            " left join pessoafisica pf on pf.id = ce.pessoa_id " +
+            " left join pessoajuridica pj on pj.id = ce.pessoa_id " +
+            " inner join banco b on b.id = ce.banco_id " +
+            " inner join planocontasinterno pci on pci.banco_id = b.id and pci.ativo = 1 " +
+            " inner join itemplanocontasinterno ipci on ipci.planocontasinterno_id = pci.id " +
+            " inner join servico s on s.id = ipci.servico_id " +
+            where +
+            " ) dados " +
+            " order by dados.cadastroEconomico, dados.conta ";
+
+        Query q = em.createNativeQuery(sql);
+        List<Object[]> resultado = q.getResultList();
+        List<RelatorioContaReceitaBancariaDTO> retorno = Lists.newArrayList();
+        if (!resultado.isEmpty()) {
+            for (Object[] obj : resultado) {
+                RelatorioContaReceitaBancariaDTO relatorio = new RelatorioContaReceitaBancariaDTO();
+                relatorio.setConta((String) obj[0]);
+                relatorio.setDescricaoConta((String) obj[1]);
+                relatorio.setFuncao((String) obj[2]);
+                relatorio.setNomeServico((String) obj[3]);
+                relatorio.setCadastroEconomico((String) obj[4]);
+                retorno.add(relatorio);
+            }
+        }
+        return retorno;
+    }
+
+    private List<CnaeNfseDTO> buscarCnaesCadastroEconomico(Long idCadastro) {
+        List<CnaeNfseDTO> cnaes = Lists.newArrayList();
+        String sql = " SELECT C.ID, C.CODIGOCNAE, C.DESCRICAODETALHADA" +
+            "  FROM CNAE C " +
+            " INNER JOIN ECONOMICOCNAE EC ON EC.CNAE_ID = C.ID " +
+            " WHERE EC.CADASTROECONOMICO_ID = :IDCADASTRO " +
+            " ORDER BY C.CODIGOCNAE ";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("IDCADASTRO", idCadastro);
+        List<Object[]> resultList = query.getResultList();
+        if (resultList != null && !resultList.isEmpty()) {
+            for (Object[] obj : resultList) {
+                CnaeNfseDTO dto = new CnaeNfseDTO();
+                dto.setId(((BigDecimal) obj[0]).longValue());
+                dto.setCodigo((String) obj[1]);
+                dto.setDescricao((String) obj[2]);
+                cnaes.add(dto);
+            }
+        }
+        return cnaes;
+    }
+
+    private List<ServicoNfseDTO> buscarServicosCadastroEconomico(Long idCadastro) {
+        List<ServicoNfseDTO> servicos = Lists.newArrayList();
+        String sql = " SELECT S.ID, S.CODIGO, S.NOME " +
+            "   FROM SERVICO S " +
+            " INNER JOIN CADASTROECONOMICO_SERVICO CE_S ON CE_S.SERVICO_ID = S.ID " +
+            " WHERE CE_S.CADASTROECONOMICO_ID = :IDCADASTRO " +
+            " ORDER BY S.CODIGO ";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("IDCADASTRO", idCadastro);
+        List<Object[]> resultList = query.getResultList();
+        if (resultList != null && !resultList.isEmpty()) {
+            for (Object[] obj : resultList) {
+                ServicoNfseDTO dto = new ServicoNfseDTO();
+                dto.setId(((BigDecimal) obj[0]).longValue());
+                dto.setCodigo((String) obj[1]);
+                dto.setDescricao((String) obj[2]);
+                servicos.add(dto);
+            }
+        }
+        return servicos;
     }
 
     public List<RelatorioCupomParticipanteDTO> buscarCuponsParticipantes(FiltroRelatorioCupomParticipante filtro) {
@@ -1147,30 +1089,6 @@ public class NotaFiscalFacade extends AbstractFacade<NotaFiscal> {
         return Lists.newArrayList();
     }
 
-    public TotalizadorRelatorioNotasFiscaisDTO buscarValoresTotalizador(String complemento,
-                                                                        List<FiltroConsultaEntidade> filtrosConsultaNsfe) {
-
-        StringBuilder sql = new StringBuilder();
-        sql.append(" select count(1) as qtdNotas, sum(dps.totalservicos) as servicos, ");
-        sql.append(" sum(coalesce(dps.descontosincondicionais, 0) + coalesce(dps.descontoscondicionais,0)) as descontos, ");
-        sql.append(" sum(coalesce(dps.deducoeslegais, 0)) as deducoes, sum(coalesce(dps.basecalculo, 0)) as baseCalculo, ");
-        sql.append(" sum(coalesce(dps.isscalculado, 0)) as iss ");
-        sql.append(FROM_NOTA_FISCAL);
-        if (!Strings.isNullOrEmpty(complemento))
-            sql.append(complemento);
-        Map<String, Object> params = addParamsToQuery(filtrosConsultaNsfe, sql);
-        Query q = em.createNativeQuery(sql.toString());
-        params.keySet().forEach(s -> q.setParameter(s, params.get(s)));
-        Object[] obj = (Object[]) q.getSingleResult();
-        TotalizadorRelatorioNotasFiscaisDTO dto = new TotalizadorRelatorioNotasFiscaisDTO();
-        dto.setQuantidadeNotas(((Number) obj[0]).intValue());
-        dto.setTotalServicos((BigDecimal) obj[1]);
-        dto.setTotalDescontos((BigDecimal) obj[2]);
-        dto.setTotalDeducoes((BigDecimal) obj[3]);
-        dto.setTotalBaseCalculo((BigDecimal) obj[4]);
-        dto.setTotalIssCalculado((BigDecimal) obj[5]);
-        return dto;
-    }
 
     public Integer contarNotasFiscais(String complemento, List<FiltroConsultaEntidade> filtrosConsultaNsfe) {
         StringBuilder sql = new StringBuilder();

@@ -109,6 +109,7 @@ public class RelatorioFolhaPorSecretariaRecVincFPControlador implements Serializ
         listaTodasHierarquias = new ArrayList<>();
     }
 
+
     @URLAction(mappingId = "folha-por-secretaria-recurso-vinculoFP", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novo() {
         if (!FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().isEmpty()) {

@@ -6,7 +6,6 @@ import br.com.webpublico.entidades.ProcessoJudicialCDA;
 import br.com.webpublico.entidades.ProcessoJudicialExtincao;
 import br.com.webpublico.entidades.tributario.procuradoria.*;
 import br.com.webpublico.entidadesauxiliares.AssistenteDetentorArquivoComposicao;
-import br.com.webpublico.entidadesauxiliares.datajud.RegistroDatajud;
 import br.com.webpublico.enums.SituacaoCadastralPessoa;
 import br.com.webpublico.enums.SummaryMessages;
 import br.com.webpublico.enums.tributario.procuradoria.PapelProcesso;
@@ -14,7 +13,6 @@ import br.com.webpublico.enums.tributario.procuradoria.TipoAcaoProcessoJudicial;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
-import br.com.webpublico.negocios.ComunicaSofPlanFacade;
 import br.com.webpublico.negocios.ProcessoJudicialFacade;
 import br.com.webpublico.util.ConverterAutoComplete;
 import br.com.webpublico.util.ConverterGenerico;
@@ -70,20 +68,11 @@ public class ProcessoJudicialControlador extends PrettyControlador<ProcessoJudic
     private CertidaoDividaAtiva certidao;
     private PessoaProcesso pessoaProcesso;
     private ProcessoJudicialExtincao processoJudicialExtincao;
-    private List<RegistroDatajud> registrosDatajud;
 
     public ProcessoJudicialControlador() {
         super(ProcessoJudicialCDA.class);
         tramite = new TramiteProcessoJudicial();
         pessoaProcesso = new PessoaProcesso();
-    }
-
-    public List<RegistroDatajud> getRegistrosDatajud() {
-        return registrosDatajud;
-    }
-
-    public void setRegistrosDatajud(List<RegistroDatajud> registrosDatajud) {
-        this.registrosDatajud = registrosDatajud;
     }
 
     public ParametroProcuradoria getParametroProcuradoria() {
@@ -446,20 +435,6 @@ public class ProcessoJudicialControlador extends PrettyControlador<ProcessoJudic
             } catch (ValidacaoException ve) {
                 FacesUtil.printAllFacesMessages(ve.getMensagens());
             }
-        }
-    }
-
-    public void consultarProcessoDatajud() {
-        try {
-            registrosDatajud = processoJudicialFacade.buscarDadosDatajud(selecionado.getProcessoJudicial().getNumeroProcessoForum());
-            if (registrosDatajud == null || registrosDatajud.isEmpty()) {
-                FacesUtil.addAtencao("Processo judicial não encontrado no Datajud.");
-            } else {
-                FacesUtil.atualizarComponente("formConsultaDatajud");
-                FacesUtil.executaJavaScript("openDialog(dlgConsultaDatajud)");
-            }
-        } catch (Exception e) {
-            FacesUtil.addErrorPadrao(e);
         }
     }
 }

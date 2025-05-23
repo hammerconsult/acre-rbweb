@@ -260,7 +260,6 @@ public class PainelEsocialControlador {
     private List<VinculoFP> filtroS2400;
     private List<VinculoFP> filtroS2410;
     private int qtdeRegistrosParaEnvio = 0;
-    private TipoEventoFPEmpregador tipoEventoFPEmpregador;
 
     private List<Future<AssistenteBarraProgresso>> futureAssistenteBarraProgresso;
 
@@ -465,25 +464,14 @@ public class PainelEsocialControlador {
         this.vinculoFP = vinculoFP;
     }
 
-    public TipoEventoFPEmpregador getTipoEventoFPEmpregador() {
-        return tipoEventoFPEmpregador;
-    }
-
-    public void setTipoEventoFPEmpregador(TipoEventoFPEmpregador tipoEventoFPEmpregador) {
-        this.tipoEventoFPEmpregador = tipoEventoFPEmpregador;
-    }
-
     public void setarEvento(String evento) {
         this.evento = evento;
         definirEventoRemuneracao(evento);
     }
 
     private void definirEventoRemuneracao(String evento) {
-        eventoRemuneracao = false;
-        mostrarDescricaoEvento = false;
         if (TipoArquivoESocial.S1200.name().equals(evento) || TipoArquivoESocial.S1202.name().equals(evento)
-            || TipoArquivoESocial.S1207.name().equals(evento) || TipoArquivoESocial.S1210.name().equals(evento)
-            || TipoArquivoESocial.S2299.name().equals(evento) || TipoArquivoESocial.S2200.name().equals(evento)) {
+            || TipoArquivoESocial.S1207.name().equals(evento) || TipoArquivoESocial.S1210.name().equals(evento)) {
             eventoRemuneracao = true;
         }
         if (TipoArquivoESocial.S1010.name().equals(evento)) {
@@ -1037,6 +1025,14 @@ public class PainelEsocialControlador {
         this.hierarquiasOrganizacionais = hierarquiasOrganizacionais;
     }
 
+    public CAT getCat() {
+        return cat;
+    }
+
+    public void setCat(CAT cat) {
+        this.cat = cat;
+    }
+
     public TipoOperacaoESocial getTipoOperacaoESocialS2200() {
         return tipoOperacaoESocialS2200;
     }
@@ -1075,14 +1071,6 @@ public class PainelEsocialControlador {
 
     public void setTipoOperacaoESocialS2399(TipoOperacaoESocial tipoOperacaoESocialS2399) {
         this.tipoOperacaoESocialS2399 = tipoOperacaoESocialS2399;
-    }
-
-    public CAT getCat() {
-        return cat;
-    }
-
-    public void setCat(CAT cat) {
-        this.cat = cat;
     }
 
     public TipoOperacaoESocial getTipoOperacaoESocialS2400() {
@@ -1209,9 +1197,9 @@ public class PainelEsocialControlador {
         itemContratoFPS2220 = Lists.newArrayList();
         itemExoneracaoS2299 = Lists.newArrayList();
         itemPrestadorServico2300 = Lists.newArrayList();
+        itemEventoS2400 = Lists.newArrayList();
         itemEventoS2410 = Lists.newArrayList();
         itemCedenciaS2231 = Lists.newArrayList();
-        itemEventoS2400 = Lists.newArrayList();
         itemTermBeneficioS2420 = Lists.newArrayList();
         itemRiscoOcupacional = Lists.newArrayList();
         itemExclusao = Lists.newArrayList();
@@ -2213,53 +2201,15 @@ public class PainelEsocialControlador {
 
     public void buscarS1010() {
         if (empregador != null) {
-            try {
-                validarEventoFP();
-                itemEventoFPS1010.clear();
-                ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
-                List<EventoFP> eventos = registroESocialFacade.buscarEventoFPParaEnvioEsocial(
-                    config, codigoEventoFP, apenasNaoEnviados, sistemaFacade.getDataOperacao(), tipoEventoFPEmpregador);
-                if (eventos == null || eventos.isEmpty()) {
-                    FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
-                } else {
-                    realizarAlteracoesPorTipoDeEnvio(eventos);
-                    itemEventoFPS1010.addAll(eventos);
-                }
-            } catch (ValidacaoException ve) {
-                FacesUtil.printAllFacesMessages(ve.getMensagens());
+            itemEventoFPS1010.clear();
+            ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(empregador);
+            List<EventoFP> eventos = registroESocialFacade.buscarEventoFPParaEnvioEsocialS1010(config, codigoEventoFP, apenasNaoEnviados, sistemaFacade.getDataOperacao(), tipoOperacaoESocialS1010);
+            if (eventos == null || eventos.isEmpty()) {
+                FacesUtil.addMessageWarn("Atenção!", "Nenhum registro encontrado para envio.");
+            } else {
+                itemEventoFPS1010.addAll(eventos);
             }
         }
-    }
-
-    private void realizarAlteracoesPorTipoDeEnvio(List<EventoFP> eventos) {
-        if (TipoEventoFPEmpregador.ALTERNATIVO.equals(tipoEventoFPEmpregador)) {
-            eventos.stream()
-                .filter(eventoFP -> TipoEventoFP.VANTAGEM.equals(eventoFP.getTipoEventoFP()) ||
-                    TipoEventoFP.DESCONTO.equals(eventoFP.getTipoEventoFP()))
-                .forEach(eventoFP -> {
-                    if (TipoEventoFP.VANTAGEM.equals(eventoFP.getTipoEventoFP())) {
-                        eventoFP.setCodigo(eventoFP.getCodigo().concat("D"));
-                        eventoFP.setDebitoCreditoDecimo("D");
-                    } else if (TipoEventoFP.DESCONTO.equals(eventoFP.getTipoEventoFP())) {
-                        eventoFP.setCodigo(eventoFP.getCodigo().concat("C"));
-                        eventoFP.setDebitoCreditoDecimo("C");
-                    }
-                });
-        } else if (TipoEventoFPEmpregador.DECIMO_TERCEIRO.equals(tipoEventoFPEmpregador)) {
-            eventos.stream().filter(eventoFP -> TipoEventoFP.VANTAGEM.equals(eventoFP.getTipoEventoFP()) ||
-                TipoEventoFP.DESCONTO.equals(eventoFP.getTipoEventoFP())).forEach(eventoFP -> {
-                eventoFP.setCodigo(eventoFP.getCodigo().concat("DT"));
-                eventoFP.setDebitoCreditoDecimo("DT");
-            });
-        }
-    }
-
-    private void validarEventoFP() {
-        ValidacaoException ve = new ValidacaoException();
-        if (tipoEventoFPEmpregador == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("Informe o Tipo de Configuração.");
-        }
-        ve.lancarException();
     }
 
     public void removerS1010(EventoFP eventoFP) {
@@ -2863,10 +2813,6 @@ public class PainelEsocialControlador {
         }
         if (registroEventoEsocialS1207.getExercicio() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("Informe o Ano.");
-
-        }
-        if (registroEventoEsocialS1207.getTipoApuracaoFolha() == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("Informe o Tipo de Apuração.");
         }
         if (empregador == null) {
             ve.adicionarMensagemDeCampoObrigatorio("Informe o CNPJ/Entidade.");
@@ -2928,7 +2874,7 @@ public class PainelEsocialControlador {
         try {
             validarPesquisaEnvioEventoS1207();
             registroEventoEsocialS1207.setItemVinculoFP(getVinculoComFolhaEfetivadaNaCompetenciaS1207());
-            vinculoFP = null;
+            registroEventoEsocialS1207.setPessoaFisica(null);
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
@@ -2969,7 +2915,8 @@ public class PainelEsocialControlador {
         registroEventoEsocialS1210.getItemVinculoFP().remove(servidor);
     }
 
-    private List<VinculoFPEventoEsocial> getVinculoComFolhaEfetivadaNaCompetencia(RegistroEventoEsocial registroEventoEsocial) {
+    private List<VinculoFPEventoEsocial> getVinculoComFolhaEfetivadaNaCompetencia(RegistroEventoEsocial
+                                                                                      registroEventoEsocial) {
         try {
             registroEventoEsocial.setEntidade(empregador);
             return registroS1200Facade.getVinculoComFolhaEfetivadaNaCompetencia(registroEventoEsocial, empregador, pessoaVinculo, apenasNaoEnviados, hierarquiaOrganizacional);
@@ -2982,7 +2929,8 @@ public class PainelEsocialControlador {
     private List<VinculoFPEventoEsocial> getVinculoComFolhaEfetivadaNaCompetenciaS1202() {
         try {
             registroEventoEsocialS1202.setEntidade(empregador);
-            return registroS1202Facade.getVinculoFPEventoEsocial(registroEventoEsocialS1202, pessoaVinculo, apenasNaoEnviados, hierarquiaOrganizacional);
+            return registroS1202Facade.getVinculoFPEventoEsocial(registroEventoEsocialS1202, pessoaVinculo,
+                apenasNaoEnviados, hierarquiaOrganizacional);
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
             return null;
@@ -2992,7 +2940,7 @@ public class PainelEsocialControlador {
     private List<VinculoFPEventoEsocial> getVinculoComFolhaEfetivadaNaCompetenciaS1207() {
         try {
             registroEventoEsocialS1207.setEntidade(empregador);
-            return registroS1207Facade.getVinculoFPEventoEsocial(registroEventoEsocialS1207, vinculoFP, apenasNaoEnviados);
+            return registroS1207Facade.getVinculoFPEventoEsocial(registroEventoEsocialS1207, apenasNaoEnviados);
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
             return null;
@@ -3038,6 +2986,9 @@ public class PainelEsocialControlador {
             if (item != null) {
                 validarItemEventoS1200(item, registroEventoEsocialS1200);
                 registroEventoEsocialS1200.getItemVinculoFP().addAll(item);
+                List<VinculoFPEventoEsocial> itensSelecionados = registroEventoEsocialS1200.getItemVinculoFPSelecionados() != null ? Lists.newArrayList(registroEventoEsocialS1200.getItemVinculoFPSelecionados()) : Lists.newArrayList();
+                itensSelecionados.addAll(item);
+                registroEventoEsocialS1200.setItemVinculoFPSelecionados(itensSelecionados.toArray(new VinculoFPEventoEsocial[0]));
                 vinculoFP = null;
                 pessoaVinculo = null;
             }
@@ -3055,6 +3006,9 @@ public class PainelEsocialControlador {
             if (item != null) {
                 validarItemEventoS1200(item, registroEventoEsocialS1210);
                 registroEventoEsocialS1210.getItemVinculoFP().addAll(item);
+                List<VinculoFPEventoEsocial> itensSelecionados = registroEventoEsocialS1210.getItemVinculoFPSelecionados() != null ? Lists.newArrayList(registroEventoEsocialS1210.getItemVinculoFPSelecionados()) : Lists.newArrayList();
+                itensSelecionados.addAll(item);
+                registroEventoEsocialS1210.setItemVinculoFPSelecionados(itensSelecionados.toArray(new VinculoFPEventoEsocial[0]));
                 pessoaVinculo = null;
             }
         } catch (ValidacaoException ve) {
@@ -3064,7 +3018,8 @@ public class PainelEsocialControlador {
     }
 
 
-    private void validarItemEvento(List<VinculoFPEventoEsocial> item, RegistroEventoEsocial registroEventoEsocial) {
+    private void validarItemEvento(List<VinculoFPEventoEsocial> item, RegistroEventoEsocial
+        registroEventoEsocial) {
         ValidacaoException ve = new ValidacaoException();
         if (registroEventoEsocial.getItemVinculoFP() != null && !registroEventoEsocial.getItemVinculoFP().isEmpty()) {
             for (VinculoFPEventoEsocial vinculoFPEventoEsocial : item) {
@@ -3086,7 +3041,8 @@ public class PainelEsocialControlador {
         ve.lancarException();
     }
 
-    private void validarItemEventoS1200(List<VinculoFPEventoEsocial> item, RegistroEventoEsocial registroEventoEsocial) {
+    private void validarItemEventoS1200(List<VinculoFPEventoEsocial> item, RegistroEventoEsocial
+        registroEventoEsocial) {
         ValidacaoException ve = new ValidacaoException();
         if (registroEventoEsocial.getItemVinculoFP() != null && !registroEventoEsocial.getItemVinculoFP().isEmpty()) {
             for (VinculoFPEventoEsocial vinculoFPEventoEsocial : item) {
@@ -3100,6 +3056,19 @@ public class PainelEsocialControlador {
         }
         ve.lancarException();
     }
+
+    public List<SelectItem> getMes() {
+        return Util.getListSelectItem(Mes.values(), false);
+    }
+
+    public List<SelectItem> getTipoFolhaPagamento() {
+        return Util.getListSelectItem(TipoFolhaDePagamento.getFolhasPorPrioridadeDeUso(), false);
+    }
+
+    public List<SelectItem> getSituacaoEvento() {
+        return Util.getListSelectItem(SituacaoESocial.getSituacoesRelatorioInconsistencia(), false);
+    }
+
 
     public boolean isEventoDePagamento() {
         return registroExclusaoS3000.getTipoArquivoESocial() != null && TipoArquivoESocial.getEventoFolhaPagamento().contains(registroExclusaoS3000.getTipoArquivoESocial()) && !isTipoArquivoESocialEhS1210();
@@ -3615,7 +3584,8 @@ public class PainelEsocialControlador {
         ve.lancarException();
     }
 
-    private void validarConfiguracaoEmpregador(ConfiguracaoEmpregadorESocial empregador, RegistroExclusaoS3000 registroExclusaoS3000) {
+    private void validarConfiguracaoEmpregador(ConfiguracaoEmpregadorESocial empregador, RegistroExclusaoS3000
+        registroExclusaoS3000) {
         ValidacaoException ve = new ValidacaoException();
         if (empregador == null || empregador.getCertificado() == null) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("Não foi encontrato configuração de empregador e certificado digital para o servidor " + registroExclusaoS3000.getVinculoFP());
@@ -3654,10 +3624,6 @@ public class PainelEsocialControlador {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Tipo de Folha de Pagamento deve ser informado.");
         }
         ve.lancarException();
-    }
-
-    public List<SelectItem> getMes() {
-        return Util.getListSelectItem(Mes.values(), false);
     }
 
     public void enviarEventoS1299() {
@@ -3710,15 +3676,6 @@ public class PainelEsocialControlador {
         }
         ve.lancarException();
     }
-
-    public List<SelectItem> getTipoFolhaPagamento() {
-        return Util.getListSelectItem(TipoFolhaDePagamento.getFolhasPorPrioridadeDeUso(), false);
-    }
-
-    public List<SelectItem> getSituacaoEvento() {
-        return Util.getListSelectItem(SituacaoESocial.getSituacoesRelatorioInconsistencia(), false);
-    }
-
 
     public List<SelectItem> getTiposCessao2231() {
         return Util.getListSelectItemSemCampoVazio(TipoCessao2231.values(), false);
@@ -3900,7 +3857,7 @@ public class PainelEsocialControlador {
     }
 
     public void setDataInicialContratoPrestador(Date dataInicialContratoPrestador) {
-        this.dataInicialContratoPrestador = dataInicialContratoPrestador;
+        dataInicialContratoPrestador = dataInicialContratoPrestador;
     }
 
     public PrestadorServicos getPrestadorServicosS2306() {
@@ -3968,6 +3925,14 @@ public class PainelEsocialControlador {
         return tipoRegimePrevidenciarioS1210;
     }
 
+    public void setTipoRegimePrevidenciarioS1210(TipoRegimePrevidenciario tipoRegimePrevidenciarioS1210) {
+        this.tipoRegimePrevidenciarioS1210 = tipoRegimePrevidenciarioS1210;
+    }
+
+    public List<SelectItem> getTipoRegime() {
+        return Util.getListSelectItem(TipoRegimePrevidenciario.values(), false);
+    }
+
     public List<VinculoFP> completaContratoPorEmpregador(String s) {
         try {
             validarBuscaEmpregador();
@@ -4001,14 +3966,6 @@ public class PainelEsocialControlador {
         return Lists.newArrayList();
     }
 
-    public void setTipoRegimePrevidenciarioS1210(TipoRegimePrevidenciario tipoRegimePrevidenciarioS1210) {
-        this.tipoRegimePrevidenciarioS1210 = tipoRegimePrevidenciarioS1210;
-    }
-
-    public List<SelectItem> getTipoRegime() {
-        return Util.getListSelectItem(TipoRegimePrevidenciario.values(), false);
-    }
-
     public List<SelectItem> getTipoOperacao() {
         List<SelectItem> retorno = new ArrayList();
         retorno.add(new SelectItem(null, "Automático"));
@@ -4016,10 +3973,6 @@ public class PainelEsocialControlador {
             retorno.add(new SelectItem(value, value.toString()));
         }
         return retorno;
-    }
-
-    public List<SelectItem> getConfiguracaoEventoFP() {
-        return Util.getListSelectItem(TipoEventoFPEmpregador.values(), false);
     }
 
     public void marcarTodosItensS2200() {
@@ -4245,4 +4198,3 @@ public class PainelEsocialControlador {
         }
     }
 }
-

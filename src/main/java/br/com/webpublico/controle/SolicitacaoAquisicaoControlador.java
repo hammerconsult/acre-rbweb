@@ -248,7 +248,7 @@ public class SolicitacaoAquisicaoControlador extends PrettyControlador<Solicitac
 
     private void recuperarItensRequisicao() {
         try {
-            itensRequisicao = facade.getRequisicaoDeCompraFacade().buscarItensRequisicaoAndItensExecucao(selecionado.getRequisicaoDeCompra());
+            itensRequisicao = facade.getRequisicaoDeCompraFacade().buscarItensRequisicao(selecionado.getRequisicaoDeCompra());
             for (ItemRequisicaoDeCompra item : itensRequisicao) {
                 ObjetoCompra objetoCompra = item.getObjetoCompra();
                 objetoCompra.setGrupoContaDespesa(facade.getObjetoCompraFacade().criarGrupoContaDespesa(objetoCompra.getTipoObjetoCompra(),objetoCompra.getGrupoObjetoCompra()));
@@ -403,8 +403,8 @@ public class SolicitacaoAquisicaoControlador extends PrettyControlador<Solicitac
 
     public void listenerRequisicaoCompra(){
         cancelarDocumento();
-        if (selecionado.getRequisicaoDeCompra().getTipoRequisicao().isExecucao()) {
-            selecionado.setRequisicaoDeCompra(facade.getRequisicaoDeCompraFacade().recuperarComDependenciasRequisicaoExecucao(selecionado.getRequisicaoDeCompra().getId()));
+        if (selecionado.getRequisicaoDeCompra().isTipoExecucaoProcesso()) {
+            selecionado.getRequisicaoDeCompra().setExecucoes(facade.getRequisicaoDeCompraFacade().buscarRequisicaoExecucao(selecionado.getRequisicaoDeCompra().getId()));
         }
     }
 

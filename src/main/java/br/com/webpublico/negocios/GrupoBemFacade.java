@@ -198,6 +198,32 @@ public class GrupoBemFacade extends AbstractFacade<GrupoBem> {
         return q.getResultList();
     }
 
+    public List<GrupoBem> grupoBemImovel(String parte) {
+        String sql = "select * from grupobem "
+            + "     where codigo like '01.01.02%' "
+            + "     and ((replace(codigo, '.', '') like :parte||'%') "
+            + "       or codigo like :parte||'%'"
+            + "       or (upper(descricao) like '%'||:parte||'%') )";
+        Query q = getEntityManager().createNativeQuery(sql, GrupoBem.class);
+        q.setParameter("parte", parte.toUpperCase());
+        q.setMaxResults(10);
+
+        return q.getResultList();
+    }
+
+    public List<GrupoBem> grupoBemIntangivel(String parte) {
+        String sql = "select * from grupobem "
+            + "     where codigo like '01.02.01%' "
+            + "     and ((replace(codigo, '.', '') like :parte||'%') "
+            + "        or codigo like :parte||'%'"
+            + "        or (upper(descricao) like '%'||:parte||'%') )";
+        Query q = getEntityManager().createNativeQuery(sql, GrupoBem.class);
+        q.setParameter("parte", parte.toUpperCase());
+        q.setMaxResults(10);
+
+        return q.getResultList();
+    }
+
     public List<GrupoBem> recuperarGrupoBemSemTipoReducao(String parte) {
         String sql = "   select grupo.* "
             + "       from grupobem grupo "
@@ -224,6 +250,19 @@ public class GrupoBemFacade extends AbstractFacade<GrupoBem> {
         Query q = em.createNativeQuery(sql, GrupoBem.class);
         q.setParameter("parteCod", parte.trim().replace(".", "") + "%");
         q.setParameter("parteDesc", "%" + parte.trim() + "%");
+        q.setMaxResults(10);
+        return q.getResultList();
+    }
+
+    public List<GrupoBem> listaFiltrandoGrupoBemCodigoDescricaoAndTipoBem(String parte, TipoBem tipoBem) {
+        String sql = " SELECT GB.* FROM GRUPOBEM GB " +
+            "          WHERE GB.TIPOBEM = :tipoBem " +
+            "            AND (LOWER(GB.DESCRICAO) LIKE :parteDesc " +
+            "                 OR REPLACE(GB.CODIGO, '.','') LIKE :parteCod OR GB.CODIGO LIKE :parteCod) ";
+        Query q = em.createNativeQuery(sql, GrupoBem.class);
+        q.setParameter("parteCod", parte.trim() + "%");
+        q.setParameter("parteDesc", "%" + parte.trim() + "%");
+        q.setParameter("tipoBem", tipoBem.name());
         q.setMaxResults(10);
         return q.getResultList();
     }

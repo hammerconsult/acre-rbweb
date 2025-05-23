@@ -7,8 +7,6 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.arquivo.dto.ArquivoDTO;
 import br.com.webpublico.controle.ConsultaDebitoControlador;
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.DocumentoCondutorOtt;
-import br.com.webpublico.entidades.DocumentoVeiculoOtt;
 import br.com.webpublico.entidades.comum.SolicitacaoCadastroPessoa;
 import br.com.webpublico.entidades.comum.TermoUso;
 import br.com.webpublico.entidades.comum.UsuarioWeb;
@@ -128,7 +126,7 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     @EJB
     private ConfiguracaoEmailFacade configuracaoEmailFacade;
     @EJB
-    private FaleConoscoFacade faleConoscoFacade;
+    private ImpressaoCarneIPTUFacade impressaoCarneIPTUFacade;
     @EJB
     private NivelEscolaridadeFacade nivelEscolaridadeFacade;
     @EJB
@@ -138,9 +136,9 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     @EJB
     private UFFacade ufFacade;
     @EJB
-    private ImpressaoCarneIPTUFacade impressaoCarneIPTUFacade;
-    @EJB
     private ConselhoClasseOrdemFacade conselhoClasseOrdemFacade;
+    @EJB
+    private FaleConoscoFacade faleConoscoFacade;
     @EJB
     private DocumentoPortalContribuinteFacade documentoPortalContribuinteFacade;
     @EJB
@@ -188,9 +186,15 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     @EJB
     private NfseAuthorityFacade nfseAuthorityFacade;
     @EJB
+    private ConfiguracaoDeRelatorioFacade configuracaoDeRelatorioFacade;
+    @EJB
+    private ContraChequeFacade contraChequeFacade;
+    @EJB
     private CalculaISSFacade calculaISSFacade;
     @EJB
     private CidadeFacade cidadeFacade;
+    @EJB
+    private RelatorioCadastroEconomicoFacade relatorioCadastroEconomicoFacade;
     @EJB
     private ProcRegularizaConstrucaoFacade procRegularizaConstrucaoFacade;
     @EJB
@@ -198,15 +202,9 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     @EJB
     private HabiteseConstrucaoFacade habiteseConstrucaoFacade;
     @EJB
-    private ConfiguracaoDeRelatorioFacade configuracaoDeRelatorioFacade;
-    @EJB
-    private ContraChequeFacade contraChequeFacade;
-    @EJB
-    private RelatorioCadastroEconomicoFacade relatorioCadastroEconomicoFacade;
+    private TermoUsoFacade termoUsoFacade;
     @EJB
     private SolicitacaoCertidaoPortalFacade solicitacaoCertidaoPortalFacade;
-    @EJB
-    private TermoUsoFacade termoUsoFacade;
     @EJB
     private RegistroDeObitoFacade registroDeObitoFacade;
     @EJB
@@ -218,6 +216,10 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     @EJB
     private CacheRH cacheRH;
     @EJB
+    private ParametroSaudFacade parametroSaudFacade;
+    @EJB
+    private UsuarioSaudFacade usuarioSaudFacade;
+    @EJB
     private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
     @EJB
     private ConfiguracaoPortalContribuinteFacade configuracaoPortalContribuinteFacade;
@@ -225,10 +227,6 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     private MoedaFacade moedaFacade;
     @EJB
     private GeraValorDividaSolicitacaoCadastroCredor geraValorDividaSolicitacaoCadastroCredor;
-    @EJB
-    private ParametroSaudFacade parametroSaudFacade;
-    @EJB
-    private UsuarioSaudFacade usuarioSaudFacade;
     @EJB
     private ParametrosOttFacade parametrosOttFacade;
     @EJB
@@ -276,6 +274,10 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
 
     public ExercicioFacade getExercicioFacade() {
         return exercicioFacade;
+    }
+
+    public ConfiguracaoTributarioFacade getConfiguracaoTributarioFacade() {
+        return configuracaoTributarioFacade;
     }
 
     public NivelEscolaridadeFacade getNivelEscolaridadeFacade() {
@@ -358,16 +360,16 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         this.alteracaoCadastralPessoaFacade = alteracaoCadastralPessoaFacade;
     }
 
+    public AlvaraFacade getAlvaraFacade() {
+        return alvaraFacade;
+    }
+
     public CalculaISSFacade getCalculaISSFacade() {
         return calculaISSFacade;
     }
 
     public CidadeFacade getCidadeFacade() {
         return cidadeFacade;
-    }
-
-    public AlvaraFacade getAlvaraFacade() {
-        return alvaraFacade;
     }
 
     public SolicitacaoCertidaoPortalFacade getSolicitacaoCertidaoPortalFacade() {
@@ -760,6 +762,7 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
             CondutorOperadoraTecnologiaTransporte condutor = getCondutorOperadoraTecnologiaTransporte(condutorOttDTO);
             condutorOperadoraTecnologiaTransporteFacade.criarHistoricoSituacoesCondutor(condutor);
             condutor = em.merge(condutor);
+
             condutorOperadoraTecnologiaTransporteFacade.criarNotificacaoAguardandoAprovacao(condutor);
             condutorOttDTO.setId(condutor.getId());
             return condutorOttDTO;
@@ -1341,7 +1344,7 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
 
     public UsuarioPortalWebDTO fazerLoginPortalWebApp(String senha, String cpfCnpj) throws
         UsuarioWebNaoExistenteException, UsuarioWebSenhaInvalidaException, UsuarioWebProblemasCadastroException {
-        UsuarioWeb usuarioWeb = usuarioWebFacade.buscarUsuarioWebPorLogin(cpfCnpj);
+        UsuarioWeb usuarioWeb = usuarioWebFacade.buscarNfseUserPorLogin(cpfCnpj);
         WSPessoa wsPessoa = null;
         try {
             wsPessoa = new WSPessoa(recuperarWSPessoaPorCPF(cpfCnpj), cpfCnpj, senha);
@@ -1577,6 +1580,30 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         }
     }
 
+    public ConsultaCPF verificarDisponibilidadeCPFParaPrimeiroAcesso(String cpf) {
+        cpf = StringUtil.retornaApenasNumeros(cpf);
+        Pessoa pessoa;
+        String tipo;
+        if (cpf.length() == 11) {
+            tipo = "CPF";
+            pessoa = pessoaFacade.buscarPessoaFisicaPorCPF(cpf, false);
+        } else {
+            tipo = "CNPJ";
+            pessoa = pessoaFacade.buscarPessoaJuridicaPorCNPJ(cpf, false);
+        }
+        if (pessoa != null) {
+            WSPessoa wsPessoa = new WSPessoa(pessoa);
+            UsuarioWeb usuarioWeb = usuarioWebFacade.buscarUsuarioWebByIdPessoa(pessoa.getId());
+            if (usuarioWeb != null) {
+                return new ConsultaCPF(false, "Já existe um cadastro no portal com " + tipo + " informado.", wsPessoa);
+            }
+        } else {
+            return new ConsultaCPF("O " + (tipo.equals("CPF") ? "CPF: " : "CNPJ: ") + cpf + " não está registrado na base de dados. " +
+                "Por favor, compareça a um CAC presencialmente, ou acesse o atendimento online. ", false);
+        }
+        return new ConsultaCPF(null, true);
+    }
+
     public ConsultaCPF buscarConsultaCPFValidoCredor(String cpf, String email) {
         cpf = StringUtil.retornaApenasNumeros(cpf);
         Pessoa pessoa;
@@ -1618,30 +1645,6 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
                     "</br>Caso ainda tenha dúvidas, compareça a um CAC presencialmente, ou acesse o atendimento online.", wsPessoa);
             }
             return new ConsultaCPF(true, null, wsPessoa);
-        }
-        return new ConsultaCPF(null, true);
-    }
-
-    public ConsultaCPF verificarDisponibilidadeCPFParaPrimeiroAcesso(String cpf) {
-        cpf = StringUtil.retornaApenasNumeros(cpf);
-        Pessoa pessoa;
-        String tipo;
-        if (cpf.length() == 11) {
-            tipo = "CPF";
-            pessoa = pessoaFacade.buscarPessoaFisicaPorCPF(cpf, false);
-        } else {
-            tipo = "CNPJ";
-            pessoa = pessoaFacade.buscarPessoaJuridicaPorCNPJ(cpf, false);
-        }
-        if (pessoa != null) {
-            WSPessoa wsPessoa = new WSPessoa(pessoa);
-            UsuarioWeb usuarioWeb = usuarioWebFacade.buscarUsuarioWebByIdPessoa(pessoa.getId());
-            if (usuarioWeb != null) {
-                return new ConsultaCPF(false, "Já existe um cadastro no portal com " + tipo + " informado.", wsPessoa);
-            }
-        } else {
-            return new ConsultaCPF("O " + (tipo.equals("CPF") ? "CPF: " : "CNPJ: ") + cpf + " não está registrado na base de dados. " +
-                "Por favor, compareça a um CAC presencialmente, ou acesse o atendimento online. ", false);
         }
         return new ConsultaCPF(null, true);
     }
@@ -1915,7 +1918,7 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     public DAM gerarDAMAgrupadoPortalWeb(List<ResultadoParcela> parcelas) {
         LocalDate localDate = LocalDate.now();
         Calendar c = DataUtil.ultimoDiaUtil(DataUtil.ultimoDiaMes(localDate.toDate()), feriadoFacade);
-        return damFacade.gerarDamAgrupado(parcelas, c.getTime(), exercicioFacade.getExercicioPorAno(localDate.getYear()), null);
+        return damFacade.gerarDamAgrupado(parcelas, c.getTime());
     }
 
     public List<DAM> gerarDAMPixPortal(List<ParcelaPixDTO> parcelasPix) {
@@ -2177,7 +2180,8 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         return veiculoOperadoraTecnologiaTransporteFacade.contarVeiculosOttPortal(cnpj);
     }
 
-    public List<CondutorOttDTO> buscarCondutoresOTT(String cnpj, Integer inicio, Integer max) throws UsuarioWebNaoExistenteException, UsuarioWebProblemasCadastroException, UsuarioWebSenhaInvalidaException {
+    public List<CondutorOttDTO> buscarCondutoresOTT(String cnpj, Integer inicio, Integer max) throws
+        UsuarioWebNaoExistenteException, UsuarioWebProblemasCadastroException, UsuarioWebSenhaInvalidaException {
         List<CondutorOttDTO> retorno = Lists.newArrayList();
         for (CondutorOperadoraTecnologiaTransporte condutor : condutorOperadoraTecnologiaTransporteFacade.buscarCondutoresOttPortal(cnpj, inicio, max)) {
             retorno.add(condutor.toDTO());
@@ -2608,10 +2612,6 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         return pessoaFacade.buscarPessoaPorCpfAndMatricula(cpf, matricula);
     }
 
-    public ConfiguracaoTributarioFacade getConfiguracaoTributarioFacade() {
-        return configuracaoTributarioFacade;
-    }
-
     public void salvarFaleConosco(FaleConosco faleConosco) {
         faleConoscoFacade.salvarFaleConosco(faleConosco);
     }
@@ -2809,7 +2809,10 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     public List<ResultadoParcela> buscarDebitosIPTU(WsIPTU wsIPTU, boolean carneIptu) {
         CadastroImobiliario cadastroImobiliario = cadastroImobiliarioFacade.recuperaPorInscricao(wsIPTU.getMatriculaImovel());
         Pessoa pessoa = pessoaFacade.buscarPessoaAtivasPorCpfOrCnpj(wsIPTU.getCpfCnpj());
-        return buscarParcelasPorCadastroImobiliario(cadastroImobiliario, pessoa, carneIptu);
+        if (pessoa != null && cadastroImobiliario != null) {
+            return buscarParcelasPorCadastroImobiliario(cadastroImobiliario, pessoa, carneIptu);
+        }
+        return Lists.newArrayList();
     }
 
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 2)
@@ -2880,31 +2883,8 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         return getExercicioFacade().getExercicioPorAno(sistemaFacade.getExercicioCorrente().getAno() - configuracaoTributarioFacade.retornaUltimo().getQuantidadeAnosPrescricao());
     }
 
-    public List<WsProcRegularizaConstrucao> buscarProcessosRegularizacaoConstrucao(String cpfCnpj, String anoProtocolo, String numeroProtocolo, String inscricaoCadastral, Integer codigo, Integer ano, Date dataCriacaoProcesso) {
-        List<ProcRegularizaConstrucao> processos = procRegularizaConstrucaoFacade.buscarProcessos(procRegularizaConstrucaoFacade.criarCriteriaConsulta(anoProtocolo, numeroProtocolo, inscricaoCadastral, cpfCnpj, codigo, ano, dataCriacaoProcesso));
-        List<WsProcRegularizaConstrucao> wsProcessos = Lists.newArrayList();
-        for (ProcRegularizaConstrucao proc : processos) {
-            wsProcessos.add(new WsProcRegularizaConstrucao(proc));
-        }
-        return wsProcessos;
-    }
-
-    public WsAlvaraConstrucao buscarAlvaraDeConstrucao(Long id) {
-        AlvaraConstrucao alvara = alvaraConstrucaoFacade.recuperar(id);
-        if (alvara != null) {
-            return new WsAlvaraConstrucao(alvara);
-        } else {
-            return null;
-        }
-    }
-
-    public WsHabitese buscarHabiteseDeConstrucao(Long id) {
-        Habitese habitese = habiteseConstrucaoFacade.recuperar(id);
-        if (habitese != null) {
-            return new WsHabitese(habitese);
-        } else {
-            return null;
-        }
+    public ContraChequeFacade getContraChequeFacade() {
+        return contraChequeFacade;
     }
 
     public ParametroSaudFacade getParametroSaudFacade() {
@@ -2914,23 +2894,6 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
     private Divida atribuirDividaIssqnFixo() {
         return configuracaoTributarioFacade.retornaUltimo().getDividaISSFixo();
     }
-
-    public ContraChequeFacade getContraChequeFacade() {
-        return contraChequeFacade;
-    }
-
-    public CadastroImobiliarioFacade getCadastroImobiliarioFacade() {
-        return cadastroImobiliarioFacade;
-    }
-
-    public CadastroImobiliarioImpressaoHistFacade getCadastroImobiliarioImpressaoHistFacade() {
-        return cadastroImobiliarioImpressaoHistFacade;
-    }
-
-    public CadastroEconomicoImpressaoHistFacade getCadastroEconomicoImpressaoHistFacade() {
-        return cadastroEconomicoImpressaoHistFacade;
-    }
-
 
     public List<ArquivoDTO> recuperarRenovacaoArquivosCondutor(Long idRenovacaoCondutor) {
         String hql = " select con from CondutorRenovacaoDetentorArquivo con where con.renovacaoCondutorOTT.id = :idRenovacaoCondutor";
@@ -3116,6 +3079,69 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         }
     }
 
+    public List<ArquivoDTO> recuperarArquivosOperadora(OperadoraTecnologiaTransporteDTO operadora) {
+        String hql = " select opera from OperadoraTransporteDetentorArquivo opera where opera.operadoraTecTransporte.id = :idOperadora";
+        Query q = em.createQuery(hql);
+        q.setParameter("idOperadora", operadora.getId());
+
+        List<OperadoraTransporteDetentorArquivo> arquivos = q.getResultList();
+        List<ArquivoDTO> retorno = Lists.newArrayList();
+
+        for (OperadoraTransporteDetentorArquivo arquivo : arquivos) {
+            retorno.add(arquivo.getDetentorArquivoComposicao().getArquivoComposicao().getArquivo().toArquivoDTO());
+        }
+        return retorno;
+    }
+
+    public void salvarArquivosOperadoraOtt(List<ArquivoDTO> arquivos) {
+
+        OperadoraTecnologiaTransporte operadora = ottFacade.recuperar(arquivos.get(0).getId());
+        Exercicio exercicioPorAno = exercicioFacade.getExercicioPorAno(DataUtil.getAno(operadora.getDataCadastro()));
+
+        operadora.getDetentorArquivoComposicao().clear();
+
+        for (ArquivoDTO arquivoDTO : arquivos) {
+            try {
+                if (operadora != null) {
+
+                    OperadoraTransporteDetentorArquivo operaArq = new OperadoraTransporteDetentorArquivo();
+                    operaArq.setOperadoraTecTransporte(operadora);
+                    operaArq.setExercicio(exercicioPorAno);
+//                    operaArq.setDocumentosOperadoraTransporte(DocumentosOperadoraTrasporte.getEnumByDescricao(arquivoDTO.getDescricao()));
+
+                    ArquivoComposicao arquivoComposicao = new ArquivoComposicao();
+                    arquivoComposicao.setDataUpload(new Date());
+                    arquivoComposicao.setArquivo(new Arquivo());
+                    String dataInfo = arquivoDTO.getConteudo().split(";base64,")[0];
+                    String data = arquivoDTO.getConteudo().split("base64,")[1];
+                    String mimeType;
+                    try {
+                        mimeType = dataInfo.split(":")[1];
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        mimeType = null;
+                    }
+                    Base64 decoder = new Base64();
+                    byte[] imgBytes = decoder.decode(data);
+                    Arquivo arquivo = arquivoFacade.novoArquivoMemoria(new Arquivo(), new ByteArrayInputStream(imgBytes));
+                    arquivo.setNome(arquivoDTO.getNome());
+                    arquivo.setDescricao(arquivoDTO.getDescricao());
+                    arquivo.setMimeType(mimeType);
+                    arquivoComposicao.setArquivo(arquivo);
+
+                    DetentorArquivoComposicao detentorArquivoComposicao = new DetentorArquivoComposicao();
+                    arquivoComposicao.setDetentorArquivoComposicao(detentorArquivoComposicao);
+                    detentorArquivoComposicao.setArquivoComposicao(arquivoComposicao);
+                    detentorArquivoComposicao.getArquivosComposicao().add(arquivoComposicao);
+
+                    operaArq.setDetentorArquivoComposicao(detentorArquivoComposicao);
+                    operadora.getDetentorArquivoComposicao().add(operaArq);
+                }
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+        }
+    }
+
     public RenovacaoOperadoraOttDTO salvarRenovacaoOperadora(RenovacaoOperadoraOttDTO renovacaoOperadora) throws Exception {
         RenovacaoOperadoraOTT renovacao = new RenovacaoOperadoraOTT();
         renovacao.setOperadora(operadoraTecnologiaTransporteFacade.recuperar(renovacaoOperadora.getOperadoraOttDTO().getId()));
@@ -3236,6 +3262,18 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         return retorno;
     }
 
+    public CadastroImobiliarioFacade getCadastroImobiliarioFacade() {
+        return cadastroImobiliarioFacade;
+    }
+
+    public CadastroImobiliarioImpressaoHistFacade getCadastroImobiliarioImpressaoHistFacade() {
+        return cadastroImobiliarioImpressaoHistFacade;
+    }
+
+    public CadastroEconomicoImpressaoHistFacade getCadastroEconomicoImpressaoHistFacade() {
+        return cadastroEconomicoImpressaoHistFacade;
+    }
+
     public void atualizarFotoPessoa(FotoPessoaDTO foto) {
         ImagemUsuarioNfseDTO dtoFoto = convertToImagemUsuarioNfseDto(foto);
         pessoaFacade.atualizarImagemPessoa(dtoFoto);
@@ -3249,6 +3287,33 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
         pessoa.setId(foto.getId());
         dtoFoto.setPessoa(pessoa);
         return dtoFoto;
+    }
+
+    public List<WsProcRegularizaConstrucao> buscarProcessosRegularizacaoConstrucao(String cpfCnpj, String anoProtocolo, String numeroProtocolo, String inscricaoCadastral, Integer codigo, Integer ano, Date dataCriacaoProcesso) {
+        List<ProcRegularizaConstrucao> processos = procRegularizaConstrucaoFacade.buscarProcessos(procRegularizaConstrucaoFacade.criarCriteriaConsulta(anoProtocolo, numeroProtocolo, inscricaoCadastral, cpfCnpj, codigo, ano, dataCriacaoProcesso));
+        List<WsProcRegularizaConstrucao> wsProcessos = Lists.newArrayList();
+        for (ProcRegularizaConstrucao proc : processos) {
+            wsProcessos.add(new WsProcRegularizaConstrucao(proc));
+        }
+        return wsProcessos;
+    }
+
+    public WsAlvaraConstrucao buscarAlvaraDeConstrucao(Long id) {
+        AlvaraConstrucao alvara = alvaraConstrucaoFacade.recuperar(id);
+        if (alvara != null) {
+            return new WsAlvaraConstrucao(alvara);
+        } else {
+            return null;
+        }
+    }
+
+    public WsHabitese buscarHabiteseDeConstrucao(Long id) {
+        Habitese habitese = habiteseConstrucaoFacade.recuperar(id);
+        if (habitese != null) {
+            return new WsHabitese(habitese);
+        } else {
+            return null;
+        }
     }
 
     public WsTermoUso buscarTermoUsoVigente() {
@@ -3587,19 +3652,5 @@ public class PortalContribunteFacade extends AbstractFacade<Pessoa> {
 
     public Boolean cnpjPermiteCadastroOTT(String cnpj) {
         return operadoraTecnologiaTransporteFacade.cnpjPermiteCadastroOTT(cnpj);
-    }
-
-    public List<ArquivoDTO> recuperarArquivosOperadora(OperadoraTecnologiaTransporteDTO operadora) {
-        String hql = " select opera from OperadoraTransporteDetentorArquivo opera where opera.operadoraTecTransporte.id = :idOperadora";
-        Query q = em.createQuery(hql);
-        q.setParameter("idOperadora", operadora.getId());
-
-        List<OperadoraTransporteDetentorArquivo> arquivos = q.getResultList();
-        List<ArquivoDTO> retorno = Lists.newArrayList();
-
-        for (OperadoraTransporteDetentorArquivo arquivo : arquivos) {
-            retorno.add(arquivo.getDetentorArquivoComposicao().getArquivoComposicao().getArquivo().toArquivoDTO());
-        }
-        return retorno;
     }
 }

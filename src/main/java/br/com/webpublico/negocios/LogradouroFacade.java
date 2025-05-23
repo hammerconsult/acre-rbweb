@@ -148,11 +148,11 @@ public class LogradouroFacade extends AbstractFacade<Logradouro> {
             return new ArrayList<>();
         } else {
             String hql = "select distinct l from LogradouroBairro lb " +
-                    " join lb.logradouro l " +
-                    " join lb.bairro b " +
-                    " join l.tipoLogradouro tl " +
-                    " where (lower(l.nome) like :parte or lower(tl.descricao) like :parte) and b = :bairro " +
-                    " and l.situacao = 'ATIVO'";
+                " join lb.logradouro l " +
+                " join lb.bairro b " +
+                " join l.tipoLogradouro tl " +
+                " where (lower(l.nome) like :parte or lower(tl.descricao) like :parte) and b = :bairro " +
+                " and l.situacao = 'ATIVO'";
             Query q = getEntityManager().createQuery(hql);
             q.setParameter("parte", "%" + parte.toLowerCase() + "%");
             q.setParameter("bairro", bairro);
@@ -162,11 +162,11 @@ public class LogradouroFacade extends AbstractFacade<Logradouro> {
 
     public List<Logradouro> consultaLogradouros(String bairro, String parte) {
         String hql = "select distinct logradouro from LogradouroBairro lb " +
-                " join lb.logradouro logradouro" +
-                " join lb.bairro bairro" +
-                " where lower(bairro.descricao) like :bairro " +
-                "   and lower(logradouro.nome) like :parte " +
-                "   and coalesce(logradouro.situacao,'" + SituacaoLogradouro.ATIVO.name() + "') = :situacao ";
+            " join lb.logradouro logradouro" +
+            " join lb.bairro bairro" +
+            " where lower(bairro.descricao) like :bairro " +
+            "   and lower(logradouro.nome) like :parte " +
+            "   and coalesce(logradouro.situacao,'" + SituacaoLogradouro.ATIVO.name() + "') = :situacao ";
         Query q = em.createQuery(hql);
 
 //        Query q = em.createQuery("select logradouro FROM Logradouro logradouro, LogradouroBairro lb "
@@ -259,8 +259,8 @@ public class LogradouroFacade extends AbstractFacade<Logradouro> {
 
     public LogradouroBairro recuperaLogradourBairro(Bairro bairro, Logradouro logradouro) {
         StringBuilder hql = new StringBuilder("select lb from LogradouroBairro lb ")
-                .append(" where lb.logradouro = :logradouro ")
-                .append(" and lb.bairro = :bairro");
+            .append(" where lb.logradouro = :logradouro ")
+            .append(" and lb.bairro = :bairro");
 
         Query q = em.createQuery(hql.toString());
         q.setParameter("logradouro", logradouro);

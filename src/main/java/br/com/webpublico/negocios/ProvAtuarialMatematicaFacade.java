@@ -166,9 +166,9 @@ public class ProvAtuarialMatematicaFacade extends SuperFacadeContabil<ProvAtuari
         if (entity.getTipoPassivoAtuarial() == null) {
             throw new ExcecaoNegocioGenerica("O Tipo Passivo Atuarial está vazio.");
         }
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getTipoPassivoAtuarial(), item));
-        objetos.add(new ObjetoParametro(entity.getDividaPublica().getCategoriaDividaPublica(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), ProvAtuarialMatematica.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getTipoPassivoAtuarial().getId().toString(), TipoPassivoAtuarial.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
 
         item.setObjetoParametros(objetos);
 

@@ -1539,7 +1539,7 @@ public class CalculoITBIControlador extends PrettyControlador<ProcessoCalculoITB
             List<ResultadoParcela> parcelas = getParcelasImpressaoDAM();
             Exercicio exercicio = calculoITBIFacade.buscarExercicioCorrente();
             for (ResultadoParcela parcela : parcelas) {
-                DAM dam = calculoITBIFacade.buscarOuGerarDam(parcela, exercicio);
+                DAM dam = calculoITBIFacade.buscarOuGerarDam(parcela);
                 dams.add(dam);
             }
         } catch (Exception e) {

@@ -198,12 +198,11 @@ public class ConfiguracaoTributario extends ConfiguracaoModulo implements Serial
     private String mensagemRodapeAlvara;
     private Integer quantidadeExerciciosAnteriores;
     @Enumerated(EnumType.STRING)
+    private TipoVerificacaoDebitoAlvara tipoVerificacaoDebitoAlvara;
+    @Enumerated(EnumType.STRING)
     private Mes mesVencimentoRenovaAlvaraFunc;
     @Enumerated(EnumType.STRING)
     private Mes mesVencimentoRenovaAlvaraLoc;
-    @Enumerated(EnumType.STRING)
-    private TipoVerificacaoDebitoAlvara tipoVerificacaoDebitoAlvara;
-    private String rodapePortalContribuinte;
 
     //Rateio
     @ManyToOne
@@ -247,9 +246,9 @@ public class ConfiguracaoTributario extends ConfiguracaoModulo implements Serial
     private String assunto;
     private String urlPortalContribuinte;
     private String conteudo;
-    private int quantidadeAnosPrescricao;
     private Boolean verificaAidf;
     private String assinaturaCertidaoAtividadeCmc;
+    private int quantidadeAnosPrescricao;
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @Invisivel
     private DetentorArquivoComposicao certificadoNfse;
@@ -270,11 +269,6 @@ public class ConfiguracaoTributario extends ConfiguracaoModulo implements Serial
     private String nomeApresentante;
     private Long seqIncialRemessaProtesto;
     private String linkPlanoDiretor;
-
-    //Datajus
-    private String endpointDatajus;
-    private String apiKeyDatajus;
-
 
     @OneToOne(cascade = CascadeType.ALL)
     private ConfiguracaoTributarioBI configuracaoTributarioBI;
@@ -1183,14 +1177,6 @@ public class ConfiguracaoTributario extends ConfiguracaoModulo implements Serial
         this.mesVencimentoIssFixo = mesVencimentoIssFixo;
     }
 
-    public Tributo getTributoHabitese() {
-        return tributoHabitese;
-    }
-
-    public void setTributoHabitese(Tributo tributoHabitese) {
-        this.tributoHabitese = tributoHabitese;
-    }
-
     public Boolean getAtivaAlteracaoCadastral() {
         return ativaAlteracaoCadastral;
     }
@@ -1239,14 +1225,6 @@ public class ConfiguracaoTributario extends ConfiguracaoModulo implements Serial
         this.telefoneEmail = telefoneEmail;
     }
 
-    public String getRodapePortalContribuinte() {
-        return rodapePortalContribuinte;
-    }
-
-    public void setRodapePortalContribuinte(String rodapePortalContribuinte) {
-        this.rodapePortalContribuinte = rodapePortalContribuinte;
-    }
-
     public String getRodapePadraoEmail() {
         return rodapePadraoEmail;
     }
@@ -1269,6 +1247,14 @@ public class ConfiguracaoTributario extends ConfiguracaoModulo implements Serial
 
     public void setTextoSolicitacaoITBI(String textoSolicitacaoITBI) {
         this.textoSolicitacaoITBI = textoSolicitacaoITBI;
+    }
+
+    public Tributo getTributoHabitese() {
+        return tributoHabitese;
+    }
+
+    public void setTributoHabitese(Tributo tributoHabitese) {
+        this.tributoHabitese = tributoHabitese;
     }
 
     public List<ConfiguracaoAlvara> getConfiguracaoAlvara() {
@@ -1365,22 +1351,6 @@ public class ConfiguracaoTributario extends ConfiguracaoModulo implements Serial
 
     public void setLinkPlanoDiretor(String linkPlanoDiretor) {
         this.linkPlanoDiretor = linkPlanoDiretor;
-    }
-
-    public String getEndpointDatajus() {
-        return endpointDatajus;
-    }
-
-    public void setEndpointDatajus(String endpointDatajus) {
-        this.endpointDatajus = endpointDatajus;
-    }
-
-    public String getApiKeyDatajus() {
-        return apiKeyDatajus;
-    }
-
-    public void setApiKeyDatajus(String apiKeyDatajus) {
-        this.apiKeyDatajus = apiKeyDatajus;
     }
 
     public ConfiguracaoTributarioBI getConfiguracaoTributarioBI() {

@@ -3,7 +3,6 @@ package br.com.webpublico.reinf.service;
 import br.com.webpublico.entidades.Pessoa;
 import br.com.webpublico.entidades.PessoaFisica;
 import br.com.webpublico.entidades.Telefone;
-import br.com.webpublico.entidades.contabil.reinf.FiltroReinf;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidadesauxiliares.AssistenteSincronizacaoReinf;
 import br.com.webpublico.enums.TipoTelefone;
@@ -172,7 +171,6 @@ public class R1000Service {
             evento.setTpAmb(2);
         }
 
-
         evento.setIndEscrituracao(0);
         evento.setIndDesoneracao(0);
         evento.setIndAcordoIsenMulta(0);
@@ -195,7 +193,6 @@ public class R1000Service {
             evento.setIniValid(config.getDataInicioReinf(), false);
             evento.setFimValid(config.getDataFimReinf(), false);
         }
-
         return evento;
     }
 

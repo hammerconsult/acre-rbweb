@@ -95,6 +95,8 @@ public class S1010Service {
     public void enviar1010(ConfiguracaoEmpregadorESocial config, ValidacaoException val, EventoFP eventofp) {
         EventoS1010 s1010 = criarEventoS1010(config, eventofp, val);
         logger.error("Antes de Enviar: " + s1010.getXml());
+
+
         val.lancarException();
         eSocialService.enviarEventoS1010(s1010);
     }
@@ -113,14 +115,14 @@ public class S1010Service {
     private void adicionarDadosRubrica(ConfiguracaoEmpregadorESocial config, EventosESocialDTO.S1010
         eventoS1010, EventoFP evento, ValidacaoException val) {
         EventoFPEmpregador eventoFPEmpregador = eventoFPFacade.getEventoFPEmpregador(evento, new Date(), config.getEntidade());
-        eventoS1010.setIdESocial(evento.getId().toString().concat(evento.getDebitoCreditoDecimo()));
+        eventoS1010.setIdESocial(evento.getId().toString());
         eventoS1010.setCodRubr(evento.getCodigo());
-
         if (!Strings.isNullOrEmpty(eventoFPEmpregador.getIdentificacaoTabela())) {
             eventoS1010.setIdeTabRubr(eventoFPEmpregador.getIdentificacaoTabela());
         } else {
             val.adicionarMensagemDeCampoObrigatorio("A Identificação da Tabela do evento " + evento + " não foi informada.");
         }
+
         eventoS1010.setIniValid(config.getInicioVigencia());
         preencherNaturezaRubrica(eventoS1010, evento, val, eventoFPEmpregador);
         eventoS1010.setTpRubr(evento.getTipoEventoFP().getCodigoEsocial());
@@ -129,6 +131,7 @@ public class S1010Service {
         preencherCodigoRubricaFGTS(eventoS1010, evento, val, eventoFPEmpregador);
         preencherIncidenciaSindical(eventoS1010, evento, val, eventoFPEmpregador);
         preencherTetoRemuneratorio(eventoS1010, config.getEntidade(), eventoFPEmpregador);
+
     }
 
     private void preencherCodigoRubricaPrevidenciaSocial(EventosESocialDTO.S1010 eventoS1010, EventoFP

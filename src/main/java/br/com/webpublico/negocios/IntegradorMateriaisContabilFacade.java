@@ -168,7 +168,7 @@ public class IntegradorMateriaisContabilFacade implements Serializable {
         bensEstoque.setHistorico(historico);
         bensEstoque.setHistoricoRazao(historico);
         bensEstoque.setHistoricoNota(historico);
-        bensEstoque.setValor(itemProduzido.getValorFinanceiroTotal().setScale(2, RoundingMode.FLOOR));
+        bensEstoque.setValor(itemProduzido.getValorFinanceiroTotal().setScale(2, RoundingMode.HALF_EVEN));
         return bensEstoque;
     }
 

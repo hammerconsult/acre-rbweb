@@ -86,19 +86,16 @@ public class Afastamento extends SuperEntidade implements PossuidorArquivo, IHis
     private Boolean retornoInformado;
     @Transient
     private TipoAfastamentoESocial tipoAfastamentoESocial;
+    @Temporal(TemporalType.DATE)
+    private Date dataRetornoInformado;
     @ManyToOne
     @Etiqueta("Ato Legal")
     private AtoLegal atoLegal;
-    @Temporal(TemporalType.DATE)
-    private Date dataRetornoInformado;
-
-
     @ManyToOne
     private Sindicato sindicato;
     @Etiqueta("Quantidade de Dias")
     @Tabelavel
     private Integer quantidadeDias;
-
     @Transient
     private List<EventoESocialDTO> eventosEsocial;
     @OneToOne(cascade = CascadeType.ALL)

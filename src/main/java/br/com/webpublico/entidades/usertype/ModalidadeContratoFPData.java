@@ -6,7 +6,6 @@ import br.com.webpublico.entidades.ContratoFP;
 import br.com.webpublico.entidades.ModalidadeContratoFP;
 import br.com.webpublico.entidades.SuperEntidade;
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.interfaces.ValidadorVigencia;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
@@ -17,7 +16,7 @@ import java.util.Date;
 @Entity
 @Audited
 @Etiqueta("Vigência da Modalidade de Contrato")
-public class ModalidadeContratoFPData extends SuperEntidade implements ValidadorVigencia, Comparable {
+public class ModalidadeContratoFPData extends SuperEntidade {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -81,15 +80,6 @@ public class ModalidadeContratoFPData extends SuperEntidade implements Validador
         this.inicioVigencia = inicioVigencia;
     }
 
-    @Override
-    public Date getFimVigencia() {
-        return this.finalVigencia;
-    }
-    @Override
-    public void setFimVigencia(Date data) {
-        this.finalVigencia = data;
-    }
-
     public Date getFinalVigencia() {
         return finalVigencia;
     }
@@ -104,10 +94,5 @@ public class ModalidadeContratoFPData extends SuperEntidade implements Validador
 
     public void setAtoLegal(AtoLegal atoLegal) {
         this.atoLegal = atoLegal;
-    }
-
-    @Override
-    public int compareTo(Object o) {
-        return this.getInicioVigencia().compareTo(((ModalidadeContratoFPData) o).getInicioVigencia());
     }
 }

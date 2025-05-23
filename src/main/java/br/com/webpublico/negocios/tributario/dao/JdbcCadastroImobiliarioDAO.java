@@ -35,7 +35,7 @@ public class JdbcCadastroImobiliarioDAO extends JdbcDaoSupport implements Serial
             "                from Propriedade prop " +
             "              where prop.imovel_id = ci.id " +
             "                and prop.proporcao = (select max(s_prop.proporcao) from Propriedade s_prop where s_prop.imovel_id = prop.imovel_id) " +
-            "                and (prop.finalVigencia is null or trunc(prop.finalVigencia) <= sysdate) " +
+            "                and (prop.finalVigencia is null or prop.finalVigencia <= sysdate) " +
             "                and rownum = 1) pessoa_id," +
             "              coalesce(ci.autonoma,1) as autonoma " +
             "        from CadastroImobiliario ci " +
@@ -73,9 +73,5 @@ public class JdbcCadastroImobiliarioDAO extends JdbcDaoSupport implements Serial
             return lista.get(0);
         }
         return new Testada();
-    }
-
-    public void executarSql(String sql) {
-        getJdbcTemplate().execute(sql);
     }
 }

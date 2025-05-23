@@ -13,7 +13,6 @@ import br.com.webpublico.negocios.SistemaFacade;
 import br.com.webpublico.negocios.comum.UsuarioWebFacade;
 import br.com.webpublico.nfse.domain.BloqueioEmissaoNfse;
 import br.com.webpublico.nfse.domain.NfseUserAuthority;
-import br.com.webpublico.nfse.domain.UserDteCadastroEconomico;
 import br.com.webpublico.nfse.domain.UserNfseCadastroEconomico;
 import br.com.webpublico.nfse.domain.dtos.enums.PermissaoUsuarioEmpresaNfse;
 import br.com.webpublico.nfse.enums.SituacaoBloqueioEmissaoNfse;
@@ -57,7 +56,6 @@ public class UsuarioWebControlador extends PrettyControlador<UsuarioWeb> impleme
     private String senha2;
     private CadastroEconomico cadastroEconomicoSelecionado;
     private ArrayList<PermissaoUsuarioEmpresaNfse> permissaoUsuarioEmpresaNfses = Lists.newArrayList(PermissaoUsuarioEmpresaNfse.values());
-    private CadastroEconomico cadastroEconomicoDte;
     @EJB
     private ConsultaCepFacade consultaCepFacade;
     private BloqueioEmissaoNfse bloqueioEmissaoNfse;
@@ -273,53 +271,6 @@ public class UsuarioWebControlador extends PrettyControlador<UsuarioWeb> impleme
         selecionado.setActivated(!selecionado.isActivated());
         selecionado = usuarioWebFacade.criarHistoricoAtivacaoInativacao(selecionado, sistemaFacade.getUsuarioCorrente());
         FacesUtil.addOperacaoRealizada("Usuário " + (selecionado.isActivated() ? "Ativado" : "Inativado") + " com sucesso!");
-    }
-
-    public CadastroEconomico getCadastroEconomicoDte() {
-        return cadastroEconomicoDte;
-    }
-
-    public void setCadastroEconomicoDte(CadastroEconomico cadastroEconomicoDte) {
-        this.cadastroEconomicoDte = cadastroEconomicoDte;
-    }
-
-    private void validarListaCadastroEconomicoDte() {
-        ValidacaoException ve = new ValidacaoException();
-        if (cadastroEconomicoDte == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("Selecione um Cadastro Econômico!");
-        }
-        for (UserDteCadastroEconomico cadastro : selecionado.getUserDteCadastrosEconomicos()) {
-            if (cadastro.getCadastroEconomico().equals(cadastroEconomicoDte)) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("Cadastro Econômico já foi adicionado a lista!");
-            }
-        }
-        ve.lancarException();
-    }
-
-    public void adicionarCadastroEconomicoDte() {
-        try {
-            validarListaCadastroEconomicoDte();
-            UserDteCadastroEconomico userDteCadastroEconomico = new UserDteCadastroEconomico();
-            userDteCadastroEconomico.setUsuarioWeb(selecionado);
-            userDteCadastroEconomico.setCadastroEconomico(cadastroEconomicoDte);
-            selecionado.getUserDteCadastrosEconomicos().add(userDteCadastroEconomico);
-            cadastroEconomicoDte = null;
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve.getMensagens());
-        }
-    }
-
-    public void removerCadastroEconomicoDte(UserDteCadastroEconomico userDteCadastroEconomico) {
-        if (selecionado.getUserNfseCadastroEconomico() != null && selecionado.getUserDteCadastroEconomico().equals(userDteCadastroEconomico)) {
-            selecionado.setUserNfseCadastroEconomico(null);
-        }
-        selecionado.getUserDteCadastrosEconomicos().remove(userDteCadastroEconomico);
-    }
-
-    public void permitirAcessoCadastroDte(UserDteCadastroEconomico userCadastro) {
-        userCadastro.setSituacao(UserDteCadastroEconomico.Situacao.APROVADO);
-        usuarioWebFacade.updateUserDteCadastroEconomico(userCadastro);
-        FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "editar/" + selecionado.getId() + "/");
     }
 
     public void salvarBloqueioEmissaoNfse() {

@@ -2,8 +2,6 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AssistenteNotificacaoCobranca;
-import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
-import br.com.webpublico.entidadesauxiliares.AssistenteNotificacaoCobranca;
 import br.com.webpublico.enums.AgrupadorCobrancaAdm;
 import br.com.webpublico.enums.Operacoes;
 import br.com.webpublico.enums.TipoAcaoCobranca;

@@ -4,9 +4,9 @@
 */
 package br.com.webpublico.controle;
 
+import br.com.webpublico.enums.SituacaoLogradouro;
 import br.com.webpublico.entidadesauxiliares.DataTablePesquisaGenerico;
 import br.com.webpublico.entidadesauxiliares.ItemPesquisaGenerica;
-import br.com.webpublico.enums.SituacaoLogradouro;
 
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
@@ -19,8 +19,8 @@ public class PesquisaLogradouro extends ComponentePesquisaGenerico implements Se
     @Override
     public String getHqlConsulta() {
         return "select new Logradouro(obj.id, st, obj.codigo, obj.tipoLogradouro, obj.nome, obj.nomeUsual, obj.nomeAntigo, obj.situacao) " +
-            " from " + classe.getSimpleName() + " obj " +
-            " left join obj.setor st ";
+                " from " + classe.getSimpleName() + " obj " +
+                " left join obj.setor st " ;
     }
 
     @Override

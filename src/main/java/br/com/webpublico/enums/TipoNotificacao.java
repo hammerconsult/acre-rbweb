@@ -51,19 +51,18 @@ public enum TipoNotificacao implements EnumComDescricao {
     AVISO_DE_DEBITOS_A_PRESCREVER("Aviso de Débitos à Prescrever", 39),
     AVISO_NOTIFICAO_COBRANCA_ADMINISTRATIVA_VENCIDA("Aviso/Notificação de Cobrança Administrativa com prazo vencido", 40),
     FALE_CONOSCO_WEB("Fale Conosco", 41),
-    INTEGRACAO_SISOBRA("Integração SisObra Pref", 42),
+    RECLAMACAO_NOTA_PREMIADA("Reclamações Portal da Nota Premiada", 42),
     AVISO_NOTIFICACAO_SOLICITACOES_ISENCAO_IPTU("Aviso de Solicitações de Isenção de IPTU", 44),
-    RECLAMACAO_NOTA_PREMIADA("Reclamações Portal da Nota Premiada", 45),
+    INTEGRACAO_SISOBRA("Integração SisObra Pref", 41),
     RECONHECIMENTO_DIVIDA("Novo Reconhecimento de Dívida do Exercício", 46),
+    CALCULO_ALVARA("Cálculo de Alvará", 47),
     AVALIACAO_SOLICITACAO_COMPRA_AGUARDANDO("Nova Avaliação de Solicitação de Compra Aguardando Avaliação", 47),
     AVALIACAO_SOLICITACAO_COMPRA_AVALIADA("Solicitação de Compra Avaliada", 48),
+    RESPOSTA_QUESTIONAMENTO_NFSE("Resposta de questionamento da nota fiscal eletrônica de serviços", 78),
     SOLICITACAO_AFASTAMENTO("Solicitação de Afastamento", 49),
     DOCUMENTO_OFICIAL("Documento Oficial", 50),
-    SOLICITACAO_FALTAS_PONTO("Solicitação de Faltas - Ponto", 51),
-    CALCULO_ALVARA("Cálculo de Alvará", 47),
-    RESPOSTA_QUESTIONAMENTO_NFSE("Resposta de questionamento da nota fiscal eletrônica de serviços", 78),
-    AVISO_DEPRECIACAO_EM_ELABORACAO("Aviso de Depreciação em Elaboração", 51),
     INCONSISTENCIA_CADASTRO_CALCULO_RH("Inconsistências de Cadastros ou Cálculos do RH", 51),
+    SOLICITACAO_FALTAS_PONTO("Solicitação de Faltas - Ponto", 51),
     INCONSISTENCIA_PARAMETRIZACAO_LOTACOES("Inconsistências na Parametrização de Lotações", 52),
     OCORRENCIA_CADASTRO_MATERIAL("Ocorrência no Cadastro de Material", 53),
     REQUISICAO_MATERIAL("Requisição de Material", 54);
@@ -73,12 +72,12 @@ public enum TipoNotificacao implements EnumComDescricao {
 
     private Integer ordem;
 
+    public String getDescricao() {
+        return descricao;
+    }
+
     private TipoNotificacao(String descricao, Integer ordem) {
         this.descricao = descricao;
         this.ordem = ordem;
-    }
-
-    public String getDescricao() {
-        return descricao;
     }
 }

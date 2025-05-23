@@ -1,5 +1,6 @@
 package br.com.webpublico.seguranca;
 
+import br.com.webpublico.controle.ContadorAcessoPortalControlador;
 import br.com.webpublico.entidades.ConfiguracaoMetrica;
 import br.com.webpublico.entidades.ContadorAcessosPortal;
 import br.com.webpublico.entidades.MetricaMemoria;

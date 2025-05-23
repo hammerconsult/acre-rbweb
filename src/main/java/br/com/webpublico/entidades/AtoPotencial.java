@@ -1,12 +1,11 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.TipoAtoPotencial;
 import br.com.webpublico.enums.TipoLancamento;
 import br.com.webpublico.enums.TipoOperacaoAtoPotencial;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
@@ -24,7 +23,7 @@ import java.util.TreeMap;
 @Audited
 @Entity
 @Etiqueta("Ato Potencial")
-public class AtoPotencial extends SuperEntidadeContabilGerarContaAuxiliar implements EntidadeContabil, Serializable {
+public class AtoPotencial extends SuperEntidade implements EntidadeContabil, Serializable, IGeraContaAuxiliar {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -306,12 +305,50 @@ public class AtoPotencial extends SuperEntidadeContabilGerarContaAuxiliar implem
     }
 
     @Override
-    public String toString() {
-        return numero + " - " + Util.formataValor(valor) + " - " + DataUtil.getDataFormatada(data) + " - " + tipoAtoPotencial.getDescricao();
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
     }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
-        return new GeradorContaAuxiliarDTO(getUnidadeOrganizacional());
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeOrganizacional());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "91":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeOrganizacional());
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        return numero + " - " + Util.formataValor(valor) + " - " + DataUtil.getDataFormatada(data) + " - " + tipoAtoPotencial.getDescricao();
     }
 }

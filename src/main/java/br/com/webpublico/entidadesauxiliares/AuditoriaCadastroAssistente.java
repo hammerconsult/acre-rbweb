@@ -527,6 +527,7 @@ public class AuditoriaCadastroAssistente implements AssistentePaginacao {
         this.naturezaJuridica = null;
         this.grauDeRisco = null;
         this.tipoAutonomo = null;
+        this.mei = Boolean.FALSE;
     }
 
     public void iniciarVariaveisCadastroImobiliario() {
@@ -549,8 +550,8 @@ public class AuditoriaCadastroAssistente implements AssistentePaginacao {
     }
 
     public void iniciarVariaveisGeral() {
+        this.dataInicial = new Date();
         this.mensagem = "";
-        this.dataInicial = null;
         this.dataFinal = new Date();
         this.usuarioSistema = null;
         this.tipoMovimento = null;

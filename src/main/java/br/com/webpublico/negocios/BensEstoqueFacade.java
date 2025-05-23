@@ -16,7 +16,6 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -154,9 +153,9 @@ public class BensEstoqueFacade extends SuperFacadeContabil<BensEstoque> {
                     item.setTagValor(TagValor.LANCAMENTO);
 
                     List<ObjetoParametro> objetos = Lists.newArrayList();
-                    objetos.add(new ObjetoParametro(entity, item));
-                    objetos.add(new ObjetoParametro(entity.getGrupoMaterial(), item));
-                    objetos.add(new ObjetoParametro(entity.getOperacoesBensEstoque(), item));
+                    objetos.add(new ObjetoParametro(entity.getId().toString(), BensEstoque.class.getSimpleName(), item));
+                    objetos.add(new ObjetoParametro(entity.getGrupoMaterial().getId().toString(), GrupoMaterial.class.getSimpleName(), item));
+                    objetos.add(new ObjetoParametro(entity.getOperacoesBensEstoque().toString(), TipoOperacaoBensEstoque.class.getSimpleName(), item));
 
                     item.setObjetoParametros(objetos);
 

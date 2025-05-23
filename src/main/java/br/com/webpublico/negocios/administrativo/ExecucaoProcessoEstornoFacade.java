@@ -3,7 +3,7 @@ package br.com.webpublico.negocios.administrativo;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoEstornoItemVo;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoEstornoVo;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.OperacaoORC;
 import br.com.webpublico.enums.TipoContaDespesa;
 import br.com.webpublico.enums.TipoObjetoCompra;
@@ -157,36 +157,6 @@ public class ExecucaoProcessoEstornoFacade extends AbstractFacade<ExecucaoProces
         Query q = em.createNativeQuery(sql);
         q.setParameter("idFonte", fonte.getId());
         q.setParameter("idItem", item.getId());
-        return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
-    }
-
-    public BigDecimal getValorEstornadoItemPorFonte(ExecucaoProcessoItem item, FonteDespesaORC fonteDespesaORC) {
-        String sql = " select distinct coalesce(sum(item.valortotal),0) from execucaoprocessoempestitem item " +
-            "           inner join execucaoprocesssoitem exitem on exitem.id = item.execucaoprocesssoitem_id" +
-            "           inner join execucaoprocessofonteitem exdot on exitem.id = exdot.execucaoprocesssoitem_id" +
-            "           inner join execucaoprocessofonte exfonte on exfonte.id = exdot.execucaoprocessofonte_id " +
-            "           where exitem.id = :idItem ";
-        sql+= fonteDespesaORC !=null ? " and exfonte.fontedespesaorc_id = :idFonteDespOrc " : "";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idItem", item.getId());
-        if (fonteDespesaORC !=null){
-            q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
-        }
-        return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
-    }
-
-    public BigDecimal getQuantidadeEstornadaItemPorFonte(ExecucaoProcessoItem item, FonteDespesaORC fonteDespesaORC) {
-        String sql = " select distinct coalesce(sum(item.quantidade),0) from execucaoprocessoempestitem item " +
-            "           inner join execucaoprocessoitem exitem on exitem.id = item.execucaoprocessoitem_id" +
-            "           inner join execucaoprocessofonteitem exdot on exitem.id = exdot.execucaoprocessoitem_id " +
-            "           inner join execucaoprocessofonte exfonte on exfonte.id = exdot.execucaoprocessofonte_id " +
-            "           where exitem.id = :idItem ";
-        sql+= fonteDespesaORC !=null ? " and exfonte.fontedespesaorc_id = :idFonteDespOrc " : "";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idItem", item.getId());
-        if (fonteDespesaORC !=null){
-            q.setParameter("idFonteDespOrc", fonteDespesaORC.getId());
-        }
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
 

@@ -1,3 +1,7 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
@@ -10,8 +14,6 @@ import br.com.webpublico.negocios.contabil.singleton.SingletonFechamentoMensal;
 import br.com.webpublico.util.DataUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import org.springframework.web.context.ContextLoader;
 
 import javax.ejb.*;
 import javax.persistence.EntityManager;
@@ -24,6 +26,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * @author venon
+ */
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.CONTAINER)
 @AccessTimeout(value = 50000)
@@ -228,77 +233,6 @@ public class SaldoContaContabilFacade implements Serializable {
         return configuracaoContabil;
     }
 
-    public List<ValidadorMatrizSaldoContabilBlc> buscarSaldoAtualBalanceteContabil(Date dataInicial, Date dataFinal, Exercicio exercicio) {
-        String sql = " select codigo, sum(SALDOanteriorcredito) - sum(SALDOanteriordebito) as saldoanterior," +
-            "       sum(SALDOanteriorcredito) -sum(SALDOfinalcredito) as movimentocredito," +
-            "       sum(SALDOanteriordebito) -sum(SALDOfinaldebito) as movimentodebito," +
-            "       sum(SALDOfinalcredito) - sum(SALDOfinaldebito) as saldofinal" +
-            " from (select CODIGO," +
-            "             0                                                                                    as SALDOanteriorcredito," +
-            "             0                                                                                    as SALDOanteriordebito," +
-            "             COALESCE(sum(saldoatual.TOTALCREDITO), 0)  AS SALDOfinalcredito," +
-            "             COALESCE(sum(saldoatual.TOTALDEBITO), 0) AS SALDOfinaldebito" +
-            "      from (SELECT substr(c.codigo, 0, 1)             as codigo," +
-            "                   COALESCE(SUM(scc.totalcredito), 0) as totalcredito," +
-            "                   COALESCE(SUM(scc.totaldebito), 0)  AS totaldebito" +
-            "            FROM SALDOCONTACONTABIL SCC" +
-            "                     INNER JOIN CONTA C ON SCC.CONTACONTABIL_ID = C.ID" +
-            "                     inner join contacontabil cc on c.id = cc.id" +
-            "            where c.EXERCICIO_ID = :exercicio" +
-            "              and trunc(scc.datasaldo) = (SELECT trunc(MAX(sld.DATASALDO)) AS maxdata" +
-            "                                          FROM SALDOCONTACONTABIL sld" +
-            "                                          WHERE trunc(sld.DATASALDO) <= TO_DATE(:datafinal, 'DD/MM/YYYY')" +
-            "                                            and sld.unidadeorganizacional_id = scc.unidadeorganizacional_id" +
-            "                                            and sld.tipoBalancete = scc.tipoBalancete" +
-            "                                            and sld.contacontabil_id = scc.contacontabil_id)" +
-            "            group by substr(c.codigo, 0, 1)) saldoatual" +
-            "      group by CODIGO" +
-            "      union all" +
-            "      select CODIGO," +
-            "             COALESCE(sum(saldoanterior.TOTALCREDITO), 0) as SALDOanteriorcredito," +
-            "             COALESCE(sum(saldoanterior.TOTALDEBITO), 0) AS SALDOanteriordebito," +
-            "             0                                           as SALDOfinalcredito," +
-            "             0                                           as SALDOfinaldebito" +
-            "      from (SELECT substr(c.codigo, 0, 1)             as codigo," +
-            "                   COALESCE(SUM(scc.totalcredito), 0) as totalcredito," +
-            "                   COALESCE(SUM(scc.totaldebito), 0)  AS totaldebito" +
-            "            FROM SALDOCONTACONTABIL SCC" +
-            "                     INNER JOIN CONTA C ON SCC.CONTACONTABIL_ID = C.ID" +
-            "                     inner join contacontabil cc on c.id = cc.id" +
-            "            where c.EXERCICIO_ID = :exercicio" +
-            "              and trunc(scc.datasaldo) = (SELECT trunc(MAX(sld.DATASALDO)) AS maxdata" +
-            "                                          FROM SALDOCONTACONTABIL sld" +
-            "                                          WHERE trunc(sld.DATASALDO) < TO_DATE(:dataInicial, 'DD/MM/YYYY')" +
-            "                                            and sld.unidadeorganizacional_id = scc.unidadeorganizacional_id" +
-            "                                            and sld.tipoBalancete = scc.tipoBalancete" +
-            "                                            and sld.contacontabil_id = scc.contacontabil_id)" +
-            "            group by substr(c.codigo, 0, 1)) saldoanterior" +
-            "      group by CODIGO)" +
-            "group by codigo " +
-            "order by codigo";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("datafinal", DataUtil.getDataFormatada(dataFinal));
-        q.setParameter("dataInicial", DataUtil.getDataFormatada(dataInicial));
-        q.setParameter("exercicio", exercicio.getId());
-        List resultado = q.getResultList();
-        if (!resultado.isEmpty()) {
-            List<ValidadorMatrizSaldoContabilBlc> matriz = Lists.newArrayList();
-            for (Object o : resultado) {
-                Object[] obj = (Object[]) o;
-                ValidadorMatrizSaldoContabilBlc blc = new ValidadorMatrizSaldoContabilBlc();
-                blc.setCodigo((String) obj[0]);
-                blc.setSaldoAnterior(new BigDecimal(((Number) obj[1]).doubleValue()));
-                blc.setCredito(new BigDecimal(((Number) obj[2]).doubleValue()));
-                blc.setDebito(new BigDecimal(((Number) obj[3]).doubleValue()));
-                blc.setAtual(new BigDecimal(((Number) obj[4]).doubleValue()));
-                matriz.add(blc);
-            }
-            return matriz;
-        }
-        return Lists.newArrayList();
-    }
-
-
     public List<LancamentoContabil> recuperLancamentosContabeis(AssistenteAnaliseContabil analiseContabil) {
 
         String sql = " select l.* from lancamentocontabil l " +
@@ -355,5 +289,75 @@ public class SaldoContaContabilFacade implements Serializable {
 
     public void limparConfiguracaoContabil() {
         configuracaoContabil = null;
+    }
+
+    public List<ValidadorMatrizSaldoContabilBlc> buscarSaldoAtualBalanceteContabil(Date dataInicial, Date dataFinal, Exercicio exercicio) {
+        String sql = " select codigo, sum(saldoanteriorcredito) - sum(saldoanteriordebito) as saldoanterior," +
+            "       sum(saldoanteriorcredito) -sum(saldofinalcredito) as movimentocredito," +
+            "       sum(saldoanteriordebito) -sum(saldofinaldebito) as movimentodebito," +
+            "       sum(saldofinalcredito) - sum(saldofinaldebito) as saldofinal" +
+            " from (select codigo," +
+            "             0                                         as saldoanteriorcredito," +
+            "             0                                         as saldoanteriordebito," +
+            "             coalesce(sum(saldoatual.totalcredito), 0) as saldofinalcredito," +
+            "             coalesce(sum(saldoatual.totaldebito), 0)  as saldofinaldebito" +
+            "      from (select substr(c.codigo, 0, 1)              as codigo," +
+            "                   coalesce(sum(scc.totalcredito), 0)  as totalcredito," +
+            "                   coalesce(sum(scc.totaldebito), 0)   as totaldebito" +
+            "            from saldocontacontabil scc" +
+            "                     inner join conta c on scc.contacontabil_id = c.id" +
+            "                     inner join contacontabil cc on c.id = cc.id" +
+            "            where c.exercicio_id = :exercicio" +
+            "              and trunc(scc.datasaldo) = (select trunc(max(sld.datasaldo)) as maxdata" +
+            "                                          from saldocontacontabil sld" +
+            "                                          where trunc(sld.datasaldo) <= to_date(:datafinal, 'dd/mm/yyyy')" +
+            "                                            and sld.unidadeorganizacional_id = scc.unidadeorganizacional_id" +
+            "                                            and sld.tipobalancete = scc.tipobalancete" +
+            "                                            and sld.contacontabil_id = scc.contacontabil_id)" +
+            "            group by substr(c.codigo, 0, 1)) saldoatual" +
+            "      group by codigo" +
+            "      union all" +
+            "      select codigo," +
+            "             coalesce(sum(saldoanterior.totalcredito), 0) as saldoanteriorcredito," +
+            "             coalesce(sum(saldoanterior.totaldebito), 0) as saldoanteriordebito," +
+            "             0                                           as saldofinalcredito," +
+            "             0                                           as saldofinaldebito" +
+            "      from (select substr(c.codigo, 0, 1)             as codigo," +
+            "                   coalesce(sum(scc.totalcredito), 0) as totalcredito," +
+            "                   coalesce(sum(scc.totaldebito), 0)  as totaldebito" +
+            "            from saldocontacontabil scc" +
+            "                     inner join conta c on scc.contacontabil_id = c.id" +
+            "                     inner join contacontabil cc on c.id = cc.id" +
+            "            where c.exercicio_id = :exercicio" +
+            "              and trunc(scc.datasaldo) = (select trunc(max(sld.datasaldo)) as maxdata" +
+            "                                          from saldocontacontabil sld" +
+            "                                          where trunc(sld.datasaldo) < to_date(:datainicial, 'dd/mm/yyyy')" +
+            "                                            and sld.unidadeorganizacional_id = scc.unidadeorganizacional_id" +
+            "                                            and sld.tipobalancete = scc.tipobalancete" +
+            "                                            and sld.contacontabil_id = scc.contacontabil_id)" +
+            "            group by substr(c.codigo, 0, 1)) saldoanterior" +
+            "      group by codigo)" +
+            "group by codigo " +
+            "order by codigo";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("datafinal", DataUtil.getDataFormatada(dataFinal));
+        q.setParameter("datainicial", DataUtil.getDataFormatada(dataInicial));
+        q.setParameter("exercicio", exercicio.getId());
+        List resultado = q.getResultList();
+        if (!resultado.isEmpty()) {
+            List<ValidadorMatrizSaldoContabilBlc> matriz = Lists.newArrayList();
+            for (Object o : resultado) {
+                Object[] obj = (Object[]) o;
+                ValidadorMatrizSaldoContabilBlc blc = new ValidadorMatrizSaldoContabilBlc();
+                blc.setCodigo((String) obj[0]);
+                blc.setSaldoAnterior(new BigDecimal(((Number) obj[1]).doubleValue()));
+                blc.setCredito(new BigDecimal(((Number) obj[2]).doubleValue()));
+                blc.setDebito(new BigDecimal(((Number) obj[3]).doubleValue()));
+                blc.setAtual(new BigDecimal(((Number) obj[4]).doubleValue()));
+                matriz.add(blc);
+            }
+            return matriz;
+        }
+        return Lists.newArrayList();
     }
 }

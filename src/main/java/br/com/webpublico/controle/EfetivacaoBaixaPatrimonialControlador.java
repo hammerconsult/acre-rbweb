@@ -676,8 +676,8 @@ public class EfetivacaoBaixaPatrimonialControlador extends PrettyControlador<Efe
 
     private String getDescricaoHierarquia() {
         try {
-            if (!selecionado.isEfetivacaoPorAlienacao()) {
-                UnidadeOrganizacional unidadeSolicitacao = selecionado.getParecerBaixaPatrimonial().getSolicitacaoBaixa().getHierarquiaAdministrativa().getSubordinada();
+            if (!selecionado.getParecerBaixaPatrimonial().getSolicitacaoBaixa().isTipoBaixaAlienacao()) {
+                UnidadeOrganizacional unidadeSolicitacao = selecionado.getParecerBaixaPatrimonial().getSolicitacaoBaixa().getUnidadeAdministrativa();
                 return facade.getHierarquiaOrganizacionalFacade().getDescricaoHierarquia(TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(), unidadeSolicitacao, selecionado.getDataEfetivacao());
             }
         } catch (NullPointerException ex) {

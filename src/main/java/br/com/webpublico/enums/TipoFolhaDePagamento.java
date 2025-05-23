@@ -202,11 +202,6 @@ public enum TipoFolhaDePagamento {
         return toDto;
     }
 
-    @Override
-    public String toString() {
-        return descricao;
-    }
-
     public static List<TipoFolhaDePagamento> convertStringToTipoFolha(String[] tiposFolha) {
         if (tiposFolha == null) {
             return null;
@@ -218,6 +213,12 @@ public enum TipoFolhaDePagamento {
                 tipos.add(tipoPorName);
         }
         return tipos;
+    }
+
+
+    @Override
+    public String toString() {
+        return descricao;
     }
 
     public static TipoFolhaDePagamento getTipoPorName(String descricao) {

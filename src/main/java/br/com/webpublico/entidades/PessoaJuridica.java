@@ -408,28 +408,6 @@ public class PessoaJuridica extends Pessoa implements Serializable {
         return dto;
     }
 
-    public br.com.webpublico.tributario.dto.PessoaJuridicaDTO toPessoaJuridicaDTOTributario(){
-        PessoaJuridica pessoaJuridica = this;
-
-        br.com.webpublico.tributario.dto.PessoaJuridicaDTO dto = new br.com.webpublico.tributario.dto.PessoaJuridicaDTO();
-
-        dto.setId(pessoaJuridica.getId());
-        dto.setCnpj(pessoaJuridica.getCnpj());
-        dto.setNome(pessoaJuridica.getNome());
-        dto.setNomeFantasia(pessoaJuridica.getNomeFantasia());
-        dto.setInicioAtividade(pessoaJuridica.getInicioAtividade());
-        dto.setPorte(pessoaJuridica.getPorte() != null ? br.com.webpublico.pessoa.enumeration.TipoPorte.valueOf(pessoaJuridica.getPorte().name()) : null);
-        dto.setNumeroInscricaoEstadual(pessoaJuridica.getInscricaoEstadual());
-        dto.setCapitalSocial(pessoaJuridica.getCapitalSocial());
-        dto.setCapitalIntegralizado(pessoaJuridica.getCapitalIntegralizado());
-        dto.setValorQuota(pessoaJuridica.getValorCota());
-        dto.setEnderecoCorreio(EnderecoCorreio.toEnderecoCorreioDTOTributario(pessoaJuridica.getEnderecoPrincipal()));
-        dto.setEmail(pessoaJuridica.getEmail());
-        dto.setTelefones(Telefone.toTelefonesTributario(pessoaJuridica.getTelefones()));
-
-        return dto;
-    }
-
     public Integer getCodigoIsencaoImunidade() {
         return codigoIsencaoImunidade;
     }

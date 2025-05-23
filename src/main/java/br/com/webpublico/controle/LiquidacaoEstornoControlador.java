@@ -399,6 +399,9 @@ public class LiquidacaoEstornoControlador extends PrettyControlador<LiquidacaoEs
             validarDocumentoFiscal();
             documentoFiscal.setLiquidacaoEstorno(selecionado);
             Util.adicionarObjetoEmLista(selecionado.getDocumentosFiscais(), documentoFiscal);
+//            if (!Util.isListNullOrEmpty(selecionado.getDesdobramentos()) && (isBemMovel() || isEstoque())) {
+//                selecionado.getDesdobramentos().forEach(this::adicionarGrupoIntegracaoDocumentoFiscal);
+//            }
             cancelarDocumentoFiscal();
         } catch (ExcecaoNegocioGenerica ex) {
             FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
@@ -525,7 +528,6 @@ public class LiquidacaoEstornoControlador extends PrettyControlador<LiquidacaoEs
                 facade.getNotaOrcamentariaFacade().imprimirDocumentoOficial(notas.get(0), selecionado.getCategoriaOrcamentaria().isResto() ? ModuloTipoDoctoOficial.NOTA_RESTO_ESTORNO_LIQUIDACAO : ModuloTipoDoctoOficial.NOTA_ESTORNO_LIQUIDACAO, selecionado, isDownload);
             }
         } catch (Exception ex) {
-            logger.error("Erro ao imprimir nota: " + ex);
             FacesUtil.addErroAoGerarRelatorio(ex.getMessage());
         }
     }
@@ -558,6 +560,7 @@ public class LiquidacaoEstornoControlador extends PrettyControlador<LiquidacaoEs
 
     private void adicionarDocumentoFiscalDesdobramentoIntegracaoBemMovelAndEstoque() {
         if (isBemMovel() || isEstoque()) {
+
             selecionado.setDesdobramentos(Lists.newArrayList());
             for (Desdobramento desd : selecionado.getLiquidacao().getDesdobramentos()) {
                 novoDetalhamento();

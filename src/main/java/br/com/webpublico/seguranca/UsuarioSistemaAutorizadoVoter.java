@@ -9,6 +9,7 @@ import com.google.common.collect.Sets;
 import com.ocpsoft.pretty.PrettyContext;
 import com.ocpsoft.pretty.faces.config.PrettyConfigurator;
 import com.ocpsoft.pretty.faces.url.URL;
+import org.joda.time.LocalTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,6 @@ import org.springframework.security.web.FilterInvocation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -79,7 +79,7 @@ public class UsuarioSistemaAutorizadoVoter implements AccessDecisionVoter<Object
     }
 
     private void guardarUltimoAcesso(FilterInvocation url, UsuarioSistema usuarioSistema) {
-        singletonRecursosSistema.guardarUltimoAcesso(usuarioSistema, LocalDateTime.now(), url.getRequestUrl());
+        singletonRecursosSistema.guardarUltimoAcesso(usuarioSistema, LocalTime.now(), url.getRequestUrl());
     }
 
     private boolean hasRecursoParaUsuario(RecursoSistema recursoSistema, UsuarioSistema usuarioSistema) {

@@ -17,18 +17,22 @@ import java.sql.Types;
  */
 public class BorderoSetter implements BatchPreparedStatementSetter {
 
-    public static final String SQL_INSERT = "insert into bordero (id, situacao, datageracao, datageracaoarquivo, datadebito, subconta_id, unidadeorganizacional_id,\n" +
-        "                     observacao, banco_id, valor, qntdpagamentos, exercicio_id, sequenciaarquivo)\n" +
-        "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    public static final String SQL_INSERT = "insert into bordero (" +
+        " id, situacao, datageracao, datageracaoarquivo, datadebito, subconta_id, unidadeorganizacional_id, " +
+        " observacao, banco_id, valor, qntdpagamentos, exercicio_id, sequenciaarquivo" +
+        " ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    public static final String SQL_UPDATE = "update bordero set situacao = ?, datageracao = ?, datageracaoarquivo = ?, datadebito = ?, subconta_id =?, \n" +
-        "                   unidadeorganizacional_id = ?, observacao = ?, banco_id = ?, valor = ?, qntdpagamentos = ?,\n" +
-        "                   exercicio_id = ?, sequenciaarquivo = ? where id = ?";
+    public static final String SQL_UPDATE = "update bordero set " +
+        " situacao = ?, datageracao = ?, datageracaoarquivo = ?, datadebito = ?, subconta_id =?, unidadeorganizacional_id = ?, " +
+        " observacao = ?, banco_id = ?, valor = ?, qntdpagamentos = ?, exercicio_id = ?, sequenciaarquivo = ? " +
+        " where id = ?";
 
     public static final String SQL_UPDATE_SITUACAO = "update bordero set situacao = ? where id = ?";
-    public static final String SQL_INSERT_AUD = "insert into bordero_aud (id, situacao, datageracao, datageracaoarquivo, datadebito, subconta_id, unidadeorganizacional_id,\n" +
-        "                                         observacao, banco_id, valor, qntdpagamentos, exercicio_id, sequenciaarquivo, rev, revtype )\n" +
-        "                     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    public static final String SQL_INSERT_AUD = "insert into bordero_aud (" +
+        " id, situacao, datageracao, datageracaoarquivo, datadebito, subconta_id, unidadeorganizacional_id, " +
+        " observacao, banco_id, valor, qntdpagamentos, exercicio_id, sequenciaarquivo, rev, revtype" +
+        " ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private final Bordero bordero;
     private Long idRev;

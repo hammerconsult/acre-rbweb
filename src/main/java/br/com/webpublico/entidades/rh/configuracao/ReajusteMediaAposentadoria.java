@@ -14,7 +14,6 @@ import br.com.webpublico.util.anotacoes.Obrigatorio;
 import br.com.webpublico.util.anotacoes.Pesquisavel;
 import br.com.webpublico.util.anotacoes.Tabelavel;
 import org.hibernate.envers.Audited;
-import java.util.Date;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -60,12 +59,6 @@ public class ReajusteMediaAposentadoria extends SuperEntidade implements Seriali
     private List<ProcessoCalculoReajuste> processosCalculo;
     @Transient
     private Boolean reajusteTransiente;
-    @Etiqueta("Início de Vigência")
-    @Temporal(TemporalType.DATE)
-    private Date inicioVigencia;
-    @Etiqueta("Final de Vigência")
-    @Temporal(TemporalType.DATE)
-    private Date finalVigencia;
 
     public Long getId() {
         return id;
@@ -116,7 +109,7 @@ public class ReajusteMediaAposentadoria extends SuperEntidade implements Seriali
         if (!getReajusteTransiente()) {
             return mes.getDescricao() + " - " + exercicio + " - " + valorReajuste + "%";
         }
-        return mes.getDescricao() + " - " + exercicio + " Não foi encontrado registro de percentual cadastrado ou vigente na data de referência. Os aposentados/pensionistas previdenciários abaixo não sofrerão reajuste:";
+        return mes.getDescricao() + " - " + exercicio + " Não foi encontrado registro de percentual cadastrado. Os aposentados/pensionistas previdenciários abaixo não sofrerão reajuste:";
     }
 
 
@@ -148,22 +141,6 @@ public class ReajusteMediaAposentadoria extends SuperEntidade implements Seriali
 
     public void setReajusteTransiente(Boolean reajusteTransiente) {
         this.reajusteTransiente = reajusteTransiente;
-    }
-
-    public Date getInicioVigencia() {
-        return inicioVigencia;
-    }
-
-    public void setInicioVigencia(Date inicioVigencia) {
-        this.inicioVigencia = inicioVigencia;
-    }
-
-    public Date getFinalVigencia() {
-        return finalVigencia;
-    }
-
-    public void setFinalVigencia(Date finalVigencia) {
-        this.finalVigencia = finalVigencia;
     }
 
     @Override

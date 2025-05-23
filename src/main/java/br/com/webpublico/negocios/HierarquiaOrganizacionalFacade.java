@@ -8,7 +8,6 @@ import br.com.webpublico.controlerelatorio.AbstractReport;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.HierarquiaOrganizacionalDTO;
 import br.com.webpublico.entidadesauxiliares.PrevistoRealizadoDespesaUnidade;
-import br.com.webpublico.enums.TipoGestor;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.util.*;
@@ -195,7 +194,6 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         }
         return q.getResultList();
     }
-
 
     public List<HierarquiaOrganizacional> buscarHierarquiaUsuarioPorTipo(String parte, UsuarioSistema usuario, Date dataOperacao, TipoHierarquiaOrganizacional tipoHierarquia) {
         return buscarHierarquiaUsuarioPorTipo(parte, usuario, dataOperacao, tipoHierarquia, null);
@@ -387,13 +385,6 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
     @Override
     public HierarquiaOrganizacional recuperar(Object id) {
         HierarquiaOrganizacional ho = super.recuperar(((HierarquiaOrganizacional) id).getId());
-        ho.getHierarquiaOrganizacionalCorrespondentes().size();
-        ho.getHierarquiaOrganizacionalResponsavels().size();
-        return ho;
-    }
-
-    public HierarquiaOrganizacional recuperarPeloId(Long id) {
-        HierarquiaOrganizacional ho = em.find(HierarquiaOrganizacional.class, id);
         ho.getHierarquiaOrganizacionalCorrespondentes().size();
         ho.getHierarquiaOrganizacionalResponsavels().size();
         return ho;
@@ -1085,6 +1076,31 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         return q.getResultList();
     }
 
+    public List<HierarquiaOrganizacional> filtraPorNivelEntidade(String parte, String nivel, String tipo, Date data) {
+        StringBuilder sql = new StringBuilder();
+
+        if (tipo.equals(TipoHierarquiaOrganizacional.ORCAMENTARIA.name())) {
+            sql.append(" SELECT DISTINCT h.* FROM VWHIERARQUIAORCAMENTARIA VW ");
+            sql.append(" inner join HIERARQUIAORGANIZACIONAL h on h.id=VW.ID ");
+            sql.append(" inner join UNIDADEORGANIZACIONAL uni on uni.id = h.subordinada_id ");
+            sql.append(" WHERE to_date(:data) between vw.INICIOVIGENCIA  and coalesce(vw.FIMVIGENCIA, to_date(:data)) ");
+            sql.append(" and h.INDICEDONO = :nivel and uni.entidade_id is not null and ( VW.CODIGO like :str or upper(vw.descricao) like :str)  order by h.codigo");
+        } else {
+            sql.append(" SELECT DISTINCT h.* FROM VWHIERARQUIAADMINISTRATIVA VW  ");
+            sql.append(" inner join HIERARQUIAORGANIZACIONAL h on h.id=VW.ID ");
+            sql.append(" WHERE :data between vw.INICIOVIGENCIA  and coalesce(vw.FIMVIGENCIA, :data)");
+
+            sql.append("and h.INDICEDONO = :nivel and ( VW.CODIGO like :str or upper(vw.descricao) like :str) order by h.codigo");
+        }
+        Query q = getEntityManager().createNativeQuery(sql.toString(), HierarquiaOrganizacional.class);
+        String parametro = "%" + parte.trim().toUpperCase() + "%";
+        q.setParameter("str", parametro);
+        q.setParameter("nivel", nivel);
+        q.setParameter("data", data, TemporalType.DATE);
+        q.setMaxResults(10);
+        return q.getResultList();
+    }
+
     public List<HierarquiaOrganizacional> filtraNivelDoisESemRaiz(String parte, String tipo, Date data) {
         return filtraNivelDoisESemRaiz(parte, tipo, data, true);
     }
@@ -1215,13 +1231,11 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         q.setParameter("unidade", o.getId());
         q.setParameter("tipo", tipo);
         q.setMaxResults(1);
-        List<HierarquiaOrganizacional> resultado = q.getResultList();
-        if (resultado.isEmpty()) {
-            return null;
-        } else {
-            return resultado.get(0);
+        List<HierarquiaOrganizacional> lista = q.getResultList();
+        if (lista != null && !lista.isEmpty()) {
+            return lista.get(0);
         }
-
+        return null;
     }
 
     public HierarquiaOrganizacional getHierarquiaDaUnidadeSemConsiderarVigencia(String tipo, UnidadeOrganizacional o) {
@@ -2038,11 +2052,11 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
             "INNER JOIN VWHIERARQUIAADMINISTRATIVA VWADM   ON VWADM.ID = HIERARQUIAORGRESP.HIERARQUIAORGADM_ID " +
             "INNER JOIN VWHIERARQUIAORCAMENTARIA VWORC     ON VWORC.ID = HIERARQUIAORGRESP.HIERARQUIAORGORC_ID " +
             "INNER JOIN UNIDADEORGANIZACIONAL ORCAMENTARIA ON ORCAMENTARIA.ID =  VWORC.SUBORDINADA_ID " +
-            "INNER JOIN HIERARQUIAORGANIZACIONAL HIERARQUIAORC ON HIERARQUIAORC.ID = VWORC.ID" +
+            "INNER JOIN HIERARQUIAORGANIZACIONAL HIERARQUIAORC ON HIERARQUIAORC.ID = VWORC.ID " +
             "     WHERE to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN trunc(VWADM.INICIOVIGENCIA) AND COALESCE(trunc(VWADM.FIMVIGENCIA),to_date(:dataAtual, 'dd/MM/yyyy')) " +
-            "       AND to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN trunc(VWORC.INICIOVIGENCIA) AND COALESCE(trunc(VWORC.FIMVIGENCIA),to_date(:dataAtual, 'dd/MM/yyyy')) " +
-            "       AND to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN trunc(HIERARQUIAORGRESP.DATAINICIO) AND COALESCE(trunc(HIERARQUIAORGRESP.DATAFIM),to_date(:dataAtual, 'dd/MM/yyyy'))" +
-            "       AND VWADM.SUBORDINADA_ID = :unidadeadministrativa" +
+            "     AND to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN trunc(VWORC.INICIOVIGENCIA) AND COALESCE(trunc(VWORC.FIMVIGENCIA),to_date(:dataAtual, 'dd/MM/yyyy')) " +
+            "     AND to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN trunc(HIERARQUIAORGRESP.DATAINICIO) AND COALESCE(trunc(HIERARQUIAORGRESP.DATAFIM),to_date(:dataAtual, 'dd/MM/yyyy')) " +
+            "     AND VWADM.SUBORDINADA_ID = :unidadeadministrativa " +
             "  ORDER BY HIERARQUIAORC.CODIGO";
 
         Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
@@ -2051,46 +2065,20 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         return q.getResultList();
     }
 
-    public List<HierarquiaOrganizacional> retornarHierarquiAdministrativaPresenteNoUsuario( UsuarioSistema usuarioSistema, UnidadeOrganizacional unidadeOrc, Date dataReferencia) {
-        String sql = " SELECT DISTINCT HIERARQUIAADM.* " +
-                " FROM HIERARQUIAORGRESP " +
-                " INNER JOIN VWHIERARQUIAADMINISTRATIVA VWADM ON VWADM.ID = HIERARQUIAORGRESP.HIERARQUIAORGADM_ID " +
-                " INNER JOIN HIERARQUIAORGANIZACIONAL HIERARQUIAADM ON HIERARQUIAADM.ID = VWADM.ID " +
-                " INNER JOIN VWHIERARQUIAORCAMENTARIA VWORC ON VWORC.ID = HIERARQUIAORGRESP.HIERARQUIAORGORC_ID " +
-                " INNER JOIN USUARIOUNIDADEORGANIZACIO UU ON VWADM.SUBORDINADA_ID = UU.UNIDADEORGANIZACIONAL_ID " +
-                "     WHERE to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN VWADM.INICIOVIGENCIA AND COALESCE(VWADM.FIMVIGENCIA, to_date(:dataAtual, 'dd/MM/yyyy')) " +
-                "       AND to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN HIERARQUIAADM.INICIOVIGENCIA AND COALESCE(HIERARQUIAADM.FIMVIGENCIA, to_date(:dataAtual, 'dd/MM/yyyy')) " +
-                "       AND to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN VWORC.INICIOVIGENCIA AND COALESCE(VWORC.FIMVIGENCIA, to_date(:dataAtual, 'dd/MM/yyyy')) " +
-                "       AND to_date(:dataAtual, 'dd/MM/yyyy') BETWEEN HIERARQUIAORGRESP.DATAINICIO AND COALESCE(HIERARQUIAORGRESP.DATAFIM, to_date(:dataAtual, 'dd/MM/yyyy')) " +
-                "       AND VWORC.SUBORDINADA_ID = :unidadeOrc " +
-                " AND UU.USUARIOSISTEMA_ID = :usuarioSistema " +
-                "  ORDER BY HIERARQUIAADM.CODIGO ";
-
-        Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
-        q.setParameter("dataAtual", DataUtil.getDataFormatada(dataReferencia));
-        q.setParameter("unidadeOrc", unidadeOrc.getId());
-        q.setParameter("usuarioSistema", usuarioSistema.getId());
-
-        return q.getResultList();
-    }
-
-    public List<HierarquiaOrganizacional> buscarHierarquiaAdministrativaPorUnidadeOrcamentaria(UsuarioSistema usuarioSistema, UnidadeOrganizacional unidadeOrcamentaria, Date dataReferencia) {
-        String sql = "        SELECT DISTINCT HIERARQUIAADM.*  " +
+    public List<HierarquiaOrganizacional> buscarHierarquiaAdministrativaPorUnidadeOrcamentaria(UnidadeOrganizacional unidadeOrcamentaria, Date dataReferencia) {
+        String sql = "        SELECT HIERARQUIAADM.*  " +
             "      FROM HIERARQUIAORGCORRE  " +
             "INNER JOIN VWHIERARQUIAADMINISTRATIVA VWADM   ON VWADM.ID = HIERARQUIAORGCORRE.HIERARQUIAORGADM_ID  " +
             "INNER JOIN VWHIERARQUIAORCAMENTARIA VWORC     ON VWORC.ID = HIERARQUIAORGCORRE.HIERARQUIAORGORC_ID  " +
             "INNER JOIN HIERARQUIAORGANIZACIONAL HIERARQUIAADM ON HIERARQUIAADM.ID = VWADM.ID " +
-            "INNER JOIN USUARIOUNIDADEORGANIZACIO UU ON VWADM.SUBORDINADA_ID = UU.UNIDADEORGANIZACIONAL_ID " +
             "     WHERE :dataAtual BETWEEN VWADM.INICIOVIGENCIA AND COALESCE(VWADM.FIMVIGENCIA,:dataAtual)  " +
             "       AND :dataAtual BETWEEN VWORC.INICIOVIGENCIA AND COALESCE(VWORC.FIMVIGENCIA,:dataAtual)  " +
             "       AND :dataAtual BETWEEN HIERARQUIAORGCORRE.DATAINICIO AND COALESCE(HIERARQUIAORGCORRE.DATAFIM,:dataAtual) " +
             "       AND VWORC.SUBORDINADA_ID = :unidadeorcamentaria " +
-            "       AND UU.USUARIOSISTEMA_ID = :idUsuario " +
             "  ORDER BY HIERARQUIAADM.CODIGO";
 
         Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
         q.setParameter("unidadeorcamentaria", unidadeOrcamentaria.getId());
-        q.setParameter("idUsuario", usuarioSistema.getId());
         q.setParameter("dataAtual", dataReferencia, TemporalType.DATE);
         return q.getResultList();
     }
@@ -2154,45 +2142,45 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         }
     }
 
-    public List<HierarquiaOrganizacional> buscarHierarquiaPaiAndFilhoUsuarioPorTipoGestor(TipoGestor tipoGestor, String parteDigitada, String nivelEstrutura, UsuarioSistema usuarioSistema, Date dataDaOperacao) {
+    public List<BigDecimal> getHierarquiaOrganizacionalPaiEFilhoOndeUsuarioEhGestorMaterial(String parteDigitada, String nivelEstrutura, UsuarioSistema usuarioSistema, Date dataDaOperacao) {
         String sql = "with dados(id, superior_id, subordinada_id, codigo, descricao ) as (" +
             "  select vw.id, vw.superior_id, vw.subordinada_id, vw.codigo, vw.descricao " +
             "  from vwhierarquiaadministrativa vw" +
             "  inner join hierarquiaorganizacional ho on ho.id = vw.id" +
-            "  where to_date(:dataOperacao, 'dd/mm/yyyy') between vw.iniciovigencia   " +
-            "  and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/mm/yyyy'))" +
-            "  AND nivelestrutura(ho.codigo, '.') = 2 " +
+            "  where to_date(:dataOperacao, 'dd/MM/yyyy') between vw.iniciovigencia   " +
+            "  and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/MM/yyyy'))" +
+            "  AND nivelestrutura(ho.codigo, '.')     = 2 " +
             "  and substr(vw.codigo,1,6) in (select substr(ho.codigo,1,6)" +
-            "                                  from usuariosistema us" +
-            "                                 inner join usuariounidadeorganizacio uu on uu.usuariosistema_id = us.id" +
-            "                                 inner join hierarquiaorganizacional ho on ho.subordinada_id = uu.unidadeorganizacional_id" +
-            "                                 where us.id = :usuarioId " +
-            "                                   and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(ho.iniciovigencia) and coalesce(trunc(ho.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " +
-            "                                   and uu." +TipoGestor.getNomeColunaGestor(tipoGestor) + " = :gestor)" +
+            "                                    from usuariosistema us" +
+            "                              inner join usuariounidadeorganizacio uu on uu.usuariosistema_id = us.id" +
+            "                              inner join hierarquiaorganizacional ho on ho.subordinada_id = uu.unidadeorganizacional_id" +
+            "                                   where us.id = :usuarioId" +
+            "                                   and to_date(:dataOperacao, 'dd/MM/yyyy') between ho.iniciovigencia and coalesce(ho.fimvigencia, to_date(:dataOperacao, 'dd/MM/yyyy')) " +
+            "                                   and uu.gestorMateriais = 1)" +
+            "  " +
             "  UNION ALL " +
+            "  " +
             "  select vw.id, vw.superior_id, vw.subordinada_id, vw.codigo, vw.descricao " +
-            "  from vwhierarquiaadministrativa vw " +
+            "  from vwhierarquiaadministrativa vw" +
             "  inner join dados dd on dd.subordinada_id = vw.superior_id" +
-            "  where to_date(:dataOperacao, 'dd/mm/yyyy') between vw.iniciovigencia   " +
-            "  and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/mm/yyyy'))" +
+            "  where to_date(:dataOperacao, 'dd/MM/yyyy') between vw.iniciovigencia   " +
+            "  and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/MM/yyyy'))" +
             ")" +
-            " select distinct ho.* " +
+            " select distinct dd.subordinada_id " +
             "   from dados dd" +
             " inner join hierarquiaorganizacional ho on ho.id = dd.id" +
-            " where ((replace(dd.codigo,'.','') LIKE :filtro) or dd.codigo LIKE :filtro OR (UPPER(dd.descricao) LIKE :filtro))" +
-            "    and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(ho.iniciovigencia) and coalesce(trunc(ho.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " +
-            (nivelEstrutura == null ? "" : " and ho.indicedono = :nivelEstrutura") +
-            " order by ho.codigo ";
-
-        Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
+            "  where (lower(dd.descricao) like :parte " +
+            "     or dd.codigo like :parte)" +
+            "    and to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(ho.iniciovigencia) and coalesce(trunc(ho.fimvigencia), to_date(:dataOperacao, 'dd/MM/yyyy')) " +
+            (nivelEstrutura == null ? "" : " and ho.indicedono = :nivel");
+        Query q = em.createNativeQuery(sql);
         q.setParameter("dataOperacao", DataUtil.getDataFormatada(dataDaOperacao));
         q.setParameter("usuarioId", usuarioSistema.getId());
-        q.setParameter("gestor", Boolean.TRUE);
-        q.setParameter("filtro", "%" + parteDigitada.toUpperCase().trim() + "%");
-        if (nivelEstrutura != null) {
-            q.setParameter("nivelEstrutura", nivelEstrutura);
-        }
+        q.setParameter("parte", "%" + parteDigitada.toLowerCase().trim() + "%");
 
+        if (nivelEstrutura != null) {
+            q.setParameter("nivel", nivelEstrutura);
+        }
         return q.getResultList();
     }
 
@@ -2391,13 +2379,10 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
             "        and UU.USUARIOSISTEMA_ID = :usuario_id" +
             "        AND (upper(vw.descricao) LIKE :str OR vw.codigo LIKE :str or replace(vw.codigo, '.', '') like :str)" +
             "   ORDER BY orc.codigo";
-
-        Query q = getEntityManager().createNativeQuery(sql, HierarquiaOrganizacional.class);
-
+        Query q = getEntityManager().createNativeQuery(sql.toString(), HierarquiaOrganizacional.class);
         q.setParameter("str", "%" + parte.trim().toUpperCase() + "%");
         q.setParameter("data", DataUtil.getDataFormatada(data));
         q.setParameter("usuario_id", usuarioCorrente.getId());
-
         return q.getResultList();
     }
 
@@ -2625,6 +2610,27 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         return hierarquias;
     }
 
+    public List<HierarquiaOrganizacional> buscarFiltrandoHierarquiaOrcamentariaPorUnidadeAdministrativa(String parte, UnidadeOrganizacional unidadeAdministrativa, Date dataReferencia) {
+        String sql = "    SELECT HIERARQUIAORC.* " +
+            "      FROM HIERARQUIAORGRESP " +
+            "INNER JOIN VWHIERARQUIAADMINISTRATIVA VWADM   ON VWADM.ID = HIERARQUIAORGRESP.HIERARQUIAORGADM_ID " +
+            "INNER JOIN VWHIERARQUIAORCAMENTARIA VWORC     ON VWORC.ID = HIERARQUIAORGRESP.HIERARQUIAORGORC_ID " +
+            "INNER JOIN UNIDADEORGANIZACIONAL ORCAMENTARIA ON ORCAMENTARIA.ID =  VWORC.SUBORDINADA_ID " +
+            "INNER JOIN HIERARQUIAORGANIZACIONAL HIERARQUIAORC ON HIERARQUIAORC.ID = VWORC.ID" +
+            "     WHERE to_date(:dataAtual, 'dd/mm/yyyy') BETWEEN VWADM.INICIOVIGENCIA AND COALESCE(VWADM.FIMVIGENCIA, to_date(:dataAtual, 'dd/mm/yyyy')) " +
+            "       AND to_date(:dataAtual, 'dd/mm/yyyy') BETWEEN VWORC.INICIOVIGENCIA AND COALESCE(VWORC.FIMVIGENCIA, to_date(:dataAtual, 'dd/mm/yyyy')) " +
+            "       AND to_date(:dataAtual, 'dd/mm/yyyy') BETWEEN trunc(HIERARQUIAORGRESP.DATAINICIO) AND COALESCE(trunc(HIERARQUIAORGRESP.DATAFIM), to_date(:dataAtual, 'dd/mm/yyyy')) " +
+            "       AND VWADM.SUBORDINADA_ID = :unidadeadministrativa" +
+            "       AND ((replace(VWORC.codigo,'.','') LIKE :parte) or VWORC.codigo LIKE :parte OR (upper(VWORC.descricao) LIKE :parte)) " +
+            "  ORDER BY HIERARQUIAORC.CODIGO";
+
+        Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
+        q.setParameter("unidadeadministrativa", unidadeAdministrativa.getId());
+        q.setParameter("parte", "%" + parte.trim().toUpperCase().trim() + "%");
+        q.setParameter("dataAtual", DataUtil.getDataFormatada(dataReferencia));
+        return q.getResultList();
+    }
+
     public HierarquiaOrganizacional recuperarSecretariaAdministrativaVigente(HierarquiaOrganizacional hierarquiaOrganizacional, Date dataOperacao) {
         String sql = "SELECT DISTINCT h.* " +
             " FROM " +
@@ -2658,38 +2664,6 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
             return null;
         }
 
-    }
-
-    public List<HierarquiaOrganizacional> buscarFiltrandoHierarquiaOrcamentariaPorUnidadeAdministrativa(String parte, UnidadeOrganizacional unidadeAdministrativa, Date dataReferencia) {
-        String sql = "    SELECT HIERARQUIAORC.* " +
-            "      FROM HIERARQUIAORGRESP " +
-            "INNER JOIN VWHIERARQUIAADMINISTRATIVA VWADM   ON VWADM.ID = HIERARQUIAORGRESP.HIERARQUIAORGADM_ID " +
-            "INNER JOIN VWHIERARQUIAORCAMENTARIA VWORC     ON VWORC.ID = HIERARQUIAORGRESP.HIERARQUIAORGORC_ID " +
-            "INNER JOIN UNIDADEORGANIZACIONAL ORCAMENTARIA ON ORCAMENTARIA.ID =  VWORC.SUBORDINADA_ID " +
-            "INNER JOIN HIERARQUIAORGANIZACIONAL HIERARQUIAORC ON HIERARQUIAORC.ID = VWORC.ID" +
-            "     WHERE :dataAtual BETWEEN VWADM.INICIOVIGENCIA AND COALESCE(VWADM.FIMVIGENCIA,:dataAtual) " +
-            "       AND :dataAtual BETWEEN VWORC.INICIOVIGENCIA AND COALESCE(VWORC.FIMVIGENCIA,:dataAtual) " +
-            "       AND :dataAtual BETWEEN HIERARQUIAORGRESP.DATAINICIO AND COALESCE(HIERARQUIAORGRESP.DATAFIM,:dataAtual)" +
-            "       AND VWADM.SUBORDINADA_ID = :unidadeadministrativa" +
-            "       AND ((replace(VWORC.codigo,'.','') LIKE :parte) or VWORC.codigo LIKE :parte OR (upper(VWORC.descricao) LIKE :parte)) " +
-            "  ORDER BY HIERARQUIAORC.CODIGO";
-
-        Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
-        q.setParameter("unidadeadministrativa", unidadeAdministrativa.getId());
-        q.setParameter("parte", "%" + parte.trim().toUpperCase().trim() + "%");
-        q.setParameter("dataAtual", dataReferencia, TemporalType.DATE);
-        return q.getResultList();
-    }
-
-    public boolean estaNoOrgao(UnidadeOrganizacional unidadeOrganizacional, HierarquiaOrganizacional orgao) {
-        HierarquiaOrganizacional ho = getHierarquiaOrganizacionalPorUnidade(sistemaFacade.getDataOperacao(), unidadeOrganizacional, TipoHierarquiaOrganizacional.ADMINISTRATIVA);
-        while (ho.getSuperior() != null) {
-            if (ho.getCodigo().equals(orgao.getCodigo())) {
-                return true;
-            }
-            ho = getHierarquiaOrganizacionalPorUnidade(sistemaFacade.getDataOperacao(), ho.getSuperior(), TipoHierarquiaOrganizacional.ADMINISTRATIVA);
-        }
-        return false;
     }
 
     public List<HierarquiaOrganizacional> buscarHierarquiaUsuarioPorTipoData(String parte, UsuarioSistema usuario, Date dataOperacao, TipoHierarquiaOrganizacional tipoHierarquia) {
@@ -2802,26 +2776,6 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         return q.getResultList();
     }
 
-    public List<HierarquiaOrganizacional> buscarUnidadesOrcamentariasRequisicaoCompra(RequisicaoDeCompra requisicaoCompra) {
-        String sql = " select distinct vw.* from requisicaodecompra req  " +
-            " left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
-            " left join execucaocontratoempenho exEmp on exEmp.id = reqEx.execucaocontratoempenho_id " +
-            " left join execucaoprocessoempenho exEmpProc on  exEmpProc.id = reqEx.execucaoprocessoempenho_id " +
-            " left join solicitacaoempenhorecdiv exrd on exrd.id = reqEx.execucaoreconhecimentodiv_id " +
-            " left join reconhecimentodivida rd on rd.id = exrd.reconhecimentodivida_id " +
-            " left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
-            " inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
-            " inner join hierarquiaorganizacional vw on vw.subordinada_id = emp.unidadeorganizacional_id  " +
-            " where to_date(:dataOperacao, 'dd/MM/yyyy') between vw.iniciovigencia and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/MM/yyyy')) " +
-            " and vw.tipohierarquiaorganizacional = :tipoHo" +
-            " and req.id = :idRequisicao ";
-        Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
-        q.setParameter("idRequisicao", requisicaoCompra.getId());
-        q.setParameter("dataOperacao", DataUtil.getDataFormatada(requisicaoCompra.getDataRequisicao()));
-        q.setParameter("tipoHo", TipoHierarquiaOrganizacional.ORCAMENTARIA.name());
-        return q.getResultList();
-    }
-
     public List<HierarquiaOrganizacional> buscarHierarquiasDoEmpregadorEsocial(Entidade empregador, Date dataOperacao) {
         String sql = " select hierarquia.* " +
             " from VWHIERARQUIAADMINISTRATIVA ho " +
@@ -2838,6 +2792,27 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
             return q.getResultList();
         }
         return Lists.newArrayList();
+    }
+
+    public List<HierarquiaOrganizacional> buscarUnidadesOrcamentariasRequisicaoCompra(RequisicaoDeCompra requisicaoCompra) {
+        String sql = " select distinct vw.* from requisicaodecompra req  " +
+            " left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
+            " left join execucaocontrato ex on ex.id = reqEx.execucaocontrato_id " +
+            " left join execucaocontratoempenho exEmp on ex.id = exEmp.execucaocontrato_id " +
+            " left join execucaoprocesso exProc on exProc.id = reqEx.execucaoprocesso_id " +
+            " left join execucaoprocessoempenho exEmpProc on exProc.id = exEmpProc.execucaoprocesso_id " +
+            " left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " +
+            " left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
+            " inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
+            " inner join hierarquiaorganizacional vw on vw.subordinada_id = emp.unidadeorganizacional_id  " +
+            " where to_date(:dataOperacao, 'dd/MM/yyyy') between vw.iniciovigencia and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/MM/yyyy')) " +
+            " and vw.tipohierarquiaorganizacional = :tipoHo" +
+            " and req.id = :idRequisicao ";
+        Query q = em.createNativeQuery(sql, HierarquiaOrganizacional.class);
+        q.setParameter("idRequisicao", requisicaoCompra.getId());
+        q.setParameter("dataOperacao", DataUtil.getDataFormatada(requisicaoCompra.getDataRequisicao()));
+        q.setParameter("tipoHo", TipoHierarquiaOrganizacional.ORCAMENTARIA.name());
+        return q.getResultList();
     }
 
     public List<HierarquiaOrganizacional> agruparHierarquiasFilhas(List<HierarquiaOrganizacional> hos) {
@@ -2915,42 +2890,6 @@ public class HierarquiaOrganizacionalFacade extends AbstractFacade<HierarquiaOrg
         q.setParameter("tipoHierarquia", TipoHierarquiaOrganizacional.ORCAMENTARIA.name());
         q.setParameter("str", "%" + parte.toLowerCase() + "%");
         q.setParameter("dataOperacao", DataUtil.getDataFormatada(dataOperacao));
-        return q.getResultList();
-    }
-
-    public List<HierarquiaOrganizacional> buscarHierarquiasOrganizacionaisAdmnistrativasComFilhasDoUsuarioFiltrando(String parte, Date data, UsuarioSistema usuarioSistema) {
-        String sql = " select distinct h.* " +
-            " from vwhierarquiaadministrativa vw " +
-            "         inner join hierarquiaorganizacional h on h.id = vw.id " +
-            " where to_date(:data, 'dd/mm/yyyy') between vw.iniciovigencia and coalesce(vw.fimvigencia, to_date(:data, 'dd/mm/yyyy')) " +
-            "  and vw.subordinada_id in (select distinct ho.subordinada_id " +
-            "                            from unidadeorganizacional uo " +
-            "                                     inner join hierarquiaorganizacional ho " +
-            "                                                on uo.id = ho.subordinada_id and " +
-            "                                                   ho.tipohierarquiaorganizacional = :tipoHierarquia " +
-            "                                                    and to_date(:data, 'dd/mm/yyyy') between ho.iniciovigencia and coalesce(ho.fimvigencia, to_date(:data, 'dd/mm/yyyy')) " +
-            "                            start with ho.id in (select distinct hierarquia.id " +
-            "                                                 from hierarquiaorganizacional hierarquia " +
-            "                                                          inner join usuariounidadeorganizacio uu " +
-            "                                                                     on uu.unidadeorganizacional_id = hierarquia.subordinada_id " +
-            "                                                          inner join usuariosistema u on u.id = uu.usuariosistema_id " +
-            "                                                 where u.id = :idUsuario " +
-            "                                                   and hierarquia.tipohierarquiaorganizacional = :tipoHierarquia " +
-            "                                                   and to_date(:data, 'dd/mm/yyyy') between hierarquia.iniciovigencia and coalesce(hierarquia.fimvigencia, to_date(:data, 'dd/mm/yyyy'))) " +
-            "                            connect by prior ho.subordinada_id = ho.superior_id) " +
-            "  and (upper(translate(vw.descricao, 'âàãáÁÂÀÃéêÉÊíÍóôõÓÔÕüúÜÚÇç', 'aaaaaaaaeeeeiioooooouuuucc')) like " +
-            "       translate(:str, 'âàãáÁÂÀÃéêÉÊíÍóôõÓÔÕüúÜÚÇç', 'aaaaaaaaeeeeiioooooouuuucc') " +
-            "    or vw.codigo like :str " +
-            "    or replace(vw.codigo, '.', '') like :str) " +
-            "order by h.codigo";
-
-        Query q = getEntityManager().createNativeQuery(sql, HierarquiaOrganizacional.class);
-        String parametro = "%" + parte.trim().toUpperCase() + "%";
-        q.setParameter("str", parametro.toUpperCase());
-        q.setParameter("data", DataUtil.getDataFormatada(data));
-        q.setParameter("idUsuario", usuarioSistema.getId());
-        q.setParameter("tipoHierarquia", TipoHierarquiaOrganizacional.ADMINISTRATIVA.name());
-        q.setMaxResults(MAX_RESULTADOS_NO_AUTOCOMPLATE);
         return q.getResultList();
     }
 

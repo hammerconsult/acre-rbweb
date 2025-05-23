@@ -58,6 +58,7 @@ public class S2399Service {
 
     private void adicionarInformacoesBasicas(EventosESocialDTO.S2399 eventoS2399, VinculoFP vinculoFP, PrestadorServicos prestadorServicos, ValidacaoException ve) {
         eventoS2399.setCpfTrab(StringUtil.retornaApenasNumeros(vinculoFP.getMatriculaFP().getPessoa().getCpf()));
+
         if (vinculoFP.getMatriculaFP().getPessoa().getCarteiraDeTrabalho() == null) {
             ve.adicionarMensagemDeOperacaoNaoRealizada("A pessoa " + vinculoFP.getMatriculaFP().getPessoa() + " não possui carteira de trabalho.");
         } else {

@@ -10,7 +10,7 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.contabil.execucao.DesdobramentoPagamentoEstorno;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentaria;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentariaRetencao;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.EntidadeContabil;
@@ -637,12 +637,12 @@ public class PagamentoEstornoFacade extends SuperFacadeContabil<PagamentoEstorno
 
     private void adicionarObjetosParametro(PagamentoEstorno entity, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getPagamento().getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa(), item));
-        objetos.add(new ObjetoParametro(entity.getPagamento().getSubConta(), item));
-        objetos.add(new ObjetoParametro(entity.getPagamento().getLiquidacao().getEmpenho().getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), PagamentoEstorno.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPagamento().getLiquidacao().getEmpenho().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPagamento().getSubConta().getId().toString(), SubConta.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPagamento().getLiquidacao().getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         if (entity.getPagamento().getLiquidacao().getEmpenho().getDividaPublica() != null) {
-            objetos.add(new ObjetoParametro(entity.getPagamento().getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica(), item));
+            objetos.add(new ObjetoParametro(entity.getPagamento().getLiquidacao().getEmpenho().getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
         }
         item.setObjetoParametros(objetos);
     }

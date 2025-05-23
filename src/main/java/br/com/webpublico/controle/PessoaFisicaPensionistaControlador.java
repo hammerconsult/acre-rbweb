@@ -1380,8 +1380,7 @@ public class PessoaFisicaPensionistaControlador extends PrettyControlador<Pessoa
 
         if (!selecionado.getCpf_Cnpj().equals("")) {
             if (Util.valida_CpfCnpj(String.valueOf(selecionado.getCpf_Cnpj()))) {
-                if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, true)) {
-                } else if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, false)) {
+                if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, false)) {
                     ve.adicionarMensagemDeOperacaoNaoPermitida("Este CPF já pertence a " + getDescricaoConcatenada(pessoaFacade.getPessoasComMesmoCPF(selecionado)));
                 }
             } else {
@@ -1565,13 +1564,7 @@ public class PessoaFisicaPensionistaControlador extends PrettyControlador<Pessoa
         if (!Util.validarCpf((selecionado).getCpf())) {
             FacesUtil.addMessageWarn("Formulario:iCPF", "Atenção!", "O CPF digitado é inválido");
         } else if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, false)) {
-            FacesUtil.addAtencao("O CPF digitado já pertence a " + getDescricaoConcatenada(pessoaFacade.getPessoasComMesmoCPF((PessoaFisica) selecionado))
-                + " já possui cadastro no sistema. Os dados existentes foram carregados. Por favor, atente para o devido preenchimento de campos obrigatórios antes do salvamento.");
-        }
-
-        if (pessoaFacade.hasOutraPessoaComMesmoCpf(selecionado, true)) {
-            setId(pessoaFacade.recuperarIdPessoaFisicaPorCPF(selecionado.getCpf().trim()));
-            FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "editar/" + getId() + "/");
+            FacesUtil.addMessageWarn("Formulario:iCPF", "Atenção!", "O CPF digitado já pertence a " + getDescricaoConcatenada(pessoaFacade.getPessoasComMesmoCPF((PessoaFisica) selecionado)));
         }
     }
 

@@ -1,13 +1,11 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.Util;
 import br.com.webpublico.util.anotacoes.*;
 import com.google.common.collect.Lists;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -48,11 +46,11 @@ public class RequisicaoCompraEstorno extends SuperEntidade {
     private String motivo;
 
     @OneToMany(mappedBy = "requisicaoCompraEstorno", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ItemRequisicaoCompraEstorno> itens;
+    private List<ItemRequisicaoCompraEstorno> itensRequisicaoCompraEstorno;
 
     public RequisicaoCompraEstorno() {
         super();
-        itens = Lists.newArrayList();
+        itensRequisicaoCompraEstorno = Lists.newArrayList();
     }
 
     @Override
@@ -96,25 +94,11 @@ public class RequisicaoCompraEstorno extends SuperEntidade {
         this.motivo = motivo;
     }
 
-    public List<ItemRequisicaoCompraEstorno> getItens() {
-        return itens;
+    public List<ItemRequisicaoCompraEstorno> getItensRequisicaoCompraEstorno() {
+        return itensRequisicaoCompraEstorno;
     }
 
-    public void setItens(List<ItemRequisicaoCompraEstorno> itensRequisicaoCompraEstorno) {
-        this.itens = itensRequisicaoCompraEstorno;
-    }
-
-    public boolean hasItens() {
-        return !Util.isListNullOrEmpty(itens);
-    }
-
-    public BigDecimal getValorTotal() {
-        BigDecimal valorTotal = BigDecimal.ZERO;
-        if (hasItens()) {
-            for (ItemRequisicaoCompraEstorno item : itens) {
-                valorTotal = valorTotal.add(item.getValorTotal());
-            }
-        }
-        return valorTotal;
+    public void setItensRequisicaoCompraEstorno(List<ItemRequisicaoCompraEstorno> itensRequisicaoCompraEstorno) {
+        this.itensRequisicaoCompraEstorno = itensRequisicaoCompraEstorno;
     }
 }

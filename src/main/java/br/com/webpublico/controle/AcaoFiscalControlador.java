@@ -1,32 +1,19 @@
 package br.com.webpublico.controle;
 
-import br.com.webpublico.DateUtils;
 import br.com.webpublico.consultaentidade.*;
-import br.com.webpublico.DateUtils;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.ImpressaoDemonstrativoAcaoFiscal;
 import br.com.webpublico.entidadesauxiliares.ImprimeRelacaoNotas;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
-import br.com.webpublico.exception.WebReportRelatorioExistenteException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.interfaces.DocumentoFiscalEmail;
 import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.AcaoFiscalFacade;
-import br.com.webpublico.negocios.AutoInfracaoFiscalFacade;
-import br.com.webpublico.negocios.SistemaFacade;
 import br.com.webpublico.negocios.comum.ConfiguracaoEmailFacade;
 import br.com.webpublico.nfse.domain.NotaFiscal;
-import br.com.webpublico.nfse.domain.dtos.FiltroNotaFiscal;
-import br.com.webpublico.nfse.domain.dtos.TotalizadorRelatorioNotasFiscaisDTO;
-import br.com.webpublico.nfse.enums.SituacaoNota;
 import br.com.webpublico.nfse.facades.NotaFiscalFacade;
-import br.com.webpublico.nfse.relatorio.controladores.RelatorioNotasFiscaisControlador;
-import br.com.webpublico.report.ReportService;
 import br.com.webpublico.util.*;
-import br.com.webpublico.webreportdto.dto.comum.RelatorioDTO;
-import br.com.webpublico.webreportdto.dto.comum.TipoRelatorioDTO;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
@@ -78,6 +65,7 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
     private NotaFiscalFacade notaFiscalFacade;
 
     private BigDecimal valorIndiceEncontrado;
+    private BigDecimal ufmArbitramento;
     private BigDecimal multa;
     private Integer ano;
     private Long numeroRegistro;
@@ -89,7 +77,7 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
     private String emails;
 
     private Date dataParaValorIndice;
-    private AlteracaoDataArbitramento alteracaoDataArbitramento;
+    private Date dataArbitramento;
 
     private Boolean supervisor;
     private Boolean ehAlteracaoNotaCanceladaExtraviada;
@@ -105,8 +93,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
     private LancamentoMultaFiscal lancamentoMultaFiscal;
     private LevantamentoContabil[] levantamentosContabeisSelecionados;
     private LevantamentoContabil levantamentoContabil;
-
-    private EnquadramentoFiscal enquadramentoFiscal;
 
     private AutoInfracaoFiscal autoInfracaoFiscalSelecionado;
     private ParametroFiscalizacao parametroFiscalizacao;
@@ -124,7 +110,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
 
     private List<TotalizadorLancamentoContabil> listaTotalizador;
     private List<LancamentoMultaFiscal> multasALancar;
-    private List<LancamentoMultaFiscal> multasSelecionadas;
     private List<LancamentoContabilFiscal> lancamentoParaMulta;
     private List<LancamentoDoctoFiscal> notasParaMulta;
     private Map<Integer, Integer> diaVencimentoPorAno = Maps.newHashMap();
@@ -133,12 +118,9 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
     private Map<String, ItemCalculoIss> aliquotasVariadas;
     private Map<ValoresIssPago, BigDecimal> valoresPagos;
     private LazyDataModel<NotaFiscal> notasFiscaisModel;
-    private TotalizadorRelatorioNotasFiscaisDTO totalizadorNotasFiscais;
     private List<FieldConsultaEntidade> fieldsConsultaNsfe;
     private List<FiltroConsultaEntidade> filtrosConsultaNsfe;
     private ConsultaEntidadeController.ConverterFieldConsultaEntidade converterFieldConsulta;
-
-    private Boolean fiscalTributarioSupervisor;
 
     public AcaoFiscalControlador() {
         super(AcaoFiscal.class);
@@ -153,20 +135,20 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
         this.multasALancar = multasALancar;
     }
 
-    public List<LancamentoMultaFiscal> getMultasSelecionadas() {
-        return multasSelecionadas;
+    public Date getDataArbitramento() {
+        return dataArbitramento;
     }
 
-    public void setMultasSelecionadas(List<LancamentoMultaFiscal> multasSelecionadas) {
-        this.multasSelecionadas = multasSelecionadas;
+    public void setDataArbitramento(Date dataArbitramento) {
+        this.dataArbitramento = dataArbitramento;
     }
 
-    public AlteracaoDataArbitramento getAlteracaoDataArbitramento() {
-        return alteracaoDataArbitramento;
+    public BigDecimal getUfmArbitramento() {
+        return ufmArbitramento;
     }
 
-    public void setAlteracaoDataArbitramento(AlteracaoDataArbitramento alteracaoDataArbitramento) {
-        this.alteracaoDataArbitramento = alteracaoDataArbitramento;
+    public void setUfmArbitramento(BigDecimal ufmArbitramento) {
+        this.ufmArbitramento = ufmArbitramento;
     }
 
     public String getFundamentacaoAutoInfracao() {
@@ -191,30 +173,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
 
     public void setNotasFiscaisDoLancamento(List<LancamentoDoctoFiscal> notasFiscaisDoLancamento) {
         this.notasFiscaisDoLancamento = notasFiscaisDoLancamento;
-    }
-
-    public EnquadramentoFiscal getEnquadramentoFiscal() {
-        return enquadramentoFiscal;
-    }
-
-    public void setEnquadramentoFiscal(EnquadramentoFiscal enquadramentoFiscal) {
-        this.enquadramentoFiscal = enquadramentoFiscal;
-    }
-
-    public Boolean getFiscalTributarioSupervisor() {
-        return fiscalTributarioSupervisor;
-    }
-
-    public void setFiscalTributarioSupervisor(Boolean fiscalTributarioSupervisor) {
-        this.fiscalTributarioSupervisor = fiscalTributarioSupervisor;
-    }
-
-    public TotalizadorRelatorioNotasFiscaisDTO getTotalizadorNotasFiscais() {
-        return totalizadorNotasFiscais;
-    }
-
-    public void setTotalizadorNotasFiscais(TotalizadorRelatorioNotasFiscaisDTO totalizadorNotasFiscais) {
-        this.totalizadorNotasFiscais = totalizadorNotasFiscais;
     }
 
     public RegistroLancamentoContabil getRegistroAtivo() {
@@ -362,14 +320,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
         this.ehAlteracaoNotaCanceladaExtraviada = ehAlteracaoNotaCanceladaExtraviada;
     }
 
-    public List<LancamentoContabilFiscal> getLancamentoParaMulta() {
-        return lancamentoParaMulta;
-    }
-
-    public void setLancamentoParaMulta(List<LancamentoContabilFiscal> lancamentoParaMulta) {
-        this.lancamentoParaMulta = lancamentoParaMulta;
-    }
-
     @Override
     public String getCaminhoPadrao() {
         return "/acao-fiscal/";
@@ -421,10 +371,8 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
                 || selecionado.getLancamentosContabeis().isEmpty()) {
                 carregarMesesPorPeriodo();
             }
-            this.multasSelecionadas = Lists.newArrayList();
             inicializarVariaveis();
             buildFieldsNotaFiscal();
-            this.enquadramentoFiscal = acaoFiscalFacade.getCadastroEconomicoFacade().buscarEnquadramentoFiscalVigente(selecionado.getCadastroEconomico());
         } catch (Exception e) {
             logger.debug("Erro ao Editar Ação Fiscal", e);
         }
@@ -433,9 +381,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
     private void inicializarVariaveis() {
         emails = selecionado.getCadastroEconomico().getPessoa().getEmail();
         programacaoRecuperada = acaoFiscalFacade.getProgramacaoFiscalFacade().recuperar(selecionado.getProgramacaoFiscal().getId());
-        UsuarioSistema usuarioCorrente = acaoFiscalFacade.getSistemaFacade().getUsuarioCorrente();
-        usuarioCorrente = acaoFiscalFacade.getUsuarioSistemaFacade().recuperar(usuarioCorrente.getId());
-        fiscalTributarioSupervisor = usuarioCorrente.isFiscalTributarioSupervisor();
     }
 
     @URLAction(mappingId = "verAcaoFiscal", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -869,7 +814,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
                     selecionado.setSituacaoAcaoFiscal(SituacaoAcaoFiscal.EXECUTANDO);
                 }
                 selecionado.setDataTermoFiscalizacao(new Date());
-                atribuirDataArbitramento(new Date());
             } else if (TipoDoctoAcaoFiscal.AUTOINFRACAO.equals(tipoDoctoAcaoFiscal)) {
                 tipo = acaoFiscalFacade.getParametroFiscalizacaoFacade().recuperarTipoDoctoAutoInfracaoPorExercicio(getSistemaControlador().getExercicioCorrente());
                 if (tipo != null && getRegistroAtivo().getAutoInfracaoValido() == null) {
@@ -944,11 +888,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
         return null;
     }
 
-    private void atribuirDataArbitramento(Date data) {
-        selecionado.setDataArbitramento(data);
-        selecionado.setUfmArbitramento(acaoFiscalFacade.getMoedaFacade().recuperaValorUFMPorExercicio(DateUtils.getAno(data)));
-    }
-
     public void imprimirDocumento() {
         documentoOficial = acaoFiscalFacade.getDocumentoOficialFacade().salvarRetornando(documentoOficial);
         acaoFiscalFacade.getDocumentoOficialFacade().emiteDocumentoOficial(documentoOficial);
@@ -997,6 +936,9 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
             Calendar ultimo = Calendar.getInstance();
             ultimo.set(Calendar.MONTH, mesInicio - 1);
             ultimo.set(Calendar.YEAR, anoInicio);
+            selecionado.setDataArbitramento(Util.recuperaDataUltimoDiaDoMes(calendar.getTime()));
+            selecionado.setUfmArbitramento(acaoFiscalFacade.getMoedaFacade().recuperaValorUFMPorExercicio(anoInicio));
+
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
@@ -1275,24 +1217,19 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
         }
     }
 
-    public void validarExclusaoLancamentoContabil(LancamentoContabilFiscal l, RegistroLancamentoContabil r) {
-        if (r.getLancamentosContabeis().stream().filter(lcf -> lcf.getMes() == l.getMes()
-            && lcf.getAno().compareTo(l.getAno()) == 0).count() <= 1) {
-            throw new ValidacaoException("Não existe registro duplicado para o mês " + l.getMes().getDescricao() +
-                "/" + l.getAno() + ". Somente é permitido a exclusão de meses duplicados.");
+    public void removerLancamentoContabil(LancamentoContabilFiscal l, RegistroLancamentoContabil r) {
+        int contador = 0;
+        for (LancamentoContabilFiscal lcf : r.getLancamentosContabeis()) {
+            if (lcf.getMes() == l.getMes() && lcf.getAno().compareTo(l.getAno()) == 0) {
+                contador++;
+            }
         }
-    }
-
-    public void excluirLancamentoContabil(LancamentoContabilFiscal lancamentoContabilFiscal, RegistroLancamentoContabil registro) {
-        try {
-            validarExclusaoLancamentoContabil(lancamentoContabilFiscal, registro);
-            registro.getLancamentosContabeis().remove(lancamentoContabilFiscal);
-            registro.getLancamentosPorAno().clear();
-            reorganizaSequenciaLancamentoContabil(registro);
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve);
-        } catch (Exception e) {
-            FacesUtil.addErrorPadrao(e);
+        if (contador > 1) {
+            r.getLancamentosContabeis().remove(l);
+            r.getLancamentosPorAno().clear();
+            reorganizaSequenciaLancamentoContabil(r);
+        } else {
+            FacesUtil.addError("Impossível continuar!", "Só é possível remover os meses duplicados.");
         }
     }
 
@@ -3070,35 +3007,18 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
         return false;
     }
 
-    public void iniciarAlteracaoDataArbitramento() {
-        alteracaoDataArbitramento = new AlteracaoDataArbitramento();
-        alteracaoDataArbitramento.setUsuarioSistema(acaoFiscalFacade.getSistemaFacade().getUsuarioCorrente());
-        alteracaoDataArbitramento.setDataArbitramentoAnterior(selecionado.getDataArbitramento());
+    public void setaDadosArbitramento() {
+        dataArbitramento = selecionado.getDataArbitramento();
+        ufmArbitramento = selecionado.getUfmArbitramento();
     }
 
-    public void validarAlteracaoDataArbitramento(BigDecimal ufmPorExercicio) {
-        if (alteracaoDataArbitramento.getDataArbitramento() == null) {
-            throw new ValidacaoException("O campo Data de Arbitramento deve ser informado.");
-        }
-        if (ufmPorExercicio == null || ufmPorExercicio.compareTo(BigDecimal.ZERO) == 0) {
-            throw new ValidacaoException("UFM não encontrada para o exercício de " + ano + ".");
-        }
-    }
-
-    public void alterarDataArbitramento() {
-        try {
-            Integer ano = alteracaoDataArbitramento.getDataArbitramento() != null ?
-                DateUtils.getAno(alteracaoDataArbitramento.getDataArbitramento()) : null;
-            BigDecimal ufmPorExercicio = ano != null ?
-                acaoFiscalFacade.getMoedaFacade().recuperaValorUFMPorExercicio(ano) : null;
-            validarAlteracaoDataArbitramento(ufmPorExercicio);
-            alteracaoDataArbitramento.setAcaoFiscal(selecionado);
-            selecionado.getAlteracoesDataArbitramento().add(alteracaoDataArbitramento);
-            atribuirDataArbitramento(alteracaoDataArbitramento.getDataArbitramento());
-            alteracaoDataArbitramento = null;
+    public void alterarArbitramento() {
+        if (dataArbitramento != null && ufmArbitramento != null) {
+            selecionado.setDataArbitramento(dataArbitramento);
+            selecionado.setUfmArbitramento(ufmArbitramento);
             recalcularMultas();
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve);
+        } else {
+            FacesUtil.addCampoObrigatorio("Favor informar a Data e o Valor do UFM de abitramento!");
         }
     }
 
@@ -3727,8 +3647,6 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
                     return notaFiscalFacade.buscarNotasFiscais(complemento.toString(), first, pageSize, filtrosConsultaNsfe);
                 }
             };
-
-            totalizadorNotasFiscais = notaFiscalFacade.buscarValoresTotalizador(complemento.toString(), filtrosConsultaNsfe);
         } catch (Exception e) {
             Util.loggingError(this.getClass(), "Erro ao buscar notas fiscais da ação fiscal " + selecionado.getId(), e);
         }
@@ -3739,119 +3657,4 @@ public class AcaoFiscalControlador extends PrettyControlador<AcaoFiscal> impleme
         return "to_date('" + DataUtil.getDataFormatada(date) + "', 'dd/MM/yyyy')";
     }
 
-
-
-    public void excluirLancamentosContabil(RegistroLancamentoContabil registro) {
-        if (lancamentoParaMulta == null || lancamentoParaMulta.isEmpty()) {
-            FacesUtil.addOperacaoNaoPermitida("Nenhum lançamento foi selecionado para ser excluído.");
-        } else {
-            for (LancamentoContabilFiscal lancamentoContabilFiscal : lancamentoParaMulta) {
-                if (registro.equals(lancamentoContabilFiscal.getRegistroLancamentoContabil())) {
-                    excluirLancamentoContabil(lancamentoContabilFiscal, registro);
-                }
-            }
-        }
-    }
-
-    public void selecionarTodasMultas(RegistroLancamentoContabil registro) {
-        for (LancamentoMultaFiscal lancamento : registro.getMultas()) {
-            if (!multasSelecionadas.contains(lancamento)) {
-                multasSelecionadas.add(lancamento);
-            }
-        }
-    }
-
-    public void naoSelecionarTodasMultas(RegistroLancamentoContabil registro) {
-        for (LancamentoMultaFiscal lancamento : registro.getMultas()) {
-            multasSelecionadas.remove(lancamento);
-        }
-    }
-
-    public boolean todasMultasSelecionadas(RegistroLancamentoContabil registro) {
-        if (registro.getMultas() != null && !registro.getMultas().isEmpty()) {
-            return registro.getMultas().stream().noneMatch(m -> !multasSelecionadas.contains(m));
-        }
-        return false;
-    }
-
-    public boolean multaSelecionada(LancamentoMultaFiscal lancamento) {
-        return multasSelecionadas.contains(lancamento);
-    }
-
-    public void selecionarMulta(LancamentoMultaFiscal lancamento) {
-        multasSelecionadas.add(lancamento);
-    }
-
-    public void naoSelecionarMulta(LancamentoMultaFiscal lancamento) {
-        multasSelecionadas.remove(lancamento);
-    }
-
-    public void excluirMultas(RegistroLancamentoContabil registro) {
-        if (multasSelecionadas == null || multasSelecionadas.isEmpty()) {
-            FacesUtil.addOperacaoNaoPermitida("Nenhuma multa foi selecionada para ser excluída.");
-        } else {
-            for (LancamentoMultaFiscal multaFiscal : multasSelecionadas) {
-                if (registro.equals(multaFiscal.getRegistroLancamentoContabil())) {
-                    excluirMultaLancada(multaFiscal, registro);
-                }
-            }
-        }
-    }
-
-
-    public void aplicarFieldsConsultaEntidade(FiltroNotaFiscal filtroNotaFiscal) {
-        for (FiltroConsultaEntidade filtroConsultaEntidade : filtrosConsultaNsfe) {
-            if (filtroConsultaEntidade.getValor() == null) continue;
-            Object valor = filtroConsultaEntidade.getValor();
-            switch (filtroConsultaEntidade.getField().getValor().trim().toLowerCase()) {
-                case "nf.numero": {
-                    filtroNotaFiscal.setNumero((String) valor);
-                    break;
-                }
-                case "nf.emissao": {
-                    filtroNotaFiscal.setDataInicial((Date) valor);
-                    filtroNotaFiscal.setDataFinal((Date) valor);
-                    break;
-                }
-                case "nf.codigoverificacao": {
-                    filtroNotaFiscal.setCodigoVerificacao((String) valor);
-                    break;
-                }
-                case "dptnf.nomerazaosocial": {
-                    filtroNotaFiscal.setNomeTomador((String) valor);
-                    break;
-                }
-                case "dptnf.cpfcnpj": {
-                    filtroNotaFiscal.setCpfCnpjTomadorInicial((String) valor);
-                    filtroNotaFiscal.setCpfCnpjTomadorFinal((String) valor);
-                    break;
-                }
-                case "dps.situacao": {
-                    filtroNotaFiscal.setSituacoes(Lists.newArrayList(SituacaoNota.valueOf((String) valor)));
-                }
-            }
-        }
-    }
-
-    public void gerarRelatorio(String tipoRelatorioExtensao) {
-        try {
-            FiltroNotaFiscal filtro = new FiltroNotaFiscal();
-            filtro.setCadastroEconomico(selecionado.getCadastroEconomico());
-            filtro.setDataInicial(selecionado.getDataLevantamentoInicial());
-            filtro.setDataFinal(selecionado.getDataLevantamentoFinal());
-            aplicarFieldsConsultaEntidade(filtro);
-            RelatorioDTO dto = RelatorioNotasFiscaisControlador.criarRelatorioDTO(tipoRelatorioExtensao,
-                acaoFiscalFacade.getSistemaFacade().getUsuarioCorrente().getNome(), filtro);
-            ReportService.getInstance().gerarRelatorio(acaoFiscalFacade.getSistemaFacade().getUsuarioCorrente(), dto);
-            FacesUtil.addMensagemRelatorioSegundoPlano();
-        } catch (WebReportRelatorioExistenteException e) {
-            ReportService.getInstance().abrirDialogConfirmar(e);
-        } catch (ValidacaoException op) {
-            FacesUtil.printAllFacesMessages(op);
-        } catch (Exception ex) {
-            logger.error("Erro ao gerar o relatorio de notas fiscais na ação fiscal. Erro {}", ex.getMessage());
-            logger.debug("Detalhes do erro ao gerar o relatorio de notas fiscais na ação fiscal.", ex);
-            FacesUtil.addErrorPadrao(ex);
-        }
-    }
 }

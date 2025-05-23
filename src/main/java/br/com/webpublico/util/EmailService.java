@@ -19,12 +19,12 @@ import java.util.List;
 public class EmailService {
 
     private final Logger logger = LoggerFactory.getLogger(EmailService.class);
-    private final String ENVIAR_EMAIL_QUEUE_NAME = "enviarEmail";
-    private final String ATUALIZAR_CONFIGURACAO_EMAIL_QUEUE_NAME = "atualizarConfiguracaoEmail";
-    private final String enviarEmailQueue = Strings.isNullOrEmpty(System.getenv(ENVIAR_EMAIL_QUEUE_NAME)) ?
-        ENVIAR_EMAIL_QUEUE_NAME : System.getenv(ENVIAR_EMAIL_QUEUE_NAME);
-    private final String atualizarConfiguracaoEmailQueue = Strings.isNullOrEmpty(System.getenv(ATUALIZAR_CONFIGURACAO_EMAIL_QUEUE_NAME)) ?
-        ATUALIZAR_CONFIGURACAO_EMAIL_QUEUE_NAME : System.getenv(ATUALIZAR_CONFIGURACAO_EMAIL_QUEUE_NAME);
+    private final String ENV_QUEUE_ENVIAR_EMAIL = "QUEUE_ENVIAR_EMAIL";
+    private final String ENV_QUEUE_ATUALIZAR_CONFIGURACAO_EMAIL = "QUEUE_ATUALIZAR_CONFIGURACAO_EMAIL";
+    private final String queueEnviarEmail = Strings.isNullOrEmpty(System.getenv(ENV_QUEUE_ENVIAR_EMAIL)) ?
+        "enviarEmail" : System.getenv(ENV_QUEUE_ENVIAR_EMAIL);
+    private final String queueAtualizarConfiguracaoEmail = Strings.isNullOrEmpty(System.getenv(ENV_QUEUE_ATUALIZAR_CONFIGURACAO_EMAIL)) ?
+        "atualizarConfiguracaoEmail" : System.getenv(ENV_QUEUE_ATUALIZAR_CONFIGURACAO_EMAIL);
 
     private RabbitMQService rabbitMQService;
     private ObjectMapper objectMapper;
@@ -103,7 +103,7 @@ public class EmailService {
                 }
             }
             emailDTO.setAplicacaoProducao(SistemaFacade.PerfilApp.PROD.equals(SistemaFacade.PERFIL_APP));
-            rabbitMQService.basicPublish(enviarEmailQueue, objectMapper.writeValueAsBytes(emailDTO));
+            rabbitMQService.basicPublish(queueEnviarEmail, objectMapper.writeValueAsBytes(emailDTO));
         } catch (Exception e) {
             logger.error("Erro ao enviar email. {}", e.getMessage());
             logger.debug("Detalhes do erro ao enviar email.", e);
@@ -113,7 +113,7 @@ public class EmailService {
     public void atualizarConfiguracao(ConfiguracaoEmail configuracaoEmail) {
         try {
             configuracaoEmail.setSistema("rbweb");
-            rabbitMQService.basicPublish(atualizarConfiguracaoEmailQueue, objectMapper.writeValueAsBytes(configuracaoEmail));
+            rabbitMQService.basicPublish(queueAtualizarConfiguracaoEmail, objectMapper.writeValueAsBytes(configuracaoEmail));
         } catch (Exception e) {
             logger.error("Erro ao atualizar configuração de email. {}", e.getMessage());
             logger.debug("Detalhes do erro ao atualizar configuração de email.", e);

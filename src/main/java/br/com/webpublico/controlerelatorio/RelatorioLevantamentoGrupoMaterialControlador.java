@@ -20,7 +20,7 @@ import javax.faces.bean.ViewScoped;
 @ManagedBean
 @ViewScoped
 @URLMappings(mappings = {
-    @URLMapping(id = "novoLevantamentoMaterial", pattern = "/relatorio-levantamento-por-grupo-material/", viewId = "/faces/administrativo/materiais/relatorios/levantamento-por-grupo-material.xhtml")})
+        @URLMapping(id = "novoLevantamentoMaterial", pattern = "/relatorio-levantamento-por-grupo-material/", viewId = "/faces/administrativo/materiais/relatorios/levantamento-por-grupo-material.xhtml")})
 public class RelatorioLevantamentoGrupoMaterialControlador extends RelatorioMaterialSuperControlador {
 
     public void gerarEstoqueGrupoMaterial() {
@@ -79,7 +79,7 @@ public class RelatorioLevantamentoGrupoMaterialControlador extends RelatorioMate
             getFiltros().append(",");
         }
         if (getTipoEstoque() != null) {
-            condicoes.append(" AND L.TIPOESTOQUE =  ").append("'" + getTipoEstoque().name() + "'");
+            condicoes.append(" AND L.TIPOESTOQUE =  ").append("'"+getTipoEstoque().name()+"'");
             getFiltros().append(" Tipo de Estoque: ").append(getTipoEstoque().getDescricao());
             getFiltros().append(",");
         }

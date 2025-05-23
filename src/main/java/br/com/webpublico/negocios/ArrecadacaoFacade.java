@@ -56,14 +56,6 @@ public class ArrecadacaoFacade {
     @EJB
     private CalculoITBIFacade calculoITBIFacade;
     @EJB
-    private NFSAvulsaFacade nfsAvulsaFacade;
-    @EJB
-    private PermissaoTransporteFacade permissaoTransporteFacade;
-    @EJB
-    private FiscalizacaoRBTransFacade fiscalizacaoRBTransFacade;
-    @EJB
-    private ProcessoFiscalizacaoFacade processoFiscalizacaoFacade;
-    @EJB
     private ProcessoParcelamentoFacade processoParcelamentoFacade;
     private LoteBaixa loteBaixa;
     @EJB
@@ -85,8 +77,6 @@ public class ArrecadacaoFacade {
     private ContaCorrenteTributariaFacade contaCorrenteTributariaFacade;
     @EJB
     private PessoaFacade pessoaFacade;
-    @EJB
-    private AlvaraConstrucaoFacade alvaraConstrucaoFacade;
     @EJB
     private BloqueioJudicialFacade bloqueioJudicialFacade;
 
@@ -469,7 +459,6 @@ public class ArrecadacaoFacade {
         return null;
     }
 
-
     public Calculo initializeAndUnproxy(Calculo calculo) {
         if (calculo == null) {
             return null;
@@ -723,14 +712,14 @@ public class ArrecadacaoFacade {
     }
 
     public List<ParcelaParaPagamento> buscarSituacaoParcelasDoDamQueEstaoPagosApenasNesseLote(Long idDam, Long idLoteBaixa) {
-        Query query = em.createNativeQuery("SELECT pvd.id AS idparcela, spvd.id AS idsituacao, spvd.referencia, pvd.valordivida_id AS idvalordivida, pvd.opcaopagamento_id AS idopcaopagamento, calculo.id AS idcalculo, calculo.tipoCalculo " +
+        Query query = em.createNativeQuery("SELECT pvd.id as idparcela, spvd.id as idsituacao, spvd.referencia, pvd.valordivida_id as idvalordivida, pvd.opcaopagamento_id as idopcaopagamento, calculo.id as idcalculo, calculo.tipoCalculo " +
             "FROM dam " +
             "INNER JOIN itemlotebaixa ilb ON ilb.dam_id = dam.id " +
             "INNER JOIN itemdam ON itemdam.dam_id = dam.id " +
             "INNER JOIN parcelavalordivida pvd ON pvd.id = itemdam.parcela_id " +
             "INNER JOIN situacaoparcelavalordivida spvd ON spvd.id = pvd.situacaoatual_id " +
-            "INNER JOIN valordivida vd ON vd.id = pvd.valordivida_id " +
-            "INNER JOIN calculo calculo ON calculo.id = vd.calculo_id " +
+            "INNER JOIN valordivida vd on vd.id = pvd.valordivida_id " +
+            "INNER JOIN calculo calculo on calculo.id = vd.calculo_id " +
             "WHERE ilb.lotebaixa_id = :idLoteBaixa " +
             "AND spvd.situacaoparcela in (:situacaoparcela) " +
             "AND dam.id = :idDam " +
@@ -754,24 +743,24 @@ public class ArrecadacaoFacade {
     }
 
     public List<ParcelaParaPagamento> buscarOutrasParcelasDeOpcaoPagamentoDiferentePagasPorEstaParcela(ParcelaParaPagamento parcela) {
-        String sql = "SELECT pvd.id AS idparcela, spvd.id AS idsituacao, spvd.referencia, pvd.valordivida_id AS idvalordivida, pvd.opcaopagamento_id AS idopcaopagamento, calculo.id AS idcalculo, calculo.tipoCalculo " +
+        String sql = "SELECT pvd.id as idparcela, spvd.id as idsituacao, spvd.referencia, pvd.valordivida_id as idvalordivida, pvd.opcaopagamento_id as idopcaopagamento, calculo.id as idcalculo, calculo.tipoCalculo " +
             "FROM parcelavalordivida pvd " +
             "INNER JOIN situacaoparcelavalordivida spvd ON spvd.id = pvd.SITUACAOATUAL_ID " +
             "INNER JOIN valordivida vd ON vd.id = pvd.valordivida_id " +
-            "INNER JOIN calculo calculo ON calculo.id = vd.calculo_id " +
+            "INNER JOIN calculo calculo on calculo.id = vd.calculo_id " +
             "WHERE vd.id = :idValorDivida AND pvd.opcaopagamento_id <> :idOpcaoPagamento " +
             "AND spvd.SITUACAOPARCELA = :situacaoParcela " +
-            " AND NOT exists  " +
-            "( SELECT 1 " +
-            "FROM parcelavalordivida pvd2 " +
-            "INNER JOIN situacaoparcelavalordivida spvd2 ON spvd2.id = pvd2.SITUACAOATUAL_ID " +
-            "INNER JOIN itemdam ON itemdam.parcela_id = pvd2.id " +
-            "INNER JOIN dam ON dam.id = itemdam.dam_id " +
-            "INNER JOIN itemlotebaixa ilb ON ilb.dam_id = dam.id " +
-            "INNER JOIN lotebaixa lb ON lb.id = ilb.lotebaixa_id  " +
-            "WHERE pvd2.valordivida_id = pvd.valordivida_id  " +
-            "AND spvd2.SITUACAOPARCELA = :situacaoparcelaPago " +
-            "AND lb.SITUACAOLOTEBAIXA IN (:baixado, :baixadoInconsistente) " +
+            " and not exists  " +
+            "( select 1 " +
+            "from parcelavalordivida pvd2 " +
+            "inner join situacaoparcelavalordivida spvd2 on spvd2.id = pvd2.SITUACAOATUAL_ID " +
+            "inner join itemdam on itemdam.parcela_id = pvd2.id " +
+            "inner join dam on dam.id = itemdam.dam_id " +
+            "inner join itemlotebaixa ilb on ilb.dam_id = dam.id " +
+            "inner join lotebaixa lb on lb.id = ilb.lotebaixa_id  " +
+            "where pvd2.valordivida_id = pvd.valordivida_id  " +
+            "and spvd2.SITUACAOPARCELA = :situacaoparcelaPago " +
+            "and lb.SITUACAOLOTEBAIXA in (:baixado, :baixadoInconsistente) " +
             ") ";
 
         Query query = em.createNativeQuery(sql);

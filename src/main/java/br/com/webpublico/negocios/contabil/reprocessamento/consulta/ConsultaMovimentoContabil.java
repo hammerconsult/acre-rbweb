@@ -401,7 +401,6 @@ public class ConsultaMovimentoContabil {
         FONTES_CREDITOS(ArrayList.class, "Fontes de Recursos de Crédito"),
         VALOR(BigDecimal.class, "Valor do Movimento"),
         HISTORICO(String.class, "Histórico do Movimento"),
-        STATUS(StatusPagamento.class, "Status do Movimento"),
 
         //Despesa
         CONTA_DESPESA(Long.class, "Conta de Despesa"),

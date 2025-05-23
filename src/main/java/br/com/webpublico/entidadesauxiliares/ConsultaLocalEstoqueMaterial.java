@@ -28,7 +28,6 @@ public class ConsultaLocalEstoqueMaterial implements Comparable<ConsultaLocalEst
     private List<ReservaEstoque> reservasEstoque;
     private MovimentacaoGrupoMaterial movimentacaoGrupoMaterial;
 
-
     public ConsultaLocalEstoqueMaterial() {
         controleLote = false;
         medicoHospitalar = false;

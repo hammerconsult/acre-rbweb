@@ -39,7 +39,7 @@ import java.util.*;
 @ManagedBean
 @ViewScoped
 @URLMappings(mappings = {
-    @URLMapping(id = "manutencao-periodofase", pattern = "/manutencao/periodo-fase/", viewId = "/faces/admin/controleusuario/periodofase/encerramento.xhtml"),
+        @URLMapping(id = "manutencao-periodofase", pattern = "/manutencao/periodo-fase/", viewId = "/faces/admin/controleusuario/periodofase/encerramento.xhtml"),
 })
 public class EncerramentoPeriodoFaseControlador implements Serializable {
 

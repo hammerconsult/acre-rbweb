@@ -1,8 +1,5 @@
 package br.com.webpublico.entidades.comum;
 
-import br.com.webpublico.dte.dto.DteEntity;
-import br.com.webpublico.dte.dto.UsuarioWebDTO;
-import br.com.webpublico.dte.entidades.UsuarioWebTermoAdesaoDte;
 import br.com.webpublico.entidades.CadastroEconomico;
 import br.com.webpublico.entidades.ChaveNegocio;
 import br.com.webpublico.entidades.Pessoa;
@@ -35,7 +32,7 @@ import java.util.List;
 @Audited
 @Etiqueta("Usuário Web")
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class UsuarioWeb extends SuperEntidadeComChaveNegocio implements NfseEntity, DteEntity {
+public class UsuarioWeb extends SuperEntidadeComChaveNegocio implements NfseEntity {
     private static final long serialVersionUID = 1L;
 
     @Id
@@ -139,16 +136,6 @@ public class UsuarioWeb extends SuperEntidadeComChaveNegocio implements NfseEnti
     @Tabelavel
     @Etiqueta("Ultimo acesso")
     private Date ultimoAcesso;
-
-    @OneToMany(mappedBy = "usuarioWeb", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserDteCadastroEconomico> userDteCadastrosEconomicos;
-
-    @ManyToOne
-    private UserDteCadastroEconomico userDteCadastroEconomico;
-
-    @OneToMany(mappedBy = "usuarioWeb", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UsuarioWebTermoAdesaoDte> termosAdesaoDte;
-
 
     @OneToMany(mappedBy = "usuarioWeb", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BloqueioEmissaoNfse> bloqueiosEmissaoNfse;
@@ -358,30 +345,6 @@ public class UsuarioWeb extends SuperEntidadeComChaveNegocio implements NfseEnti
         this.ultimoAcesso = ultimoAcesso;
     }
 
-    public List<UserDteCadastroEconomico> getUserDteCadastrosEconomicos() {
-        return userDteCadastrosEconomicos;
-    }
-
-    public void setUserDteCadastrosEconomicos(List<UserDteCadastroEconomico> userDteCadastrosEconomicos) {
-        this.userDteCadastrosEconomicos = userDteCadastrosEconomicos;
-    }
-
-    public UserDteCadastroEconomico getUserDteCadastroEconomico() {
-        return userDteCadastroEconomico;
-    }
-
-    public void setUserDteCadastroEconomico(UserDteCadastroEconomico userDteCadastroEconomico) {
-        this.userDteCadastroEconomico = userDteCadastroEconomico;
-    }
-
-    public List<UsuarioWebTermoAdesaoDte> getTermosAdesaoDte() {
-        return termosAdesaoDte;
-    }
-
-    public void setTermosAdesaoDte(List<UsuarioWebTermoAdesaoDte> termosAdesaoDte) {
-        this.termosAdesaoDte = termosAdesaoDte;
-    }
-
     public List<BloqueioEmissaoNfse> getBloqueiosEmissaoNfse() {
         return bloqueiosEmissaoNfse;
     }
@@ -458,31 +421,6 @@ public class UsuarioWeb extends SuperEntidadeComChaveNegocio implements NfseEnti
     @Override
     public ChaveNegocio getChaveNegocio() {
         return new ChaveNegocioUsuarioWeb(login);
-    }
-
-    @Override
-    public UsuarioWebDTO toDteDto() {
-        List<String> roles = Lists.newArrayList();
-        for (NfseAuthority nfseAuthority : getAuthorities()) {
-            roles.add(nfseAuthority.getName());
-        }
-        UsuarioWebDTO usuarioWebDTO =
-            new UsuarioWebDTO(id, login, password, pessoa != null ? pessoa.getNome() : login, email, roles, activated,
-                pessoa != null && pessoa.isPessoaFisica(), pessoa.getId());
-        usuarioWebDTO.setActivationKey(activationKey);
-        usuarioWebDTO.setResetKey(resetKey);
-//        if (userNfseCadastroEconomico != null && userNfseCadastroEconomico.getCadastroEconomico() != null) {
-//            CadastroEconomico cadastroEconomico = userNfseCadastroEconomico.getCadastroEconomico();
-//            PrestadorUsuarioNfseDTO prestadorUsuario = new PrestadorUsuarioNfseDTO();
-//            prestadorUsuario.setContador(userNfseCadastroEconomico.getContador());
-//            prestadorUsuario.setPermitido(userNfseCadastroEconomico.isAprovado());
-//            prestadorUsuario.setPrestador(cadastroEconomico.toNfseDto());
-//            for (PermissaoUsuarioEmpresaNfse permissao : userNfseCadastroEconomico.getPermissoes()) {
-//                prestadorUsuario.getRoles().add(permissao.name());
-//            }
-//            userNfseDTO.setEmpresa(prestadorUsuario);
-//        }
-        return usuarioWebDTO;
     }
 
     public void adicionarBloqueioEmissaoNfse(BloqueioEmissaoNfse bloqueioEmissaoNfse) {

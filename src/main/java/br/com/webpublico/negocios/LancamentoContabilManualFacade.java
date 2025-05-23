@@ -218,18 +218,17 @@ public class LancamentoContabilManualFacade extends SuperFacadeContabil<Lancamen
         for (ContaLancamentoManual conta : lancamentoContabilManual.getContas()) {
 
             if (TipoLancamentoContabil.CREDITO.equals(conta.getTipo())) {
-                objetos.add(new ObjetoParametro(conta.getId(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
-                objetos.add(new ObjetoParametro(conta.getContaContabil(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
-                objetos.add(new ObjetoParametro(conta.getContaDeDestinacao().getFonteDeRecursos(), item , ObjetoParametro.TipoObjetoParametro.CREDITO));
+                objetos.add(new ObjetoParametro(conta.getId().toString(), ContaLancamentoManual.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
+                objetos.add(new ObjetoParametro(conta.getContaContabil().getId().toString(), ContaContabil.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.CREDITO));
+                objetos.add(new ObjetoParametro(conta.getContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item , ObjetoParametro.TipoObjetoParametro.CREDITO));
             }
             if (TipoLancamentoContabil.DEBITO.equals(conta.getTipo())) {
-                objetos.add(new ObjetoParametro(conta.getId(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
-                objetos.add(new ObjetoParametro(conta.getContaContabil(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
-                objetos.add(new ObjetoParametro(conta.getContaDeDestinacao().getFonteDeRecursos(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
+                objetos.add(new ObjetoParametro(conta.getId().toString(), ContaLancamentoManual.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
+                objetos.add(new ObjetoParametro(conta.getContaContabil().getId().toString(), ContaContabil.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
+                objetos.add(new ObjetoParametro(conta.getContaDeDestinacao().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item, ObjetoParametro.TipoObjetoParametro.DEBITO));
             }
         }
         return objetos;
-
     }
 
     public List<LancamentoContabilManual> buscarLancamentosContabeisManuais(Mes mes, Exercicio exercicio, List<TipoPrestacaoDeContas> tipos, String unidades) {

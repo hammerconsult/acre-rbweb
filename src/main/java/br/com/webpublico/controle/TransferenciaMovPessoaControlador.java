@@ -47,10 +47,8 @@ public class TransferenciaMovPessoaControlador extends PrettyControlador<Transfe
     private CadastroEconomico cadastroEconomico;
     private CadastroRural cadastroRural;
     private AssistenteDetentorArquivoComposicao assistenteDetentorArquivoComposicao;
-    private Boolean habilitarTransferenciaContabil;
-    private Boolean habilitarTransferenciaTributario;
-    private Boolean habilitarTransferenciaDocPessoais;
-    private Boolean habilitarTransferenciaRh;
+    private boolean habilitaTransferenciaContabil;
+    private boolean habilitaTransferenciaTributario;
 
     public TransferenciaMovPessoaControlador() {
         super(TransferenciaMovPessoa.class);
@@ -81,7 +79,7 @@ public class TransferenciaMovPessoaControlador extends PrettyControlador<Transfe
     public void editar() {
         super.editar();
         inicializarArquivo();
-        habilitarTransferencias();
+        habilitarTranferencias();
 
     }
 
@@ -108,12 +106,12 @@ public class TransferenciaMovPessoaControlador extends PrettyControlador<Transfe
 
     public void processarSelecaoPessoaOrigem() {
         try {
+            pessoaVigenteVinculoFP();
             selecionado.setBcis(Lists.<TransferenciaMovPessoaBci>newArrayList());
             selecionado.setBces(Lists.<TransferenciaMovPessoaBce>newArrayList());
             selecionado.setBcrs(Lists.<TransferenciaMovPessoaBcr>newArrayList());
-            habilitarTransferencias();
+            habilitarTranferencias();
             FacesUtil.atualizarComponente("Formulario");
-            cpfsDiferentesEntrePessoaOrigemEPessoaDestino();
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
@@ -122,67 +120,58 @@ public class TransferenciaMovPessoaControlador extends PrettyControlador<Transfe
 
     public void processarSelecaoPessoaDestino() {
         try {
-            habilitarTransferencias();
+            habilitarTranferencias();
             FacesUtil.atualizarComponente("Formulario");
-            cpfsDiferentesEntrePessoaOrigemEPessoaDestino();
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
     }
 
-    private void cpfsDiferentesEntrePessoaOrigemEPessoaDestino() {
-        if (selecionado.getPessoaOrigem() != null && selecionado.getPessoaDestino() != null
-            && !selecionado.getPessoaOrigem().getCpf_Cnpj().equals(selecionado.getPessoaDestino().getCpf_Cnpj())) {
-            FacesUtil.executaJavaScript("dlgConfCPFsDiferentes.show()");
+    private void pessoaVigenteVinculoFP() {
+        ValidacaoException ve = new ValidacaoException();
+        if (selecionado.getPessoaOrigem() != null && transferenciaMovPessoaFacade.hasPessoaComVinculoFP(selecionado.getPessoaOrigem())) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("A Pessoa " + selecionado.getPessoaOrigem() + " possui vínculo com a Folha de Pagamento, portanto não é possível realizar a transferência.");
         }
+        if (selecionado.getPessoaOrigem() != null && transferenciaMovPessoaFacade.hasPessoaBeneficiariaPensaoAlimenticia(selecionado.getPessoaOrigem())) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("A Pessoa " + selecionado.getPessoaOrigem() + " é Beneficiária de Pensão Alimentícia, portanto não é possível realizar a transferência.");
+        }
+        if (ve.temMensagens()) {
+            selecionado.setPessoaOrigem(null);
+            FacesUtil.atualizarComponente("Formulario");
+        }
+        ve.lancarException();
     }
 
-    public void apagarPessoasDestinoOrigem(){
-        selecionado.setPessoaOrigem(null);
-        selecionado.setPessoaDestino(null);
-    }
 
-    public void habilitarTransferencias() {
+    public void habilitarTranferencias() {
         if (selecionado.getPessoaDestino() == null) {
-            habilitarTransferenciaContabil = false;
-            habilitarTransferenciaTributario = false;
-            habilitarTransferenciaRh = false;
+            habilitaTransferenciaContabil = false;
+            habilitaTransferenciaTributario = false;
             anularTodasMarcacoes();
             return;
         } else if ("".equals(selecionado.getPessoaDestino().getCpf_Cnpj().trim())) {
-            habilitarTransferenciaContabil = false;
-            habilitarTransferenciaTributario = false;
-            habilitarTransferenciaRh = false;
+            habilitaTransferenciaContabil = false;
+            habilitaTransferenciaTributario = false;
             anularTodasMarcacoes();
             return;
         }
         if (selecionado.getPessoaOrigem() == null) {
-            habilitarTransferenciaContabil = true;
-            habilitarTransferenciaTributario = true;
-            habilitarTransferenciaRh = false;
+            habilitaTransferenciaContabil = true;
+            habilitaTransferenciaTributario = true;
             anularTodasMarcacoes();
             return;
         } else if ("".equals(selecionado.getPessoaOrigem().getCpf_Cnpj().trim())) {
-            habilitarTransferenciaContabil = true;
-            habilitarTransferenciaTributario = true;
-            habilitarTransferenciaRh = true;
+            habilitaTransferenciaContabil = true;
+            habilitaTransferenciaTributario = true;
             return;
         } else if (!selecionado.getPessoaOrigem().getCpf_Cnpj().equals(selecionado.getPessoaDestino().getCpf_Cnpj())) {
-            habilitarTransferenciaContabil = false;
-            habilitarTransferenciaTributario = true;
-            if (selecionado.getPessoaDestino() instanceof PessoaFisica) {
-                habilitarTransferenciaDocPessoais = true;
-                habilitarTransferenciaRh = true;
-            }
+            habilitaTransferenciaContabil = false;
+            habilitaTransferenciaTributario = true;
             selecionado.setTransfereMovContabeis(false);
             return;
         } else if (selecionado.getPessoaOrigem().getCpf_Cnpj().equals(selecionado.getPessoaDestino().getCpf_Cnpj())) {
-            habilitarTransferenciaContabil = true;
-            habilitarTransferenciaTributario = true;
-            if (selecionado.getPessoaDestino() instanceof PessoaFisica) {
-                habilitarTransferenciaDocPessoais = true;
-                habilitarTransferenciaRh = true;
-            }
+            habilitaTransferenciaContabil = true;
+            habilitaTransferenciaTributario = true;
             return;
         }
     }
@@ -194,12 +183,6 @@ public class TransferenciaMovPessoaControlador extends PrettyControlador<Transfe
         selecionado.setTransfereMovContabeis(false);
         selecionado.setTransfereMovimentosTributario(false);
         selecionado.setInativaPessoaTransferida(false);
-        selecionado.setTransferirDocumentosPessoais(false);
-        selecionado.setTransferirEnderecos(false);
-        selecionado.setTransferirInformacoesBancarias(false);
-        selecionado.setTransferirTelefones(false);
-        selecionado.setTransferirDependentes(false);
-        selecionado.setTransferirPensoesAlimenticias(false);
     }
 
     public void emitirSimulacaoTransferenciaMovimento(TransferenciaMovPessoa transferenciaMovPessoa) {
@@ -340,15 +323,6 @@ public class TransferenciaMovPessoaControlador extends PrettyControlador<Transfe
         setCadastroRural(null);
     }
 
-    public void marcarItensRH() {
-        if (selecionado.getTransferirCadastrosRH()) {
-            selecionado.setTransferirDependentes(Boolean.TRUE);
-            selecionado.setTransferirRespDependentes(Boolean.TRUE);
-            selecionado.setTransferirPensoesAlimenticias(Boolean.TRUE);
-            selecionado.setTransferirRespPensoesAliment(Boolean.TRUE);
-        }
-    }
-
     public void delCadastroRural(TransferenciaMovPessoaBcr transferenciaMovPessoaBcr) {
         selecionado.getBcrs().remove(transferenciaMovPessoaBcr);
     }
@@ -402,19 +376,11 @@ public class TransferenciaMovPessoaControlador extends PrettyControlador<Transfe
         return transferenciaMovPessoaFacade.getCadastroRuralFacade().buscarCadastroRuralPorPessoaAndNumeroIncra(parte, selecionado.getPessoaOrigem());
     }
 
-    public Boolean getHabilitarTransferenciaContabil() {
-        return habilitarTransferenciaContabil;
+    public boolean habilitarTransferenciaContabil() {
+        return habilitaTransferenciaContabil;
     }
 
-    public Boolean getHabilitarTransferenciaTributario() {
-        return habilitarTransferenciaTributario;
-    }
-
-    public Boolean getHabilitarTransferenciaDocPessoais() {
-        return habilitarTransferenciaDocPessoais;
-    }
-
-    public Boolean getHabilitarTransferenciaRh() {
-        return habilitarTransferenciaRh;
+    public boolean habilitarTransferenciaTributario() {
+        return habilitaTransferenciaTributario;
     }
 }

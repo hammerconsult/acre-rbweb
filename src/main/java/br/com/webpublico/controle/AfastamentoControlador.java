@@ -253,7 +253,7 @@ public class AfastamentoControlador extends PrettyControlador<Afastamento> imple
                     selecionado.setCarencia(0);
                     FacesUtil.executaJavaScript("dlgConcluir.show()");
                 } else {
-                    FacesUtil.executaJavaScript("dlgPreSalvar.show()");
+                    salvar();
                 }
             } catch (ValidacaoException ve) {
                 FacesUtil.printAllFacesMessages(ve.getMensagens());
@@ -275,12 +275,76 @@ public class AfastamentoControlador extends PrettyControlador<Afastamento> imple
             } else {
                 getFacede().salvar(selecionado);
             }
+            processarPA();
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Salvo com sucesso!", ""));
             redireciona();
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception e) {
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_FATAL, "Ocorreu um erro: ", e.getMessage()));
+        }
+    }
+
+    public void processarPA() {
+        if (selecionado.getTipoAfastamento().getAlongarPeriodoAquisitivo()) {
+            excluirPA();
+            periodoAquisitivoFLFacade.gerarPeriodosAquisitivos(selecionado.getContratoFP(), SistemaFacade.getDataCorrente(), null);
+        }
+    }
+
+    public void excluirPA() {
+
+        //esse método vai recuperar o ultimo período concedido, ou com terço de férias automático, usar a data inicio como referencia e excluir, dali pra cima,
+        //se não tiver nenhum concedido ou terço, vai excluir todos, não concedidos.
+
+        PeriodoAquisitivoFL ultimoPeriodoConcedidoLicenca = periodoAquisitivoFLFacade.
+            recuperaUltimoPeriodoConcedidoPorContratoETipoPA(selecionado.getContratoFP(), TipoPeriodoAquisitivo.LICENCA);
+
+        PeriodoAquisitivoFL ultimoPeriodoConcedidoFerias = periodoAquisitivoFLFacade.
+            recuperaUltimoPeriodoConcedidoPorContratoETipoPA(selecionado.getContratoFP(), TipoPeriodoAquisitivo.FERIAS);
+
+        PeriodoAquisitivoFL ultimoPeriodoComTercoAutomatico = periodoAquisitivoFLFacade.
+            recuperaUltimoPANaoCondedidoComTercoAutomaticoPorContrato(selecionado.getContratoFP());
+
+        Date dataReferenciaLicenca = null;
+
+        if (ultimoPeriodoConcedidoLicenca != null) {
+            dataReferenciaLicenca = ultimoPeriodoConcedidoLicenca.getInicioVigencia();
+        }
+
+        Date dataReferenciaFerias = null;
+
+        if (ultimoPeriodoConcedidoFerias != null) {
+            if (ultimoPeriodoComTercoAutomatico != null) {
+                if (ultimoPeriodoComTercoAutomatico.getInicioVigencia().after(ultimoPeriodoConcedidoFerias.getInicioVigencia())) {
+                    dataReferenciaFerias = ultimoPeriodoComTercoAutomatico.getInicioVigencia();
+                } else {
+                    dataReferenciaFerias = ultimoPeriodoConcedidoFerias.getInicioVigencia();
+                }
+            } else {
+                dataReferenciaFerias = ultimoPeriodoConcedidoFerias.getInicioVigencia();
+            }
+        }
+
+        List<PeriodoAquisitivoFL> periodosNaoConcedidosParaExcluirLicenca = periodoAquisitivoFLFacade.recuperaPeriodosNaoConcedidosPorContratoETipoPA(
+            selecionado.getContratoFP(), dataReferenciaLicenca, TipoPeriodoAquisitivo.LICENCA);
+
+        List<PeriodoAquisitivoFL> periodosNaoConcedidosParaExcluirFerias = periodoAquisitivoFLFacade.recuperaPeriodosNaoConcedidosPorContratoETipoPA(
+            selecionado.getContratoFP(), dataReferenciaFerias, TipoPeriodoAquisitivo.FERIAS);
+
+
+        if (periodosNaoConcedidosParaExcluirLicenca != null) {
+            selecionado.getContratoFP().getPeriodosAquisitivosFLs().removeAll(periodosNaoConcedidosParaExcluirLicenca);
+            for (PeriodoAquisitivoFL paNaoConcedidosLicenca : periodosNaoConcedidosParaExcluirLicenca) {
+                periodoAquisitivoFLFacade.remover(paNaoConcedidosLicenca);
+            }
+        }
+
+        if (periodosNaoConcedidosParaExcluirFerias != null) {
+            selecionado.getContratoFP().getPeriodosAquisitivosFLs().removeAll(periodosNaoConcedidosParaExcluirFerias);
+            for (PeriodoAquisitivoFL paNaoConcedidosFerias : periodosNaoConcedidosParaExcluirFerias) {
+                periodoAquisitivoFLFacade.remover(paNaoConcedidosFerias);
+            }
         }
     }
 
@@ -301,6 +365,7 @@ public class AfastamentoControlador extends PrettyControlador<Afastamento> imple
                 ve.lancarException();
             }
         }
+
     }
 
     public void informarCargoComissaoOuFuncaoGratificada() {

@@ -294,23 +294,6 @@ public class ConsultaOcorrenciasReinfControlador {
         }
     }
 
-    public void buscarR4020() {
-        try {
-            validarEmpregador();
-            validarMesExercicio();
-            selecionado.getItemEmpregadorR4020().clear();
-            ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(selecionado.getEmpregador());
-            if (config != null) {
-                selecionado.setItemEmpregadorR4020(configuracaoEmpregadorESocialFacade.buscarR4020(config, selecionado));
-            }
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve.getAllMensagens());
-        } catch (Exception e) {
-            FacesUtil.addMessageError("Erro ao tentar buscad o evento R4020", "Detalhe do erro: " + e.getMessage());
-            logger.error(e.getMessage());
-        }
-    }
-
     public void buscarR4099() {
         try {
             validarEmpregador();
@@ -327,6 +310,23 @@ public class ConsultaOcorrenciasReinfControlador {
             FacesUtil.addMessageError("Erro ao tentar buscar o evento R4099", "Detalhe do erro: " + e.getMessage());
             logger.debug("Erro no método buscarR4099", e);
             logger.error("Erro no método buscarR4099. Habilite o debug para visualizar o erro.");
+        }
+    }
+
+    public void buscarR4020() {
+        try {
+            validarEmpregador();
+            validarMesExercicio();
+            selecionado.getItemEmpregadorR4020().clear();
+            ConfiguracaoEmpregadorESocial config = configuracaoEmpregadorESocialFacade.recuperarPorEntidade(selecionado.getEmpregador());
+            if (config != null) {
+                selecionado.setItemEmpregadorR4020(configuracaoEmpregadorESocialFacade.buscarR4020(config, selecionado));
+            }
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve.getAllMensagens());
+        } catch (Exception e) {
+            FacesUtil.addMessageError("Erro ao tentar buscad o evento R4020", "Detalhe do erro: " + e.getMessage());
+            logger.error(e.getMessage());
         }
     }
 

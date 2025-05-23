@@ -371,6 +371,10 @@ public class RelatorioRREOAnexo06NovoControlador extends AbstractRelatorioItemDe
         return relatorioFacade.calcularValor(itemDemonstrativo.toDto(), itemDemonstrativoFiltros.toDto(), TipoCalculoItemDemonstrativo.RESTOS_NAO_PROCESSADOS_LIQUIDADOS_ATE_BIMESTRE);
     }
 
+    private BigDecimal buscarSaldoContabilAtual(ItemDemonstrativo itemDemonstrativo) {
+        return relatorioFacade.calcularValor(itemDemonstrativo.toDto(), itemDemonstrativoFiltros.toDto(), TipoCalculoItemDemonstrativo.SALDO_CONTABIL_ATUAL);
+    }
+
     private BigDecimal buscarSaldoContabilAtualPorTipoBalancete(ItemDemonstrativo itemDemonstrativo) {
         return relatorioFacade.calcularValor(itemDemonstrativo.toDto(), itemDemonstrativoFiltros.toDto(), TipoCalculoItemDemonstrativo.SALDO_CONTABIL_ATUAL_POR_TIPO_BALANCETE);
     }

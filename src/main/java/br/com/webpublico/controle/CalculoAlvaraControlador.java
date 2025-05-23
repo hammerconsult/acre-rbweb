@@ -440,27 +440,6 @@ public class CalculoAlvaraControlador extends PrettyControlador<ProcessoCalculoA
         FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + selecionado.getId() + "/");
     }
 
-    private void mostrarDialogCompensacaoAlvara() {
-        List<ProcessoCalculoAlvara> processos = calculoAlvaraFacade.buscarProcessosEfetivadosNoExercicio(selecionado.getCadastroEconomico().getId(), selecionado.getExercicio().getId());
-        if (processos.isEmpty()) return;
-        Long idAlvaraProcessoAnterior = null;
-        boolean temParcelasPagasProcessoAnterior = false;
-        if (processos.size() > 1) {
-            ProcessoCalculoAlvara processoCalculoAlvara = processos.get(processos.size() - 2);
-            List<DAMResultadoParcela> parcelas = preencherDAMParcelas(processoCalculoAlvara.buscarCalculosAtuais(), Lists.newArrayList(), true);
-            for (DAMResultadoParcela parcela : parcelas) {
-                if (parcela.getResultadoParcela().isPago()) {
-                    temParcelasPagasProcessoAnterior = true;
-                    break;
-                }
-            }
-            idAlvaraProcessoAnterior = processoCalculoAlvara.getAlvara().getId();
-        }
-        if (temParcelasPagasProcessoAnterior && calculoAlvaraFacade.getProcessoSuspensaoCassacaoAlvaraFacade().alvaraCassado(idAlvaraProcessoAnterior)) {
-            FacesUtil.addWarn("Atenção!", "Existem valores pagos no alvará cassado, é necessário realizar a compensação dos valores para esse novo calculo gerado.");
-        }
-    }
-
     private void atribuirCodigoAndCnaes() {
         if (isOperacaoNovo()) {
             selecionado.setCodigo(calculoAlvaraFacade.montarProximoCodigoPorExercicio(selecionado.getExercicio()));
@@ -485,6 +464,9 @@ public class CalculoAlvaraControlador extends PrettyControlador<ProcessoCalculoA
                 ve.adicionarMensagemDeOperacaoNaoPermitida("O CMC: " + selecionado.getCadastroEconomico().getCmcNomeCpfCnpj() +
                     " não possui CNAEs adicionados.");
             }
+        }
+        if (selecionado.getExercicio() == null) {
+            ve.adicionarMensagemDeCampoObrigatorio("O campo Exercício deve ser informado.");
         }
         ve.lancarException();
     }
@@ -1005,6 +987,7 @@ public class CalculoAlvaraControlador extends PrettyControlador<ProcessoCalculoA
             FacesUtil.executaJavaScript("dialogProgresEfetivar.hide()");
             FacesUtil.atualizarComponente("Formulario");
             FacesUtil.executaJavaScript("finalizarEfetivacao()");
+
         }
     }
 
@@ -1014,7 +997,6 @@ public class CalculoAlvaraControlador extends PrettyControlador<ProcessoCalculoA
                 FacesUtil.executaJavaScript("aguarde.show()");
                 selecionado = futureAssistenteEfetivarProcesso.get().getProcessoCalculoAlvara();
                 salvarAndRedirecionar(getMensagemEfetivadoComSucesso());
-                mostrarDialogCompensacaoAlvara();
             }
         } catch (Exception e) {
             FacesUtil.addError("Erro ao recuperar as permissões do usuário..", e.getMessage());
@@ -1067,7 +1049,7 @@ public class CalculoAlvaraControlador extends PrettyControlador<ProcessoCalculoA
 
     public List<DAMResultadoParcela> buscarParcelasAtuais() {
         if (parcelas == null || parcelas.isEmpty()) {
-            parcelas = preencherDAMParcelas(buscarCalculosAtuaisVer(), Lists.newArrayList(), true);
+            parcelas = preencherDAMParcelas(buscarCalculosAtuaisVer(), Lists.<SituacaoParcela>newArrayList(), true);
         }
         return parcelas;
     }
@@ -1516,11 +1498,10 @@ public class CalculoAlvaraControlador extends PrettyControlador<ProcessoCalculoA
     }
 
     public boolean canHabilitarBtnRecalculo() {
-        if (isAlvaraEmAberto(selecionado)) return true;
-        if (selecionado.getAlvara() != null && calculoAlvaraFacade.getProcessoSuspensaoCassacaoAlvaraFacade().alvaraCassado(selecionado.getAlvara().getId())) {
-            return false;
+        if (isAlvaraEmAberto(selecionado)) {
+            return true;
         }
-        if (selecionado.getAlvara() != null && calculoAlvaraFacade.getProcessoSuspensaoCassacaoAlvaraFacade().alvaraSuspenso(selecionado.getAlvara().getId())) {
+        if (selecionado.getAlvara() != null && calculoAlvaraFacade.getProcessoSuspensaoCassacaoAlvaraFacade().alvaraCassado(selecionado.getAlvara().getId())) {
             return false;
         }
         return !canHabilitarBotaoEfetivarCalculo();

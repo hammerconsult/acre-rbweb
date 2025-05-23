@@ -246,8 +246,8 @@ public class EstornoTransfMesmaUnidadeFacade extends SuperFacadeContabil<Estorno
 
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getTransferenciaMesmaUnidade().getSubContaDeposito(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), EstornoTransfMesmaUnidade.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getTransferenciaMesmaUnidade().getSubContaDeposito().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
 
@@ -287,8 +287,8 @@ public class EstornoTransfMesmaUnidadeFacade extends SuperFacadeContabil<Estorno
 
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getTransferenciaMesmaUnidade().getSubContaRetirada(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), EstornoTransfMesmaUnidade.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getTransferenciaMesmaUnidade().getSubContaRetirada().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
 

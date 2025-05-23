@@ -356,6 +356,32 @@ public class RecursoFPFacade extends AbstractFacade<RecursoFP> {
         return (RecursoFP) q.getResultList().get(0);
     }
 
+    public List<RecursoFP> buscarRecursosFPPorFolha(FolhaDePagamento folha) {
+        Query q = em.createNativeQuery("select distinct rec.* from FichaFinanceiraFP ficha  " +
+                "              inner join FolhaDePagamento folha on folha.ID = ficha.folhaDePagamento_ID  " +
+                "              inner join VinculoFP vin on vin.ID = ficha.vinculoFP_ID  " +
+                "              inner join RecursoFP rec on rec.ID = ficha.recursoFP_ID  " +
+                " where folha.id = :id order by rec.codigo "
+            , RecursoFP.class);
+        q.setParameter("id", folha.getId());
+        return q.getResultList();
+    }
+
+    public boolean recursoFPVinculadoVinculoVigente(RecursoFP recurso, Date dataReferencia) {
+        String hql = "select vinc from RecursoDoVinculoFP recVinc " +
+            " inner join recVinc.vinculoFP vinc " +
+            " inner join recVinc.recursoFP rec " +
+            " where rec = :recurso " +
+            " and :dataOperacao between vinc.inicioVigencia and coalesce(vinc.finalVigencia, :dataOperacao) " +
+            "   and (:dataReferencia between recVinc.inicioVigencia and coalesce(recVinc.finalVigencia, :dataReferencia) " +
+            "           or :dataReferencia < recVinc.inicioVigencia) ";
+        Query q = em.createQuery(hql);
+        q.setParameter("recurso", recurso);
+        q.setParameter("dataReferencia", dataReferencia);
+        q.setParameter("dataOperacao", sistemaFacade.getDataOperacao());
+        return !q.getResultList().isEmpty();
+    }
+
 
     public FontesRecursoFP clonarFonteRecursoFP(FontesRecursoFP fonte, Date data) {
         FontesRecursoFP fonteNova = new FontesRecursoFP();
@@ -430,30 +456,4 @@ public class RecursoFPFacade extends AbstractFacade<RecursoFP> {
         em.remove(em.find(FonteEventoFP.class, idFonteEvento));
     }
 
-
-    public List<RecursoFP> buscarRecursosFPPorFolha(FolhaDePagamento folha) {
-        Query q = em.createNativeQuery("select distinct rec.* from FichaFinanceiraFP ficha  " +
-                "              inner join FolhaDePagamento folha on folha.ID = ficha.folhaDePagamento_ID  " +
-                "              inner join VinculoFP vin on vin.ID = ficha.vinculoFP_ID  " +
-                "              inner join RecursoFP rec on rec.ID = ficha.recursoFP_ID  " +
-                " where folha.id = :id order by rec.codigo "
-            , RecursoFP.class);
-        q.setParameter("id", folha.getId());
-        return q.getResultList();
-    }
-
-    public boolean recursoFPVinculadoVinculoVigente(RecursoFP recurso, Date dataReferencia) {
-        String hql = "select vinc from RecursoDoVinculoFP recVinc " +
-            " inner join recVinc.vinculoFP vinc " +
-            " inner join recVinc.recursoFP rec " +
-            " where rec = :recurso " +
-            " and :dataOperacao between vinc.inicioVigencia and coalesce(vinc.finalVigencia, :dataOperacao) " +
-            "   and (:dataReferencia between recVinc.inicioVigencia and coalesce(recVinc.finalVigencia, :dataReferencia) " +
-            "           or :dataReferencia < recVinc.inicioVigencia) ";
-        Query q = em.createQuery(hql);
-        q.setParameter("recurso", recurso);
-        q.setParameter("dataReferencia", dataReferencia);
-        q.setParameter("dataOperacao", sistemaFacade.getDataOperacao());
-        return !q.getResultList().isEmpty();
-    }
 }

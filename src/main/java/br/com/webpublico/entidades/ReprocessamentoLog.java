@@ -31,7 +31,7 @@ public class ReprocessamentoLog extends SuperEntidade implements Serializable {
     public ReprocessamentoLog(Date dataLog, String mensagem, String erro, String objetosUtilizados, Boolean logDeErro, ReprocessamentoHistorico reprocessamentoHistorico, Long idObjeto, String classeOIbjeto) {
         super();
         this.mensagem = mensagem.length() > 255 ? mensagem.substring(0, 255) : mensagem;
-        this.erro = erro.length() > 255 ? erro.substring(0, 255) : erro;
+        this.erro = erro;
         this.objetosUtilizados = objetosUtilizados;
         this.logDeErro = logDeErro;
         this.dataLog = dataLog;

@@ -53,7 +53,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
@@ -98,7 +98,9 @@ public class ConsultaEntidadeController implements Serializable {
     private ConsultaEntidade consulta;
     private ExcelUtil excelUtil = new ExcelUtil();
     private Map<String, String> hrefs = Maps.newHashMap();
-    private final int CEM =100;
+    private int statusExcel = 0;
+    private StreamedContent streamedContentExcel;
+    private Future<StreamedContent> futureExcel;
 
     public ConsultaEntidadeController() {
         SpringBeanAutowiringSupport.processInjectionBasedOnCurrentContext(this);
@@ -248,6 +250,7 @@ public class ConsultaEntidadeController implements Serializable {
             }
             if (consulta != null) {
                 adicionarFiltrosPadroes();
+                //consultarEntidade();
             }
         }
         if (consulta != null) {
@@ -588,35 +591,79 @@ public class ConsultaEntidadeController implements Serializable {
         return new DefaultStreamedContent(stream, JSON_CONTENT_TYPE, consulta.chave + JSON_EXTENSION);
     }
 
+    public int getStatusExcel() {
+        return statusExcel;
+    }
+
+    public StreamedContent getStreamedContentExcel() {
+        return streamedContentExcel;
+    }
+
+    public void iniciarGeracaoExcel() {
+        statusExcel = 0;
+        streamedContentExcel = null;
+        futureExcel = null;
+    }
 
     public void gerarExcel(Boolean todosRegistros) {
-        if (consulta.getResultados().isEmpty()) {
-            consultarEntidade();
-        }
-        AssistenteBarraProgresso detailProcessAsync = new AssistenteBarraProgresso("Exportando XLS: " + consulta.getNomeTela(), CEM);
-        AsyncExecutor.getInstance()
-            .execute(detailProcessAsync, () -> {
-                facade.gerarExcel(consulta, todosRegistros);
-                detailProcessAsync.contar(CEM);
-                return null;
-            });
-        FacesUtil.addOperacaoRealizada("Você pode acompanhar a exportação do XLS na barra inferior da aplicação");
+        statusExcel = 1;
+        futureExcel = facade.gerarExcel(consulta, todosRegistros);
+        FacesUtil.executaJavaScript("iniciarGeracaoExcel()");
     }
 
-    public void gerarCSV(Boolean todosRegistros) {
-        if (consulta.getResultados().isEmpty()) {
-            consultarEntidade();
+    public void acompanharGeracaoExcel() {
+        if (futureExcel.isDone() || futureExcel.isCancelled()) {
+            FacesUtil.executaJavaScript("pararInterval()");
+            try {
+                statusExcel = 2;
+                streamedContentExcel = futureExcel.get();
+                if (streamedContentExcel == null) {
+                    statusExcel = 3;
+                }
+            } catch (Exception e) {
+                statusExcel = 3;
+                logger.error("Erro ao pegar streamContent da geracao de excel. Detalhe {}", e);
+            }
+            FacesUtil.executaJavaScript("atualizarFormularioExcel()");
         }
-        AssistenteBarraProgresso detailProcessAsync = new AssistenteBarraProgresso("Exportando CSV: " + consulta.getNomeTela(), CEM);
-        AsyncExecutor.getInstance()
-            .execute(detailProcessAsync, () -> {
-                facade.gerarCSV(consulta, todosRegistros);
-                detailProcessAsync.contar(CEM);
-                return null;
-            });
-        FacesUtil.addOperacaoRealizada("Você pode acompanhar a exportação do CSV na barra inferior da aplicação");
     }
 
+    public StreamedContent gerarCSV() {
+        try {
+            List<String> colunas = Lists.newArrayList();
+            List<Object[]> valores = Lists.newArrayList();
+            for (FieldConsultaEntidade tabelavel : consulta.getTabelaveis()) {
+                colunas.add(StringUtil.removeCaracteresEspeciais(StringUtil.removeAcentuacao(tabelavel.getDescricao())));
+            }
+            for (Map<String, Object> resultado : consulta.getResultados()) {
+                Object[] obj = new Object[resultado.size()];
+                int i = 0;
+                for (FieldConsultaEntidade tabelavel : consulta.getTabelaveis()) {
+                    Object o = resultado.get(tabelavel.getValor());
+                    if (o != null) {
+                        if (TipoCampo.STRING.equals(tabelavel.getTipo()) || TipoCampo.ENUM.equals(tabelavel.getTipo())) {
+                            obj[i] = StringUtil.removeCaracteresEspeciais(StringUtil.removeAcentuacao(o.toString()));
+                        } else {
+                            obj[i] = o;
+                        }
+                    } else {
+                        obj[i] = "";
+                    }
+                    i++;
+                }
+                valores.add(obj);
+            }
+
+            excelUtil
+                .gerarCSV("Relatório de " + consulta.getNomeTela(),
+                    "relatorio_" + consulta.getChave(),
+                    colunas, valores, false);
+
+            return excelUtil.fileDownload();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     public void gerarPDF() {
         try {

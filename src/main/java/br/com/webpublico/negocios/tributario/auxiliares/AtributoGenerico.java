@@ -8,9 +8,9 @@ public class AtributoGenerico implements Serializable {
     private Long idValoratributo;
     private boolean ativo;
     private transient Object valor;
-    private double fator;
 
     public AtributoGenerico() {
+
     }
 
     public String getIdentificacao() {
@@ -43,13 +43,5 @@ public class AtributoGenerico implements Serializable {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
-    }
-
-    public double getFator() {
-        return fator;
-    }
-
-    public void setFator(double fator) {
-        this.fator = fator;
     }
 }

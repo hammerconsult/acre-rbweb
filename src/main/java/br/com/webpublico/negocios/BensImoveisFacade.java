@@ -151,11 +151,11 @@ public class BensImoveisFacade extends SuperFacadeContabil<BensImoveis> {
 
             List<ObjetoParametro> objetosParametro = Lists.newArrayList();
             if (!simulacao) {
-                objetosParametro.add(new ObjetoParametro(entity, item));
+                objetosParametro.add(new ObjetoParametro(entity.getId().toString(), BensImoveis.class.getSimpleName(), item));
             }
-            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem(), item));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoOperacaoBemEstoque(), item));
-            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getGrupoBem().getId().toString(), GrupoBem.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoOperacaoBemEstoque().toString(), TipoOperacaoBensImoveis.class.getSimpleName(), item));
+            objetosParametro.add(new ObjetoParametro(entity.getTipoGrupo().name(), TipoGrupo.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetosParametro);
 

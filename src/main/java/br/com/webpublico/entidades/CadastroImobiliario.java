@@ -25,7 +25,6 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @GrupoDiagrama(nome = "CadastroImobiliario")
 @Entity
@@ -132,8 +131,6 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
     private String numeroDoTitulo;
     @OneToMany(mappedBy = "cadastroImobiliario")
     private List<EventoCalculoBCI> eventosCalculoBCI;
-    @Transient
-    private Map<GrupoAtributo, List<EventoCalculoBCI>> mapEventoCalculoBCIPorGrupoAtributo;
     @OneToMany(mappedBy = "cadastroImobiliario", orphanRemoval = true, cascade = CascadeType.ALL)
     private List<EnderecoCadastroImobiliario> enderecosCadastroImobiliario;
     @Transient
@@ -152,11 +149,10 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
     private List<Compromissario> listaCompromissarios;
     @NotAudited
     @OneToMany(mappedBy = "cadastroImobiliario", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProcRegularizaConstrucao> processosDeRegularizacao;
-    @OneToMany(mappedBy = "cadastroImobiliario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CadastroImobiliarioImpressaoHist> cadastroImobiliarioImpressaoHists;
 
-    private String coordenadasSIT;
+    @OneToMany(mappedBy = "cadastroImobiliario", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProcRegularizaConstrucao> processosDeRegularizacao;
 
     @Transient
     private List<AlvaraConstrucao> alvarasContrucao;
@@ -690,23 +686,6 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
         this.eventosCalculoBCI = eventosCalculoBCI;
     }
 
-    public List<GrupoAtributo> initEventosCalculadosBCI() {
-        if (mapEventoCalculoBCIPorGrupoAtributo == null) {
-            mapEventoCalculoBCIPorGrupoAtributo = Maps.newHashMap();
-            for (EventoCalculoBCI evento : eventosCalculoBCI) {
-                mapEventoCalculoBCIPorGrupoAtributo.computeIfAbsent(evento.getEventoCalculo().getGrupoAtributo(), k -> Lists.newArrayList());
-                mapEventoCalculoBCIPorGrupoAtributo.get(evento.getEventoCalculo().getGrupoAtributo()).add(evento);
-            }
-        }
-        return mapEventoCalculoBCIPorGrupoAtributo.keySet().stream()
-            .sorted(Comparator.comparing(GrupoAtributo::getCodigo))
-            .collect(Collectors.toList());
-    }
-
-    public Map<GrupoAtributo, List<EventoCalculoBCI>> getMapEventoCalculoBCIPorGrupoAtributo() {
-        return mapEventoCalculoBCIPorGrupoAtributo;
-    }
-
     public List<EventoCalculoConstrucao> getEventosCalculoConstrucoes() {
         return eventosCalculoConstrucoes;
     }
@@ -1033,14 +1012,6 @@ public class CadastroImobiliario extends Cadastro implements Comparable<Cadastro
 
     public void setGerarNovoCodigoAutenticidade(Boolean gerarNovoCodigoAtenticidade) {
         this.gerarNovoCodigoAutenticidade = gerarNovoCodigoAtenticidade;
-    }
-
-    public String getCoordenadasSIT() {
-        return coordenadasSIT;
-    }
-
-    public void setCoordenadasSIT(String coordenadasSIT) {
-        this.coordenadasSIT = coordenadasSIT;
     }
 
     @Override

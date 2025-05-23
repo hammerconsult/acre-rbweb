@@ -8,7 +8,7 @@ import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.comum.ConfiguracaoEmailFacade;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.EmailService;
-import com.beust.jcommander.internal.Lists;
+import com.google.common.collect.Lists;
 import org.hibernate.Hibernate;
 
 import javax.ejb.EJB;

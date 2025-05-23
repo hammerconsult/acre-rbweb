@@ -249,9 +249,9 @@ public class DiariaContabilizacaoFacade extends SuperFacadeContabil<DiariaContab
         item.setTagValor(TagValor.LANCAMENTO);
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa(), item));
-        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), DiariaContabilizacao.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
 
         parametroEvento.getItensParametrosEvento().add(item);
@@ -283,9 +283,9 @@ public class DiariaContabilizacaoFacade extends SuperFacadeContabil<DiariaContab
         item.setTagValor(TagValor.LANCAMENTO);
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa(), item));
-        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), DiariaContabilizacao.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
         parametroEvento.getItensParametrosEvento().add(item);
 
@@ -319,9 +319,9 @@ public class DiariaContabilizacaoFacade extends SuperFacadeContabil<DiariaContab
         item.setOperacaoClasseCredor(classeCredorFacade.recuperaOperacaoAndVigenciaClasseCredor(entity.getPropostaConcessaoDiaria().getPessoaFisica(), entity.getPropostaConcessaoDiaria().getClasseCredor(), entity.getDataDiaria()));
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa(), item));
-        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), DiariaContabilizacao.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getPropostaConcessaoDiaria().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
 
         parametroEvento.getItensParametrosEvento().add(item);
@@ -360,11 +360,11 @@ public class DiariaContabilizacaoFacade extends SuperFacadeContabil<DiariaContab
         item.setOperacaoClasseCredor(classeCredorFacade.recuperaOperacaoAndVigenciaClasseCredor(entity.getPropostaConcessaoDiaria().getPessoaFisica(), entity.getPropostaConcessaoDiaria().getClasseCredor(), entity.getDataDiaria()));
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(conta, item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), DiariaContabilizacao.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(conta.getId().toString(), ContaDespesa.class.getSimpleName(), item));
 
         Preconditions.checkNotNull(desdobramento.getDiariaContabilizacao().getPropostaConcessaoDiaria().getClasseCredor(), "A Classe credor do suprimento de fundo não foi preenchida.");
-        objetos.add(new ObjetoParametro(desdobramento.getDiariaContabilizacao().getPropostaConcessaoDiaria().getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getDiariaContabilizacao().getPropostaConcessaoDiaria().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
 
         parametroEvento.getItensParametrosEvento().add(item);

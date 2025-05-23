@@ -985,31 +985,10 @@ public class ESocialServiceImpl implements ESocialService {
     }
 
     @Override
-    public EventoS1298 getEventoS1298(EmpregadorESocial empregador) {
+    public EventoS1210 enviarEventoS1210(EventoS1210 s1210) {
         try {
-            Preconditions.checkNotNull(empregador);
-            String urlWebpublico = getBaseUrl() + trocaTag(URLESocial.GET_S1298, empregador.getInfoCadastro().getNrInsc());
-            ResponseEntity<String> esocialResponse = restTemplate.getForEntity(urlWebpublico, String.class);
-            EventosESocialDTO.S1298 s1298 = readValue(esocialResponse.getBody(), EventosESocialDTO.S1298.class);
-            return s1298;
-        } catch (HttpClientErrorException e) {
-            log.error("Erro: ", e);
-            log.info("Detalhes do Erro: ", e.getResponseBodyAsString());
-            throw new ExcecaoNegocioGenerica(e.getResponseBodyAsString(), e);
-        } catch (HttpServerErrorException error) {
-            log.error("Erro: ", error);
-            throw new ExcecaoNegocioGenerica(error.getResponseBodyAsString(), error);
-        } catch (Exception error) {
-            log.error("Erro: ", error);
-            throw new ExcecaoNegocioGenerica(error.getMessage(), error);
-        }
-    }
-
-    @Override
-    public EventoS1298 enviarEventoS1298(EventoS1298 s1298) {
-        try {
-            String url = getBaseUrl() + URLESocial.POST_S1298.getCaminho();
-            ResponseEntity<EventoS1298> esocialResponse = restTemplate.postForEntity(url, s1298, EventoS1298.class);
+            String url = getBaseUrl() + URLESocial.POST_S1210.getCaminho();
+            ResponseEntity<EventoS1210> esocialResponse = restTemplate.postForEntity(url, s1210, EventoS1210.class);
             return esocialResponse.getBody();
         } catch (HttpClientErrorException e) {
             log.error("Erro: ", e);
@@ -1023,19 +1002,22 @@ public class ESocialServiceImpl implements ESocialService {
     }
 
     @Override
-    public EventoS1202 enviarEventoS1202(EventoS1202 s1202, VinculoFP vinculoFP) {
+    public EventoS1210 getEventoS1210(EmpregadorESocial empregador) {
         try {
-            String url = getBaseUrl() + URLESocial.POST_S1202.getCaminho();
-            ResponseEntity<EventoS1202> esocialResponse = restTemplate.postForEntity(url, s1202, EventoS1202.class);
-            return esocialResponse.getBody();
+            Preconditions.checkNotNull(empregador);
+            String urlWebpublico = getBaseUrl() + trocaTag(URLESocial.GET_S1210, empregador.getInfoCadastro().getNrInsc());
+            ResponseEntity<String> esocialResponse = restTemplate.getForEntity(urlWebpublico, String.class);
+            return readValue(esocialResponse.getBody(), EventosESocialDTO.S1210.class);
         } catch (HttpClientErrorException e) {
             log.error("Erro: ", e);
             log.debug("Detalhes do Erro: ", e.getResponseBodyAsString());
             throw new ExcecaoNegocioGenerica(e.getResponseBodyAsString(), e);
         } catch (HttpServerErrorException error) {
             log.error("Erro: ", error);
-            log.info("Detalhes do Erro: ", error.getResponseBodyAsString());
             throw new ExcecaoNegocioGenerica(error.getResponseBodyAsString(), error);
+        } catch (Exception error) {
+            log.error("Erro: ", error);
+            throw new ExcecaoNegocioGenerica(error.getMessage(), error);
         }
     }
 
@@ -1078,11 +1060,12 @@ public class ESocialServiceImpl implements ESocialService {
     }
 
     @Override
-    public EventoS1210 enviarEventoS1210(EventoS1210 s1210) {
+    public EventoS1207 enviarEventoS1207(EventoS1207 eventoS1207) {
         try {
-            String url = getBaseUrl() + URLESocial.POST_S1210.getCaminho();
-            ResponseEntity<EventoS1210> esocialResponse = restTemplate.postForEntity(url, s1210, EventoS1210.class);
-            return esocialResponse.getBody();
+            String url = getBaseUrl() + URLESocial.POST_S1207.getCaminho();
+            ResponseEntity<EventoS1207> esocialResponse = restTemplate.postForEntity(url, eventoS1207, EventoS1207.class);
+            EventoS1207 body = esocialResponse.getBody();
+            return body;
         } catch (HttpClientErrorException e) {
             log.error("Erro: ", e);
             log.debug("Detalhes do Erro: ", e.getResponseBodyAsString());
@@ -1095,12 +1078,13 @@ public class ESocialServiceImpl implements ESocialService {
     }
 
     @Override
-    public EventoS1210 getEventoS1210(EmpregadorESocial empregador) {
+    public EventoS1207 getEventoS1207(EmpregadorESocial empregadorESocial) {
         try {
-            Preconditions.checkNotNull(empregador);
-            String urlWebpublico = getBaseUrl() + trocaTag(URLESocial.GET_S1210, empregador.getInfoCadastro().getNrInsc());
+            Preconditions.checkNotNull(empregadorESocial);
+            String urlWebpublico = getBaseUrl() + trocaTag(URLESocial.GET_S1207, empregadorESocial.getInfoCadastro().getNrInsc());
             ResponseEntity<String> esocialResponse = restTemplate.getForEntity(urlWebpublico, String.class);
-            return readValue(esocialResponse.getBody(), EventosESocialDTO.S1210.class);
+            EventosESocialDTO.S1207 s1207 = readValue(esocialResponse.getBody(), EventosESocialDTO.S1207.class);
+            return s1207;
         } catch (HttpClientErrorException e) {
             log.error("Erro: ", e);
             log.debug("Detalhes do Erro: ", e.getResponseBodyAsString());
@@ -1153,12 +1137,11 @@ public class ESocialServiceImpl implements ESocialService {
     }
 
     @Override
-    public EventoS1207 enviarEventoS1207(EventoS1207 eventoS1207) {
+    public EventoS1202 enviarEventoS1202(EventoS1202 s1202, VinculoFP vinculoFP) {
         try {
-            String url = getBaseUrl() + URLESocial.POST_S1207.getCaminho();
-            ResponseEntity<EventoS1207> esocialResponse = restTemplate.postForEntity(url, eventoS1207, EventoS1207.class);
-            EventoS1207 body = esocialResponse.getBody();
-            return body;
+            String url = getBaseUrl() + URLESocial.POST_S1202.getCaminho();
+            ResponseEntity<EventoS1202> esocialResponse = restTemplate.postForEntity(url, s1202, EventoS1202.class);
+            return esocialResponse.getBody();
         } catch (HttpClientErrorException e) {
             log.error("Erro: ", e);
             log.debug("Detalhes do Erro: ", e.getResponseBodyAsString());
@@ -1171,13 +1154,13 @@ public class ESocialServiceImpl implements ESocialService {
     }
 
     @Override
-    public EventoS1207 getEventoS1207(EmpregadorESocial empregadorESocial) {
+    public EventoS1298 getEventoS1298(EmpregadorESocial empregador) {
         try {
-            Preconditions.checkNotNull(empregadorESocial);
-            String urlWebpublico = getBaseUrl() + trocaTag(URLESocial.GET_S1207, empregadorESocial.getInfoCadastro().getNrInsc());
+            Preconditions.checkNotNull(empregador);
+            String urlWebpublico = getBaseUrl() + trocaTag(URLESocial.GET_S1298, empregador.getInfoCadastro().getNrInsc());
             ResponseEntity<String> esocialResponse = restTemplate.getForEntity(urlWebpublico, String.class);
-            EventosESocialDTO.S1207 s1207 = readValue(esocialResponse.getBody(), EventosESocialDTO.S1207.class);
-            return s1207;
+            EventosESocialDTO.S1298 s1298 = readValue(esocialResponse.getBody(), EventosESocialDTO.S1298.class);
+            return s1298;
         } catch (HttpClientErrorException e) {
             log.error("Erro: ", e);
             log.debug("Detalhes do Erro: ", e.getResponseBodyAsString());
@@ -1188,6 +1171,23 @@ public class ESocialServiceImpl implements ESocialService {
         } catch (Exception error) {
             log.error("Erro: ", error);
             throw new ExcecaoNegocioGenerica(error.getMessage(), error);
+        }
+    }
+
+    @Override
+    public EventoS1298 enviarEventoS1298(EventoS1298 s1298) {
+        try {
+            String url = getBaseUrl() + URLESocial.POST_S1298.getCaminho();
+            ResponseEntity<EventoS1298> esocialResponse = restTemplate.postForEntity(url, s1298, EventoS1298.class);
+            return esocialResponse.getBody();
+        } catch (HttpClientErrorException e) {
+            log.error("Erro: ", e);
+            log.debug("Detalhes do Erro: ", e.getResponseBodyAsString());
+            throw new ExcecaoNegocioGenerica(e.getResponseBodyAsString(), e);
+        } catch (HttpServerErrorException error) {
+            log.error("Erro: ", error);
+            log.debug("Detalhes do Erro: ", error.getResponseBodyAsString());
+            throw new ExcecaoNegocioGenerica(error.getResponseBodyAsString(), error);
         }
     }
 

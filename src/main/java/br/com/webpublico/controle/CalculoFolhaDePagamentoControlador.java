@@ -26,7 +26,6 @@ import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
 import org.apache.commons.beanutils.BeanUtils;
-import org.jboss.ejb3.annotation.TransactionTimeout;
 
 import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
@@ -44,7 +43,6 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static br.com.webpublico.enums.TipoFolhaDePagamento.*;
 import static br.com.webpublico.util.FacesUtil.addWarn;
@@ -67,8 +65,6 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
     private SistemaControlador sistemaControlador;
     @EJB
     private FolhaDePagamentoFacade folhaDePagamentoFacade;
-    @EJB
-    private CreditoSalarioFacade creditoSalarioFacade;
     @EJB
     private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
     @EJB
@@ -121,17 +117,10 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
     private ItemCalendarioFP itemCalendarioFP;
     private List<String> retorno;
     private boolean podeConfigurarRetroacaoParaDecimo = false;
-    private DetalhesCalculoRH detalhesCalculoRHSelecionado;
-    private Map<DetalhesCalculoRH, List<FilaProcessamentoFolha>> mapVinculos;
     private List<HierarquiaOrganizacional> hieraquiasOrganizacionaisSelecionadas;
     private FiltroFolhaDePagamentoDTO filtro;
+    private List<FiltroFolhaDePagamentoDTO> filtros;
     private FiltroFolhaDePagamento filtroFolhaDePagamentoAtual;
-    private AssistenteBarraProgresso assistenteBarraProgressoExclusao;
-    private CompletableFuture<AssistenteBarraProgresso> futureExclusao;
-
-    private VinculoFP vinculoFP;
-    private TipoCalculo tipoCalculo;
-
     public CalculoFolhaDePagamentoControlador() {
         metadata = new EntidadeMetaData(FolhaDePagamento.class);
     }
@@ -177,13 +166,12 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
         super.ver();
         podeConfigurarRetroacaoParaDecimo = vinculoFPFacade.hasAutorizacaoEspecialRH(sistemaFacade.getUsuarioCorrente(), TipoAutorizacaoRH.PERMITIR_CONFIGURACAO_RETROACAO_DECIMO_TERCEIRO);
         configuracaoRH = configuracaoRHFacade.recuperarConfiguracaoRHVigente();
+        buscarDadosFiltros();
     }
 
     public void verDetalhesFolha(BigDecimal id) {
-        mapVinculos = new HashMap<>();
         selecionado = folhaDePagamentoFacade.recuperarAlternativo(id.longValue());
         Web.navegacao(getCaminhoPadrao() + "listar/", getCaminhoPadrao() + "detalhes-folha-pagamento/" + selecionado.getId() + "/", selecionado);
-        limparFiltros();
     }
 
     public void recuperarFolhaPorId(BigDecimal id) {
@@ -285,7 +273,7 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
     public List<VinculoFP> completarContratoFP(String parte) {
         if (folhaDePagamento != null && folhaDePagamento.getTipoFolhaDePagamento() != null) {
             if (!TipoFolhaDePagamento.isFolhaRescisao(getFolhaDePagamento())) {
-                return contratoFPFacade.recuperaContratoVigenteSemCedenciaOuAfastamento(parte.trim(), folhaDePagamento.getMes().getNumeroMes(), folhaDePagamento.getAno());
+                return contratoFPFacade.recuperaContratoVigenteNaoCedidoMatricula(parte.trim(), folhaDePagamento.getMes().getNumeroMes(), folhaDePagamento.getAno());
             }
 
             if (TipoFolhaDePagamento.isFolhaRescisao(folhaDePagamento)) {
@@ -574,20 +562,20 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
             if (TipoFolhaDePagamento.isFolhaRescisao(folha) && hieraquiasOrganizacionaisSelecionadas.isEmpty()) {
                 vinculos = folhaDePagamentoFacade.recuperaContratosExonerados(getFolhaDePagamento());
             } else if (!hieraquiasOrganizacionaisSelecionadas.isEmpty()) {
-                vinculos = contratoFPFacade.listarVinculosPorHierarquiaSemCedenciaEstagioOuAfastamento(hieraquiasOrganizacionaisSelecionadas, folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
+                vinculos = contratoFPFacade.recuperaMatriculaPorOrgaoRecursivaPelaView(hieraquiasOrganizacionaisSelecionadas, folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
             } else {
-                vinculos = folhaDePagamentoFacade.recuperarMatriculasSemCedenciaEstagioOuAfastamento(folha.getMes(), folha.getAno());
+                vinculos = folhaDePagamentoFacade.recuperarTodasMatriculas(folha.getMes(), folha.getAno());
             }
         } else if (TipoCalculo.LOTE.equals(filtro.getTipoCalculo())) {
-            vinculos = folhaDePagamentoFacade.findVinculosSemCedenciaAfastamentoByLote(filtro.getLoteProcessamento(), folha.getMes(), folha.getAno());
+            vinculos = folhaDePagamentoFacade.findVinculosByLote(filtro.getLoteProcessamento());
             folha.setLoteProcessamento(filtro.getLoteProcessamento());
         } else if (TipoCalculo.ORGAO.equals(filtro.getTipoCalculo())) {
-            vinculos = contratoFPFacade.listarVinculosPorHierarquiaSemCedenciaEstagioOuAfastamento(Lists.newArrayList(filtro.getHierarquiaOrganizacional()), folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
+            vinculos = contratoFPFacade.recuperaMatriculaPorOrgaoRecursivaPelaView(Lists.newArrayList(filtro.getHierarquiaOrganizacional()), folha.getMes(), folha.getAno(), TipoFolhaDePagamento.isFolhaRescisao(folha));
         } else if (TipoCalculo.INDIVIDUAL.equals(filtro.getTipoCalculo())) {
             filtro.getVinculoFP().getMatriculaFP().getPessoa().setFichaJaExcluidas(false);
             vinculos.add(filtro.getVinculoFP());
         } else if (TipoCalculo.ENTIDADE.equals(filtro.getTipoCalculo())) {
-            vinculos = contratoFPFacade.buscarVinculosPorItemDPContasSemCedenciaOuAfastamento(filtro.getItemEntidadeDPContas(), TipoFolhaDePagamento.isFolhaRescisao(folha), folha.getMes(), folha.getAno());
+            vinculos = contratoFPFacade.buscarVinculoFpPorItemEntidadeDPContas(filtro.getItemEntidadeDPContas(), TipoFolhaDePagamento.isFolhaRescisao(folha));
         }
 
         detalheProcessamentoFolha.getDetalhesCalculoRH().setTotalServidores(vinculos.size());
@@ -692,44 +680,12 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
             FacesUtil.addError("Atenção!", "A Folha não pode ser excluída, a competência não está aberta.");
         } else {
             try {
-                existeCreditoSalarioPorFolhaDePagamento(selecionado);
-                assistenteBarraProgressoExclusao = new AssistenteBarraProgresso();
-                assistenteBarraProgressoExclusao.setDescricaoProcesso("Excluir folha de pagamento");
-                assistenteBarraProgressoExclusao.setUsuarioSistema(sistemaFacade.getUsuarioCorrente());
-                assistenteBarraProgressoExclusao.setTotal(1);
-
-                futureExclusao = AsyncExecutor.getInstance().execute(
-                    new AssistenteBarraProgresso("Remoção de Folha de Pagamento", 0),
-                    () -> folhaDePagamentoFacade.remover(selecionado, assistenteBarraProgressoExclusao));
-
-                FacesUtil.executaJavaScript("excluirFolha()");
-
-            } catch (ValidacaoException ve) {
-                FacesUtil.printAllFacesMessages(ve.getMensagens());
+                folhaDePagamentoFacade.remover(selecionado);
+                redireciona();
+                FacesUtil.addInfo(SummaryMessages.OPERACAO_NAO_REALIZADA.getDescricao(), "Registro excluído com sucesso.");
             } catch (Exception e) {
                 FacesUtil.addError(SummaryMessages.OPERACAO_NAO_REALIZADA.getDescricao(), e.getMessage());
             }
-        }
-    }
-
-    private void existeCreditoSalarioPorFolhaDePagamento(FolhaDePagamento folhaDePagamento) {
-        ValidacaoException ve = new ValidacaoException();
-        if (creditoSalarioFacade.existeCreditoSalarioPorFolhaDePagamento(folhaDePagamento)) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("Não foi possível excluir a folha de pagamento selecionada, pois ela possui vínculo com registros de crédito salário");
-        }
-        ve.lancarException();
-    }
-
-    public void verificarTermino() {
-
-        if (futureExclusao != null && futureExclusao.isDone()) {
-            FacesUtil.executaJavaScript("termina()");
-            futureExclusao = null;
-
-            FacesUtil.executaJavaScript("aguarde.hide()");
-            redireciona();
-            FacesUtil.addInfo(SummaryMessages.OPERACAO_REALIZADA.getDescricao(), "Registro excluído com sucesso.");
-
         }
     }
 
@@ -995,7 +951,7 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
     public void definirPropriedades() {
         if (folhaDePagamento != null) {
             folhaDePagamento = folhaDePagamentoFacade.recuperarSimples(folhaDePagamento.getId());
-            folhaDePagamento.setCalculadaEm(SistemaFacade.getDataCorrente());
+            folhaDePagamento.setCalculadaEm(sistemaControlador.getDataOperacao());
         }
     }
 
@@ -1088,30 +1044,6 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
         return false;
     }
 
-    public Map<DetalhesCalculoRH, List<FilaProcessamentoFolha>> getMapVinculos() {
-        return mapVinculos;
-    }
-
-    public void setMapVinculos(Map<DetalhesCalculoRH, List<FilaProcessamentoFolha>> mapVinculos) {
-        this.mapVinculos = mapVinculos;
-    }
-
-    public DetalhesCalculoRH getDetalhesCalculoRHSelecionado() {
-        return detalhesCalculoRHSelecionado;
-    }
-
-    public void setDetalhesCalculoRHSelecionado(DetalhesCalculoRH detalhesCalculoRHSelecionado) {
-        this.detalhesCalculoRHSelecionado = detalhesCalculoRHSelecionado;
-    }
-
-    public void recuperarMatriculasDetalhe(DetalhesCalculoRH detalhe) {
-        if (!mapVinculos.containsKey(detalhe)) {
-            mapVinculos.put(detalhe, filaProcessamentoFolhaFacade.buscarFilasProcessamentoFolhaPorDetalheCalculo(detalhe));
-        }
-        detalhesCalculoRHSelecionado = detalhe;
-        FacesUtil.executaJavaScript("dialogMatriculas.show()");
-    }
-
     public List<HierarquiaOrganizacional> getHieraquiasOrganizacionaisSelecionadas() {
         return hieraquiasOrganizacionaisSelecionadas;
     }
@@ -1129,88 +1061,49 @@ public class CalculoFolhaDePagamentoControlador extends PrettyControlador<FolhaD
         setHieraquiasOrganizacionaisSelecionadas(new ArrayList<>());
     }
 
-    public List<EventoFP> eventosBloqueados(List<Long> eventoFPsBloqueadosIds){
-        List<EventoFP> eventos = eventoFPFacade.buscarEventoFPs(eventoFPsBloqueadosIds);
-        return (eventos != null && !eventos.isEmpty()) ? eventos : null;
-    }
-
-    public void carregarTodosOsVinculos() {
-        if (vinculoFP != null) {
-
-            for (DetalhesCalculoRH detalhe : selecionado.getDetalhesCalculoRHList()) {
-                if (!mapVinculos.containsKey(detalhe)) {
-                    mapVinculos.put(detalhe, filaProcessamentoFolhaFacade.buscarFilasProcessamentoFolhaPorDetalheCalculo(detalhe));
-                }
-            }
+    public void popularAtributosFiltro(FiltroFolhaDePagamentoDTO filtro) {
+        if (filtro == null) {
+            return;
+        }
+        if (filtro.getHierarquiaOrganizacionalId() != null) {
+            filtro.setHierarquiaOrganizacional(hierarquiaOrganizacionalFacade.recuperar(filtro.getHierarquiaOrganizacionalId()));
+        }
+        if (filtro.getItemEntidadeDPContasId() != null) {
+            filtro.setItemEntidadeDPContas(itemEntidadeDPContasFacade.recuperar(filtro.getItemEntidadeDPContasId()));
+        }
+        if (filtro.getVinculoFPId() != null) {
+            filtro.setVinculoFP(vinculoFPFacade.recuperar(filtro.getVinculoFPId()));
+        }
+        if (filtro.getLoteProcessamentoId() != null) {
+            filtro.setLoteProcessamento(loteProcessamentoFacade.recuperar(filtro.getLoteProcessamentoId()));
+        }
+        if (filtro.getEventoFPsBloqueadosIds() != null && !filtro.getEventoFPsBloqueadosIds().isEmpty()) {
+            filtro.setEventosFPsBloqueados(eventoFPFacade.buscarEventoFPs(filtro.getEventoFPsBloqueadosIds()));
+        }
+        if (filtro.getHierarquiasOrganizacionaisIds() != null && !filtro.getHierarquiasOrganizacionaisIds().isEmpty()) {
+            filtro.setHierarquiasOrganizacionais(hierarquiaOrganizacionalFacade.buscarHierarquiasOrganizacionais(filtro.getHierarquiasOrganizacionaisIds()));
         }
     }
 
-    public List<DetalhesCalculoRH> getDetalhesCalculoRHListOrdenado() {
-        if (selecionado == null || selecionado.getDetalhesCalculoRHList() == null) {
-            return Collections.emptyList();
+    public void buscarDadosFiltros() {
+        filtros = Lists.newArrayList();
+        if (selecionado == null || selecionado.getId() == null) {
+            return;
         }
-
-
-        return selecionado.getDetalhesCalculoRHList().stream()
-            .filter(detalhes -> {
-                if (tipoCalculo == null && vinculoFP == null) {
-                    return true;
-                }
-
-                return Optional.ofNullable(detalhes.getFiltroFolhaDePagamento())
-                    .map(FiltroFolhaDePagamento::getFiltroDTO)
-                    .map(filtroDTO -> {
-                        boolean tipoCalculoMatch = tipoCalculo == null ||
-                            (filtroDTO.getTipoCalculo() != null && tipoCalculo.name().equals(filtroDTO.getTipoCalculo().name()));
-
-                        boolean vinculoFPMatch = vinculoFP == null ||
-                            (mapVinculos.containsKey(detalhes) &&
-                                mapVinculos.get(detalhes) != null &&
-                                mapVinculos.get(detalhes).stream()
-                                    .filter(Objects::nonNull)
-                                    .map(FilaProcessamentoFolha::getVinculoFP)
-                                    .filter(Objects::nonNull)
-                                    .anyMatch(vinculo -> vinculo.getId() != null && vinculo.getId().equals(vinculoFP.getId()))
-                            );
-
-
-                        return tipoCalculoMatch && vinculoFPMatch;
-                    })
-                    .orElse(false);
-            })
-            .sorted(Comparator.comparing(DetalhesCalculoRH::getDataCalculo, Comparator.nullsLast(Comparator.reverseOrder())))
-            .collect(Collectors.toList());
-
-    }
-
-    public void limparFiltros() {
-       tipoCalculo = null;
-       vinculoFP = null;
-    }
-
-    public List<SelectItem> getTiposDeCalculo() {
-        List<SelectItem> toReturn = new ArrayList<SelectItem>();
-        toReturn.add(new SelectItem(null, ""));
-        for (TipoCalculo object : TipoCalculo.values()) {
-            toReturn.add(new SelectItem(object, object.getDescricao()));
+        List<FiltroFolhaDePagamento> filtrosFolhaDePagamento = folhaDePagamentoFacade.buscarFiltros(selecionado);
+        for(FiltroFolhaDePagamento filtroFolhaDePagamento :filtrosFolhaDePagamento) {
+            FiltroFolhaDePagamentoDTO filtroFolhaDePagamentoDTO = FiltroFolhaDePagamentoDTO.daEntidade(filtroFolhaDePagamento);
+            popularAtributosFiltro(filtroFolhaDePagamentoDTO);
+            filtros.add(filtroFolhaDePagamentoDTO);
         }
-        return toReturn;
     }
 
-    public VinculoFP getVinculoFP() {
-        return vinculoFP;
+    public List<FiltroFolhaDePagamentoDTO> getFiltros() {
+        return filtros;
     }
 
-    public void setVinculoFP(VinculoFP vinculoFP) {
-        this.vinculoFP = vinculoFP;
-    }
-
-    public TipoCalculo getTipoCalculo() {
-        return tipoCalculo;
-    }
-
-    public void setTipoCalculo(TipoCalculo tipoCalculo) {
-        this.tipoCalculo = tipoCalculo;
+    public void setFiltros(List<FiltroFolhaDePagamentoDTO> filtros) {
+        this.filtros = filtros;
     }
 
     public FiltroFolhaDePagamento getFiltroFolhaDePagamentoAtual() {

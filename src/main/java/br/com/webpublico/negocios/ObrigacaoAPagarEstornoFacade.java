@@ -174,12 +174,12 @@ public class ObrigacaoAPagarEstornoFacade extends SuperFacadeContabil<ObrigacaoA
         Preconditions.checkNotNull(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar().getDespesaORC().getProvisaoPPADespesa(), "A provisão ppa despesa não foi preenchida.");
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno(), item));
-        objetos.add(new ObjetoParametro(desdobramento.getConta(), item));
-        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar().getDespesaORC().getProvisaoPPADespesa(), item));
-        objetos.add(new ObjetoParametro(getFonteRecurso(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar()), item));
-        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar().getClasseCredor(), item));
-        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar().getPessoa(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno().getId().toString(), ObrigacaoAPagarEstorno.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar().getDespesaORC().getProvisaoPPADespesa().getId().toString(), ProvisaoPPADespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(getFonteRecurso(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar()).getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagarEstorno().getObrigacaoAPagar().getPessoa().getId().toString(), Pessoa.class.getSimpleName(), item));
         return objetos;
     }
 

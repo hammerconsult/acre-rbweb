@@ -88,8 +88,6 @@ public class ParametroLicencaPremio implements Serializable, ValidadorVigencia {
     @ManyToOne
     private ReferenciaFP referenciaFP;
     private Boolean adiarConcecaoUmMesPorFalta;
-    @Etiqueta("Quantidade de Dias para Perda do Período Aquisitivo")
-    private Integer quantidadeDiasPerdaPeriodo;
 
     public Long getId() {
         return id;
@@ -269,14 +267,6 @@ public class ParametroLicencaPremio implements Serializable, ValidadorVigencia {
 
     public void setAdiarConcecaoUmMesPorFalta(Boolean adiarConcecaoUmMesPorFalta) {
         this.adiarConcecaoUmMesPorFalta = adiarConcecaoUmMesPorFalta;
-    }
-
-    public Integer getQuantidadeDiasPerdaPeriodo() {
-        return quantidadeDiasPerdaPeriodo;
-    }
-
-    public void setQuantidadeDiasPerdaPeriodo(Integer quantidadeDiasPerdaPeriodo) {
-        this.quantidadeDiasPerdaPeriodo = quantidadeDiasPerdaPeriodo;
     }
 
     @Override

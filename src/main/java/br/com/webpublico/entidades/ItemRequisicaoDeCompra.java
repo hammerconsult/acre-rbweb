@@ -5,8 +5,6 @@
  */
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidadesauxiliares.ItemRequisicaoCompraVO;
-import br.com.webpublico.enums.TipoControleLicitacao;
 import br.com.webpublico.enums.TipoDescontoItemRequisicao;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.anotacoes.Etiqueta;
@@ -17,8 +15,9 @@ import org.hibernate.envers.Audited;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 /**
  * @author Felipe Marinzeck
@@ -58,6 +57,10 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
     private BigDecimal valorTotal;
 
     @ManyToOne
+    @Etiqueta("Item Contrato")
+    private ItemContrato itemContrato;
+
+    @ManyToOne
     @Etiqueta("Objeto de Compra")
     private ObjetoCompra objetoCompra;
 
@@ -66,28 +69,26 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
     private UnidadeMedida unidadeMedida;
 
     @ManyToOne
+    @Etiqueta("Item Reconhecimento Dívida")
+    private ItemReconhecimentoDivida itemReconhecimentoDivida;
+
+    @ManyToOne
+    private ExecucaoProcessoItem execucaoProcessoItem;
+
+    @ManyToOne
     @Etiqueta("Derivação Componente")
     private DerivacaoObjetoCompraComponente derivacaoComponente;
 
     @Lob
-    @Etiqueta("Descrição Complementar")
     private String descricaoComplementar;
 
-    @Etiqueta("Arredondar Valor Total")
     private Boolean arredondaValorTotal;
 
     @Enumerated(EnumType.STRING)
-    @Etiqueta("Tipo de Desconto")
     private TipoDescontoItemRequisicao tipoDesconto;
 
-    @Etiqueta("Valor Desconto Unitário")
     private BigDecimal valorDescontoUnitario;
-
-    @Etiqueta("Valor Desconto Total")
     private BigDecimal valorDescontoTotal;
-
-    @Etiqueta("Número Item Processo")
-    private Integer numeroItemProcesso;
 
     @Invisivel
     @OneToMany(mappedBy = "itemRequisicaoCompra", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -95,14 +96,35 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
 
     @Transient
     private BigDecimal quantidadeDisponivel;
+    @Transient
+    private BigDecimal valorTotalItemEntrada;
+    @Transient
+    private Material material;
 
     public ItemRequisicaoDeCompra() {
         super();
         itensRequisicaoExecucao = Lists.newArrayList();
         quantidadeDisponivel = BigDecimal.ZERO;
         quantidade = BigDecimal.ZERO;
+        valorTotalItemEntrada = BigDecimal.ZERO;
         arredondaValorTotal = Boolean.FALSE;
         tipoDesconto = TipoDescontoItemRequisicao.NAO_ARREDONDAR;
+    }
+
+    public ItemReconhecimentoDivida getItemReconhecimentoDivida() {
+        return itemReconhecimentoDivida;
+    }
+
+    public void setItemReconhecimentoDivida(ItemReconhecimentoDivida itemReconhecimentoDivida) {
+        this.itemReconhecimentoDivida = itemReconhecimentoDivida;
+    }
+
+    public ExecucaoProcessoItem getExecucaoProcessoItem() {
+        return execucaoProcessoItem;
+    }
+
+    public void setExecucaoProcessoItem(ExecucaoProcessoItem execucaoProcessoItem) {
+        this.execucaoProcessoItem = execucaoProcessoItem;
     }
 
     public DerivacaoObjetoCompraComponente getDerivacaoComponente() {
@@ -111,6 +133,13 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
 
     public void setDerivacaoComponente(DerivacaoObjetoCompraComponente derivacaoComponente) {
         this.derivacaoComponente = derivacaoComponente;
+    }
+
+    public Boolean isControleQuantidade() {
+        if (requisicaoDeCompra.isTipoContrato()) {
+            return itemContrato.getControleQuantidade();
+        }
+        return requisicaoDeCompra.isTipoExecucaoProcesso() && execucaoProcessoItem.isExecucaoPorQuantidade();
     }
 
     public BigDecimal getValorUnitario() {
@@ -146,7 +175,7 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
     }
 
     public BigDecimal getQuantidade() {
-        if (quantidade == null) {
+        if (quantidade == null){
             return BigDecimal.ZERO;
         }
         return quantidade;
@@ -205,6 +234,15 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
         this.unidadeMedida = unidadeMedida;
     }
 
+
+    public boolean quantidadeDisponivelEhRequisitavel() {
+        return !BigDecimal.ZERO.equals(getQuantidadeDisponivel());
+    }
+
+    public boolean isItemAjusteValor(){
+        return itensRequisicaoExecucao.stream().anyMatch(ItemRequisicaoCompraExecucao::getAjusteValor);
+    }
+
     public BigDecimal getValorTotal() {
         if (valorTotal == null) {
             return BigDecimal.ZERO;
@@ -225,17 +263,11 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
     }
 
     public ItemContrato getItemContrato() {
-        Optional<ItemRequisicaoCompraExecucao> any = itensRequisicaoExecucao.stream()
-            .filter(exec -> exec.getExecucaoContratoItem() != null)
-            .findAny();
-        return any.map(ItemRequisicaoCompraExecucao::getItemContrato).orElse(null);
+        return itemContrato;
     }
 
-    public ExecucaoProcessoItem getExecucaoProcessoItem() {
-        Optional<ItemRequisicaoCompraExecucao> any = itensRequisicaoExecucao.stream()
-            .filter(exec -> exec.getExecucaoProcessoItem() != null)
-            .findAny();
-        return any.map(ItemRequisicaoCompraExecucao::getExecucaoProcessoItem).orElse(null);
+    public void setItemContrato(ItemContrato itemContrato) {
+        this.itemContrato = itemContrato;
     }
 
     public Boolean getArredondaValorTotal() {
@@ -270,8 +302,20 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
         return quantidade != null && quantidade.compareTo(BigDecimal.ZERO) > 0;
     }
 
+    public boolean hasValorUnitario() {
+        return valorUnitario != null && valorUnitario.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public boolean hasDiferencaRequisicaoComEntrada() {
+        return getValorTotal().compareTo(getValorTotalItemEntrada()) != 0;
+    }
+
     public boolean hasValorUnitarioDesdobrado() {
         return valorUnitarioDesdobrado != null && valorUnitarioDesdobrado.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public boolean hasPercentualDesconto() {
+        return percentualDesconto != null && percentualDesconto.compareTo(BigDecimal.ZERO) > 0;
     }
 
     public BigDecimal getPercentualDesconto() {
@@ -312,14 +356,6 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
         this.valorDescontoTotal = valorDescontoTotal;
     }
 
-    public Integer getNumeroItemProcesso() {
-        return numeroItemProcesso;
-    }
-
-    public void setNumeroItemProcesso(Integer numeroItemProcesso) {
-        this.numeroItemProcesso = numeroItemProcesso;
-    }
-
     public RoundingMode getRoundigModeValorTotal() {
         try {
             return getArredondaValorTotal() ? RoundingMode.HALF_EVEN : RoundingMode.FLOOR;
@@ -328,17 +364,59 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
         }
     }
 
-    public TipoControleLicitacao getTipoControle() {
-        if (getItemContrato() != null) {
-            return getItemContrato().getTipoControle();
-        } else if (getExecucaoProcessoItem() != null) {
-            return getExecucaoProcessoItem().getItemProcessoCompra().getTipoControle();
+    public RoundingMode getRoundigModeValorUnitario() {
+        try {
+            return tipoDesconto.isArredondar() ? RoundingMode.HALF_EVEN : RoundingMode.FLOOR;
+        } catch (Exception e) {
+            return RoundingMode.HALF_EVEN;
         }
-        return TipoControleLicitacao.QUANTIDADE;
     }
 
-    public Boolean isControleQuantidade() {
-        return getTipoControle().isTipoControlePorQuantidade();
+    public int getScaleUnitario() {
+        try {
+            if (requisicaoDeCompra.getTipoObjetoCompra().isMaterialPermanente() && tipoDesconto.isNaoArredondar()) {
+                return TipoDescontoItemRequisicao.MATERIAL_PERMANTENTE.getScale();
+            }
+            return tipoDesconto.getScale();
+        } catch (Exception e) {
+            return TipoDescontoItemRequisicao.ARREDONDAR.getScale();
+        }
+    }
+
+    public void calcularValoresItemRequisicaoAndItemExecucao() {
+        if (requisicaoDeCompra.isTipoContrato() && !hasMaisDeUmItemRequisicaoExecucao()) {
+            ItemRequisicaoCompraExecucao itemReqExecucao = itensRequisicaoExecucao.get(0);
+            itemReqExecucao.setQuantidade(hasQuantidade() ? quantidade : BigDecimal.ZERO);
+            itemReqExecucao.setValorUnitario(valorUnitario);
+
+            BigDecimal valorTotal = itemReqExecucao.getQuantidade().multiply(itemReqExecucao.getValorUnitario());
+            itemReqExecucao.setValorTotal(valorTotal.setScale(2, RoundingMode.HALF_EVEN));
+        }
+        calcularValorTotal();
+    }
+
+    public void calcularValorTotal() {
+        setValorTotal(BigDecimal.ZERO);
+        if (hasQuantidade() && hasValorUnitario()) {
+            BigDecimal valorTotal = quantidade.multiply(valorUnitario);
+            setValorTotal(valorTotal.setScale(2, RoundingMode.HALF_EVEN));
+
+            if (requisicaoDeCompra.isLicitacaoMaiorDesconto()) {
+                BigDecimal subtract = getValorTotalDesdobrado().subtract(getValorDescontoTotal());
+                valorTotal = subtract.setScale(2, getRoundigModeValorTotal());
+                setValorTotal(valorTotal);
+            }
+        }
+    }
+
+    public void atribuirValorUnitario() {
+        if (hasValorUnitarioDesdobrado()) {
+            if (isControleQuantidade()) {
+                setValorUnitario(getValorUnitarioDesdobrado());
+                return;
+            }
+            setValorUnitario(getValorUnitarioComDesconto().setScale(getScaleUnitario(), RoundingMode.FLOOR));
+        }
     }
 
     public BigDecimal getValorUnitarioComDesconto() {
@@ -348,34 +426,118 @@ public class ItemRequisicaoDeCompra extends SuperEntidade implements Comparable<
         return BigDecimal.ZERO;
     }
 
-    public BigDecimal getQuantidadeTotalItemExecucao() {
+    public BigDecimal getQuantidadeDisponivelItemExecucao() {
+        BigDecimal quantidade = BigDecimal.ZERO;
+        for (ItemRequisicaoCompraExecucao item : itensRequisicaoExecucao) {
+            if (!item.getAjusteValor()) {
+                quantidade = quantidade.add(item.getQuantidadeDisponivel());
+            }
+        }
+        return quantidade;
+    }
+
+    public BigDecimal getValorTotalItemExecucao() {
         BigDecimal total = BigDecimal.ZERO;
         for (ItemRequisicaoCompraExecucao item : itensRequisicaoExecucao) {
-            total = total.add(item.getQuantidade());
+            total = total.add(item.getValorTotal());
         }
         return total;
     }
 
-    public static ItemRequisicaoDeCompra toVO(ItemRequisicaoCompraVO itemReqVO) {
-        ItemRequisicaoDeCompra novoItemReq = new ItemRequisicaoDeCompra();
-        novoItemReq.setId(itemReqVO.getId());
-        novoItemReq.setNumero(itemReqVO.getNumero());
-        novoItemReq.setNumeroItemProcesso(itemReqVO.getNumeroItemProcesso());
-        novoItemReq.setRequisicaoDeCompra(itemReqVO.getRequisicaoDeCompra());
-        novoItemReq.setQuantidade(itemReqVO.getQuantidade());
-        novoItemReq.setValorUnitario(itemReqVO.getValorUnitario());
-        novoItemReq.setValorUnitarioDesdobrado(itemReqVO.getValorUnitarioDesdobrado());
-        novoItemReq.setPercentualDesconto(itemReqVO.getPercentualDesconto());
-        novoItemReq.setValorTotal(itemReqVO.getValorTotal());
-        novoItemReq.setObjetoCompra(itemReqVO.getObjetoCompra());
-        novoItemReq.setUnidadeMedida(itemReqVO.getUnidadeMedida());
-        novoItemReq.setDerivacaoComponente(itemReqVO.getDerivacaoComponente());
-        novoItemReq.setDescricaoComplementar(itemReqVO.getDescricaoComplementar());
-        novoItemReq.setArredondaValorTotal(itemReqVO.getArredondaValorTotal());
-        novoItemReq.setTipoDesconto(itemReqVO.getTipoDesconto());
-        novoItemReq.setValorDescontoUnitario(itemReqVO.getValorDescontoUnitario());
-        novoItemReq.setValorDescontoTotal(itemReqVO.getValorDescontoTotal());
-        return novoItemReq;
+    public BigDecimal getQuantidadeTotalItemExecucao() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (ItemRequisicaoCompraExecucao item : itensRequisicaoExecucao) {
+            if (!item.getAjusteValor()) {
+                total = total.add(item.getQuantidade());
+            }
+        }
+        return total;
+    }
+
+    public BigDecimal getValorUnitarioTotalItemExecucao() {
+        BigDecimal valorUnitario = BigDecimal.ZERO;
+        Map<BigDecimal, ItemRequisicaoCompraExecucao> map = new HashMap<>();
+        for (ItemRequisicaoCompraExecucao item : itensRequisicaoExecucao) {
+            if (!map.containsKey(item.getValorUnitario())) {
+                map.put(item.getValorUnitario(), item);
+            }
+        }
+        for (Map.Entry<BigDecimal, ItemRequisicaoCompraExecucao> entry : map.entrySet()) {
+            valorUnitario = valorUnitario.add(entry.getKey());
+        }
+        return valorUnitario;
+    }
+
+    public BigDecimal getValorDescontoUnitarioPorTipoDesconto(TipoDescontoItemRequisicao tipoDesconto) {
+        if (hasQuantidade() && hasValorUnitarioDesdobrado()) {
+            if (tipoDesconto.isNaoArredondar()) {
+                return getValorDescontoSemArredondar();
+            } else {
+                return getValorDescontoSemArredondar().setScale(getScaleUnitario(), getRoundigModeValorUnitario());
+            }
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public BigDecimal getValorDescontoTotalPorTipoDesconto(TipoDescontoItemRequisicao tipoDesconto) {
+        if (hasQuantidade() && hasValorUnitarioDesdobrado()) {
+            return getQuantidade().multiply(getValorDescontoUnitarioPorTipoDesconto(tipoDesconto)).setScale(2, getRoundigModeValorUnitario());
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public BigDecimal getValorDescontoSemArredondar() {
+        BigDecimal valorDesconto = BigDecimal.ZERO;
+        if (!isControleQuantidade() && hasValorUnitarioDesdobrado() && hasPercentualDesconto()) {
+            valorDesconto = valorUnitarioDesdobrado.multiply(percentualDesconto).divide(new BigDecimal("100"), 10, RoundingMode.FLOOR);
+        }
+        return valorDesconto;
+    }
+
+    public void calcularValorTotalItemEntradaPorCompra() {
+        if (hasQuantidade() && hasValorUnitario()) {
+            setValorTotalItemEntrada(getQuantidade().multiply(getValorUnitario()).setScale(2, getRoundigModeValorTotal()));
+        }
+    }
+
+    public BigDecimal getValorTotalDesdobrado() {
+        if (hasQuantidade() && hasValorUnitarioDesdobrado()) {
+            return quantidade.multiply(valorUnitarioDesdobrado).setScale(2, RoundingMode.HALF_EVEN);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public BigDecimal getPercentualDescontoDaNota() {
+        if (hasQuantidade() && hasValorUnitarioDesdobrado()) {
+            BigDecimal descontoTotal = getValorDescontoTotal();
+            return descontoTotal.multiply(new BigDecimal("100")).divide(getValorTotalDesdobrado(), 10, RoundingMode.FLOOR);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public Long getIdItemProcesso() {
+        if (itemContrato != null) {
+            return itemContrato.getId();
+        } else if (execucaoProcessoItem != null) {
+            return execucaoProcessoItem.getId();
+        }
+        return itemReconhecimentoDivida.getId();
+    }
+
+    public BigDecimal getValorTotalItemEntrada() {
+        return valorTotalItemEntrada;
+    }
+
+    public void setValorTotalItemEntrada(BigDecimal valorTotalItemEntrada) {
+        this.valorTotalItemEntrada = valorTotalItemEntrada;
+    }
+
+    public Material getMaterial() {
+        return material;
+    }
+
+    public void setMaterial(Material material) {
+        this.material = material;
     }
 
     @Override

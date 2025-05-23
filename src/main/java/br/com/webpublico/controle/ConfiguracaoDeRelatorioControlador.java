@@ -40,8 +40,8 @@ public class ConfiguracaoDeRelatorioControlador {
 
     @URLAction(mappingId = "configuracao-de-relatorio", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novo() {
-        selecionado= facade.getConfiguracaoPorChave();
-        if(selecionado == null) {
+        selecionado = facade.getConfiguracaoPorChave();
+        if (selecionado == null) {
             selecionado = new ConfiguracaoDeRelatorio();
             selecionado.setData(new Date());
             selecionado.setChave(facade.getUsuarioBanco().toUpperCase());
@@ -53,9 +53,9 @@ public class ConfiguracaoDeRelatorioControlador {
             ValidacaoException ve = new ValidacaoException();
             Util.validarCamposObrigatorios(selecionado, ve);
             ve.lancarException();
-            if(selecionado.getId() == null){
+            if (selecionado.getId() == null) {
                 facade.salvarNovo(selecionado);
-            }else{
+            } else {
                 facade.salvar(selecionado);
             }
             FacesUtil.addOperacaoRealizada("Configuração salva com sucesso.");

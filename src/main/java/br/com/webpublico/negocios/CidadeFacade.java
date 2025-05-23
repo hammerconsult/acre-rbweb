@@ -270,14 +270,4 @@ public class CidadeFacade extends AbstractFacade<Cidade> {
         }
         return null;
     }
-
-    public Cidade buscarPorCodigoIbge(String codigoIbge) {
-        String hql = "from Cidade c where c.codigoIBGE = :codigoIbge ";
-        Query q = em.createQuery(hql);
-        q.setParameter("codigoIbge", Integer.valueOf(codigoIbge));
-        if (!q.getResultList().isEmpty()) {
-            return (Cidade) q.getResultList().get(0);
-        }
-        return null;
-    }
 }

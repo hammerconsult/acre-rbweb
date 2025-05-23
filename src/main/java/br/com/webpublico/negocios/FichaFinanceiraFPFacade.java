@@ -64,13 +64,11 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
     @EJB
     private ModuloExportacaoFacade moduloExportacaoFacade;
     @EJB
-    private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
-    @EJB
     private ConfiguracaoRHFacade configuracaoRHFacade;
     @EJB
-    private SistemaFacade sistemaFacade;
-    @EJB
     private ContraChequeFacade contraChequeFacade;
+    @EJB
+    private SistemaFacade sistemaFacade;
     @EJB
     private VinculoFPFacade vinculoFPFacade;
 
@@ -136,9 +134,7 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
 
     public ValorFinanceiroRH recuperaValorAnualPorVinculoFpEModuloExportacao(Long idVinculo, Integer ano, GrupoExportacao grupo, ModuloExportacao modulo, TipoFolhaDePagamento... tipos) {
         StringBuilder sql = new StringBuilder();
-        sql.append("  select new br.com.webpublico.entidadesauxiliares.ValorFinanceiroRH(coalesce(sum(case when item.tipoEventoFP = 'VANTAGEM' then item.valor else 0 end),0),   ");
-        sql.append("  coalesce(sum(case when item.tipoEventoFP = 'DESCONTO' then item.valor else 0 end),0))  ");
-        sql.append("  from FolhaDePagamento folha, ItemGrupoExportacao itemGrupo join folha.fichaFinanceiraFPs ficha join ficha.itemFichaFinanceiraFP item ");
+        sql.append("  select new br.com.webpublico.entidadesauxiliares.ValorFinanceiroRH(coalesce(sum(case when item.tipoEventoFP = 'VANTAGEM' then item.valor else 0 end),0), coalesce(sum(case when item.tipoEventoFP = 'DESCONTO' then item.valor else 0 end),0)) from FolhaDePagamento folha, ItemGrupoExportacao itemGrupo join folha.fichaFinanceiraFPs ficha join ficha.itemFichaFinanceiraFP item ");
         sql.append("  join itemGrupo.grupoExportacao grupo join grupo.moduloExportacao modulo ");
         sql.append("  where ficha.vinculoFP.id = :idVinculo");
         sql.append("  and folha.ano = :ano ");
@@ -159,40 +155,6 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
             return new ValorFinanceiroRH(BigDecimal.ZERO, BigDecimal.ZERO);
         }
         return valorFinanceiroRHs.get(0);
-    }
-
-    public ValorFinanceiroRH recuperaValorAnualPorVinculoFpEModuloExportacao(Map.Entry<Entidade, HierarquiaOrganizacional> entidadeHo, Long idVinculo, Integer ano, GrupoExportacao grupo, ModuloExportacao modulo, TipoFolhaDePagamento... tipos) {
-        if (entidadeHo.getValue().getCodigo().equalsIgnoreCase(hierarquiaOrganizacionalFacade.getRaizHierarquia(sistemaFacade.getDataOperacao()).getCodigo())) {
-            return recuperaValorAnualPorVinculoFpEModuloExportacao(idVinculo, ano, grupo, modulo, tipos);
-        }
-        StringBuilder sql = new StringBuilder();
-        sql.append("  select new br.com.webpublico.entidadesauxiliares.ValorFinanceiroRH(ficha.unidadeOrganizacional, coalesce(sum(case when item.tipoEventoFP = 'VANTAGEM' then item.valor else 0 end),0),   ");
-        sql.append("  coalesce(sum(case when item.tipoEventoFP = 'DESCONTO' then item.valor else 0 end),0))  ");
-        sql.append("  from FolhaDePagamento folha, ItemGrupoExportacao itemGrupo join folha.fichaFinanceiraFPs ficha join ficha.itemFichaFinanceiraFP item ");
-        sql.append("  join itemGrupo.grupoExportacao grupo join grupo.moduloExportacao modulo ");
-        sql.append("  where ficha.vinculoFP.id = :idVinculo");
-        sql.append("  and folha.ano = :ano ");
-        sql.append("  and itemGrupo.eventoFP = item.eventoFP ");
-        sql.append("  and folha.tipoFolhaDePagamento in (:tipos) ");
-        sql.append("  and item.tipoEventoFP in('VANTAGEM', 'DESCONTO') ");
-        sql.append("  and grupo = :grupo ");
-        sql.append("  and modulo = :modulo ");
-        sql.append("  group by ficha.unidadeOrganizacional ");
-
-        Query q = em.createQuery(sql.toString());
-        q.setParameter("idVinculo", idVinculo);
-        q.setParameter("ano", ano);
-        q.setParameter("modulo", modulo);
-        q.setParameter("grupo", grupo);
-        q.setParameter("tipos", Arrays.asList(tipos));
-        List<ValorFinanceiroRH> valorFinanceiroRHs = q.getResultList();
-
-        for (ValorFinanceiroRH valorFinanceiroRH : valorFinanceiroRHs) {
-            if (hierarquiaOrganizacionalFacade.estaNoOrgao(valorFinanceiroRH.getUnidadeOrganizacional(), entidadeHo.getValue())) {
-                return valorFinanceiroRH;
-            }
-        }
-        return new ValorFinanceiroRH(BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
     public BigDecimal buscarValorItemFichaFinanceiraPorVinculoFPAndEventoFPAndMesAndAno(VinculoFP vin, EventoFP evento, Integer ano, Mes mes) {
@@ -1379,12 +1341,12 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
             " where folha.ano = :ano " +
             " and ficha.vinculoFP = :vinculo" +
             " and itemFicha.eventoFP = :evento " +
-            " and folha.tipoFolhaDePagamento in :tiposFolha" +
             " group by evento, evento.tipoEventoFP ");
+
         q.setParameter("vinculo", vinculoFP);
         q.setParameter("ano", ano);
+
         q.setParameter("evento", evento);
-        q.setParameter("tiposFolha", TipoFolhaDePagamento.getFolhasDePagamentoSemDecimoTerceiro());
         if (!q.getResultList().isEmpty()) {
             return (EventoTotalItemFicha) q.getSingleResult();
         }
@@ -1458,14 +1420,17 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
         return q.getResultList();
     }
 
-    public List<FichaFinanceiraFP> buscarFichaPorCpf(String cpf, Integer year) {
+    public List<FichaFinanceiraFP> buscarFichaPorMatriculaAndCpf(String matricula, String cpf, Integer year) {
         String hql = "select ficha from FichaFinanceiraFP ficha "
-            + "                           where replace(replace(replace(ficha.vinculoFP.matriculaFP.pessoa.cpf,'.',''),'-',''),'/','') = :numeroCpf "
+            + "                         where ficha.vinculoFP.matriculaFP.matricula = :numeroMatricula "
+            + "                           and replace(replace(replace(ficha.vinculoFP.matriculaFP.pessoa.cpf,'.',''),'-',''),'/','') = :numeroCpf "
             + "                           and ficha.folhaDePagamento.ano = :ano "
             + "                           and ficha.folhaDePagamento.efetivadaEm is not null "
             + "                           and ficha.folhaDePagamento.exibirPortal = true "
             + "                           order by ficha.folhaDePagamento.ano desc, ficha.folhaDePagamento.mes desc, ficha.folhaDePagamento.versao asc";
         Query q = this.em.createQuery(hql);
+        q.setParameter("numeroMatricula", matricula.trim());
+
         q.setParameter("ano", year);
         q.setParameter("numeroCpf", StringUtil.retornaApenasNumeros(cpf.trim()));
         return q.getResultList();
@@ -1480,18 +1445,6 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
         q.setParameter("vinculo", vinculoFP);
         q.setParameter("ano", exercicio.getAno());
         q.setParameter("mes", mes);
-        return q.getResultList();
-    }
-
-    public List<RecursoFP> buscarRecursosFPPorServidorPorTiposFolha(VinculoFP vinculoFP, List<TipoFolhaDePagamento> tipos, Exercicio exercicio) {
-        String hql = "select ficha.recursoFP from FichaFinanceiraFP ficha "
-            + "                         where ficha.vinculoFP = :vinculo "
-            + "                           and ficha.folhaDePagamento.ano = :ano "
-            + "                           and ficha.folhaDePagamento.tipoFolhaDePagamento in :tipos ";
-        Query q = this.em.createQuery(hql);
-        q.setParameter("vinculo", vinculoFP);
-        q.setParameter("ano", exercicio.getAno());
-        q.setParameter("tipos", tipos);
         return q.getResultList();
     }
 
@@ -1719,11 +1672,11 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
     }
 
     public BigDecimal buscarValorEnquadramentoPCSVigente(ContratoFP contratoFP, Date dataOperacao) {
-        String sql = "select enqpcs.vencimentobase from enquadramentofuncional funcional  +" +
-            "             inner join categoriapcs pcs on funcional.categoriapcs_id = pcs.id  +" +
-            "             inner join enquadramentopcs enqpcs on pcs.id = enqpcs.categoriapcs_id  +" +
-            "             where funcional.contratoservidor_id = :contrato  +" +
-            "             and trunc(:dataoperacao) between trunc(enqpcs.iniciovigencia)  +" +
+        String sql = "select enqpcs.vencimentobase from enquadramentofuncional funcional " +
+            "             inner join categoriapcs pcs on funcional.categoriapcs_id = pcs.id " +
+            "             inner join enquadramentopcs enqpcs on pcs.id = enqpcs.categoriapcs_id " +
+            "             where funcional.contratoservidor_id = :contrato " +
+            "             and trunc(:dataoperacao) between trunc(enqpcs.iniciovigencia) " +
             "             and coalesce(trunc(enqpcs.finalvigencia), trunc(:dataoperacao))";
 
         Query q = em.createNativeQuery(sql);
@@ -1877,7 +1830,6 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
         consulta.executeUpdate();
     }
 
-
     public List<FichaFinanceiraFP> buscarFichasFinanceirasFPPorAno(Integer ano, VinculoFP vinculoFP, TipoFolhaDePagamento tipoFolhaDePagamento) {
         Query q = em.createNativeQuery(" SELECT item.*, CASE "
             + " WHEN evento.tipoeventofp  = 'INFORMATIVO' THEN '3' "
@@ -1945,21 +1897,6 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
         return vinculos;
     }
 
-    public List<Long> buscarIdsFichaFinanceiraPorVinculo(VinculoFP vinculoFP) {
-        String sql = " select ficha.id from fichafinanceirafp ficha " +
-            " where ficha.vinculofp_id = :vinculo " +
-            " order by ficha.id desc ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("vinculo", vinculoFP.getId());
-        List<BigDecimal> resultList = q.getResultList();
-        List<Long> retorno = Lists.newArrayList();
-        if (resultList != null && !resultList.isEmpty()) {
-            for (BigDecimal resultado : resultList) {
-                retorno.add(resultado.longValue());
-            }
-        }
-        return retorno;
-    }
     public List<FichaFinanceiraFP> buscarFichasFinanceirasPorVinculoFPMesAnoTiposFolha(VinculoFP vinculoFP, Integer mes, Integer ano, String... tiposFolhaDePagamento) {
         String sql = "select ficha.* from FichaFinanceiraFP ficha " +
             "               inner join folhadepagamento folha on ficha.FOLHADEPAGAMENTO_ID = folha.ID " +
@@ -2006,5 +1943,21 @@ public class FichaFinanceiraFPFacade extends AbstractFacade<FichaFinanceiraFP> {
             return (BigDecimal) resultado.get(0);
         }
         return null;
+    }
+
+    public List<Long> buscarIdsFichaFinanceiraPorVinculo(VinculoFP vinculoFP) {
+        String sql = " select ficha.id from fichafinanceirafp ficha " +
+            " where ficha.vinculofp_id = :vinculo " +
+            " order by ficha.id desc ";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("vinculo", vinculoFP.getId());
+        List<BigDecimal> resultList = q.getResultList();
+        List<Long> retorno = Lists.newArrayList();
+        if (resultList != null && !resultList.isEmpty()) {
+            for (BigDecimal resultado : resultList) {
+                retorno.add(resultado.longValue());
+            }
+        }
+        return retorno;
     }
 }

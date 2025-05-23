@@ -136,10 +136,10 @@ public class ConciliacaoContabilFacade implements Serializable {
                 return TipoMovimentoSaldo.SALDO.equals(configConciliacaoContabil.getTipoMovimentoSaldo()) ? QueryReprocessamentoService.getService().getQuerySaldoPassivoAtuarial() : "";
             case RECEITA_DE_OPERACAO_DE_CREDITO:
                 return TipoMovimentoSaldo.SALDO.equals(configConciliacaoContabil.getTipoMovimentoSaldo()) ? "" : QueryReprocessamentoService.getService().getQueryMovimentoReceitaRealizada();
-            case RECEITA_DE_ALIENACAO_DE_BEM:
-                return TipoMovimentoSaldo.SALDO.equals(configConciliacaoContabil.getTipoMovimentoSaldo()) ? "" : QueryReprocessamentoService.getService().getQueryMovimentoReceitaRealizada();
             case LIQUIDACAO_DE_DESPESA_E_DE_RESTOS_A_PAGAR:
                 return TipoMovimentoSaldo.SALDO.equals(configConciliacaoContabil.getTipoMovimentoSaldo()) ? "" : QueryReprocessamentoService.getService().getQueryMovimentoLiquidacao();
+            case RECEITA_DE_ALIENACAO_DE_BEM:
+                return TipoMovimentoSaldo.SALDO.equals(configConciliacaoContabil.getTipoMovimentoSaldo()) ? "" : QueryReprocessamentoService.getService().getQueryMovimentoReceitaRealizada();
             case OBRAS_E_INSTALACOES_E_AQUISICAO_DE_IMOVEIS:
                 return TipoMovimentoSaldo.SALDO.equals(configConciliacaoContabil.getTipoMovimentoSaldo()) ? "" : QueryReprocessamentoService.getService().getQueryMovimentoLiquidacaoPorConta();
             case MATERIAL_DE_CONSUMO:

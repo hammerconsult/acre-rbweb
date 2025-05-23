@@ -1553,7 +1553,7 @@ public class PrestacaoDeContasFacade implements Serializable {
             || verificarTipoEventoContabil(lancamentoContabil, TipoEventoContabil.RESTO_PAGAR)
             || verificarTipoEventoContabil(lancamentoContabil, TipoEventoContabil.APURACAO)
             || verificarTipoEventoContabil(lancamentoContabil, TipoEventoContabil.CANCELAMENTO_RESTO_PAGAR)
-            ) {
+        ) {
             if (o instanceof Empenho) {
                 Pessoa pessoa = ((Empenho) o).getFornecedor();
                 return montarConteudoContaCorrenteCredor(pessoa);

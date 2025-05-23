@@ -42,7 +42,7 @@ import java.util.List;
         viewId = "/faces/tributario/nfse/campanha/edita.xhtml"),
     @URLMapping(
         id = "campanha-nfse-ver",
-        pattern = "/nfse/campanha/ver/#{campanhaNfseControlador.id}/",
+        pattern = "" + "/nfse/campanha/ver/#{campanhaNfseControlador.id}/",
         viewId = "/faces/tributario/nfse/campanha/visualizar.xhtml"),
 })
 public class CampanhaNfseControlador extends PrettyControlador<CampanhaNfse> implements Serializable, CRUD {

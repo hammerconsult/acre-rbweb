@@ -320,8 +320,19 @@ public class ProcessoDebito implements Serializable, PossuidorArquivo {
         this.detentorArquivoComposicao = detentorArquivoComposicao;
     }
 
-    public boolean isSituacao(SituacaoProcessoDebito situacaoProcessoDebito) {
-        return situacaoProcessoDebito.equals(this.situacao);
+    @Override
+    public int hashCode() {
+        return IdentidadeDaEntidade.calcularHashCode(this);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        return IdentidadeDaEntidade.calcularEquals(this, object);
+    }
+
+    @Override
+    public String toString() {
+        return "br.com.webpublico.entidades.ProcessoDebito[ id=" + id + " ]";
     }
 
     public SituacaoParcela getSituacaoParcela() {

@@ -54,5 +54,4 @@ public class ContaDespesa extends Conta implements Serializable {
     public void setCodigoReduzido(String codigoReduzido) {
         this.codigoReduzido = codigoReduzido;
     }
-
 }

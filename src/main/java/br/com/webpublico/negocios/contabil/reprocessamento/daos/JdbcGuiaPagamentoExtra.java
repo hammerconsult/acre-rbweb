@@ -56,7 +56,7 @@ public class JdbcGuiaPagamentoExtra extends JdbcDaoSupport implements Serializab
             "       tipoidentificacaoguia , " +
             "       codigoidentificacao , " +
             "       datapagamento , " +
-            "       guiagru_id  from guiapagamentoextra where pagamentoextra_id = ?";
+            "       guiagru_id  from guiapagamentoextra where pagamentoextra_id = ? ";
 
         List<GuiaPagamentoExtra> guias = getJdbcTemplate().query(sql, new Object[]{pagamentoExtra.getId()}, new GuiaPagamentoExtraRowMapper());
         if (!guias.isEmpty()) {

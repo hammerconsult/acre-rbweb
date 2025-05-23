@@ -54,6 +54,8 @@ public class DispensaDeLicitacaoFacade extends AbstractFacade<DispensaDeLicitaca
     @EJB
     private UnidadeOrganizacionalFacade unidadeOrganizacionalFacade;
     @EJB
+    private ContratoFacade contratoFacade;
+    @EJB
     private ConfiguracaoLicitacaoFacade configuracaoLicitacaoFacade;
     @EJB
     private EventoPncpFacade eventoPncpFacade;
@@ -357,6 +359,10 @@ public class DispensaDeLicitacaoFacade extends AbstractFacade<DispensaDeLicitaca
 
     public UnidadeOrganizacionalFacade getUnidadeOrganizacionalFacade() {
         return unidadeOrganizacionalFacade;
+    }
+
+    public ContratoFacade getContratoFacade() {
+        return contratoFacade;
     }
 
     public ConfiguracaoLicitacaoFacade getConfiguracaoLicitacaoFacade() {

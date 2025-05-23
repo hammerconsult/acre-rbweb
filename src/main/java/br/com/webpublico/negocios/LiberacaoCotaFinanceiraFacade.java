@@ -277,8 +277,8 @@ public class LiberacaoCotaFinanceiraFacade extends SuperFacadeContabil<Liberacao
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity.getSolicitacaoCotaFinanceira(), item));
-            objetos.add(new ObjetoParametro(entity.getContaFinanceiraRecebida(), item));
+            objetos.add(new ObjetoParametro(entity.getSolicitacaoCotaFinanceira().getId().toString(), SolicitacaoCotaFinanceira.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getContaFinanceiraRecebida().getId().toString(), SubConta.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);
@@ -317,8 +317,8 @@ public class LiberacaoCotaFinanceiraFacade extends SuperFacadeContabil<Liberacao
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getContaFinanceiraRetirada(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), LiberacaoCotaFinanceira.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getContaFinanceiraRetirada().getId().toString(), SubConta.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetos);
 

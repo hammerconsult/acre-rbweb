@@ -202,13 +202,13 @@ public class ObrigacaoAPagarFacade extends SuperFacadeContabil<ObrigacaoAPagar> 
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
         if (desdobramento.getObrigacaoAPagar().getId() != null) {
-            objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar(), item));
+            objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar().getId().toString(), ObrigacaoAPagar.class.getSimpleName(), item));
         }
-        objetos.add(new ObjetoParametro(desdobramento.getConta(), item));
-        objetos.add(new ObjetoParametro(getFonteRecurso(desdobramento.getObrigacaoAPagar()), item));
-        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar().getDespesaORC().getProvisaoPPADespesa(), item));
-        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar().getClasseCredor(), item));
-        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar().getPessoa(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(getFonteRecurso(desdobramento.getObrigacaoAPagar()).getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar().getDespesaORC().getProvisaoPPADespesa().getId().toString(), ProvisaoPPADespesa.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(desdobramento.getObrigacaoAPagar().getPessoa().getId().toString(), Pessoa.class.getSimpleName(), item));
         return objetos;
     }
 

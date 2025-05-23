@@ -85,7 +85,7 @@ public class EfetivacaoSolicitacaoIncorporacaoMovelFacade extends AbstractFacade
         entity.getItensEfetivacao().clear();
         Entidade entidade = entidadeFacade.recuperarEntidadePorUnidadeOrganizacional(entity.getSolicitacaoIncorporacao().getUnidadeAdministrativa());
         SolicitacaoIncorporacaoMovel solicitacao = solicitacaoIncorporacaoMovelFacade.recuperar(entity.getSolicitacaoIncorporacao().getId());
-        ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroComDependenciasEntidadeGeradoCodigo();
+        ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroPatrimonio();
         if (parametroPatrimonio == null) {
             throw new ExcecaoNegocioGenerica("Parâmetro do patrimônio não encontrado para gerar a incorporação de bem.");
         }

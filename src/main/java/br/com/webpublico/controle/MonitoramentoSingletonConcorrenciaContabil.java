@@ -44,6 +44,17 @@ public class MonitoramentoSingletonConcorrenciaContabil implements Serializable 
         singletonConcorrenciaContabil.reiniciarBloqueioMovimentosContabeis();
     }
 
+    public void reiniciarUnidadesDespesaExtra() {
+        singletonConcorrenciaContabil.reiniciarUnidadesDespesaExtra();
+    }
+
+    public void reiniciarUnidadesPagamento() {
+        singletonConcorrenciaContabil.reiniciarUnidadesPagamento();
+    }
+
+    public void reiniciarUnidadesEmpenho() {
+        singletonConcorrenciaContabil.reiniciarUnidadesEmpenho();
+    }
 
     public void reiniciarBorderos() {
         singletonConcorrenciaContabil.reiniciarBorderos();
@@ -123,6 +134,18 @@ public class MonitoramentoSingletonConcorrenciaContabil implements Serializable 
 
     public Set<Bordero> getBorderos() {
         return singletonConcorrenciaContabil.getBorderos();
+    }
+
+    public Set<UnidadeOrganizacional> getUnidadesOrganizacionaisEmpenho() {
+        return singletonConcorrenciaContabil.getUnidadesOrganizacionaisEmpenho();
+    }
+
+    public Set<UnidadeOrganizacional> getUnidadesOrganizacionaisPagamento() {
+        return singletonConcorrenciaContabil.getUnidadesOrganizacionaisPagamento();
+    }
+
+    public Set<UnidadeOrganizacional> getUnidadesOrganizacionaisDespesaExtra() {
+        return singletonConcorrenciaContabil.getUnidadesOrganizacionaisDespesaExtra();
     }
 
     public List<ContaAuxiliar> getContasAuxiliares() {

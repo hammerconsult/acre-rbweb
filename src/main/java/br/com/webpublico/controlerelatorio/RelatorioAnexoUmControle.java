@@ -292,7 +292,7 @@ public class RelatorioAnexoUmControle extends AbstractReport implements Serializ
         }
     }
 
-    public void gerarRelatorioAnexoDoisReceitaGeral() {
+    public void gerarRelatorioAnexoDoisrR() throws JRException, IOException {
         try {
             validarOrgaoAndUnidade();
             Exercicio exercicio = sistemaControlador.getExercicioCorrente();
@@ -473,12 +473,12 @@ public class RelatorioAnexoUmControle extends AbstractReport implements Serializ
 
         if (this.orgaoInicial != null
             && this.orgaoInicial.getCodigo().compareTo(this.orgaoFinal.getCodigo()) > 0) {
-                ex.adicionarMensagemDeOperacaoNaoPermitida(" Órgão Inicial maior que o Órgão Final!");
+            ex.adicionarMensagemDeOperacaoNaoPermitida(" Órgão Inicial maior que o Órgão Final!");
         }
 
         if (this.unidadeInicial != null
             && this.unidadeInicial.getCodigo().compareTo(this.unidadeFinal.getCodigo()) > 0) {
-                ex.adicionarMensagemDeOperacaoNaoPermitida(" Unidade Inicial maior que a Unidade Final!");
+            ex.adicionarMensagemDeOperacaoNaoPermitida(" Unidade Inicial maior que a Unidade Final!");
         }
         ex.lancarException();
     }

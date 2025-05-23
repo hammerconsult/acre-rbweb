@@ -352,7 +352,4 @@ public class ItemDeclaracaoServico extends SuperEntidade {
         this.detalhes = detalhes;
     }
 
-    public BigDecimal getDescontos() {
-        return getDescontosCondicionados().add(getDescontosIncondicionados());
-    }
 }

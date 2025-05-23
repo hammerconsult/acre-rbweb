@@ -4,20 +4,16 @@
  */
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.entidadesauxiliares.manad.ManadRegistro;
 import br.com.webpublico.enums.EsferaOrcamentaria;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
+import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.interfaces.IManadRegistro;
 import br.com.webpublico.negocios.SistemaFacade;
 import br.com.webpublico.negocios.manad.ManadContabilFacade;
-import br.com.webpublico.util.IdentidadeDaEntidade;
-import br.com.webpublico.util.ManadUtil;
-import br.com.webpublico.util.Util;
-import br.com.webpublico.util.UtilBeanContabil;
+import br.com.webpublico.util.*;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
@@ -26,6 +22,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.TreeMap;
 
 /**
  * Detalha o valor de cada despesa de cada ação do PPA de acordo com a origem dos recursos, de
@@ -38,7 +35,7 @@ import java.util.Date;
 @Entity
 
 @Etiqueta("Provisão PPA Fonte")
-public class ProvisaoPPAFonte extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil, IManadRegistro {
+public class ProvisaoPPAFonte implements Serializable, EntidadeContabil, IManadRegistro, IGeraContaAuxiliar {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -311,23 +308,68 @@ public class ProvisaoPPAFonte extends SuperEntidadeContabilGerarContaAuxiliar im
         return toString();
     }
 
-    public String getCodigoExtensaoFonteRecursoAsString() {
-        return getExtensaoFonteRecurso().getCodigo().toString();
-    }
-
-    public Integer getCodigoEs() {
-        return getExtensaoFonteRecurso().getCodigoEs();
+    @Override
+    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
+        return null;
     }
 
     @Override
-    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
         AcaoPPA acaoPPA = provisaoPPADespesa.getSubAcaoPPA().getAcaoPPA();
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "97":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada7(getProvisaoPPADespesa().getUnidadeOrganizacional(),
+                    acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
+                    getDestinacaoDeRecursosAsContaDeDestinacao(),
+                    getProvisaoPPADespesa().getContaDeDespesa(),
+                    (getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
+                        getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
+                            getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
+                            getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0));
+        }
+        return null;
+    }
 
-        return new GeradorContaAuxiliarDTO(getProvisaoPPADespesa().getUnidadeOrganizacional(),
-            acaoPPA.getCodigoFuncaoSubFuncao(),
-            getDestinacaoDeRecursosAsContaDeDestinacao(),
-            getProvisaoPPADespesa().getContaDeDespesa(),
-            getCodigoEs(), null, null, provisaoPPADespesa.getSubAcaoPPA().getExercicio(), null, null, 0, null,
-            getProvisaoPPADespesa().getContaDeDespesa().getCodigoContaSiconf());
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        AcaoPPA acaoPPA = provisaoPPADespesa.getSubAcaoPPA().getAcaoPPA();
+        switch (tipoContaAuxiliar.getCodigo()) {
+            case "97":
+                return UtilGeradorContaAuxiliar.gerarContaAuxiliar7(getProvisaoPPADespesa().getUnidadeOrganizacional(),
+                    acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
+                    getDestinacaoDeRecursosAsContaDeDestinacao(),
+                    (getProvisaoPPADespesa().getContaDeDespesa().getCodigoSICONFI() != null ?
+                        getProvisaoPPADespesa().getContaDeDespesa().getCodigoSICONFI() :
+                        getProvisaoPPADespesa().getContaDeDespesa().getCodigo().replace(".", "")),
+                    (getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
+                        getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
+                            getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
+                            getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0));
+        }
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    @Override
+    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+        return null;
+    }
+
+    public String getCodigoExtensaoFonteRecursoAsString() {
+        return getExtensaoFonteRecurso().getCodigo().toString();
     }
 }

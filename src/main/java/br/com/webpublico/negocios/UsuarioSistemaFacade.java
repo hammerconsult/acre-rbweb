@@ -903,17 +903,6 @@ public class UsuarioSistemaFacade extends AbstractFacade<UsuarioSistema> {
         }
     }
 
-    public AssinaturaUsuarioSistema buscarAssinaturaUsuarioSistema(Long idUsuario) {
-        String sql = " select aus.* from assinaturausuariosistema aus " +
-            " where aus.usuariosistema_id = :idUsuario ";
-
-        Query q = em.createNativeQuery(sql, AssinaturaUsuarioSistema.class);
-        q.setParameter("idUsuario", idUsuario);
-
-        List<AssinaturaUsuarioSistema> assinaturas = q.getResultList();
-        return (assinaturas != null && !assinaturas.isEmpty()) ? assinaturas.get(0) : null;
-    }
-
     public List<UsuarioSistema> buscarUsuariosGestoresInternos(UnidadeOrganizacional unidadeOrcamentaria, Date data) {
         String sql = "SELECT u.* FROM USUARIOSISTEMA u"
             + " INNER JOIN USUARIOUNIDADEORGANIZACIO uo ON uo.USUARIOSISTEMA_ID=u.ID"
@@ -933,6 +922,17 @@ public class UsuarioSistemaFacade extends AbstractFacade<UsuarioSistema> {
         q.setParameter("administrativa", TipoHierarquiaOrganizacional.ADMINISTRATIVA.name());
         q.setParameter("orcamentaria", TipoHierarquiaOrganizacional.ORCAMENTARIA.name());
         return q.getResultList();
+    }
+
+    public AssinaturaUsuarioSistema buscarAssinaturaUsuarioSistema(Long idUsuario) {
+        String sql = " select aus.* from assinaturausuariosistema aus " +
+            " where aus.usuariosistema_id = :idUsuario ";
+
+        Query q = em.createNativeQuery(sql, AssinaturaUsuarioSistema.class);
+        q.setParameter("idUsuario", idUsuario);
+
+        List<AssinaturaUsuarioSistema> assinaturas = q.getResultList();
+        return (assinaturas != null && !assinaturas.isEmpty()) ? assinaturas.get(0) : null;
     }
 
     public boolean isFiscalTributario() {

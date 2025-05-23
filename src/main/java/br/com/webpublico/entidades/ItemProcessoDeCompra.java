@@ -7,7 +7,6 @@ package br.com.webpublico.entidades;
 import br.com.webpublico.enums.SituacaoItemCertame;
 import br.com.webpublico.enums.SituacaoItemProcessoDeCompra;
 import br.com.webpublico.enums.StatusLancePregao;
-import br.com.webpublico.enums.TipoControleLicitacao;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Invisivel;
@@ -204,16 +203,8 @@ public class ItemProcessoDeCompra extends SuperEntidade {
         return this.getLoteProcessoDeCompra().getNumero();
     }
 
-    public String getNumeroDescricao() {
+    public String getNumeroDescricao(){
         return getNumero() + " - " + getDescricao();
-    }
-
-    public TipoControleLicitacao getTipoControle() {
-        try {
-            return getItemSolicitacaoMaterial().getItemCotacao().getTipoControle();
-        } catch (NullPointerException e) {
-            return TipoControleLicitacao.QUANTIDADE;
-        }
     }
 
 }

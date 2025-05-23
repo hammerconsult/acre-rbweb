@@ -6,6 +6,7 @@ import br.com.webpublico.enums.TipoCalculoRBTRans;
 import br.com.webpublico.enums.TipoDamRbtrans;
 import br.com.webpublico.enums.TipoPermissaoRBTrans;
 import br.com.webpublico.entidades.Calculo;
+import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 import org.hibernate.Hibernate;
 
@@ -103,6 +104,8 @@ public class ConsultaDamRBTransFacade {
         if (digitoFinal != null) {
             q.setParameter("digitoFinal", digitoFinal);
         }
+        q.setParameter("anoDebito", anoDebito.getAno());
+        q.setParameter("iss", Calculo.TipoCalculo.ISS.name());
         LinkedList<ParcelaValorDivida> retorno = Lists.newLinkedList();
         List<BigDecimal> resultado = q.getResultList();
         if (!resultado.isEmpty()) {

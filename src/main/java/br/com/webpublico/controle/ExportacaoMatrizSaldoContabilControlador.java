@@ -79,111 +79,6 @@ public class ExportacaoMatrizSaldoContabilControlador extends PrettyControlador<
             TipoUnidadeGestora.MSC);
     }
 
-    public void buscarRegistros() {
-        msc = Lists.newArrayList();
-        blc = Lists.newArrayList();
-        blcContabil = Lists.newArrayList();
-        blcDiferenca = Lists.newArrayList();
-        List<MatrizSaldoContabil> saldos = exportacaoMatrizSaldoContabilFacade.buscarSaldos(selecionado.getMes(), unidadeGestora, selecionado.getTipoBalanceteExportacao(), buscarTiposIniciais(), buscarTiposFinais());
-        for (MatrizSaldoContabil matrizSaldoContabil : saldos) {
-            String conta = matrizSaldoContabil.getContaContabilSiconfi().toString().substring(0, 1);
-            String naturezaValor = matrizSaldoContabil.getNaturezaValor();
-            BigDecimal valor = (matrizSaldoContabil.getValor().compareTo(BigDecimal.ZERO) < 0 ? matrizSaldoContabil.getValor().multiply(new BigDecimal("-1")) : matrizSaldoContabil.getValor());
-            ValidadorMatrizSaldoContabil matriz = new ValidadorMatrizSaldoContabil();
-            matriz.setCodigo(conta);
-            if (naturezaValor.equals("D")) {
-                matriz.setDebito(valor);
-            }
-            if (naturezaValor.equals("C")) {
-                matriz.setCredito(valor);
-            }
-            matriz.setTipoValor(matrizSaldoContabil.getTipoValor());
-
-            Boolean encontrouAlguem = Boolean.FALSE;
-            for (ValidadorMatrizSaldoContabil v : msc) {
-                if (v.getCodigo().equals(matriz.getCodigo())
-                    && v.getTipoValor().equals(matriz.getTipoValor())) {
-                    encontrouAlguem = Boolean.TRUE;
-                    v.setCredito(v.getCredito().add(matriz.getCredito()));
-                    v.setDebito(v.getDebito().add(matriz.getDebito()));
-                }
-            }
-
-            if (!encontrouAlguem) {
-                msc.add(matriz);
-            }
-        }
-        for (ValidadorMatrizSaldoContabil validadorMatrizSaldoContabil : msc) {
-
-            ValidadorMatrizSaldoContabilBlc bal = new ValidadorMatrizSaldoContabilBlc();
-            bal.setCodigo(validadorMatrizSaldoContabil.getCodigo());
-            if (TipoMatrizSaldoContabil.BEGINNING_BALANCE.equals(validadorMatrizSaldoContabil.getTipoValor())) {
-                bal.setSaldoAnterior(validadorMatrizSaldoContabil.getCredito().subtract(validadorMatrizSaldoContabil.getDebito()));
-            }
-            if (TipoMatrizSaldoContabil.PERIOD_CHANGE.equals(validadorMatrizSaldoContabil.getTipoValor())) {
-                bal.setCredito(validadorMatrizSaldoContabil.getCredito());
-                bal.setDebito(validadorMatrizSaldoContabil.getDebito());
-            }
-            if (TipoMatrizSaldoContabil.ENDING_BALANCE.equals(validadorMatrizSaldoContabil.getTipoValor())) {
-                bal.setAtual(validadorMatrizSaldoContabil.getCredito().subtract(validadorMatrizSaldoContabil.getDebito()));
-            }
-
-            Boolean encontrouAlguem = Boolean.FALSE;
-            for (ValidadorMatrizSaldoContabilBlc v : blc) {
-                if (v.getCodigo().equals(bal.getCodigo())) {
-                    encontrouAlguem = Boolean.TRUE;
-                    v.setSaldoAnterior(v.getSaldoAnterior().add(bal.getSaldoAnterior()));
-                    v.setCredito(v.getCredito().add(bal.getCredito()));
-                    v.setDebito(v.getDebito().add(bal.getDebito()));
-                    v.setAtual(v.getAtual().add(bal.getAtual()));
-                }
-            }
-
-            if (!encontrouAlguem) {
-                blc.add(bal);
-            }
-        }
-        buscarBalanceteContabil();
-        verificarDiferenca();
-    }
-
-    private void verificarDiferenca() {
-        if (blcContabil != null && blc != null) {
-            blcDiferenca = Lists.newArrayList();
-            for (ValidadorMatrizSaldoContabilBlc bal : blcContabil) {
-                for (ValidadorMatrizSaldoContabilBlc msc : blc) {
-                    if (bal.getCodigo().equals(msc.getCodigo())) {
-
-                        if (bal.getAtual().setScale(2, RoundingMode.HALF_UP).compareTo(msc.getAtual().setScale(2, RoundingMode.HALF_UP)) != 0 ||
-                            bal.getSaldoAnterior().setScale(2, RoundingMode.HALF_UP).compareTo(msc.getSaldoAnterior().setScale(2, RoundingMode.HALF_UP)) != 0) {
-                            ValidadorMatrizSaldoContabilBlc dif = new ValidadorMatrizSaldoContabilBlc();
-                            dif.setCodigo(bal.getCodigo());
-                            dif.setSaldoAnterior(bal.getSaldoAnterior().subtract(msc.getSaldoAnterior()));
-                            dif.setCredito(bal.getCredito().add(msc.getCredito()));
-                            dif.setDebito(bal.getDebito().add(msc.getDebito()));
-                            dif.setAtual(bal.getAtual().subtract(msc.getAtual()));
-                            blcDiferenca.add(dif);
-                        }
-                    }
-                }
-            }
-            if (blcDiferenca.isEmpty()) {
-                FacesUtil.addInfo("Informação", "Nenhuma diferença foi encontrada.");
-            }
-        }
-    }
-
-    private void buscarBalanceteContabil() {
-        Exercicio exercicio = exportacaoMatrizSaldoContabilFacade.getSistemaFacade().getExercicioCorrente();
-
-
-        String dataInicial = "01/" + selecionado.getMes().getNumeroMesString() + "/" + exercicio.getAno();
-        String dataFinal = Util.getDiasMes(selecionado.getMes().getNumeroMes(), exercicio.getAno()) + "/" + selecionado.getMes().getNumeroMesString() + "/" + exercicio.getAno();
-
-        blcContabil = saldoContaContabilFacade.buscarSaldoAtualBalanceteContabil(DataUtil.getDateParse(dataInicial), DataUtil.getDateParse(dataFinal), exercicio);
-
-    }
-
     public StreamedContent exportar() {
         try {
             List<String> cabecalho = Lists.newArrayList();
@@ -290,48 +185,6 @@ public class ExportacaoMatrizSaldoContabilControlador extends PrettyControlador<
         return retorno;
     }
 
-    //Utilizado para calcular corretamente os movimentos de crédito e débito filtrando os tipos na última data do saldo.
-    private List<String> buscarTipoBalanceteFinalParaSaldoAtual(TipoBalancete tipoInicial, TipoBalancete tipoFinal) {
-        List<String> toReturn = Lists.newArrayList();
-        switch (tipoFinal) {
-            case TRANSPORTE:
-                toReturn.add(TipoBalancete.TRANSPORTE.name());
-                break;
-            case ABERTURA:
-                toReturn.add(TipoBalancete.ABERTURA.name());
-                break;
-            case MENSAL:
-                if (TipoBalancete.ABERTURA.equals(tipoInicial) || TipoBalancete.TRANSPORTE.equals(tipoInicial)) {
-                    toReturn.add(TipoBalancete.ABERTURA.name());
-                }
-                toReturn.add(TipoBalancete.MENSAL.name());
-                break;
-            case APURACAO:
-                toReturn.add(TipoBalancete.APURACAO.name());
-                if (TipoBalancete.MENSAL.equals(tipoInicial)) {
-                    toReturn.add(TipoBalancete.MENSAL.name());
-                } else if (TipoBalancete.ABERTURA.equals(tipoInicial) || TipoBalancete.TRANSPORTE.equals(tipoInicial)) {
-                    toReturn.add(TipoBalancete.MENSAL.name());
-                    toReturn.add(TipoBalancete.ABERTURA.name());
-                }
-                break;
-            case ENCERRAMENTO:
-                toReturn.add(TipoBalancete.ENCERRAMENTO.name());
-                if (TipoBalancete.APURACAO.equals(tipoInicial)) {
-                    toReturn.add(TipoBalancete.APURACAO.name());
-                } else if (TipoBalancete.MENSAL.equals(tipoInicial)) {
-                    toReturn.add(TipoBalancete.MENSAL.name());
-                    toReturn.add(TipoBalancete.APURACAO.name());
-                } else if (TipoBalancete.ABERTURA.equals(tipoInicial) || TipoBalancete.TRANSPORTE.equals(tipoInicial)) {
-                    toReturn.add(TipoBalancete.MENSAL.name());
-                    toReturn.add(TipoBalancete.ABERTURA.name());
-                    toReturn.add(TipoBalancete.APURACAO.name());
-                }
-                break;
-        }
-        return toReturn;
-    }
-
     public UnidadeGestora getUnidadeGestora() {
         return unidadeGestora;
     }
@@ -400,6 +253,108 @@ public class ExportacaoMatrizSaldoContabilControlador extends PrettyControlador<
             StreamedContent streamedContent = new DefaultStreamedContent(is, emsc.getArquivo().getMimeType(), emsc.getArquivo().getNome());
             escreverNoResponse(IOUtils.toByteArray(streamedContent.getStream()), emsc.getArquivo().getNome(), streamedContent.getContentType());
         }
+    }
+
+    public void buscarRegistros() {
+        msc = Lists.newArrayList();
+        blc = Lists.newArrayList();
+        blcContabil = Lists.newArrayList();
+        blcDiferenca = Lists.newArrayList();
+        buscarSaldosMsc();
+        atualizarBlcComMsc();
+        buscarBalanceteContabil();
+        verificarDiferenca();
+    }
+
+    private void buscarSaldosMsc() {
+        List<MatrizSaldoContabil> saldos = exportacaoMatrizSaldoContabilFacade.buscarSaldos(selecionado.getMes(), unidadeGestora, selecionado.getTipoBalanceteExportacao(), buscarTiposIniciais(), buscarTiposFinais());
+        for (MatrizSaldoContabil matrizSaldoContabil : saldos) {
+            String conta = matrizSaldoContabil.getContaContabilSiconfi().toString().substring(0, 1);
+            String naturezaValor = matrizSaldoContabil.getNaturezaValor();
+            BigDecimal valor = (matrizSaldoContabil.getValor().compareTo(BigDecimal.ZERO) < 0 ? matrizSaldoContabil.getValor().multiply(new BigDecimal("-1")) : matrizSaldoContabil.getValor());
+            ValidadorMatrizSaldoContabil matriz = new ValidadorMatrizSaldoContabil();
+            matriz.setCodigo(conta);
+            if (naturezaValor.equals("D")) {
+                matriz.setDebito(valor);
+            }
+            if (naturezaValor.equals("C")) {
+                matriz.setCredito(valor);
+            }
+            matriz.setTipoValor(matrizSaldoContabil.getTipoValor());
+            boolean encontrouAlguem = false;
+            for (ValidadorMatrizSaldoContabil v : msc) {
+                if (v.getCodigo().equals(matriz.getCodigo())
+                    && v.getTipoValor().equals(matriz.getTipoValor())) {
+                    encontrouAlguem = true;
+                    v.setCredito(v.getCredito().add(matriz.getCredito()));
+                    v.setDebito(v.getDebito().add(matriz.getDebito()));
+                }
+            }
+            if (!encontrouAlguem) {
+                msc.add(matriz);
+            }
+        }
+    }
+
+    private void atualizarBlcComMsc() {
+        for (ValidadorMatrizSaldoContabil validadorMatrizSaldoContabil : msc) {
+            ValidadorMatrizSaldoContabilBlc bal = new ValidadorMatrizSaldoContabilBlc();
+            bal.setCodigo(validadorMatrizSaldoContabil.getCodigo());
+            if (TipoMatrizSaldoContabil.BEGINNING_BALANCE.equals(validadorMatrizSaldoContabil.getTipoValor())) {
+                bal.setSaldoAnterior(validadorMatrizSaldoContabil.getCredito().subtract(validadorMatrizSaldoContabil.getDebito()));
+            }
+            if (TipoMatrizSaldoContabil.PERIOD_CHANGE.equals(validadorMatrizSaldoContabil.getTipoValor())) {
+                bal.setCredito(validadorMatrizSaldoContabil.getCredito());
+                bal.setDebito(validadorMatrizSaldoContabil.getDebito());
+            }
+            if (TipoMatrizSaldoContabil.ENDING_BALANCE.equals(validadorMatrizSaldoContabil.getTipoValor())) {
+                bal.setAtual(validadorMatrizSaldoContabil.getCredito().subtract(validadorMatrizSaldoContabil.getDebito()));
+            }
+            boolean encontrouAlguem = false;
+            for (ValidadorMatrizSaldoContabilBlc v : blc) {
+                if (v.getCodigo().equals(bal.getCodigo())) {
+                    encontrouAlguem = true;
+                    v.setSaldoAnterior(v.getSaldoAnterior().add(bal.getSaldoAnterior()));
+                    v.setCredito(v.getCredito().add(bal.getCredito()));
+                    v.setDebito(v.getDebito().add(bal.getDebito()));
+                    v.setAtual(v.getAtual().add(bal.getAtual()));
+                }
+            }
+            if (!encontrouAlguem) {
+                blc.add(bal);
+            }
+        }
+    }
+
+    private void verificarDiferenca() {
+        if (blcContabil != null && blc != null) {
+            blcDiferenca = Lists.newArrayList();
+            for (ValidadorMatrizSaldoContabilBlc bal : blcContabil) {
+                for (ValidadorMatrizSaldoContabilBlc msc : blc) {
+                    if (bal.getCodigo().equals(msc.getCodigo()) &&
+                        (bal.getAtual().setScale(2, RoundingMode.HALF_UP).compareTo(msc.getAtual().setScale(2, RoundingMode.HALF_UP)) != 0 ||
+                            bal.getSaldoAnterior().setScale(2, RoundingMode.HALF_UP).compareTo(msc.getSaldoAnterior().setScale(2, RoundingMode.HALF_UP)) != 0)) {
+                        ValidadorMatrizSaldoContabilBlc dif = new ValidadorMatrizSaldoContabilBlc();
+                        dif.setCodigo(bal.getCodigo());
+                        dif.setSaldoAnterior(bal.getSaldoAnterior().subtract(msc.getSaldoAnterior()));
+                        dif.setCredito(bal.getCredito().add(msc.getCredito()));
+                        dif.setDebito(bal.getDebito().add(msc.getDebito()));
+                        dif.setAtual(bal.getAtual().subtract(msc.getAtual()));
+                        blcDiferenca.add(dif);
+                    }
+                }
+            }
+            if (blcDiferenca.isEmpty()) {
+                FacesUtil.addInfo("Informação", "Nenhuma diferença foi encontrada.");
+            }
+        }
+    }
+
+    private void buscarBalanceteContabil() {
+        Exercicio exercicio = exportacaoMatrizSaldoContabilFacade.getSistemaFacade().getExercicioCorrente();
+        String dataInicial = "01/" + selecionado.getMes().getNumeroMesString() + "/" + exercicio.getAno();
+        String dataFinal = Util.getDiasMes(selecionado.getMes().getNumeroMes(), exercicio.getAno()) + "/" + selecionado.getMes().getNumeroMesString() + "/" + exercicio.getAno();
+        blcContabil = saldoContaContabilFacade.buscarSaldoAtualBalanceteContabil(DataUtil.getDateParse(dataInicial), DataUtil.getDateParse(dataFinal), exercicio);
     }
 
     public List<ValidadorMatrizSaldoContabil> getMsc() {

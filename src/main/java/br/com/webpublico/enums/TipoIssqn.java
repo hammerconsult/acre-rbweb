@@ -12,19 +12,19 @@ import br.com.webpublico.webreportdto.dto.tributario.TipoIssqnNfseDTO;
  * @author gustavo
  */
 public enum TipoIssqn implements NfseEnum, EnumComDescricao {
-    ESTIMADO("Estimado", 1, TipoIssqnNfseDTO.ESTIMADO),
-    FIXO("Fixo Anual", 2, TipoIssqnNfseDTO.FIXO),
-    MENSAL("Mensal", 3, TipoIssqnNfseDTO.MENSAL),
-    MEI("MEI", 4, TipoIssqnNfseDTO.MEI),
-    NAO_INCIDENCIA("Não Incidência", 5, TipoIssqnNfseDTO.NAO_INCIDENCIA),
-    SIMPLES_NACIONAL("Simples Nacional", 6, TipoIssqnNfseDTO.SIMPLES_NACIONAL),
-    SUBLIMITE_ULTRAPASSADO("Sublimite Ultrapassado", 7, TipoIssqnNfseDTO.SUBLIMITE_ULTRAPASSADO),
-    IMUNE("Imune", 8, TipoIssqnNfseDTO.IMUNE),
-    ISENTO("Isento", 9, TipoIssqnNfseDTO.ISENTO);
+    ESTIMADO("Estimado", TipoIssqnNfseDTO.ESTIMADO, 1),
+    FIXO("Fixo Anual", TipoIssqnNfseDTO.FIXO, 2),
+    IMUNE("Imune", TipoIssqnNfseDTO.IMUNE, 8),
+    ISENTO("Isento", TipoIssqnNfseDTO.ISENTO, 9),
+    MEI("MEI", TipoIssqnNfseDTO.MEI, 4),
+    MENSAL("Mensal", TipoIssqnNfseDTO.MENSAL, 3),
+    NAO_INCIDENCIA("Não Incidência", TipoIssqnNfseDTO.NAO_INCIDENCIA,5),
+    SIMPLES_NACIONAL("Simples Nacional", TipoIssqnNfseDTO.SIMPLES_NACIONAL, 6),
+    SUBLIMITE_ULTRAPASSADO("Sublimite Ultrapassado", TipoIssqnNfseDTO.SUBLIMITE_ULTRAPASSADO, 7);
 
     private String descricao;
-    private Integer codigo;
     private TipoIssqnNfseDTO dto;
+    private Integer codigo;
 
     public String getDescricao() {
         return descricao;
@@ -33,7 +33,6 @@ public enum TipoIssqn implements NfseEnum, EnumComDescricao {
     public Integer getCodigo() {
         return codigo;
     }
-
 
     public static TipoIssqn getPorDescricao(String descricao){
         for (TipoIssqn value : TipoIssqn.values()) {
@@ -44,10 +43,11 @@ public enum TipoIssqn implements NfseEnum, EnumComDescricao {
         return null;
     }
 
-    TipoIssqn(String descricao, Integer codigo, TipoIssqnNfseDTO dto) {
+
+    TipoIssqn(String descricao, TipoIssqnNfseDTO dto, Integer codigo) {
         this.descricao = descricao;
-        this.codigo = codigo;
         this.dto = dto;
+        this.codigo = codigo;
     }
 
     @Override

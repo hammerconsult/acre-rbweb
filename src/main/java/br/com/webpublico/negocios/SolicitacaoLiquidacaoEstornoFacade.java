@@ -75,7 +75,6 @@ public class SolicitacaoLiquidacaoEstornoFacade extends AbstractFacade<Solicitac
         return resultList;
     }
 
-
     @Override
     protected EntityManager getEntityManager() {
         return em;

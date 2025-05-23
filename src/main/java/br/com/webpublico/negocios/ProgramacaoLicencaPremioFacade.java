@@ -3,8 +3,6 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.ContratoFP;
 import br.com.webpublico.entidades.PeriodoAquisitivoFL;
 import br.com.webpublico.entidades.ProgramacaoLicencaPremio;
-import br.com.webpublico.enums.StatusPeriodoAquisitivo;
-import com.google.common.collect.Lists;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -159,21 +157,5 @@ public class ProgramacaoLicencaPremioFacade extends AbstractFacade<ProgramacaoLi
             return resultList;
         }
         return null;
-    }
-
-    public List<ProgramacaoLicencaPremio> buscarProgramacaoLicencaPremioPorPeriodoAquisitivoNaoConcedido(PeriodoAquisitivoFL periodo) {
-        String hql = " select programacao " +
-            " from ProgramacaoLicencaPremio programacao " +
-            "         inner join programacao.periodoAquisitivoFL pa " +
-            " where pa.id = :periodo " +
-            "  and pa.status = :status ";
-        Query q = em.createQuery(hql);
-        q.setParameter("periodo", periodo.getId());
-        q.setParameter("status", StatusPeriodoAquisitivo.NAO_CONCEDIDO);
-        List resultList = q.getResultList();
-        if (resultList != null && !resultList.isEmpty()) {
-            return resultList;
-        }
-        return Lists.newArrayList();
     }
 }

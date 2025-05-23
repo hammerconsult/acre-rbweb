@@ -284,7 +284,8 @@ public class NovoComponentePesquisaPessoaControlador implements Serializable {
         }
 
 
-        public void carregaListasPessoa(Pessoa p) {
+        public void carregaListasPessoa(SelectEvent evento) {
+            Pessoa p = (Pessoa) evento.getObject();
             telefones = pessoaFacade.telefonePorPessoa(p);
             enderecos = pessoaFacade.enderecoPorPessoa(p);
         }

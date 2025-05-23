@@ -22,6 +22,7 @@ public class EnderecoCorreioFacade extends AbstractFacade<EnderecoCorreio> {
 
     public EnderecoCorreioFacade() {
         super(EnderecoCorreio.class);
+
     }
 
     @Override

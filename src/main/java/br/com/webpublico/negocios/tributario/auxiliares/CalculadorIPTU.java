@@ -259,9 +259,6 @@ public class CalculadorIPTU {
         engine.put(LOTE, lote);
         engine.put(CONSTRUCAO, construcao);
         for (AtributoGenerico atr : atributos) {
-            engine.put("atributo_" + atr.getIdentificacao(), atr);
-        }
-        for (AtributoGenerico atr : atributos) {
             engine.put(atr.getIdentificacao(), atr.getValor());
         }
         for (Pontuacao p : pontuacoes) {

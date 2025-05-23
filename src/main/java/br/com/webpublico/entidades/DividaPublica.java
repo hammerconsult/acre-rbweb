@@ -29,7 +29,7 @@ import java.util.List;
 @Audited
 @Etiqueta("Dívida Pública")
 @GrupoDiagrama(nome = "Contabil")
-public class DividaPublica extends SuperEntidade implements Serializable {
+public class DividaPublica implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id

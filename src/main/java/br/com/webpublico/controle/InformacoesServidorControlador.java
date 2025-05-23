@@ -112,7 +112,6 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
     private List<Afastamento> afastamentos;
     private List<ExperienciaExtraCurricular> experienciasExtraCurriculares;
     private List<CedenciaContratoFP> cedencias;
-    private List<ProvimentoReversao> provimentoReversoes;
 
 
     private List<RegistroDB> registroDBList;
@@ -148,8 +147,6 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
     private ExperienciaExtraCurricularFacade experienciaExtraCurricularFacade;
     @EJB
     private CedenciaContratoFPFacade cedenciaContratoFPFacade;
-    @EJB
-    private ProvimentoReversaoFacade provimentoReversaoFacade;
 
     private BigDecimal totalBaseConsignacao;
     private BigDecimal totalBaseEuConsigoMais;
@@ -310,7 +307,6 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
     }
 
     public void consultarFicha() {
-
         mapMemoriaCalculo = Maps.newHashMap();
         listaItemFichaFinanceiraFP = fichaFinanceiraFPFacade.recuperafichaFinanceiraFP(objetoPesquisa.getMes(), objetoPesquisa.getAno(), objetoPesquisa.getVinculoFP(), objetoPesquisa.getTipoFolhaDePagamentoWeb(), versao);
         if (!listaItemFichaFinanceiraFP.isEmpty()) {
@@ -449,8 +445,6 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
         faltas = new LinkedList<>();
         lancamentoFPs = new LinkedList<>();
         horaExtras = new LinkedList<>();
-        provimentoReversoes = new ArrayList<>();
-
         fichaFinanceiraFP = new FichaFinanceiraFP();
         listaItemFichaFinanceiraFP = new LinkedList<>();
         enquadramentoFuncionals = new LinkedList<>();
@@ -470,7 +464,6 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
         afastamentos = Lists.newLinkedList();
         experienciasExtraCurriculares = Lists.newLinkedList();
         itensFichaFinanceiraFPMesAnterior = Lists.newLinkedList();
-        mapMemoriaCalculo = Maps.newHashMap();
         cedencias = Lists.newLinkedList();
 
         mapMemoriaCalculo = Maps.newHashMap();
@@ -513,7 +506,6 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
             buscarLancamentos();
             buscarFaltas();
             buscarHorasExtra();
-            buscarProvimentoReversoes();
             buscarEnquadramento();
             buscarConcessaoFerias();
             buscarLicencaPremio();
@@ -796,10 +788,6 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
     private void buscarHorasExtra() {
 //        horaExtras = horaExtraFacade.totalHorasExtrasMesAnoPorServidor(objetoPesquisa.getVinculoFP(), objetoPesquisa.getAno(), objetoPesquisa.getMes());
         horaExtras = horaExtraFacade.totalHorasExtrasPorServidor(objetoPesquisa.getVinculoFP());
-    }
-
-    private void buscarProvimentoReversoes() {
-        provimentoReversoes = provimentoReversaoFacade.buscarProvimentoReversaoPorVinculoFP(objetoPesquisa.getVinculoFP().getId());
     }
 
     private void buscarConcessaoFerias() {
@@ -1203,13 +1191,4 @@ public class InformacoesServidorControlador extends SuperControladorCRUD impleme
         }
         return null;
     }
-
-    public List<ProvimentoReversao> getProvimentoReversoes() {
-        return provimentoReversoes;
-    }
-
-    public void setProvimentoReversoes(List<ProvimentoReversao> provimentoReversoes) {
-        this.provimentoReversoes = provimentoReversoes;
-    }
-
 }

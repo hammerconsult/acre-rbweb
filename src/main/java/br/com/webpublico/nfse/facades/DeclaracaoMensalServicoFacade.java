@@ -59,12 +59,12 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
     private DecimalFormat decimalFormat;
 
     private static final String SQL_BASE = "select dec.id,  dec.codigo,  dec.tipo,  dec.mes, dec.situacao,  dec.qtdNotas, " +
-            " dec.totalServicos, dec.totalIss, ex.ano, calculo.id as calculo_id,  dec.abertura, dec.encerramento, dec.tipomovimento " +
-            " from DeclaracaoMensalServico dec " +
-            " inner join exercicio ex on ex.id = dec.exercicio_id " +
-            " left join processocalculo proc on proc.id = dec.processocalculo_id" +
-            " left join calculo on calculo.processocalculo_id = proc.id " +
-            " where dec.prestador_id = :empresaId ";
+        " dec.totalServicos, dec.totalIss, ex.ano, calculo.id as calculo_id,  dec.abertura, dec.encerramento, dec.tipomovimento " +
+        " from DeclaracaoMensalServico dec " +
+        " inner join exercicio ex on ex.id = dec.exercicio_id " +
+        " left join processocalculo proc on proc.id = dec.processocalculo_id" +
+        " left join calculo on calculo.processocalculo_id = proc.id " +
+        " where dec.prestador_id = :empresaId ";
 
     @EJB
     private CadastroEconomicoFacade cadastroEconomicoFacade;
@@ -245,7 +245,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
             return createAndSave(declaracaoMensalServico);
         } catch (Exception e) {
             logger.error("Erro ao salvar declaracao {} - {}", declaracaoMensalServico.getPrestador().getInscricaoMunicipal(),
-                    declaracaoMensalServico.getExercicio() + "/" + declaracaoMensalServico.getMes());
+                declaracaoMensalServico.getExercicio() + "/" + declaracaoMensalServico.getMes());
         }
         return null;
     }
@@ -266,13 +266,13 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         if (isAusenciaMovimento) {
             if (TipoMovimentoMensalNfseDTO.NORMAL.equals(tipoMovimento)) {
                 List<NotaFiscalSearchDTO> notasDoMes = notaFiscalFacade.buscarNotasSemDeclararPorCompetencia(prestadorId,
-                        mes, exercicio, TipoMovimentoMensal.NORMAL, true);
+                    mes, exercicio, TipoMovimentoMensal.NORMAL, true);
                 if (!notasDoMes.isEmpty()) {
                     throw new NfseOperacaoNaoPermitidaException("Não é possível declarar ausência de movimentos para um periodo que existem notas emitidas");
                 }
             } else if (TipoMovimentoMensalNfseDTO.RETENCAO.equals(tipoMovimento)) {
                 List<NotaFiscalSearchDTO> notasDoMes = notaFiscalFacade.buscarNotasSemDeclararPorCompetencia(prestadorId,
-                        mes, exercicio, TipoMovimentoMensal.RETENCAO, false);
+                    mes, exercicio, TipoMovimentoMensal.RETENCAO, false);
                 if (!notasDoMes.isEmpty()) {
                     throw new NfseOperacaoNaoPermitidaException("Não é posspível declarar ausência de movimentos para um periodo que existem notas com retenção recebidas");
                 }
@@ -281,7 +281,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         Calendar dataAtual = Calendar.getInstance();
         dataAtual.setTime(new Date());
         if (exercicio >= dataAtual.get(Calendar.YEAR) &&
-                mes > dataAtual.get(Calendar.MONTH) + 1) {
+            mes > dataAtual.get(Calendar.MONTH) + 1) {
             throw new NfseOperacaoNaoPermitidaException("Não é possível encerrar uma competência futura.");
         }
     }
@@ -289,7 +289,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
     public DeclaracaoMensalServico createAndSave(DeclaracaoMensalServicoNfseDTO dto) {
         try {
             validarDeclaracao(dto.getMes(), dto.getExercicio(), dto.getPrestador().getId(),
-                    dto.getNotas().isEmpty(), dto.getTipoMovimento());
+                dto.getNotas().isEmpty(), dto.getTipoMovimento());
             DeclaracaoMensalServico declaracao;
             if (dto.getId() == null) {
                 declaracao = new DeclaracaoMensalServico();
@@ -337,21 +337,21 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         if (hasDeclaracaoMensalServico(declaracao.getTipoMovimento(), notaFiscalSearchDTO.getId())) {
             if (declaracao.getTipoMovimento().equals(TipoMovimentoMensal.NORMAL)) {
                 throw new NfseOperacaoNaoPermitidaException("A Nota Fiscal " + notaFiscalSearchDTO.getNumero() + " do Tomador "
-                        + (StringUtils.isEmpty(notaFiscalSearchDTO.getNomeTomador()) ? "Não Identificado" : notaFiscalSearchDTO.getNomeTomador())
-                        + " já encontra-se em outro encerramento mensal.");
+                    + (StringUtils.isEmpty(notaFiscalSearchDTO.getNomeTomador()) ? "Não Identificado" : notaFiscalSearchDTO.getNomeTomador())
+                    + " já encontra-se em outro encerramento mensal.");
             } else {
                 throw new NfseOperacaoNaoPermitidaException("A Nota Fiscal " + notaFiscalSearchDTO.getNumero() + " do Prestador "
-                        + notaFiscalSearchDTO.getNomePrestador() + " já encontra-se em outro encerramento mensal.");
+                    + notaFiscalSearchDTO.getNomePrestador() + " já encontra-se em outro encerramento mensal.");
             }
         }
     }
 
     public Boolean hasDeclaracaoMensalServico(TipoMovimentoMensal tipoMovimentoMensal, Long idDeclaracao) {
         String sql = " select 1 from notadeclarada nd " +
-                " inner join declaracaomensalservico dms on dms.id = nd.declaracaomensalservico_id " +
-                " where dms.situacao <> :cancelado " +
-                "   and dms.tipomovimento = :tipo_movimento " +
-                "   and nd.declaracaoprestacaoservico_id = :id_declaracao ";
+            " inner join declaracaomensalservico dms on dms.id = nd.declaracaomensalservico_id " +
+            " where dms.situacao <> :cancelado " +
+            "   and dms.tipomovimento = :tipo_movimento " +
+            "   and nd.declaracaoprestacaoservico_id = :id_declaracao ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("cancelado", DeclaracaoMensalServico.Situacao.CANCELADO.name());
         q.setParameter("tipo_movimento", tipoMovimentoMensal.name());
@@ -368,9 +368,9 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public Long contarCalculosIssMesPrestador(Long idPrestador, Mes mes) {
         String sql = "select count(iss.id) from CalculoIss iss " +
-                " inner join calculo calc on calc.id = iss.id " +
-                " inner join processocalculoiss proc on proc.id = calc.processocalculo_id " +
-                " where calc.cadastro_id = :idPrestador and proc.mesreferencia = :mes";
+            " inner join calculo calc on calc.id = iss.id " +
+            " inner join processocalculoiss proc on proc.id = calc.processocalculo_id " +
+            " where calc.cadastro_id = :idPrestador and proc.mesreferencia = :mes";
 
         Query q = em.createNativeQuery(sql);
         q.setParameter("idPrestador", idPrestador);
@@ -420,7 +420,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         calculo.setFaturamento(BigDecimal.ZERO);
         calculo.setValorCalculado(BigDecimal.ZERO);
         if (TipoMovimentoMensal.NORMAL.equals(declaracao.getTipoMovimento()) ||
-                TipoMovimentoMensal.INSTITUICAO_FINANCEIRA.equals(declaracao.getTipoMovimento())) {
+            TipoMovimentoMensal.INSTITUICAO_FINANCEIRA.equals(declaracao.getTipoMovimento())) {
             calculo.setIssqnFmTipoLancamentoNfse(IssqnFmTipoLancamentoNfseDTO.PROPRIO);
         } else {
             calculo.setIssqnFmTipoLancamentoNfse(IssqnFmTipoLancamentoNfseDTO.SUBSTITUTO);
@@ -487,16 +487,16 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public List<ServicoDeclaradoDTO> buscarServicosDaDeclaracao(Long id) {
         String sql = "select item.id as itemId, " +
-                " servico.id as servicoId, " +
-                " servico.aliquotaisshomologado," +
-                " item.basecalculo," +
-                " item.valorservico," +
-                " item.iss," +
-                " coalesce(dec.issretido, 0)" +
-                " from ItemDeclaracaoServico item" +
-                " inner join servico on servico.id = item.servico_id" +
-                " inner join declaracaoprestacaoservico dec on dec.id = item.declaracaoprestacaoservico_id" +
-                " where dec.id = :id";
+            " servico.id as servicoId, " +
+            " servico.aliquotaisshomologado," +
+            " item.basecalculo," +
+            " item.valorservico," +
+            " item.iss," +
+            " coalesce(dec.issretido, 0)" +
+            " from ItemDeclaracaoServico item" +
+            " inner join servico on servico.id = item.servico_id" +
+            " inner join declaracaoprestacaoservico dec on dec.id = item.declaracaoprestacaoservico_id" +
+            " where dec.id = :id";
         Query q = em.createNativeQuery(sql);
         q.setParameter("id", id);
         List<ServicoDeclaradoDTO> retorno = Lists.newArrayList();
@@ -513,8 +513,8 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         }
         OpcaoPagamento opcaoPagamento = recuperarOpcoesPagamento(calculoISS.getProcessoCalculoISS().getDivida(), new Date());
         Date dataVencimento = buscarVencimentoIss(opcaoPagamento,
-                calculoISS.getProcessoCalculoISS().getExercicio().getAno(),
-                calculoISS.getMesdeReferencia().getNumeroMes());
+            calculoISS.getProcessoCalculoISS().getExercicio().getAno(),
+            calculoISS.getMesdeReferencia().getNumeroMes());
         while (DataUtil.ehDiaNaoUtil(dataVencimento, feriadoFacade)) {
             dataVencimento = DataUtil.adicionaDias(dataVencimento, 1);
         }
@@ -569,9 +569,9 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public OpcaoPagamento recuperarOpcoesPagamento(Divida divida, Date dataBase) throws IllegalArgumentException {
         Query q = em.createQuery(" from OpcaoPagamentoDivida op "
-                + " where op.divida = :divida "
-                + " and :vigencia between coalesce(op.inicioVigencia, current_date) "
-                + " and coalesce(op.finalVigencia, current_date)");
+            + " where op.divida = :divida "
+            + " and :vigencia between coalesce(op.inicioVigencia, current_date) "
+            + " and coalesce(op.finalVigencia, current_date)");
         q.setParameter("divida", divida);
         q.setParameter("vigencia", DataUtil.dataSemHorario(dataBase));
         if (q.getResultList().isEmpty()) {
@@ -591,9 +591,9 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     private boolean hasDeclaracaoNaCompetencia(Long prestadorId, Mes mes, Integer exercicio, TipoMovimentoMensal tipoMovimento) {
         Query q = em.createNativeQuery("select a.id from " +
-                " DeclaracaoMensalServico a " +
-                " inner join exercicio ex on ex.id = a.exercicio_id " +
-                " where a.prestador_id =:empresaId and a.mes = :mes and ex.ano = :exercicio and a.tipoMovimento = :tipoMovimento");
+            " DeclaracaoMensalServico a " +
+            " inner join exercicio ex on ex.id = a.exercicio_id " +
+            " where a.prestador_id =:empresaId and a.mes = :mes and ex.ano = :exercicio and a.tipoMovimento = :tipoMovimento");
         q.setParameter("empresaId", prestadorId);
         q.setParameter("mes", mes.name());
         q.setParameter("exercicio", exercicio);
@@ -609,8 +609,8 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         q.setMaxResults(1);
         Object[] resultado = (Object[]) q.getSingleResult();
         List<ResultadoParcela> cp = new ConsultaParcela()
-                .addParameter(ConsultaParcela.Campo.CALCULO_ID, ConsultaParcela.Operador.IGUAL, ((BigDecimal) resultado[9]).longValue())
-                .executaConsulta().getResultados();
+            .addParameter(ConsultaParcela.Campo.CALCULO_ID, ConsultaParcela.Operador.IGUAL, ((BigDecimal) resultado[9]).longValue())
+            .executaConsulta().getResultados();
         return cp;
 
     }
@@ -628,8 +628,8 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         toAdd.setExercicio(((BigDecimal) obj[8]).intValue());
         if (obj[9] != null) {
             List<ResultadoParcela> cp = new ConsultaParcela()
-                    .addParameter(ConsultaParcela.Campo.CALCULO_ID, ConsultaParcela.Operador.IGUAL, ((BigDecimal) obj[9]).longValue())
-                    .executaConsulta().getResultados();
+                .addParameter(ConsultaParcela.Campo.CALCULO_ID, ConsultaParcela.Operador.IGUAL, ((BigDecimal) obj[9]).longValue())
+                .executaConsulta().getResultados();
             for (ResultadoParcela parcela : cp) {
                 toAdd.setSituacaoDebito(parcela.getSituacao());
                 toAdd.setTotalJuros(toAdd.getTotalJuros().add(parcela.getValorJuros()));
@@ -645,8 +645,8 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public List<DeclaracaoMensalServicoNfseDTO> buscarDeclaracoesNoPeriodoSemLivro(Mes inicio, Mes fim, Integer exercicio, Long prestadorId, TipoMovimentoMensal tipoMovimentoMensal) {
         String where = " and dec.mes in (:meses) and ex.ano = :exercicio " +
-                " and dec.tipoMovimento = :tipoMovimento" +
-                " and not exists (select id from itemlivrofiscal where declaracaomensalservico_id = dec.id) ";
+            " and dec.tipoMovimento = :tipoMovimento" +
+            " and not exists (select id from itemlivrofiscal where declaracaomensalservico_id = dec.id) ";
 
         Query q = em.createNativeQuery(SQL_BASE + where);
         q.setParameter("meses", Mes.getTodosMesesComoStringNoIntevalo(inicio, fim));
@@ -669,24 +669,24 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
             estatisticaPorMes.add(new EstatisticaMensalNfseDTO(inicio.getMonthOfYear(), inicio.getYear()));
         }
         String sql = "select extract(month from dps.COMPETENCIA) mes, " +
-                "       extract(YEAR from dps.COMPETENCIA) ano," +
-                "       coalesce(dps.ISSRETIDO,0), " +
-                "       dps.SITUACAO, " +
-                "       count(dps.id) count_id, " +
-                "       sum(dps.totalservicos - dps.descontosincondicionais - dps.deducoeslegais) totalServicos, " +
-                "       sum(dps.isscalculado) totalIss " +
-                "  from DECLARACAOPRESTACAOSERVICO dps " +
-                " left join NOTAFISCAL nota on nota.declaracaoprestacaoservico_id = dps.id " +
-                " left join servicodeclarado sd on sd.declaracaoprestacaoservico_id = dps.id" +
-                "                              and sd.tiposervicodeclarado = :servico_prestado " +
-                " inner join CADASTROECONOMICO cmc on cmc.id = coalesce(nota.prestador_id, sd.cadastroeconomico_id) " +
-                " where cmc.ID = :cadastroId " +
-                "   and dps.competencia between :referenciaInicial and :referenciaFinal " +
-                " group by coalesce(dps.issretido, 0), " +
-                "         dps.SITUACAO, " +
-                "         dps.TIPODOCUMENTO, " +
-                "         extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), extract(YEAR from dps.COMPETENCIA) " +
-                " order by extract(YEAR from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), extract(month from dps.COMPETENCIA) ";
+            "       extract(YEAR from dps.COMPETENCIA) ano," +
+            "       coalesce(dps.ISSRETIDO,0), " +
+            "       dps.SITUACAO, " +
+            "       count(dps.id) count_id, " +
+            "       sum(dps.totalservicos - dps.descontosincondicionais - dps.deducoeslegais) totalServicos, " +
+            "       sum(dps.isscalculado) totalIss " +
+            "  from DECLARACAOPRESTACAOSERVICO dps " +
+            " left join NOTAFISCAL nota on nota.declaracaoprestacaoservico_id = dps.id " +
+            " left join servicodeclarado sd on sd.declaracaoprestacaoservico_id = dps.id" +
+            "                              and sd.tiposervicodeclarado = :servico_prestado " +
+            " inner join CADASTROECONOMICO cmc on cmc.id = coalesce(nota.prestador_id, sd.cadastroeconomico_id) " +
+            " where cmc.ID = :cadastroId " +
+            "   and dps.competencia between :referenciaInicial and :referenciaFinal " +
+            " group by coalesce(dps.issretido, 0), " +
+            "         dps.SITUACAO, " +
+            "         dps.TIPODOCUMENTO, " +
+            "         extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), extract(YEAR from dps.COMPETENCIA) " +
+            " order by extract(YEAR from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), extract(month from dps.COMPETENCIA) ";
 
         Query q = em.createNativeQuery(sql);
         q.setParameter("cadastroId", cadastroId);
@@ -721,23 +721,23 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public List<EstatisticaMensalPorServicoNfseDTO> buscarEstatisticasServicosPrestadosNaReferencia(Date referenciaInicial, Date referenciaFinal, Long cadastroId) {
         String sql =
-                "select    extract(month from dps.COMPETENCIA), " +
-                        "      extract(year from dps.COMPETENCIA)," +
-                        "       serv.codigo, " +
-                        "       serv.nome, " +
-                        "       sum(dps.totalservicos - dps.descontosincondicionais - dps.deducoeslegais) " +
-                        "   from DECLARACAOPRESTACAOSERVICO dps " +
-                        "  inner join itemdeclaracaoservico item on dps.id = item.declaracaoprestacaoservico_id " +
-                        "  inner join servico serv on item.servico_id = serv.id " +
-                        "  left join notafiscal nf on nf.declaracaoprestacaoservico_id = dps.id " +
-                        "  left join servicodeclarado sd on sd.declaracaoprestacaoservico_id = dps.id " +
-                        "                               and sd.tiposervicodeclarado = :servico_prestado " +
-                        "  inner join cadastroeconomico cmc on cmc.id = coalesce(nf.prestador_id, sd.cadastroeconomico_id) " +
-                        "where cmc.ID = :cadastroId " +
-                        "  and dps.competencia between :referenciaInicial and :referenciaFinal" +
-                        "  and dps.situacao != :cancelada " +
-                        "group by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), serv.codigo, serv.nome " +
-                        "order by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA),serv.codigo, serv.nome";
+            "select    extract(month from dps.COMPETENCIA), " +
+                "      extract(year from dps.COMPETENCIA)," +
+                "       serv.codigo, " +
+                "       serv.nome, " +
+                "       sum(dps.totalservicos - dps.descontosincondicionais - dps.deducoeslegais) " +
+                "   from DECLARACAOPRESTACAOSERVICO dps " +
+                "  inner join itemdeclaracaoservico item on dps.id = item.declaracaoprestacaoservico_id " +
+                "  inner join servico serv on item.servico_id = serv.id " +
+                "  left join notafiscal nf on nf.declaracaoprestacaoservico_id = dps.id " +
+                "  left join servicodeclarado sd on sd.declaracaoprestacaoservico_id = dps.id " +
+                "                               and sd.tiposervicodeclarado = :servico_prestado " +
+                "  inner join cadastroeconomico cmc on cmc.id = coalesce(nf.prestador_id, sd.cadastroeconomico_id) " +
+                "where cmc.ID = :cadastroId " +
+                "  and dps.competencia between :referenciaInicial and :referenciaFinal" +
+                "  and dps.situacao != :cancelada " +
+                "group by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), serv.codigo, serv.nome " +
+                "order by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA),serv.codigo, serv.nome";
         Query q = em.createNativeQuery(sql);
         q.setParameter("cadastroId", cadastroId);
         q.setParameter("referenciaInicial", referenciaInicial);
@@ -762,27 +762,27 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public List<EstatisticaMensalPorTomadorNfseDTO> buscarEstatisticasTomadorPrestadosNaReferencia(Date referenciaInicial, Date referenciaFinal, Long cadastroId) {
         String sql =
-                "select     extract(month from dps.COMPETENCIA), " +
-                        "       extract(year from dps.COMPETENCIA), " +
-                        "       tomador.nomerazaosocial, " +
-                        "       tomador.cpfcnpj, " +
-                        "       sum(dps.totalservicos - dps.descontosincondicionais - dps.deducoeslegais) totalServicos, " +
-                        "       sum(dps.isscalculado) totalIss " +
-                        "   from DECLARACAOPRESTACAOSERVICO dps " +
-                        "  inner join DadosPessoaisNfse tomador on dps.dadospessoaistomador_id = tomador.id " +
-                        "  left join notafiscal nf on nf.declaracaoprestacaoservico_id = dps.id " +
-                        "  left join servicodeclarado sd on sd.declaracaoprestacaoservico_id = dps.id " +
-                        "                               and sd.tiposervicodeclarado = :servico_prestado " +
-                        "  inner join cadastroeconomico cmc on cmc.id = coalesce(nf.prestador_id, sd.cadastroeconomico_id) " +
-                        "where cmc.ID = :cadastroId " +
-                        "  and dps.competencia between :referenciaInicial and :referenciaFinal " +
-                        "  and dps.situacao != :cancelada " +
-                        "group by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), " +
-                        "         tomador.nomerazaosocial, " +
-                        "         tomador.cpfcnpj " +
-                        "order by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), " +
-                        "         tomador.nomerazaosocial, " +
-                        "         tomador.cpfcnpj";
+            "select     extract(month from dps.COMPETENCIA), " +
+                "       extract(year from dps.COMPETENCIA), " +
+                "       tomador.nomerazaosocial, " +
+                "       tomador.cpfcnpj, " +
+                "       sum(dps.totalservicos - dps.descontosincondicionais - dps.deducoeslegais) totalServicos, " +
+                "       sum(dps.isscalculado) totalIss " +
+                "   from DECLARACAOPRESTACAOSERVICO dps " +
+                "  inner join DadosPessoaisNfse tomador on dps.dadospessoaistomador_id = tomador.id " +
+                "  left join notafiscal nf on nf.declaracaoprestacaoservico_id = dps.id " +
+                "  left join servicodeclarado sd on sd.declaracaoprestacaoservico_id = dps.id " +
+                "                               and sd.tiposervicodeclarado = :servico_prestado " +
+                "  inner join cadastroeconomico cmc on cmc.id = coalesce(nf.prestador_id, sd.cadastroeconomico_id) " +
+                "where cmc.ID = :cadastroId " +
+                "  and dps.competencia between :referenciaInicial and :referenciaFinal " +
+                "  and dps.situacao != :cancelada " +
+                "group by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), " +
+                "         tomador.nomerazaosocial, " +
+                "         tomador.cpfcnpj " +
+                "order by extract(month from dps.COMPETENCIA), extract(year from dps.COMPETENCIA), " +
+                "         tomador.nomerazaosocial, " +
+                "         tomador.cpfcnpj";
         Query q = em.createNativeQuery(sql);
         q.setParameter("cadastroId", cadastroId);
         q.setParameter("referenciaInicial", referenciaInicial);
@@ -828,9 +828,9 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
             return;
         Calculo calculo = declaracao.getProcessoCalculo().getCalculos().get(0);
         List<ResultadoParcela> resultados = new ConsultaParcela()
-                .addParameter(ConsultaParcela.Campo.CALCULO_ID, ConsultaParcela.Operador.IGUAL, calculo.getId())
-                .executaConsulta()
-                .getResultados();
+            .addParameter(ConsultaParcela.Campo.CALCULO_ID, ConsultaParcela.Operador.IGUAL, calculo.getId())
+            .executaConsulta()
+            .getResultados();
         for (ResultadoParcela resultado : resultados) {
             ParcelaValorDivida parcelaValorDivida = em.find(ParcelaValorDivida.class, resultado.getId());
             SituacaoParcelaValorDivida situacaoParcelaValorDivida = new SituacaoParcelaValorDivida(SituacaoParcela.CANCELAMENTO, parcelaValorDivida, parcelaValorDivida.getSituacaoAtual().getSaldo());
@@ -857,7 +857,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
                                                                                           Integer mesFinal,
                                                                                           TipoMovimentoMensal tipoMovimentoMensal) {
         return new AsyncResult<>(buscarCompetenciasLivroFiscal(prestadorId, exercicioInicial, exercicioFinal,
-                mesInicial, mesFinal, tipoMovimentoMensal));
+            mesInicial, mesFinal, tipoMovimentoMensal));
     }
 
     public List<LivroFiscalCompetenciaNfseDTO> buscarCompetenciasLivroFiscal(Long prestadorId,
@@ -874,7 +874,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         competenciaFinal = DataUtil.dataSemHorario(competenciaFinal);
 
         List<LivroFiscalCompetenciaNfseDTO> competencias =
-                buscarCompetenciasLivroFiscalComMovimentos(prestadorId, tipoMovimentoMensal, competenciaInicial, competenciaFinal);
+            buscarCompetenciasLivroFiscalComMovimentos(prestadorId, tipoMovimentoMensal, competenciaInicial, competenciaFinal);
 
         Date competenciaAtual = competenciaInicial;
 
@@ -923,31 +923,31 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
                                                                                                            Date competenciaFinal) {
         List<LivroFiscalCompetenciaNfseDTO> competencias = Lists.newArrayList();
         String sql = " SELECT " +
-                "       EXTRACT(YEAR FROM DEC.COMPETENCIA) AS EXERCICIO, " +
-                "       EXTRACT(MONTH FROM DEC.COMPETENCIA) AS MES, " +
-                "       COUNT(1) AS QUANTIDADE, " +
-                "       SUM(CASE  " +
-                "              WHEN DEC.ISSRETIDO != 1 THEN DEC.ISSCALCULADO " +
-                "              ELSE 0 " +
-                "           END) AS ISSQN_PROPRIO, " +
-                "       SUM(CASE  " +
-                "              WHEN DEC.ISSRETIDO = 1 THEN DEC.ISSCALCULADO " +
-                "              ELSE 0  " +
-                "           END) AS ISSQN_RETIDO, " +
-                "       SUM(CASE  " +
-                "              WHEN DEC.ISSRETIDO != 1 AND DEC.SITUACAO = :PAGA THEN DEC.ISSCALCULADO  " +
-                "              ELSE 0 " +
-                "           END) AS ISSQN_PAGO," +
-                "       SUM(DEC.TOTALSERVICOS) AS VALOR_SERVICO " +
-                "     FROM DECLARACAOPRESTACAOSERVICO DEC " +
-                "    LEFT JOIN NOTAFISCAL NF ON NF.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID  " +
-                "    LEFT JOIN SERVICODECLARADO SD ON SD.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID AND SD.TIPOSERVICODECLARADO = :TIPO_SERVICO_PRESTADO " +
-                "    INNER JOIN CADASTROECONOMICO CE ON CE.ID = COALESCE(NF.PRESTADOR_ID, SD.CADASTROECONOMICO_ID) " +
-                " WHERE (NF.ID IS NOT NULL OR SD.ID IS NOT NULL)" +
-                "   AND CE.ID = :PRESTADOR_ID " +
-                "   AND DEC.SITUACAO != :CANCELADA " +
-                "   AND trunc(DEC.COMPETENCIA) BETWEEN :COMPETENCIA_INICIAL AND :COMPETENCIA_FINAL " +
-                " GROUP BY EXTRACT(YEAR FROM DEC.COMPETENCIA), EXTRACT(MONTH FROM DEC.COMPETENCIA) ";
+            "       EXTRACT(YEAR FROM DEC.COMPETENCIA) AS EXERCICIO, " +
+            "       EXTRACT(MONTH FROM DEC.COMPETENCIA) AS MES, " +
+            "       COUNT(1) AS QUANTIDADE, " +
+            "       SUM(CASE  " +
+            "              WHEN DEC.ISSRETIDO != 1 THEN DEC.ISSCALCULADO " +
+            "              ELSE 0 " +
+            "           END) AS ISSQN_PROPRIO, " +
+            "       SUM(CASE  " +
+            "              WHEN DEC.ISSRETIDO = 1 THEN DEC.ISSCALCULADO " +
+            "              ELSE 0  " +
+            "           END) AS ISSQN_RETIDO, " +
+            "       SUM(CASE  " +
+            "              WHEN DEC.ISSRETIDO != 1 AND DEC.SITUACAO = :PAGA THEN DEC.ISSCALCULADO  " +
+            "              ELSE 0 " +
+            "           END) AS ISSQN_PAGO," +
+            "       SUM(DEC.TOTALSERVICOS) AS VALOR_SERVICO " +
+            "     FROM DECLARACAOPRESTACAOSERVICO DEC " +
+            "    LEFT JOIN NOTAFISCAL NF ON NF.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID  " +
+            "    LEFT JOIN SERVICODECLARADO SD ON SD.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID AND SD.TIPOSERVICODECLARADO = :TIPO_SERVICO_PRESTADO " +
+            "    INNER JOIN CADASTROECONOMICO CE ON CE.ID = COALESCE(NF.PRESTADOR_ID, SD.CADASTROECONOMICO_ID) " +
+            " WHERE (NF.ID IS NOT NULL OR SD.ID IS NOT NULL)" +
+            "   AND CE.ID = :PRESTADOR_ID " +
+            "   AND DEC.SITUACAO != :CANCELADA " +
+            "   AND trunc(DEC.COMPETENCIA) BETWEEN :COMPETENCIA_INICIAL AND :COMPETENCIA_FINAL " +
+            " GROUP BY EXTRACT(YEAR FROM DEC.COMPETENCIA), EXTRACT(MONTH FROM DEC.COMPETENCIA) ";
 
         Query q = em.createNativeQuery(sql);
         q.setParameter("PRESTADOR_ID", prestadorId);
@@ -980,33 +980,33 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
                                                                                                          Date competenciaFinal) {
         List<LivroFiscalCompetenciaNfseDTO> competencias = Lists.newArrayList();
         String sql = " SELECT " +
-                "       EXTRACT(YEAR FROM DEC.COMPETENCIA) AS EXERCICIO, " +
-                "       EXTRACT(MONTH FROM DEC.COMPETENCIA) AS MES, " +
-                "       COUNT(1) AS QUANTIDADE, " +
-                "       SUM(CASE  " +
-                "              WHEN COALESCE(DEC.ISSRETIDO, 0) = 0 THEN DEC.ISSCALCULADO " +
-                "              ELSE 0 " +
-                "           END) AS ISSQN_PROPRIO, " +
-                "       SUM(CASE  " +
-                "              WHEN DEC.ISSRETIDO = 1 THEN DEC.ISSCALCULADO " +
-                "              ELSE 0  " +
-                "           END) AS ISSQN_RETIDO, " +
-                "       SUM(CASE  " +
-                "              WHEN DEC.ISSRETIDO = 1 AND DEC.SITUACAO = :PAGA THEN DEC.ISSCALCULADO  " +
-                "              ELSE 0 " +
-                "           END) AS ISSQN_PAGO," +
-                "       SUM(DEC.TOTALSERVICOS) AS VALOR_SERVICO " +
-                "   FROM DECLARACAOPRESTACAOSERVICO DEC " +
-                "  LEFT JOIN NOTAFISCAL NF ON NF.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID  " +
-                "  LEFT JOIN SERVICODECLARADO SD ON SD.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID AND SD.TIPOSERVICODECLARADO = :TIPO_SERVICO_TOMADO " +
-                "  LEFT JOIN DADOSPESSOAISNFSE DPT ON DPT.ID = DEC.DADOSPESSOAISTOMADOR_ID " +
-                "  LEFT JOIN PESSOAJURIDICA PJT ON PJT.CNPJ = DPT.CPFCNPJ " +
-                "  INNER JOIN CADASTROECONOMICO CE ON CE.PESSOA_ID = PJT.ID " +
-                " WHERE (NF.ID IS NOT NULL OR SD.ID IS NOT NULL) " +
-                "   AND CE.ID = :PRESTADOR_ID  " +
-                "   AND DEC.SITUACAO != :CANCELADA " +
-                "   AND DEC.COMPETENCIA BETWEEN :COMPETENCIA_INICIAL AND :COMPETENCIA_FINAL " +
-                " GROUP BY EXTRACT(YEAR FROM DEC.COMPETENCIA), EXTRACT(MONTH FROM DEC.COMPETENCIA) ";
+            "       EXTRACT(YEAR FROM DEC.COMPETENCIA) AS EXERCICIO, " +
+            "       EXTRACT(MONTH FROM DEC.COMPETENCIA) AS MES, " +
+            "       COUNT(1) AS QUANTIDADE, " +
+            "       SUM(CASE  " +
+            "              WHEN COALESCE(DEC.ISSRETIDO, 0) = 0 THEN DEC.ISSCALCULADO " +
+            "              ELSE 0 " +
+            "           END) AS ISSQN_PROPRIO, " +
+            "       SUM(CASE  " +
+            "              WHEN DEC.ISSRETIDO = 1 THEN DEC.ISSCALCULADO " +
+            "              ELSE 0  " +
+            "           END) AS ISSQN_RETIDO, " +
+            "       SUM(CASE  " +
+            "              WHEN DEC.ISSRETIDO = 1 AND DEC.SITUACAO = :PAGA THEN DEC.ISSCALCULADO  " +
+            "              ELSE 0 " +
+            "           END) AS ISSQN_PAGO," +
+            "       SUM(DEC.TOTALSERVICOS) AS VALOR_SERVICO " +
+            "   FROM DECLARACAOPRESTACAOSERVICO DEC " +
+            "  LEFT JOIN NOTAFISCAL NF ON NF.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID  " +
+            "  LEFT JOIN SERVICODECLARADO SD ON SD.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID AND SD.TIPOSERVICODECLARADO = :TIPO_SERVICO_TOMADO " +
+            "  LEFT JOIN DADOSPESSOAISNFSE DPT ON DPT.ID = DEC.DADOSPESSOAISTOMADOR_ID " +
+            "  LEFT JOIN PESSOAJURIDICA PJT ON PJT.CNPJ = DPT.CPFCNPJ " +
+            "  INNER JOIN CADASTROECONOMICO CE ON CE.PESSOA_ID = PJT.ID " +
+            " WHERE (NF.ID IS NOT NULL OR SD.ID IS NOT NULL) " +
+            "   AND CE.ID = :PRESTADOR_ID  " +
+            "   AND DEC.SITUACAO != :CANCELADA " +
+            "   AND DEC.COMPETENCIA BETWEEN :COMPETENCIA_INICIAL AND :COMPETENCIA_FINAL " +
+            " GROUP BY EXTRACT(YEAR FROM DEC.COMPETENCIA), EXTRACT(MONTH FROM DEC.COMPETENCIA) ";
 
         Query q = em.createNativeQuery(sql);
         q.setParameter("PRESTADOR_ID", prestadorId);
@@ -1039,26 +1039,26 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
                                                                                                Date competenciaFinal) {
         List<LivroFiscalCompetenciaNfseDTO> competencias = Lists.newArrayList();
         String sql = " SELECT " +
-                "    E.ANO AS EXERCICIO, " +
-                "    FUNCMESTONUMERO(DMS.MES) AS MES, " +
-                "    COUNT(DISTINCT IDS.ID) AS QUANTIDADE, " +
-                "    SUM(IDS.ISS) AS ISSQN_PROPRIO, " +
-                "    SUM(CASE " +
-                "            WHEN DEC.SITUACAO = :PAGA THEN IDS.ISS " +
-                "            ELSE 0 " +
-                "        END) AS ISSQN_PAGO, " +
-                "    SUM(IDS.VALORSERVICO) AS VALOR_SERVICO " +
-                "   FROM DECLARACAOMENSALSERVICO DMS " +
-                "  INNER JOIN EXERCICIO E ON E.ID = DMS.EXERCICIO_ID " +
-                "  INNER JOIN NOTADECLARADA ND ON ND.DECLARACAOMENSALSERVICO_ID = DMS.ID " +
-                "  INNER JOIN DECLARACAOPRESTACAOSERVICO DEC ON DEC.ID = ND.DECLARACAOPRESTACAOSERVICO_ID " +
-                "  INNER JOIN ITEMDECLARACAOSERVICO IDS ON IDS.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID " +
-                "  INNER JOIN CADASTROECONOMICO CE ON CE.ID = DMS.PRESTADOR_ID " +
-                "WHERE CE.ID = :PRESTADOR_ID " +
-                "  AND DMS.SITUACAO != :CANCELADO " +
-                "  AND DMS.TIPOMOVIMENTO = :INSTITUICAO_FINANCEIRA " +
-                "  AND TO_DATE('01/'||LPAD(FUNCMESTONUMERO(DMS.MES), 2, 0)||'/'||E.ANO, 'dd/MM/yyyy') BETWEEN :COMPETENCIA_INICIAL AND :COMPETENCIA_FINAL " +
-                "GROUP BY E.ANO, FUNCMESTONUMERO(DMS.MES) ";
+            "    E.ANO AS EXERCICIO, " +
+            "    FUNCMESTONUMERO(DMS.MES) AS MES, " +
+            "    COUNT(DISTINCT IDS.ID) AS QUANTIDADE, " +
+            "    SUM(IDS.ISS) AS ISSQN_PROPRIO, " +
+            "    SUM(CASE " +
+            "            WHEN DEC.SITUACAO = :PAGA THEN IDS.ISS " +
+            "            ELSE 0 " +
+            "        END) AS ISSQN_PAGO, " +
+            "    SUM(IDS.VALORSERVICO) AS VALOR_SERVICO " +
+            "   FROM DECLARACAOMENSALSERVICO DMS " +
+            "  INNER JOIN EXERCICIO E ON E.ID = DMS.EXERCICIO_ID " +
+            "  INNER JOIN NOTADECLARADA ND ON ND.DECLARACAOMENSALSERVICO_ID = DMS.ID " +
+            "  INNER JOIN DECLARACAOPRESTACAOSERVICO DEC ON DEC.ID = ND.DECLARACAOPRESTACAOSERVICO_ID " +
+            "  INNER JOIN ITEMDECLARACAOSERVICO IDS ON IDS.DECLARACAOPRESTACAOSERVICO_ID = DEC.ID " +
+            "  INNER JOIN CADASTROECONOMICO CE ON CE.ID = DMS.PRESTADOR_ID " +
+            "WHERE CE.ID = :PRESTADOR_ID " +
+            "  AND DMS.SITUACAO != :CANCELADO " +
+            "  AND DMS.TIPOMOVIMENTO = :INSTITUICAO_FINANCEIRA " +
+            "  AND TO_DATE('01/'||LPAD(FUNCMESTONUMERO(DMS.MES), 2, 0)||'/'||E.ANO, 'dd/MM/yyyy') BETWEEN :COMPETENCIA_INICIAL AND :COMPETENCIA_FINAL " +
+            "GROUP BY E.ANO, FUNCMESTONUMERO(DMS.MES) ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("PRESTADOR_ID", prestadorId);
         q.setParameter("CANCELADO", DeclaracaoMensalServico.Situacao.CANCELADO.name());
@@ -1111,7 +1111,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         Integer mes = DataUtil.getMes(competencia);
         for (LivroFiscalCompetenciaNfseDTO competenciaExtratoContaCorrenteNfseDTO : competencias) {
             if (competenciaExtratoContaCorrenteNfseDTO.getExercicio().equals(exercicio) &&
-                    competenciaExtratoContaCorrenteNfseDTO.getMes().equals(mes)) {
+                competenciaExtratoContaCorrenteNfseDTO.getMes().equals(mes)) {
                 return true;
             }
         }
@@ -1124,7 +1124,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         for (DeclaracaoMensalServico dms : declaracoes) {
             for (NotaDeclarada nota : dms.getNotas()) {
                 if (nota.getDeclaracaoPrestacaoServico().getIssRetido() &&
-                        TipoMovimentoMensal.NORMAL.equals(dms.getTipoMovimento())) {
+                    TipoMovimentoMensal.NORMAL.equals(dms.getTipoMovimento())) {
                     continue;
                 }
                 if (SituacaoNota.EMITIDA.equals(nota.getDeclaracaoPrestacaoServico().getSituacao())) {
@@ -1142,8 +1142,8 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public boolean hasDeclaracaoMensalServico(Long idDeclaracaoPrestacaoServico) {
         Query q = em.createNativeQuery(" select 1 from declaracaomensalservico dms " +
-                "  inner join notadeclarada nd on nd.declaracaomensalservico_id = dms.id " +
-                "  where dms.situacao != :situacao and nd.declaracaoprestacaoservico_id =:id_declaracao ");
+            "  inner join notadeclarada nd on nd.declaracaomensalservico_id = dms.id " +
+            "  where dms.situacao != :situacao and nd.declaracaoprestacaoservico_id =:id_declaracao ");
         q.setParameter("situacao", DeclaracaoMensalServico.Situacao.CANCELADO.name());
         q.setParameter("id_declaracao", idDeclaracaoPrestacaoServico);
         return !q.getResultList().isEmpty();
@@ -1151,11 +1151,11 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public List<DeclaracaoMensalServico> buscarDeclaracaoMensalServicoPorCalculo(Calculo calculo) {
         Query q = em.createNativeQuery("select dec.* " +
-                " from DeclaracaoMensalServico dec " +
-                " inner join exercicio ex on ex.id = dec.exercicio_id " +
-                " left join processocalculo proc on proc.id = dec.processocalculo_id" +
-                " left join calculo on calculo.processocalculo_id = proc.id " +
-                " where calculo.id = :calculoId", DeclaracaoMensalServico.class);
+            " from DeclaracaoMensalServico dec " +
+            " inner join exercicio ex on ex.id = dec.exercicio_id " +
+            " left join processocalculo proc on proc.id = dec.processocalculo_id" +
+            " left join calculo on calculo.processocalculo_id = proc.id " +
+            " where calculo.id = :calculoId", DeclaracaoMensalServico.class);
 
         q.setParameter("calculoId", calculo.getId());
         return q.getResultList();
@@ -1167,13 +1167,13 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
     public List<DeclaracaoMensalServico> buscarDMSdaNota(Long idNota) {
         String sql = "select dms.* " +
-                "from DECLARACAOMENSALSERVICO dms " +
-                "         inner join NOTADECLARADA nd " +
-                "                    on dms.ID = nd.DECLARACAOMENSALSERVICO_ID " +
-                "         inner join DECLARACAOPRESTACAOSERVICO " +
-                "                    on nd.DECLARACAOPRESTACAOSERVICO_ID = DECLARACAOPRESTACAOSERVICO.ID " +
-                "         inner join notafiscal on DECLARACAOPRESTACAOSERVICO.ID = NOTAFISCAL.DECLARACAOPRESTACAOSERVICO_ID " +
-                "where NOTAFISCAL.ID = :idNota";
+            "from DECLARACAOMENSALSERVICO dms " +
+            "         inner join NOTADECLARADA nd " +
+            "                    on dms.ID = nd.DECLARACAOMENSALSERVICO_ID " +
+            "         inner join DECLARACAOPRESTACAOSERVICO " +
+            "                    on nd.DECLARACAOPRESTACAOSERVICO_ID = DECLARACAOPRESTACAOSERVICO.ID " +
+            "         inner join notafiscal on DECLARACAOPRESTACAOSERVICO.ID = NOTAFISCAL.DECLARACAOPRESTACAOSERVICO_ID " +
+            "where NOTAFISCAL.ID = :idNota";
 
         Query q = em.createNativeQuery(sql, DeclaracaoMensalServico.class);
         q.setParameter("idNota", idNota);
@@ -1186,7 +1186,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         ImprimeRelatorioNfse imprimeRelatorioNfse = gerarImprimeRelatorioLivroFiscal(dto, cadastroEconomico);
         String jasper = getJasperLivroFiscal(dto);
         JasperPrint jasperPrint = imprimeRelatorioNfse.
-                gerarJasperPrintPdf(jasper, Lists.newArrayList(dto), usuario);
+            gerarJasperPrintPdf(jasper, Lists.newArrayList(dto), usuario);
         return new AsyncResult<>(jasperPrint);
     }
 
@@ -1202,19 +1202,19 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         TipoMovimentoMensal tipoMovimentoMensal = TipoMovimentoMensal.valueOf(dto.getTipoMovimento().name());
         if (TipoMovimentoMensal.INSTITUICAO_FINANCEIRA.equals(tipoMovimentoMensal)) {
             dto.setContasDesif(notaFiscalFacade.buscarContasDesif(cadastroEconomico.getId(), dto.getExercicio(),
-                    dto.getMes()));
+                dto.getMes()));
         } else {
             dto.setDocumentos(notaFiscalFacade.buscarNotasPorCompetenciaAndTipo(cadastroEconomico.getId(),
-                    dto.getExercicio(), dto.getMes(), tipoMovimentoMensal, null));
+                dto.getExercicio(), dto.getMes(), tipoMovimentoMensal, null));
             dto.setTotalPorNaturezaSituacao(notaFiscalFacade.agruparPorNaturezaOperacaoAndSituacao(
-                    dto.getTotalPorNaturezaSituacao(), dto.getDocumentos()));
+                dto.getTotalPorNaturezaSituacao(), dto.getDocumentos()));
         }
 
         return new ImprimeRelatorioNfse().
-                adicionarParametro("DETALHADO", dto.getDetalhado()).
-                adicionarParametro("CONTRIBUINTE", cadastroEconomico.getPessoa().getNomeAutoComplete()).
-                adicionarParametro("PERIODO", "De: " + dto.getMes() + "/" +
-                        dto.getExercicio() + " até: " + dto.getMes() + "/" + dto.getExercicio() + ".");
+            adicionarParametro("DETALHADO", dto.getDetalhado()).
+            adicionarParametro("CONTRIBUINTE", cadastroEconomico.getPessoa().getNomeAutoComplete()).
+            adicionarParametro("PERIODO", "De: " + dto.getMes() + "/" +
+                dto.getExercicio() + " até: " + dto.getMes() + "/" + dto.getExercicio() + ".");
     }
 
     public void removerNotaFiscalEncerramento(DeclaracaoMensalServico declaracaoMensalServico,
@@ -1241,12 +1241,12 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
 
         for (NotaDeclarada notaDeclarada : declaracaoMensalServico.getNotas()) {
             if (!notaDeclarada.getDeclaracaoPrestacaoServico().getIssRetido() ||
-                    !TipoMovimentoMensal.NORMAL.equals(declaracaoMensalServico.getTipoMovimento())) {
+                !TipoMovimentoMensal.NORMAL.equals(declaracaoMensalServico.getTipoMovimento())) {
                 declaracaoMensalServico.setQtdNotas(declaracaoMensalServico.getQtdNotas() + 1);
                 declaracaoMensalServico.setTotalServicos(declaracaoMensalServico.getTotalServicos()
-                        .add(notaDeclarada.getDeclaracaoPrestacaoServico().getTotalServicos()));
+                    .add(notaDeclarada.getDeclaracaoPrestacaoServico().getTotalServicos()));
                 declaracaoMensalServico.setTotalIss(declaracaoMensalServico.getTotalIss()
-                        .add(notaDeclarada.getDeclaracaoPrestacaoServico().getIssCalculado()));
+                    .add(notaDeclarada.getDeclaracaoPrestacaoServico().getIssCalculado()));
             }
         }
         em.merge(declaracaoMensalServico);
@@ -1290,7 +1290,7 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         ConfiguracaoNfseDivida configuracaoNfseDivida = configuracaoNfse.buscarConfiguracaoDivida(declaracaoMensalServico.getTipoMovimento(), declaracaoMensalServico.getTipo());
         ConsultaParcela consultaParcela = new ConsultaParcela();
         consultaParcela.addComplementoJoin(" inner join calculo c on c.id = vw.calculo_id " +
-                " inner join processocalculoiss pciss on pciss.id = c.processocalculo_id ");
+            " inner join processocalculoiss pciss on pciss.id = c.processocalculo_id ");
         consultaParcela.addParameter(ConsultaParcela.Campo.EXERCICIO_ANO, ConsultaParcela.Operador.IGUAL, declaracaoMensalServico.getExercicio().getAno());
         consultaParcela.addParameter(ConsultaParcela.Campo.DIVIDA_ID, ConsultaParcela.Operador.IGUAL, configuracaoNfseDivida.getDividaNfse().getId());
         consultaParcela.addParameter(ConsultaParcela.Campo.CADASTRO_ID, ConsultaParcela.Operador.IGUAL, declaracaoMensalServico.getPrestador().getId());
@@ -1354,37 +1354,37 @@ public class DeclaracaoMensalServicoFacade extends CalculoExecutorDepoisDePagar<
         List<RBT12NfseDTO> registros = Lists.newArrayList();
 
         String sql = " with competencias as ( " +
-                "    select to_date(to_char(add_months(:competencia_final,  - level + 1), 'MMyyyy'), 'MMyyyy') as competencia " +
-                "       from dual " +
-                "    connect by level <= round(months_between(:competencia_final, :competencia_inicial))), " +
-                "    valores as (select " +
-                "                      to_date(to_char(dec.competencia, 'MMyyyy'), 'MMyyyy') as competencia, " +
-                "                      count(1) as total_notas, " +
-                "                      sum(dec.totalservicos) as total_servicos, " +
-                "                      sum(case " +
-                "                              when dec.issretido != 1 then dec.isscalculado " +
-                "                              else 0 " +
-                "                          end) as issqn_proprio, " +
-                "                      sum(case " +
-                "                              when dec.issretido = 1 then dec.isscalculado " +
-                "                              else 0 " +
-                "                          end) as issqn_retido " +
+            "    select to_date(to_char(add_months(:competencia_final,  - level + 1), 'MMyyyy'), 'MMyyyy') as competencia " +
+            "       from dual " +
+            "    connect by level <= round(months_between(:competencia_final, :competencia_inicial))), " +
+            "    valores as (select " +
+            "                      to_date(to_char(dec.competencia, 'MMyyyy'), 'MMyyyy') as competencia, " +
+            "                      count(1) as total_notas, " +
+            "                      sum(dec.totalservicos) as total_servicos, " +
+            "                      sum(case " +
+            "                              when dec.issretido != 1 then dec.isscalculado " +
+            "                              else 0 " +
+            "                          end) as issqn_proprio, " +
+            "                      sum(case " +
+            "                              when dec.issretido = 1 then dec.isscalculado " +
+            "                              else 0 " +
+            "                          end) as issqn_retido " +
             "                  from notafiscal nf " +
             "                 inner join declaracaoprestacaoservico dec on dec.id = nf.declaracaoprestacaoservico_id " +
             "                 inner join cadastroeconomico ce on ce.id = nf.prestador_id " +
             "                where dec.situacao != :cancelada " +
             "                  and ce.id = :prestador_id " +
-                "                group by to_date(to_char(dec.competencia, 'MMyyyy'), 'MMyyyy')) " +
-                " select extract(year from c.competencia) as exercicio, " +
-                "        extract(month from c.competencia) as mes, " +
-                "        coalesce(valores.total_notas, 0) as total_notas, " +
-                "        coalesce(valores.total_servicos, 0) as total_servicos, " +
-                "        coalesce(valores.issqn_proprio, 0) as issqn_proprio, " +
-                "        coalesce(valores.issqn_retido, 0) as issqn_retido, " +
+            "                group by to_date(to_char(dec.competencia, 'MMyyyy'), 'MMyyyy')) " +
+            " select extract(year from c.competencia) as exercicio, " +
+            "        extract(month from c.competencia) as mes, " +
+            "        coalesce(valores.total_notas, 0) as total_notas, " +
+            "        coalesce(valores.total_servicos, 0) as total_servicos, " +
+            "        coalesce(valores.issqn_proprio, 0) as issqn_proprio, " +
+            "        coalesce(valores.issqn_retido, 0) as issqn_retido, " +
             "            func_rbt12(c.competencia, :prestador_id) as rbt12 " +
-                "    from competencias c " +
-                "   left join valores on valores.competencia = c.competencia " +
-                " order by c.competencia ";
+            "    from competencias c " +
+            "   left join valores on valores.competencia = c.competencia " +
+            " order by c.competencia ";
 
         Query q = em.createNativeQuery(sql);
         q.setParameter("prestador_id", prestadorId);

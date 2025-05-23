@@ -7,7 +7,10 @@ import br.com.webpublico.entidades.comum.trocatag.TrocaTagAvaliacaoFiscalSolicit
 import br.com.webpublico.entidades.comum.trocatag.TrocaTagRejeicaoSolicitacaoItbiOnline;
 import br.com.webpublico.entidadesauxiliares.VODadosCadastroITBI;
 import br.com.webpublico.entidadesauxiliares.VOProprietarioITBI;
-import br.com.webpublico.enums.*;
+import br.com.webpublico.enums.SituacaoITBI;
+import br.com.webpublico.enums.SituacaoSolicitacaoITBI;
+import br.com.webpublico.enums.TipoITBI;
+import br.com.webpublico.enums.TipoProprietario;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.negocios.comum.ConfiguracaoEmailFacade;
 import br.com.webpublico.negocios.comum.TemplateEmailFacade;
@@ -646,8 +649,11 @@ public class SolicitacaoItbiOnlineFacade extends AbstractFacade<SolicitacaoItbiO
         }
         solicitacaoItbiOnline = super.salvarRetornando(solicitacaoItbiOnline);
         if (registrarTramite) {
-            adicionarTramite(solicitacaoItbiOnline, sistemaFacade.getUsuarioCorrente().getNome(),
-                SituacaoSolicitacaoITBI.EM_ANALISE, "");
+            TramiteSolicitacaoItbiOnline tramite = new TramiteSolicitacaoItbiOnline();
+            tramite.setSolicitacaoItbiOnline(solicitacaoItbiOnline);
+            tramite.setUsuario(sistemaFacade.getUsuarioCorrente().getNome());
+            tramite.setSituacaoSolicitacaoITBI(SituacaoSolicitacaoITBI.EM_ANALISE);
+            tramiteSolicitacaoItbiOnlineFacade.salvar(tramite);
         }
         return solicitacaoItbiOnline;
     }
@@ -655,8 +661,11 @@ public class SolicitacaoItbiOnlineFacade extends AbstractFacade<SolicitacaoItbiO
     public void aprovarSolicitacao(SolicitacaoItbiOnline solicitacaoItbiOnline) {
         solicitacaoItbiOnline.setSituacao(SituacaoSolicitacaoITBI.APROVADA);
         salvar(solicitacaoItbiOnline);
-        adicionarTramite(solicitacaoItbiOnline, sistemaFacade.getUsuarioCorrente().getNome(),
-            SituacaoSolicitacaoITBI.APROVADA, "");
+        TramiteSolicitacaoItbiOnline tramite = new TramiteSolicitacaoItbiOnline();
+        tramite.setSolicitacaoItbiOnline(solicitacaoItbiOnline);
+        tramite.setUsuario(sistemaFacade.getUsuarioCorrente().getNome());
+        tramite.setSituacaoSolicitacaoITBI(SituacaoSolicitacaoITBI.APROVADA);
+        tramiteSolicitacaoItbiOnlineFacade.salvar(tramite);
     }
 
     public void rejeitarSolicitacao(SolicitacaoItbiOnline solicitacaoItbiOnline,
@@ -666,42 +675,11 @@ public class SolicitacaoItbiOnlineFacade extends AbstractFacade<SolicitacaoItbiO
         }
         solicitacaoItbiOnline.setSituacao(SituacaoSolicitacaoITBI.REJEITADA);
         salvar(solicitacaoItbiOnline);
-        adicionarTramite(solicitacaoItbiOnline, sistemaFacade.getUsuarioCorrente().getNome(),
-            SituacaoSolicitacaoITBI.REJEITADA, motivoRejeicao);
-    }
-
-    private void adicionarTramite(SolicitacaoItbiOnline solicitacaoItbiOnline,
-                                  String usuario,
-                                  SituacaoSolicitacaoITBI situacaoSolicitacaoITBI,
-                                  String observacao) {
-        adicionarTramite(solicitacaoItbiOnline, usuario, situacaoSolicitacaoITBI, observacao,
-            null, null, null);
-    }
-
-    private void adicionarTramite(SolicitacaoItbiOnline solicitacaoItbiOnline,
-                                  String usuario,
-                                  SituacaoSolicitacaoITBI situacaoSolicitacaoITBI,
-                                  String observacao,
-                                  UsuarioSistema auditorFiscal) {
-        adicionarTramite(solicitacaoItbiOnline, usuario, situacaoSolicitacaoITBI, observacao,
-            auditorFiscal, null, null);
-    }
-
-    private void adicionarTramite(SolicitacaoItbiOnline solicitacaoItbiOnline,
-                                  String usuario,
-                                  SituacaoSolicitacaoITBI situacaoSolicitacaoITBI,
-                                  String observacao,
-                                  UsuarioSistema auditorFiscal,
-                                  Arquivo arquivo,
-                                  BigDecimal valorAvaliado) {
         TramiteSolicitacaoItbiOnline tramite = new TramiteSolicitacaoItbiOnline();
         tramite.setSolicitacaoItbiOnline(solicitacaoItbiOnline);
-        tramite.setUsuario(usuario);
-        tramite.setSituacaoSolicitacaoITBI(situacaoSolicitacaoITBI);
-        tramite.setObservacao(observacao);
-        tramite.setAuditorFiscal(auditorFiscal);
-        tramite.setArquivo(arquivo);
-        tramite.setValorAvaliado(valorAvaliado);
+        tramite.setUsuario(sistemaFacade.getUsuarioCorrente().getNome());
+        tramite.setSituacaoSolicitacaoITBI(SituacaoSolicitacaoITBI.REJEITADA);
+        tramite.setObservacao(motivoRejeicao);
         tramiteSolicitacaoItbiOnlineFacade.salvar(tramite);
     }
 
@@ -725,13 +703,15 @@ public class SolicitacaoItbiOnlineFacade extends AbstractFacade<SolicitacaoItbiO
         if (auditorFiscal == null) {
             throw new ValidacaoException("O campo Auditor Fiscal deve ser informado.");
         }
-        solicitacaoItbiOnline.setDataDesignacao(new Date());
         solicitacaoItbiOnline.setAuditorFiscal(auditorFiscal);
         solicitacaoItbiOnline.setSituacao(SituacaoSolicitacaoITBI.DESIGNADA);
         salvar(solicitacaoItbiOnline);
-
-        adicionarTramite(solicitacaoItbiOnline, sistemaFacade.getUsuarioCorrente().getNome(),
-            SituacaoSolicitacaoITBI.DESIGNADA, "", auditorFiscal);
+        TramiteSolicitacaoItbiOnline tramite = new TramiteSolicitacaoItbiOnline();
+        tramite.setSolicitacaoItbiOnline(solicitacaoItbiOnline);
+        tramite.setUsuario(sistemaFacade.getUsuarioCorrente().getNome());
+        tramite.setSituacaoSolicitacaoITBI(SituacaoSolicitacaoITBI.DESIGNADA);
+        tramite.setAuditorFiscal(auditorFiscal);
+        tramiteSolicitacaoItbiOnlineFacade.salvar(tramite);
     }
 
     private void validarAvaliacaoSolicitacao(Arquivo planilhaAvaliacao,
@@ -758,37 +738,37 @@ public class SolicitacaoItbiOnlineFacade extends AbstractFacade<SolicitacaoItbiO
                                            SituacaoSolicitacaoITBI situacaoSolicitacaoITBI) {
         planilhaAvaliacao = planilhaAvaliacao != null ? em.merge(planilhaAvaliacao) : null;
 
-        if (situacaoSolicitacaoITBI.equals(SituacaoSolicitacaoITBI.INDEFERIDA)) {
+        if (SituacaoSolicitacaoITBI.AVALIADA.equals(situacaoSolicitacaoITBI)) {
             validarAvaliacaoSolicitacao(planilhaAvaliacao, valorAvaliado, parecer);
         }
-
         solicitacaoItbiOnline.setPlanilhaAvaliacao(planilhaAvaliacao);
         solicitacaoItbiOnline.setValorAvaliado(valorAvaliado);
         solicitacaoItbiOnline.setSituacao(situacaoSolicitacaoITBI);
         salvar(solicitacaoItbiOnline);
 
-        adicionarTramite(solicitacaoItbiOnline, usuario,
-            situacaoSolicitacaoITBI, parecer, null, planilhaAvaliacao, valorAvaliado);
+        TramiteSolicitacaoItbiOnline tramite = new TramiteSolicitacaoItbiOnline();
+        tramite.setSolicitacaoItbiOnline(solicitacaoItbiOnline);
+        tramite.setUsuario(usuario);
+        tramite.setSituacaoSolicitacaoITBI(situacaoSolicitacaoITBI);
+        tramite.setArquivo(planilhaAvaliacao);
+        tramite.setValorAvaliado(valorAvaliado);
+        tramite.setObservacao(parecer);
+        tramiteSolicitacaoItbiOnlineFacade.salvar(tramite);
     }
 
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 1)
     public AssistenteBarraProgresso homologarSolicitacao(AssistenteBarraProgresso assistente,
-                                                         String usuario) throws Exception {
+                                                         String usuario,
+                                                         Arquivo planilhaAvaliacao,
+                                                         BigDecimal valorAvaliado,
+                                                         String parecer) throws Exception {
         SolicitacaoItbiOnline solicitacaoItbiOnline = (SolicitacaoItbiOnline) assistente.getSelecionado();
-        solicitacaoItbiOnline.setSituacao(SituacaoSolicitacaoITBI.HOMOLOGADA);
-        solicitacaoItbiOnline = salvarRetornando(solicitacaoItbiOnline);
-        adicionarTramite(solicitacaoItbiOnline, usuario, SituacaoSolicitacaoITBI.HOMOLOGADA, "",
-            null, solicitacaoItbiOnline.getPlanilhaAvaliacao(), solicitacaoItbiOnline.getValorAvaliado());
+        salvarAvaliacaoSolicitacao(solicitacaoItbiOnline, usuario, planilhaAvaliacao,
+            valorAvaliado, parecer, SituacaoSolicitacaoITBI.HOMOLOGADA);
         ProcessoCalculoITBI processoCalculoITBI = criarProcessoCalculoITBI(solicitacaoItbiOnline,
             assistente.getUsuarioSistema());
         processoCalculoITBI = calculoITBIFacade.salvarRetornando(processoCalculoITBI);
-        criarLaudoJaAssinadoPeloChefeITBI(processoCalculoITBI);
         geraValorDividaITBI.gerarDebito(processoCalculoITBI, false);
-        transferirProprietarios(assistente, processoCalculoITBI);
-        return assistente;
-    }
-
-    private void transferirProprietarios(AssistenteBarraProgresso assistente, ProcessoCalculoITBI processoCalculoITBI) {
         boolean todosCalculosIsentos = true;
         for (CalculoITBI calculo : processoCalculoITBI.getCalculos()) {
             if (!calculo.getIsento()) {
@@ -799,17 +779,7 @@ public class SolicitacaoItbiOnlineFacade extends AbstractFacade<SolicitacaoItbiO
         if (todosCalculosIsentos) {
             calculoITBIFacade.transferirProprietariosCadastro(processoCalculoITBI, assistente);
         }
-    }
-
-    private void criarLaudoJaAssinadoPeloChefeITBI(ProcessoCalculoITBI processoCalculoITBI) {
-        LaudoAvaliacaoITBI laudoAvaliacaoITBI = calculoITBIFacade.recuperarLaudo(processoCalculoITBI);
-        if (laudoAvaliacaoITBI == null) {
-            ParametrosITBI parametroItbi = parametroITBIFacade.getParametroVigente(processoCalculoITBI.getExercicio(), processoCalculoITBI.getTipoITBI());
-            laudoAvaliacaoITBI = new LaudoAvaliacaoITBI();
-            laudoAvaliacaoITBI.setProcessoCalculoITBI(processoCalculoITBI);
-            laudoAvaliacaoITBI.setDiretorChefeDeparTributo(parametroItbi.getFuncionarioPorFuncao(TipoFuncaoParametrosITBI.DIRETOR_CHEFE_DEPARTAMENTO_TRIBUTO));
-            calculoITBIFacade.salvarLaudoAvaliacao(laudoAvaliacaoITBI);
-        }
+        return assistente;
     }
 
     private ProcessoCalculoITBI criarProcessoCalculoITBI(SolicitacaoItbiOnline solicitacaoItbiOnline,
@@ -936,16 +906,15 @@ public class SolicitacaoItbiOnlineFacade extends AbstractFacade<SolicitacaoItbiO
     }
 
     public ProcessoCalculoITBI buscarProcessoCalculoITBIDaSolicitacao(SolicitacaoItbiOnline solicitacaoItbiOnline) {
-        List<ProcessoCalculoITBI> processos = em.createQuery("from ProcessoCalculoITBI p where p.solicitacaoItbiOnline = :solicitacaoItbiOnline ")
-            .setParameter("solicitacaoItbiOnline", solicitacaoItbiOnline)
-            .getResultList();
-        if (!processos.isEmpty()) {
-            processos.sort(Comparator.comparing(ProcessoCalculoITBI::getId).reversed());
-            ProcessoCalculoITBI processoCalculoITBI = processos.get(0);
+        try {
+            ProcessoCalculoITBI processoCalculoITBI = (ProcessoCalculoITBI) em.createQuery("from ProcessoCalculoITBI p where p.solicitacaoItbiOnline = :solicitacaoItbiOnline ")
+                .setParameter("solicitacaoItbiOnline", solicitacaoItbiOnline)
+                .getSingleResult();
             Hibernate.initialize(processoCalculoITBI.getCalculos());
             return processoCalculoITBI;
+        } catch (Exception e) {
+            return null;
         }
-        return null;
     }
 
     public void enviarEmailAvaliacaoSolicitacao(SolicitacaoItbiOnline solicitacaoItbiOnline) {

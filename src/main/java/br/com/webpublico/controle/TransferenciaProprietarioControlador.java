@@ -157,8 +157,7 @@ public class TransferenciaProprietarioControlador extends PrettyControlador<Tran
     public void efetivarTransferencia() {
         try {
             validarHistorico();
-            assistenteBarraProgresso = new AssistenteBarraProgresso(getSistemaControlador().getUsuarioCorrente(),
-                "Efetivando a Transferência de Proprietários ...", 1);
+            assistenteBarraProgresso = new AssistenteBarraProgresso(getSistemaControlador().getUsuarioCorrente(), "Efetivando a Transferência...", 1);
             future = transferenciaProprietarioFacade.efetivarTransferencia(assistenteBarraProgresso, selecionado, historico);
             FacesUtil.executaJavaScript("dlgHistoricoTransferencia.hide()");
             FacesUtil.executaJavaScript("poll.start()");

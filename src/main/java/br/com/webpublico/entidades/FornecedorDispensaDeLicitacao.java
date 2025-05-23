@@ -3,13 +3,13 @@ package br.com.webpublico.entidades;
 import br.com.webpublico.enums.TipoClassificacaoFornecedor;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.ValidadorEntidade;
-import br.com.webpublico.util.anotacoes.Etiqueta;
-import br.com.webpublico.util.anotacoes.Obrigatorio;
-import br.com.webpublico.util.anotacoes.Pesquisavel;
-import br.com.webpublico.util.anotacoes.Tabelavel;
+import br.com.webpublico.util.IdentidadeDaEntidade;
+import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
+import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 

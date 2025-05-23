@@ -7,7 +7,6 @@ import br.com.webpublico.entidades.tributario.procuradoria.TramiteProcessoJudici
 import br.com.webpublico.entidadesauxiliares.VOMovimentosTributario;
 import br.com.webpublico.negocios.tributario.dao.JdbcCalculoDAO;
 import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
-import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 import org.hibernate.Hibernate;
 import org.jboss.ejb3.annotation.TransactionTimeout;
@@ -20,7 +19,6 @@ import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -471,133 +469,6 @@ public class ParecerTransferenciaMovimentoPessoaFacade extends AbstractFacade<Pa
         transferirPessoaNoEstornoReceitaRealizada(pessoaOrigem, pessoaDestino);
     }
 
-    private void transferirDocumentosPessoais(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirDocumentosPessoais()) {
-            return;
-        }
-        PessoaFisica pessoaOrigem = pessoaFacade.getPessoaFisicaFacade().recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        PessoaFisica pessoaDestino = pessoaFacade.getPessoaFisicaFacade().recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (DocumentoPessoal documentoPessoal : pessoaOrigem.getDocumentosPessoais()) {
-            documentoPessoal.setPessoaFisica(pessoaDestino);
-            Util.adicionarObjetoEmLista(pessoaDestino.getDocumentosPessoais(), documentoPessoal);
-        }
-        em.merge(pessoaDestino);
-    }
-
-    private void transferirEnderecos(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirEnderecos()) {
-            return;
-        }
-        executarUpdateEnderecoCorreio(transferenciaMovPessoa);
-    }
-
-    private void executarUpdateEnderecoCorreio(TransferenciaMovPessoa transferenciaMovPessoa) {
-        String sql = " update pessoa_enderecocorreio set pessoa_id = :pessoaDestino "
-            + " WHERE pessoa_id = :pessoaOrigem ";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("pessoaDestino", transferenciaMovPessoa.getPessoaDestino().getId());
-        q.setParameter("pessoaOrigem", transferenciaMovPessoa.getPessoaOrigem().getId());
-        q.executeUpdate();
-    }
-
-    private void transferirTelefones(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirTelefones()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (Telefone telefone : pessoaOrigem.getTelefones()) {
-            telefone.setPessoa(pessoaDestino);
-            Util.adicionarObjetoEmLista(pessoaDestino.getTelefones(), telefone);
-        }
-        em.merge(pessoaDestino);
-    }
-
-    private void transferirInformacoesBancarias(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirInformacoesBancarias()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (ContaCorrenteBancPessoa contaCorrenteBancPessoa : pessoaOrigem.getContaCorrenteBancPessoas()) {
-            contaCorrenteBancPessoa.setPessoa(pessoaDestino);
-            Util.adicionarObjetoEmLista(pessoaDestino.getContaCorrenteBancPessoas(), contaCorrenteBancPessoa);
-        }
-        em.merge(pessoaDestino);
-    }
-
-    private void transferirDependentesPessoa(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirDependentes()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (Dependente dependente : transferenciaMovPessoaFacade.buscarDependentesPorPessoa(pessoaOrigem)) {
-            dependente.setDependente((PessoaFisica) pessoaDestino);
-            Util.adicionarObjetoEmLista(((PessoaFisica) pessoaDestino).getDependentes(), dependente);
-        }
-        em.merge(pessoaDestino);
-    }
-
-    private void transferirDependentesResponsavel(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirRespDependentes()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (Dependente dependente : transferenciaMovPessoaFacade.buscarDependentesPorResponsavel(pessoaOrigem)) {
-            dependente.setResponsavel((PessoaFisica) pessoaDestino);
-            em.merge(dependente);
-        }
-    }
-
-    private void transferirBeneficiarioPensoesAlimenticias(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirPensoesAlimenticias()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (BeneficioPensaoAlimenticia beneficioPensaoAlimenticia : transferenciaMovPessoaFacade.buscarBeneficioPensaoAlimenticiaPorPessoa((PessoaFisica) pessoaOrigem)) {
-            beneficioPensaoAlimenticia.setPessoaFisicaBeneficiario((PessoaFisica) pessoaDestino);
-            em.merge(beneficioPensaoAlimenticia);
-        }
-    }
-
-    private void transferirResponsaveisPensoesAlimenticias(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirRespPensoesAliment()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (BeneficioPensaoAlimenticia beneficioPensaoAlimenticia : transferenciaMovPessoaFacade.buscarBeneficioPensaoAlimenticiaPorResponsavel((PessoaFisica) pessoaOrigem)) {
-            beneficioPensaoAlimenticia.setPessoaFisicaResponsavel((PessoaFisica) pessoaDestino);
-            em.merge(beneficioPensaoAlimenticia);
-        }
-    }
-
-    private void transferirMatriculas(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirCadastrosRH()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (MatriculaFP matriculaFP : transferenciaMovPessoaFacade.buscarMatriculasPorPessoa((PessoaFisica) pessoaOrigem)) {
-            matriculaFP.setPessoa((PessoaFisica) pessoaDestino);
-            em.merge(matriculaFP);
-        }
-    }
-
-    private void transferirPrestadorServico(TransferenciaMovPessoa transferenciaMovPessoa) {
-        if (!transferenciaMovPessoa.getTransferirCadastrosRH()) {
-            return;
-        }
-        Pessoa pessoaOrigem = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaOrigem().getId());
-        Pessoa pessoaDestino = pessoaFacade.recuperar(transferenciaMovPessoa.getPessoaDestino().getId());
-        for (PrestadorServicos prestador : transferenciaMovPessoaFacade.buscarPrestadorServicosPorPessoa((PessoaFisica) pessoaOrigem)) {
-            prestador.setPrestador((PessoaFisica) pessoaDestino);
-            em.merge(prestador);
-        }
-    }
 
     private void transferirPessoaNoEmpenho(Pessoa pessoaOrigem, Pessoa pessoaDestino) {
         List<Empenho> empenhos = empenhoFacade.recuperarEmpenhosDaPessoa(pessoaOrigem);
@@ -729,16 +600,6 @@ public class ParecerTransferenciaMovimentoPessoaFacade extends AbstractFacade<Pa
             transferirCadastroRural(transferenciaMovPessoa);
             transferirMovimentosTributario(transferenciaMovPessoa);
             transferirMovimentosContabeis(transferenciaMovPessoa);
-            transferirMatriculas(transferenciaMovPessoa);
-            transferirPrestadorServico(transferenciaMovPessoa);
-            transferirDependentesResponsavel(transferenciaMovPessoa);
-            transferirDependentesPessoa(transferenciaMovPessoa);
-            transferirBeneficiarioPensoesAlimenticias(transferenciaMovPessoa);
-            transferirResponsaveisPensoesAlimenticias(transferenciaMovPessoa);
-            transferirDocumentosPessoais(transferenciaMovPessoa);
-            transferirEnderecos(transferenciaMovPessoa);
-            transferirTelefones(transferenciaMovPessoa);
-            transferirInformacoesBancarias(transferenciaMovPessoa);
             inativarPessoaTransferida(transferenciaMovPessoa);
             transferenciaMovPessoaFacade.deferirTransferencia(transferenciaMovPessoa, parametro, usuarioCorrente, unidadeOrcamentariaCorrente);
         } else {
@@ -755,10 +616,10 @@ public class ParecerTransferenciaMovimentoPessoaFacade extends AbstractFacade<Pa
         }
     }
 
-    private void removerCpfCpnjPessoaOrigem(TransferenciaMovPessoa transferenciaMovPessoa) {
+    private void removerCpfCpnjPessoaOrigem(TransferenciaMovPessoa transferenciaMovPessoa){
         if (transferenciaMovPessoa.getPessoaOrigem() instanceof PessoaFisica)
             ((PessoaFisica) transferenciaMovPessoa.getPessoaOrigem()).setCpf(null);
-        else
+         else
             ((PessoaJuridica) transferenciaMovPessoa.getPessoaOrigem()).setCnpj(null);
     }
 

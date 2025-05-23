@@ -61,8 +61,26 @@ public class RelatorioNotasFiscaisControlador {
     public void gerarRelatorio(String tipoRelatorioExtensao) {
         try {
             filtro.validarCampos(tipoRelatorioExtensao);
-            RelatorioDTO dto = criarRelatorioDTO(tipoRelatorioExtensao,
-                notaFiscalService.getSistemaFacade().getUsuarioCorrente().getNome(), filtro);
+            RelatorioDTO dto = new RelatorioDTO();
+            if (TipoRelatorioDTO.XLS.name().equals(tipoRelatorioExtensao)) {
+                dto.setTipoRelatorio(TipoRelatorioDTO.XLS);
+                dto.setApi("tributario/nfse/nota-fiscal/excel/");
+                dto.adicionarParametro("FILTROS_EXCEL", filtro.montarMapFiltrosExcel());
+                dto.adicionarParametro("PERIODO_INICIAL", DateUtils.getDataFormatada(filtro.getPeriodoInicial().getTime()));
+                dto.adicionarParametro("PERIODO_FINAL", DateUtils.getDataFormatada(filtro.getPeriodoFinal().getTime()));
+            } else {
+                dto.setApi("tributario/nfse/nota-fiscal/");
+            }
+            dto.setNomeRelatorio("relatorio-nota-fiscal");
+            dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
+            dto.adicionarParametro("MUNICIPIO", "Municipio de Rio Branco");
+            dto.adicionarParametro("SECRETARIA", "Secretaria Municipal de Finanças");
+            dto.adicionarParametro("TITULO", "RELATÓRIO DE NOTAS FISCAIS - " + filtro.getTipoRelatorioApresentacao().name());
+            dto.adicionarParametro("TIPO_APRESENTACAO", filtro.getTipoRelatorioApresentacao().name());
+            dto.adicionarParametro("TIPO_AGRUPAMENTO", filtro.getTipoAgrupamento().name());
+            dto.adicionarParametro("USUARIO", notaFiscalService.getSistemaFacade().getUsuarioCorrente().getNome());
+            dto.adicionarParametro("SOMENTE_TOTALIZADOR", filtro.getSomenteTotalizador());
+            filtro.adicionarFiltros(dto);
             ReportService.getInstance().gerarRelatorio(notaFiscalService.getSistemaFacade().getUsuarioCorrente(), dto);
             FacesUtil.addMensagemRelatorioSegundoPlano();
         } catch (WebReportRelatorioExistenteException e) {
@@ -73,32 +91,6 @@ public class RelatorioNotasFiscaisControlador {
             logger.error("Erro ao gerar o relatorio de encerramento mensal de servico. Erro {}", ex);
             FacesUtil.addErrorPadrao(ex);
         }
-    }
-
-    public static RelatorioDTO criarRelatorioDTO(String tipoRelatorioExtensao,
-                                                 String usuario,
-                                                 FiltroNotaFiscal filtroNotaFiscal) {
-        RelatorioDTO dto = new RelatorioDTO();
-        if (TipoRelatorioDTO.XLS.name().equals(tipoRelatorioExtensao)) {
-            dto.setTipoRelatorio(TipoRelatorioDTO.XLS);
-            dto.setApi("tributario/nfse/nota-fiscal/excel/");
-            dto.adicionarParametro("FILTROS_EXCEL", filtroNotaFiscal.montarMapFiltrosExcel());
-            dto.adicionarParametro("PERIODO_INICIAL", DateUtils.getDataFormatada(filtroNotaFiscal.getPeriodoInicial().getTime()));
-            dto.adicionarParametro("PERIODO_FINAL", DateUtils.getDataFormatada(filtroNotaFiscal.getPeriodoFinal().getTime()));
-        } else {
-            dto.setApi("tributario/nfse/nota-fiscal/");
-        }
-        dto.setNomeRelatorio("relatorio-nota-fiscal");
-        dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
-        dto.adicionarParametro("MUNICIPIO", "Municipio de Rio Branco");
-        dto.adicionarParametro("SECRETARIA", "Secretaria Municipal de Finanças");
-        dto.adicionarParametro("TITULO", "RELATÓRIO DE NOTAS FISCAIS - " + filtroNotaFiscal.getTipoRelatorioApresentacao().name());
-        dto.adicionarParametro("TIPO_APRESENTACAO", filtroNotaFiscal.getTipoRelatorioApresentacao().name());
-        dto.adicionarParametro("TIPO_AGRUPAMENTO", filtroNotaFiscal.getTipoAgrupamento().name());
-        dto.adicionarParametro("USUARIO", usuario);
-        dto.adicionarParametro("SOMENTE_TOTALIZADOR", filtroNotaFiscal.getSomenteTotalizador());
-        filtroNotaFiscal.adicionarFiltros(dto);
-        return dto;
     }
 
     public FiltroNotaFiscal getFiltro() {

@@ -21,7 +21,7 @@ public class RelatorioReducaoValorBemControlador {
     @EJB
     private SistemaFacade sistemaFacade;
 
-    public void gerarRelatorio(String tipoRelatorioExtensao,LoteReducaoValorBem loteReducaoValorBem) {
+    public void gerarRelatorio(String tipoRelatorioExtensao, LoteReducaoValorBem loteReducaoValorBem) {
         try {
 
             RelatorioDTO dto = new RelatorioDTO();
@@ -31,7 +31,7 @@ public class RelatorioReducaoValorBemControlador {
             dto.setNomeParametroBrasao("BRASAO");
             dto.adicionarParametro("MUNICIPIO", "MUNICÍPIO DE " + sistemaFacade.getMunicipio().toUpperCase());
             dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
-            String nomeRelatorio = "RELATÓRIO DE CONFERÊNCIA DE  " + loteReducaoValorBem.getTipoReducao().getDescricao().toUpperCase()
+               String nomeRelatorio = "RELATÓRIO DE CONFERÊNCIA DE  " + loteReducaoValorBem.getTipoReducao().getDescricao().toUpperCase()
                 + " DE BEM " + loteReducaoValorBem.getTipoBem().getDescricao().toUpperCase();
             dto.adicionarParametro("NOMERELATORIO", nomeRelatorio);
             dto.setNomeRelatorio(nomeRelatorio);

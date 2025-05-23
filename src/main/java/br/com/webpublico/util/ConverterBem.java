@@ -1,3 +1,7 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package br.com.webpublico.util;
 
 import br.com.webpublico.negocios.BemFacade;
@@ -9,6 +13,9 @@ import javax.faces.context.FacesContext;
 import javax.faces.convert.Converter;
 import java.io.Serializable;
 
+/**
+ * @author terminal4
+ */
 public class ConverterBem implements Converter, Serializable {
 
     protected static final Logger logger = LoggerFactory.getLogger(ConverterBem.class);

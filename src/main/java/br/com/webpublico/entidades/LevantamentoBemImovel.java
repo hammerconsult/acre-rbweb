@@ -1,6 +1,9 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.enums.*;
+import br.com.webpublico.enums.EstadoConservacaoBem;
+import br.com.webpublico.enums.SituacaoConservacaoBem;
+import br.com.webpublico.enums.SummaryMessages;
+import br.com.webpublico.enums.TipoAquisicaoBem;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CaracterizadorDeBemImovel;
 import br.com.webpublico.interfaces.PossuidorArquivo;
@@ -66,11 +69,21 @@ public class LevantamentoBemImovel extends SuperEntidade implements Caracterizad
     @ManyToOne
     private UnidadeOrganizacional unidadeAdministrativa;
 
+    @Etiqueta("Unidade Administrativa")
+    @Transient
+    @Tabelavel
+    private String codigoDescricaoHierarquiaAdm;
+
     @Etiqueta("Unidade Orçamentária")
     @Obrigatorio
     @Invisivel
     @ManyToOne
     private UnidadeOrganizacional unidadeOrcamentaria;
+
+    @Etiqueta("Unidade Orçamentária")
+    @Transient
+    @Tabelavel
+    private String codigoDescricaoHierarquiaOrc;
 
     @Obrigatorio
     @Tabelavel
@@ -164,25 +177,22 @@ public class LevantamentoBemImovel extends SuperEntidade implements Caracterizad
     @OneToMany(mappedBy = "levantamentoBemImovel", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private List<DocumentoComprobatorioLevantamentoBemImovel> documentosComprobatorios;
 
+    @Transient
+    private HierarquiaOrganizacional hierarquiaOrganizacionalAdministrativa;
+
+    @Transient
+    private HierarquiaOrganizacional hierarquiaOrganizacionalOrcamentaria;
+
     @ManyToOne(cascade = CascadeType.ALL)
     private Seguradora seguradora;
 
     @ManyToOne(cascade = CascadeType.ALL)
     private Garantia garantia;
 
-    @Etiqueta(value = "Cadastro Imobiliário")
-    @ManyToOne
-    private CadastroImobiliario cadastroImobiliario;
-
-    @Enumerated(EnumType.STRING)
-    @Etiqueta("Situação")
-    private SituacaoLevantamentoImovel situacaoLevantamento;
-
     public LevantamentoBemImovel() {
         this.detentorOrigemRecurso = new DetentorOrigemRecurso();
         this.estadoConservacaoBem = EstadoConservacaoBem.OPERACIONAL;
         this.situacaoConservacaoBem = SituacaoConservacaoBem.USO_NORMAL;
-        this.situacaoLevantamento = SituacaoLevantamentoImovel.AGUARDANDO_EFETIVACAO;
     }
 
     @Override
@@ -278,7 +288,7 @@ public class LevantamentoBemImovel extends SuperEntidade implements Caracterizad
 
     @Override
     public String getBci() {
-        return cadastroImobiliario != null ? cadastroImobiliario.getNumeroCadastro() : bci;
+        return bci;
     }
 
     public void setBci(String bci) {
@@ -422,20 +432,32 @@ public class LevantamentoBemImovel extends SuperEntidade implements Caracterizad
         this.documentosComprobatorios = documentosComprobatorios;
     }
 
+    public HierarquiaOrganizacional getHierarquiaOrganizacionalOrcamentaria() {
+        return hierarquiaOrganizacionalOrcamentaria;
+    }
+
+    public void setHierarquiaOrganizacionalOrcamentaria(HierarquiaOrganizacional hierarquiaOrganizacionalOrcamentaria) {
+        this.hierarquiaOrganizacionalOrcamentaria = hierarquiaOrganizacionalOrcamentaria;
+    }
+
+    public HierarquiaOrganizacional getHierarquiaOrganizacionalAdministrativa() {
+        return hierarquiaOrganizacionalAdministrativa;
+    }
+
+    public void setHierarquiaOrganizacionalAdministrativa(HierarquiaOrganizacional hierarquiaOrganizacionalAdministrativa) {
+        this.hierarquiaOrganizacionalAdministrativa = hierarquiaOrganizacionalAdministrativa;
+
+        if (this.hierarquiaOrganizacionalAdministrativa != null) {
+            this.unidadeAdministrativa = this.hierarquiaOrganizacionalAdministrativa.getSubordinada();
+        }
+    }
+
     public Seguradora getSeguradora() {
         return seguradora;
     }
 
     public void setSeguradora(Seguradora seguradora) {
         this.seguradora = seguradora;
-    }
-
-    public SituacaoLevantamentoImovel getSituacaoLevantamento() {
-        return situacaoLevantamento;
-    }
-
-    public void setSituacaoLevantamento(SituacaoLevantamentoImovel situacaoLevantamento) {
-        this.situacaoLevantamento = situacaoLevantamento;
     }
 
     @Override
@@ -480,6 +502,7 @@ public class LevantamentoBemImovel extends SuperEntidade implements Caracterizad
                 return true;
             }
         }
+
         return false;
     }
 
@@ -491,12 +514,20 @@ public class LevantamentoBemImovel extends SuperEntidade implements Caracterizad
         this.garantia = garantia;
     }
 
-    public CadastroImobiliario getCadastroImobiliario() {
-        return cadastroImobiliario;
+    public String getCodigoDescricaoHierarquiaAdm() {
+        return codigoDescricaoHierarquiaAdm;
     }
 
-    public void setCadastroImobiliario(CadastroImobiliario cadastroImobiliario) {
-        this.cadastroImobiliario = cadastroImobiliario;
+    public void setCodigoDescricaoHierarquiaAdm(String codigoDescricaoHierarquiaAdm) {
+        this.codigoDescricaoHierarquiaAdm = codigoDescricaoHierarquiaAdm;
+    }
+
+    public String getCodigoDescricaoHierarquiaOrc() {
+        return codigoDescricaoHierarquiaOrc;
+    }
+
+    public void setCodigoDescricaoHierarquiaOrc(String codigoDescricaoHierarquiaOrc) {
+        this.codigoDescricaoHierarquiaOrc = codigoDescricaoHierarquiaOrc;
     }
 
     @Override

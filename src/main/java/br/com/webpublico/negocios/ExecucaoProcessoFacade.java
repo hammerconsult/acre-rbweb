@@ -4,7 +4,7 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AgrupadorSolicitacaoEmpenho;
 import br.com.webpublico.entidadesauxiliares.ExecucaoProcessoItemVO;
 import br.com.webpublico.entidadesauxiliares.SolicitacaoEmpenhoVo;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
@@ -105,10 +105,6 @@ public class ExecucaoProcessoFacade extends AbstractFacade<ExecucaoProcesso> {
         ExecucaoProcesso entity = super.recuperar(id);
         Hibernate.initialize(entity.getItens());
         return entity;
-    }
-
-    public ExecucaoProcesso recuperarSemDependencias(Object id) {
-        return super.recuperar(id);
     }
 
     @Override
@@ -382,9 +378,9 @@ public class ExecucaoProcessoFacade extends AbstractFacade<ExecucaoProcesso> {
 
     public BigDecimal getValorEmRequisicao(ExecucaoProcessoItem item) {
         String sql = " " +
-            " select coalesce(sum(irce.valortotal),0) as valortotal " +
-            " from itemrequisicaocompraexec irce " +
-            " where irce.execucaoprocessoitem_id = :idItemExecucao  ";
+            " select coalesce(sum(item.valortotal),0) as valortotal " +
+            " from itemrequisicaodecompra item " +
+            " where item.execucaoprocessoitem_id = :idItemExecucao  ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemExecucao", item.getId());
         List<BigDecimal> resultado = q.getResultList();
@@ -396,10 +392,10 @@ public class ExecucaoProcessoFacade extends AbstractFacade<ExecucaoProcesso> {
 
     public BigDecimal getValorEmRequisicaoEstorno(ExecucaoProcessoItem item) {
         String sql =
-            "  select coalesce(sum(itemest.quantidade * irce.valorunitario), 0) as valortotal " +
+            "  select coalesce(sum(itemest.quantidade * itemreq.valorunitario), 0) as valortotal " +
                 " from itemrequisicaocompraest itemest " +
-                "   inner join itemrequisicaocompraexec irce on irce.id = itemest.itemrequisicaocompraexec_id " +
-                " where irce.execucaoprocessoitem_id = :idItemExecucao ";
+                "   inner join itemrequisicaodecompra itemreq on itemreq.id = itemest.itemrequisicaocompra_id " +
+                " where itemreq.execucaoprocessoitem_id = :idItemExecucao ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemExecucao", item.getId());
         List<BigDecimal> resultado = q.getResultList();
@@ -630,16 +626,6 @@ public class ExecucaoProcessoFacade extends AbstractFacade<ExecucaoProcesso> {
         return q.getResultList();
     }
 
-
-    public List<ExecucaoProcessoEmpenho> buscarExecucaoProcessoEmpenhoPorExecucao(Long idExecucao) {
-        String sql = " select exemp.* from execucaoprocessoempenho exemp " +
-            "          where exemp.execucaoprocesso_id = :idExecucao " +
-            "           and exemp.empenho_id is not null ";
-        Query q = em.createNativeQuery(sql, ExecucaoProcessoEmpenho.class);
-        q.setParameter("idExecucao", idExecucao);
-        return q.getResultList();
-    }
-
     public List<ExecucaoProcesso> buscarExecucoesPorAtaRegistroPreco(AtaRegistroPreco ataRegistroPreco) {
         String sql = " " +
             "  select ex.* from execucaoprocesso ex " +
@@ -676,18 +662,6 @@ public class ExecucaoProcessoFacade extends AbstractFacade<ExecucaoProcesso> {
         q.setParameter("solicitacaoEmp", solicitacaoEmpenho);
         try {
             return (FormaEntregaExecucao) q.getSingleResult();
-        } catch (NoResultException nre) {
-            return null;
-        }
-    }
-
-    public List<ExecucaoProcessoFonteItem> buscarItensDotacaoPorItemExecucao(ExecucaoProcessoItem execucaoItem) {
-        String sql = " select itemdot.* from execucaoprocessofonteitem itemdot " +
-            "          where itemdot.execucaoprocessoitem_id = :idItem ";
-        Query q = em.createNativeQuery(sql, ExecucaoProcessoFonteItem.class);
-        q.setParameter("idItem", execucaoItem.getId());
-        try {
-            return q.getResultList();
         } catch (NoResultException nre) {
             return null;
         }

@@ -14,6 +14,7 @@ import br.com.webpublico.entidades.rh.pccr.MesesProgressaoProgressaoPCS;
 import br.com.webpublico.enums.TipoPCS;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilRH;
+import org.hibernate.Hibernate;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -51,6 +52,7 @@ public class PlanoCargosSalariosFacade extends AbstractFacade<PlanoCargosSalario
         p.getEntidadesPCS().size();
         p.getMesesProgressao().size();
         p.getMesesPromocao().size();
+        Hibernate.initialize(p.getEntidadesPCS());
         return p;
     }
 

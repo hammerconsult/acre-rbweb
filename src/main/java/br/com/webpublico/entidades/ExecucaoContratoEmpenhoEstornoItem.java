@@ -41,7 +41,6 @@ public class ExecucaoContratoEmpenhoEstornoItem extends SuperEntidade {
     @Etiqueta("Valor Total")
     private BigDecimal valorTotal;
 
-
     public ExecucaoContratoEmpenhoEstornoItem() {
         quantidade = BigDecimal.ZERO;
         valorUnitario = BigDecimal.ZERO;

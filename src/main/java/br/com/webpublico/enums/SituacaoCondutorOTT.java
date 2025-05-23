@@ -18,7 +18,7 @@ public enum SituacaoCondutorOTT {
         this.situacaoCondutorDTO = situacaoCondutorDTO;
     }
 
-    public String getDescricao(){
+    public String getDescricao() {
         return descricao;
     }
 

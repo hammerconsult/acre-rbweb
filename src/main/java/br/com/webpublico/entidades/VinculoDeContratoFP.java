@@ -39,6 +39,13 @@ public class VinculoDeContratoFP implements Serializable {
     @Pesquisavel
     @Tabelavel
     private String descricao;
+    @Etiqueta("Percentual de Aposentadoria")
+    @Tabelavel
+    private BigDecimal percentualAposentadoria;
+    @Etiqueta("Categoria SEFIP")
+    @Tabelavel
+    @ManyToOne
+    private CategoriaSEFIP categoriaSEFIP;
 
     public Long getId() {
         return id;
@@ -46,6 +53,14 @@ public class VinculoDeContratoFP implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public CategoriaSEFIP getCategoriaSEFIP() {
+        return categoriaSEFIP;
+    }
+
+    public void setCategoriaSEFIP(CategoriaSEFIP categoriaSEFIP) {
+        this.categoriaSEFIP = categoriaSEFIP;
     }
 
     public Long getCodigo() {
@@ -62,6 +77,14 @@ public class VinculoDeContratoFP implements Serializable {
 
     public void setDescricao(String descricao) {
         this.descricao = descricao;
+    }
+
+    public BigDecimal getPercentualAposentadoria() {
+        return percentualAposentadoria;
+    }
+
+    public void setPercentualAposentadoria(BigDecimal percentualAposentadoria) {
+        this.percentualAposentadoria = percentualAposentadoria;
     }
 
     @Override
@@ -86,6 +109,6 @@ public class VinculoDeContratoFP implements Serializable {
 
     @Override
     public String toString() {
-        return getCodigo() + " - " + getDescricao();
+        return getCodigo() + " - " + getDescricao() + " - " + getPercentualAposentadoria() + "%";
     }
 }

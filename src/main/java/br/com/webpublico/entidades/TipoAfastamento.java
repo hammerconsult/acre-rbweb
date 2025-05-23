@@ -154,10 +154,6 @@ public class TipoAfastamento implements Serializable {
 
     @OneToMany(mappedBy = "tipoAfastamento", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TipoAfastamentoTipoPrevidenciaFP> tipoAfastamentoTipoPrevidenciaFPList;
-    private Boolean alongarPerAquisitivoLicenca;
-    private Integer maximoPerdaPerAquisitLicenca;
-    private Boolean reiniciarPerAquisitLicenca;
-    private Boolean somarFaltasPerdaPALicenca;
     @Etiqueta("Intervalo a Considerar como Prorrogação (em dias)")
     private Integer intervaloProrrogacaoDias;
 
@@ -496,38 +492,6 @@ public class TipoAfastamento implements Serializable {
 
     public void setTipoAfastamentoTipoPrevidenciaFPList(List<TipoAfastamentoTipoPrevidenciaFP> tipoAfastamentoTipoPrevidenciaFPList) {
         this.tipoAfastamentoTipoPrevidenciaFPList = tipoAfastamentoTipoPrevidenciaFPList;
-    }
-
-    public Boolean getAlongarPerAquisitivoLicenca() {
-        return alongarPerAquisitivoLicenca != null ? alongarPerAquisitivoLicenca : Boolean.FALSE;
-    }
-
-    public void setAlongarPerAquisitivoLicenca(Boolean alongarPerAquisitivoLicenca) {
-        this.alongarPerAquisitivoLicenca = alongarPerAquisitivoLicenca;
-    }
-
-    public Integer getMaximoPerdaPerAquisitLicenca() {
-        return maximoPerdaPerAquisitLicenca;
-    }
-
-    public void setMaximoPerdaPerAquisitLicenca(Integer maximoPerdaPerAquisitLicenca) {
-        this.maximoPerdaPerAquisitLicenca = maximoPerdaPerAquisitLicenca;
-    }
-
-    public Boolean getReiniciarPerAquisitLicenca() {
-        return reiniciarPerAquisitLicenca != null ? reiniciarPerAquisitLicenca : Boolean.FALSE;
-    }
-
-    public void setReiniciarPerAquisitLicenca(Boolean reiniciarPerAquisitLicenca) {
-        this.reiniciarPerAquisitLicenca = reiniciarPerAquisitLicenca;
-    }
-
-    public Boolean getSomarFaltasPerdaPALicenca() {
-        return somarFaltasPerdaPALicenca != null ? somarFaltasPerdaPALicenca : Boolean.FALSE;
-    }
-
-    public void setSomarFaltasPerdaPALicenca(Boolean somarFaltasPerdaPALicenca) {
-        this.somarFaltasPerdaPALicenca = somarFaltasPerdaPALicenca;
     }
 
     public Integer getIntervaloProrrogacaoDias() {

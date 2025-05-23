@@ -15,7 +15,6 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -270,27 +269,6 @@ public class DividaFacade extends AbstractFacade<Divida> {
         String sql = "select d.* from divida d where coalesce(d.isParcelamento,0) = :isParcelamento order by d.descricao";
         Query q = em.createNativeQuery(sql, Divida.class).setParameter("isParcelamento", 1);
         return q.getResultList();
-    }
-
-    public List<Divida> buscarComIdAndDescricao() {
-        String sql = "SELECT d.id, d.descricao FROM divida d ORDER BY d.descricao";
-        Query q = em.createNativeQuery(sql);
-        return converterSelectIdAndDescricaoParaDivida(q);
-    }
-
-    public List<Divida> buscarIdAndDescricaoDaDividasPorTipoCadastro(TipoCadastroTributario tipoCadastroTributario) {
-        String hql = "SELECT d.id, d.descricao FROM divida d where d.tipoCadastro = :tipoCadastro order by d.descricao";
-        Query q = em.createNativeQuery(hql);
-        q.setParameter("tipoCadastro", tipoCadastroTributario.name());
-        return converterSelectIdAndDescricaoParaDivida(q);
-    }
-
-    private List<Divida> converterSelectIdAndDescricaoParaDivida(Query q) {
-        List<Divida> dividas = Lists.newArrayList();
-        for (Object[] obj : (List<Object[]>) q.getResultList()) {
-            dividas.add(new Divida((BigDecimal) obj[0], (String) obj[1]));
-        }
-        return dividas;
     }
 
     public List<Divida> buscarDividasDeDividasDiversas(String parte) {

@@ -609,7 +609,7 @@ public class IntegracaoTributarioContabilFacade implements Serializable {
                 }
                 definirEventoCreditoReceber(creditoReceber);
                 creditoReceber = creditoReceberFacade.salvarRetornando(creditoReceber);
-                creditoReceberFacade.gerarSaldoCreditoReceber(creditoReceber);
+                creditoReceberFacade.getSaldoCreditoReceberFacade().gerarSaldoCreditoReceber(creditoReceber, true);
                 creditoReceberFacade.contabilizarCreditoReceber(creditoReceber);
                 assistenteBarraProgresso.conta();
             } catch (ValidacaoException ve) {

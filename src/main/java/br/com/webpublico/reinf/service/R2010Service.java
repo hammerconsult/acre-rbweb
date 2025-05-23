@@ -116,6 +116,7 @@ public class R2010Service {
         Integer ano = DataUtil.getAno(reg.getData());
         evento.setIdESocial(reg.getPessoa().getId().toString().concat(ano.toString()).concat(mes.toString()));
 
+
         if (reinfService.isPerfilDev()) {
             evento.setTpAmb(2);
         }

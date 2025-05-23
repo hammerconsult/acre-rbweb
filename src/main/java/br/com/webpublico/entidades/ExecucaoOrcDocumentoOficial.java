@@ -204,10 +204,6 @@ public class ExecucaoOrcDocumentoOficial extends SuperEntidade {
                 this.setPagamentoEstorno((PagamentoEstorno) entidadeContabil);
                 break;
 
-            case NOTA_RESTO_ESTORNO_PAGAMENTO:
-                this.setPagamentoEstorno((PagamentoEstorno) entidadeContabil);
-                break;
-
             case NOTA_RECEITA_EXTRA:
                 this.setReceitaExtra((ReceitaExtra) entidadeContabil);
                 break;
@@ -222,6 +218,10 @@ public class ExecucaoOrcDocumentoOficial extends SuperEntidade {
 
             case NOTA_RECEITA_EXTRA_ESTORNO:
                 this.setReceitaExtraEstorno((ReceitaExtraEstorno) entidadeContabil);
+                break;
+
+            case NOTA_RESTO_ESTORNO_PAGAMENTO:
+                this.setPagamentoEstorno((PagamentoEstorno) entidadeContabil);
                 break;
 
             case NOTA_PAGAMENTO_EXTRA_ESTORNO:
@@ -274,9 +274,6 @@ public class ExecucaoOrcDocumentoOficial extends SuperEntidade {
             case NOTA_ESTORNO_PAGAMENTO:
                 return " where exdoc.pagamentoestorno_id = :obj ";
 
-            case NOTA_RESTO_ESTORNO_PAGAMENTO:
-                return " where exdoc.pagamentoestorno_id = :obj ";
-
             case NOTA_RECEITA_EXTRA:
                 return " where exdoc.receitaextra_id = :obj ";
 
@@ -288,6 +285,9 @@ public class ExecucaoOrcDocumentoOficial extends SuperEntidade {
 
             case NOTA_RECEITA_EXTRA_ESTORNO:
                 return " where exdoc.receitaextra_id = :obj ";
+
+            case NOTA_RESTO_ESTORNO_PAGAMENTO:
+                return " where exdoc.pagamentoestorno_id = :obj ";
 
             case NOTA_PAGAMENTO_EXTRA_ESTORNO:
                 return " where exdoc.pagamentoextraestorno_id = :obj ";

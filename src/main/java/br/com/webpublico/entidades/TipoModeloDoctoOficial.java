@@ -1194,11 +1194,11 @@ public class TipoModeloDoctoOficial implements Serializable {
         MOTIVO("Motivo"),
         DEBITOS("Débitos Protestados");
 
+        private String descricao;
+
         TagsProcessoDeProtesto(String descricao) {
             this.descricao = descricao;
         }
-
-        private String descricao;
 
         @Override
         public String getDescricao() {

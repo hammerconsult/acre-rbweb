@@ -79,9 +79,9 @@ public class SolicitacaoMaterialControlador extends PrettyControlador<Solicitaca
     private List<FiltroConsultaEntidade> filtros;
     private List<FieldConsultaEntidade> fieldsPesquisa;
     private ConsultaEntidadeController.ConverterFieldConsultaEntidade converterFieldConsulta;
-    private TipoDoctoOficial tipoDoctoOficial;
     private FiltroRelatorioAdministrativo filtroRelatorio;
     private FiltroHistoricoProcessoLicitatorio filtroHistoricoProcesso;
+    private TipoDoctoOficial tipoDoctoOficial;
     private LeiLicitacao leiLicitacao;
     private List<LeiLicitacao> leis;
     private List<ModalidadeLicitacao> modalidades;
@@ -345,7 +345,7 @@ public class SolicitacaoMaterialControlador extends PrettyControlador<Solicitaca
             ve.adicionarMensagemDeCampoObrigatorio("O campo Subtipo Objeto de Compra é obrigatório.");
         }
         if (selecionado.getTipoSolicitacao() != null
-            && selecionado.getTipoSolicitacao().equals(TipoSolicitacao.OBRA_SERVICO_DE_ENGENHARIA)
+            && TipoSolicitacao.OBRA_SERVICO_DE_ENGENHARIA.equals(selecionado.getTipoSolicitacao())
             && selecionado.getDataOrcamentoObra() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Data do Orçamento da Obra é obrigatório.");
         }
@@ -1351,7 +1351,7 @@ public class SolicitacaoMaterialControlador extends PrettyControlador<Solicitaca
         if (dataObra != null) {
             String[] parte = dataObra.split("/");
             String value = String.valueOf(parte[0]);
-            if (Util.isFormaterMesValido(value)) {
+            if (Util.isMesValido(value)) {
                 selecionado.setDataOrcamentoObra(DataUtil.getDateParse("01/" + dataObra));
             } else {
                 setDataObra("");

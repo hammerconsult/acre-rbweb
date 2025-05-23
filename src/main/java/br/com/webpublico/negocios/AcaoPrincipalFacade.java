@@ -204,7 +204,7 @@ public class AcaoPrincipalFacade extends AbstractFacade<AcaoPrincipal> {
 
     public BigDecimal buscaValorFinanceiroLiquidacoes(ProdutoPPA sub, Date data) {
         BigDecimal valor = new BigDecimal(BigInteger.ZERO);
-        String sql = "SELECT sum(li.valor) FROM liquidacao li "
+        String sql = "SELECT sum(li.saldo) FROM liquidacao li "
             + "INNER JOIN empenho e ON e.id = li.empenho_id "
             + "INNER JOIN fontedespesaorc fdo ON fdo.id = e.fontedespesaorc_id "
             + "INNER JOIN despesaorc do ON do.id = fdo.despesaorc_id "

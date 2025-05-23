@@ -20,7 +20,6 @@ public class ReprocessamentoContabil {
     private BarraProgressoAssistente barraProgressoAssistente;
     private List<TipoEventoContabil> tipoEventoContabils;
     private List<EventosReprocessar> eventosReprocessar;
-    private ConfiguracaoContabil configuracaoContabil;
 
     public ReprocessamentoContabil() {
         eventos = Lists.newArrayList();
@@ -118,14 +117,6 @@ public class ReprocessamentoContabil {
 
     public void setEventosReprocessar(List<EventosReprocessar> eventosReprocessar) {
         this.eventosReprocessar = eventosReprocessar;
-    }
-
-    public ConfiguracaoContabil getConfiguracaoContabil() {
-        return configuracaoContabil;
-    }
-
-    public void setConfiguracaoContabil(ConfiguracaoContabil configuracaoContabil) {
-        this.configuracaoContabil = configuracaoContabil;
     }
 
     public String getUnidadesAsString() {

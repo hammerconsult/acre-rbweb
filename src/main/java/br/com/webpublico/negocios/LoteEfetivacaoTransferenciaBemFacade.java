@@ -734,24 +734,6 @@ public class LoteEfetivacaoTransferenciaBemFacade extends AbstractFacade<LoteEfe
         return q.getResultList();
     }
 
-    @TransactionTimeout(unit = TimeUnit.HOURS, value = 2)
-    public void gerarTransferenciaBensContabil(LoteEfetivacaoTransferenciaBem efetivacao) {
-        List<EventoBem> eventosContabilizacao = new ArrayList<>();
-        List<EfetivacaoTransferenciaBem> efetivacoes = recuperarEfetivacoesFinalizadasDoLoteEfetivacao(efetivacao);
-        for (EfetivacaoTransferenciaBem evento : efetivacoes) {
-            EventoBem eventoDepreciacaoRecebida = bemFacade.recuperarEventosBemPorTipoEventoDataLacamaentoBem(evento.getBem(), TipoEventoBem.TRANSFERENCIADEPRECIACAORECEBIDA, efetivacao.getDataEfetivacao());
-            if (eventoDepreciacaoRecebida != null) {
-                eventosContabilizacao.add(eventoDepreciacaoRecebida);
-            } else {
-                eventosContabilizacao.add(evento);
-            }
-        }
-        AssistenteMovimentacaoBens assistente = new AssistenteMovimentacaoBens(efetivacao.getDataEfetivacao(), Operacoes.NOVO);
-        assistente.setTotal(eventosContabilizacao.size());
-        integradorPatrimonialContabilFacade.transferirBens(eventosContabilizacao, efetivacao.getHistoricoRazao(), assistente);
-    }
-
-
     public BemFacade getBemFacade() {
         return bemFacade;
     }
@@ -806,5 +788,24 @@ public class LoteEfetivacaoTransferenciaBemFacade extends AbstractFacade<LoteEfe
 
     public FaseFacade getFaseFacade() {
         return faseFacade;
+    }
+
+    public String buscarUnidadeDestinoTransferencia(TransferenciaBem transferenciaBem) {
+        String sql = "    " +
+            " select vw.codigo || ' - ' || vw.descricao as unidade " +
+            "  from EfetivacaoTransferenciaBem t " +
+            " inner join eventobem ev on ev.id = t.id " +
+            " inner join estadobem est on est.id  = ev.estadoresultante_id " +
+            " inner join vwhierarquiaorcamentaria vw on vw.subordinada_id = est.detentoraorcamentaria_id " +
+            "   and to_date(:dataOperacao, 'dd/MM/yyyy') between vw.iniciovigencia and coalesce(vw.fimvigencia, to_date(:dataOperacao, 'dd/MM/yyyy')) " +
+            " where t.transferenciabem_id = :idSolicitacao ";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("idSolicitacao", transferenciaBem.getId());
+        q.setParameter("dataOperacao", DataUtil.getDataFormatada(sistemaFacade.getDataOperacao()));
+        try {
+            return (String) q.getSingleResult();
+        } catch (NoResultException e) {
+            return transferenciaBem.getEstadoResultante().getDetentoraOrcamentaria().getDescricao();
+        }
     }
 }

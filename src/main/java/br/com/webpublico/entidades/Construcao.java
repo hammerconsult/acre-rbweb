@@ -10,7 +10,6 @@ import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Obrigatorio;
 import br.com.webpublico.util.anotacoes.Tabelavel;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
@@ -18,7 +17,6 @@ import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author Munif
@@ -77,8 +75,6 @@ public class Construcao implements Serializable, Comparable<Construcao> {
     private String livroDocumento;
     @OneToMany(mappedBy = "construcao", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EventoCalculoConstrucao> eventos;
-    @Transient
-    private Map<GrupoAtributo, List<EventoCalculoConstrucao>> mapEventoCalculoConstrucaoPorGrupoAtributo;
     private Boolean cancelada;
 
     public Construcao(Long id, String migracaoChave) {
@@ -333,23 +329,6 @@ public class Construcao implements Serializable, Comparable<Construcao> {
 
     public void setLivroDocumento(String livroDocumento) {
         this.livroDocumento = livroDocumento;
-    }
-
-    public List<GrupoAtributo> initEventosCalculadosConstrucao() {
-        if (mapEventoCalculoConstrucaoPorGrupoAtributo == null) {
-            mapEventoCalculoConstrucaoPorGrupoAtributo = Maps.newHashMap();
-            for (EventoCalculoConstrucao evento : eventos) {
-                mapEventoCalculoConstrucaoPorGrupoAtributo.computeIfAbsent(evento.getEventoCalculo().getGrupoAtributo(), k -> Lists.newArrayList());
-                mapEventoCalculoConstrucaoPorGrupoAtributo.get(evento.getEventoCalculo().getGrupoAtributo()).add(evento);
-            }
-        }
-        return mapEventoCalculoConstrucaoPorGrupoAtributo.keySet().stream()
-            .sorted(Comparator.comparing(GrupoAtributo::getCodigo))
-            .collect(Collectors.toList());
-    }
-
-    public Map<GrupoAtributo, List<EventoCalculoConstrucao>> getMapEventoCalculoConstrucaoPorGrupoAtributo() {
-        return mapEventoCalculoConstrucaoPorGrupoAtributo;
     }
 
     @Override

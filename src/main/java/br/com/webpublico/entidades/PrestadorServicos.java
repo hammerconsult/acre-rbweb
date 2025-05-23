@@ -5,7 +5,6 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.entidades.rh.esocial.CategoriaTrabalhador;
-import br.com.webpublico.enums.rh.TipoServicoPrestador;
 import br.com.webpublico.enums.rh.esocial.TipoOperacaoESocial;
 import br.com.webpublico.enums.rh.esocial.TipoUnidadePagamento;
 import br.com.webpublico.esocial.dto.EventoESocialDTO;
@@ -98,8 +97,6 @@ public class PrestadorServicos implements Serializable, EntidadePagavelRH, IHist
     private boolean primeiroContrato;
     @Transient
     private boolean calculandoRetroativo;
-    @Enumerated(EnumType.STRING)
-    private TipoServicoPrestador tipoServicoPrestador;
     @Etiqueta("Data de Cadastro")
     @Temporal(TemporalType.TIMESTAMP)
     private Date dataCadastro;
@@ -123,13 +120,14 @@ public class PrestadorServicos implements Serializable, EntidadePagavelRH, IHist
     }
 
     @Override
-    public FolhaCalculavel getFolha() {
-        return folha;
-    }
-
-    @Override
     public Date getFinalVigencia() {
         return null;
+    }
+
+
+    @Override
+    public FolhaCalculavel getFolha() {
+        return folha;
     }
 
     @Override
@@ -392,14 +390,6 @@ public class PrestadorServicos implements Serializable, EntidadePagavelRH, IHist
 
     public void setDescricaoSalarioVariavel(String descricaoSalarioVariavel) {
         this.descricaoSalarioVariavel = descricaoSalarioVariavel;
-    }
-
-    public TipoServicoPrestador getTipoServicoPrestador() {
-        return tipoServicoPrestador;
-    }
-
-    public void setTipoServicoPrestador(TipoServicoPrestador tipoServicoPrestador) {
-        this.tipoServicoPrestador = tipoServicoPrestador;
     }
 
     public Date getDataCadastro() {

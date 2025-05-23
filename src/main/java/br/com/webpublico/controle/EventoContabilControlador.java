@@ -333,13 +333,17 @@ public class EventoContabilControlador extends PrettyControlador<EventoContabil>
         return toReturn;
     }
 
-    public void montarChave() {
-        String chave = StringUtil.removeCaracteresEspeciais(selecionado.getDescricao());
-        chave = chave.toLowerCase();
-        chave = chave.replaceAll(" a ", " ").replaceAll(" o ", " ").replaceAll(" e ", " ").replaceAll(" de ", " ").replaceAll(" do ", " ").replaceAll(" da ", " ").replaceAll(" em ", " ").replaceAll(",", " ").replaceAll("\\.", " ");
-        chave = chave.replaceAll("  ", " ");
-        selecionado.setChave(chave.replaceAll(" ", "_").toUpperCase());
-        RequestContext.getCurrentInstance().execute("setaFoco('Formulario:eventotce');");
+    public void montaChave() {
+        EventoContabil ev = (EventoContabil) selecionado;
+        if ("".equals(ev.getChave()) || ev.getChave() == null) {
+            String chave = StringUtil.removeCaracteresEspeciais(ev.getDescricao());
+            chave = chave.toLowerCase();
+            chave = chave.replaceAll(" a ", " ").replaceAll(" o ", " ").replaceAll(" e ", " ").replaceAll(" de ", " ").replaceAll(" do ", " ").replaceAll(" da ", " ").replaceAll(" em ", " ").replaceAll(",", " ").replaceAll("\\.", " ");
+            chave = chave.replaceAll("  ", " ");
+            ev.setChave(chave.replaceAll(" ", "_").toUpperCase());
+            RequestContext.getCurrentInstance().execute("setaFoco('Formulario:eventotce');");
+        }
+
     }
 
     public EventoContabil getEventoNaoAlterado() {

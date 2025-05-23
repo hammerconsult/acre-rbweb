@@ -5,9 +5,7 @@
 package br.com.webpublico.interfaces;
 
 import br.com.webpublico.entidades.ContaContabil;
-import br.com.webpublico.entidades.ParametroEvento;
 import br.com.webpublico.entidades.TipoContaAuxiliar;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 
 import java.util.TreeMap;
 

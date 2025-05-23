@@ -9,8 +9,8 @@ import br.com.webpublico.entidades.rh.cadastrofuncional.PeriodoAquisitivoExcluid
 import br.com.webpublico.entidades.rh.esocial.CargoEmpregadorESocial;
 import br.com.webpublico.entidadesauxiliares.ItemVaga;
 import br.com.webpublico.enums.*;
-import br.com.webpublico.enums.rh.estudoatuarial.TipoEspecificacaoCargo;
 import br.com.webpublico.enums.rh.cbo.TipoCBO;
+import br.com.webpublico.enums.rh.estudoatuarial.TipoEspecificacaoCargo;
 import br.com.webpublico.enums.rh.esocial.TipoContagemEspecialEsocial;
 import br.com.webpublico.esocial.dto.OcorrenciaESocialDTO;
 import br.com.webpublico.exception.ValidacaoException;
@@ -428,7 +428,7 @@ public class CargoControlador extends PrettyControlador<Cargo> implements Serial
     }
 
     public List<SelectItem> getTiposCargoAcumulavel() {
-        return Util.getListSelectItemSemCampoVazio(TipoCargoAcumulavel.values(), false);
+        return Util.getListSelectItem(TipoCargoAcumulavel.values(), false);
     }
 
     public Converter getConverterNivelEscolaridade() {
@@ -516,16 +516,16 @@ public class CargoControlador extends PrettyControlador<Cargo> implements Serial
         return basePeriodoAquisitivo;
     }
 
+    public void setBasePeriodoAquisitivo(BasePeriodoAquisitivo basePeriodoAquisitivo) {
+        this.basePeriodoAquisitivo = basePeriodoAquisitivo;
+    }
+
     public CargoEmpregadorESocial getCargoEmpregadorESocial() {
         return cargoEmpregadorESocial;
     }
 
     public void setCargoEmpregadorESocial(CargoEmpregadorESocial cargoEmpregadorESocial) {
         this.cargoEmpregadorESocial = cargoEmpregadorESocial;
-    }
-
-    public void setBasePeriodoAquisitivo(BasePeriodoAquisitivo basePeriodoAquisitivo) {
-        this.basePeriodoAquisitivo = basePeriodoAquisitivo;
     }
 
     public Boolean validaCodigoAlfaNumerico(String codigo) {
@@ -660,9 +660,6 @@ public class CargoControlador extends PrettyControlador<Cargo> implements Serial
         }
         if (itemCargoSindicatoSelecionado != null) {
             val.adicionarMensagemDeOperacaoNaoPermitida("Antes de salvar, confirme ou cancele as alterações na Entidade Sindical!");
-        }
-        if(selecionado.getEmpregadores() == null || selecionado.getEmpregadores().isEmpty()){
-            val.adicionarMensagemDeOperacaoNaoPermitida("Informe ao menos um Empregador para o cargo.");
         }
         if (selecionado.getUnidadesCargo().isEmpty()) {
             val.adicionarMensagemDeCampoObrigatorio("Adicione ao menos uma Hierarquia Organizacional ao Cargo.");

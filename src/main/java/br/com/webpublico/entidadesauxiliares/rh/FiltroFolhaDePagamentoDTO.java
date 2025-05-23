@@ -175,6 +175,13 @@ public class FiltroFolhaDePagamentoDTO {
         return eventosFPsBloqueados.stream().map(EventoFP::toString).collect(Collectors.joining("<br/>"));
     }
 
+    public boolean hasEventosBloqueados() {
+        if (eventosFPsBloqueados == null || eventosFPsBloqueados.isEmpty()) {
+            return false;
+        }
+        return true;
+    }
+
     public String toJSON() throws JsonProcessingException {
         if (hierarquiaOrganizacional != null) {
             this.hierarquiaOrganizacionalId = hierarquiaOrganizacional.getId();
@@ -197,4 +204,13 @@ public class FiltroFolhaDePagamentoDTO {
         return Util.converterObjetoParaJson(this);
     }
 
+    public static FiltroFolhaDePagamentoDTO deJSON(String json) {
+        return Util.converterDeJsonParaObjeto(json, FiltroFolhaDePagamentoDTO.class);
+    }
+
+    public static FiltroFolhaDePagamentoDTO daEntidade(FiltroFolhaDePagamento filtro) {
+        FiltroFolhaDePagamentoDTO dto = deJSON(filtro.getFiltroJSON());
+        dto.setCalculadaEm(filtro.getCalculadaEm());
+        return dto;
+    }
 }

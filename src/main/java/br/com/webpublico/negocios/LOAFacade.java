@@ -10,7 +10,7 @@ import br.com.webpublico.controle.portaltransparencia.entidades.LDOPortal;
 import br.com.webpublico.controle.portaltransparencia.entidades.LOAPortal;
 import br.com.webpublico.controle.portaltransparencia.entidades.PPAPortal;
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidaLDOExeption;
 import br.com.webpublico.interfaces.EntidadeContabil;
@@ -729,8 +729,8 @@ public class LOAFacade extends SuperFacadeContabil<LOA> {
         item.setTagValor(TagValor.LANCAMENTO);
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getProvisaoPPADespesa().getContaDeDespesa(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), ProvisaoPPAFonte.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
 
         parametroEvento.getItensParametrosEvento().add(item);
@@ -764,9 +764,9 @@ public class LOAFacade extends SuperFacadeContabil<LOA> {
         item.setTagValor(TagValor.LANCAMENTO);
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita(), item));
-        objetos.add(new ObjetoParametro(entity.getDestinacaoDeRecursos().getFonteDeRecursos(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), ReceitaLOAFonte.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getReceitaLOA().getContaDeReceita().getId().toString(), ContaReceita.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getDestinacaoDeRecursos().getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
 
         parametroEvento.getItensParametrosEvento().add(item);

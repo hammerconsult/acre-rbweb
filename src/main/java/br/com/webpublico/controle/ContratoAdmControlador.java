@@ -173,6 +173,7 @@ public class ContratoAdmControlador extends PrettyControlador<Contrato> implemen
     }
 
     private void recuperarDadosEditar() {
+        carregarQuantidadesValoresDosItens(selecionado.getItens());
         tipoCaucaoContrato = TipoCaucaoContrato.EM_DINHEIRO;
         if (selecionado.getCaucoes() != null && !selecionado.getCaucoes().isEmpty()) {
             Collections.sort(selecionado.getCaucoes());
@@ -2571,6 +2572,14 @@ public class ContratoAdmControlador extends PrettyControlador<Contrato> implemen
         this.indiceAba = indiceAba;
     }
 
+    public AtaRegistroPreco getAtaRegistroPreco() {
+        return ataRegistroPreco;
+    }
+
+    public void setAtaRegistroPreco(AtaRegistroPreco ataRegistroPreco) {
+        this.ataRegistroPreco = ataRegistroPreco;
+    }
+
     public GestorContrato getGestorContrato() {
         return gestorContrato;
     }
@@ -2634,15 +2643,6 @@ public class ContratoAdmControlador extends PrettyControlador<Contrato> implemen
             ve.adicionarMensagemDeOperacaoNaoPermitida("É permitido somente um gestor vigente por contrato.");
         }
         ve.lancarException();
-    }
-
-
-    public AtaRegistroPreco getAtaRegistroPreco() {
-        return ataRegistroPreco;
-    }
-
-    public void setAtaRegistroPreco(AtaRegistroPreco ataRegistroPreco) {
-        this.ataRegistroPreco = ataRegistroPreco;
     }
 
     public ObjetoContrato getObjetoContrato() {

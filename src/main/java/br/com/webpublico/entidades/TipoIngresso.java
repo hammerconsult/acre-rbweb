@@ -4,12 +4,9 @@
  */
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.enums.TipoBem;
 import br.com.webpublico.enums.TipoIngressoBaixa;
-import br.com.webpublico.util.anotacoes.Etiqueta;
-import br.com.webpublico.util.anotacoes.Obrigatorio;
-import br.com.webpublico.util.anotacoes.Pesquisavel;
-import br.com.webpublico.util.anotacoes.Tabelavel;
+import br.com.webpublico.enums.TipoBem;
+import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;

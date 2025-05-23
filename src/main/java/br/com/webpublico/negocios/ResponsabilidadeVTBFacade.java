@@ -112,8 +112,8 @@ public class ResponsabilidadeVTBFacade extends SuperFacadeContabil<Responsabilid
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity.getClasseCredor(), item));
-            objetos.add(new ObjetoParametro(entity, item));
+            objetos.add(new ObjetoParametro(entity.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), ResponsabilidadeVTB.class.getSimpleName(), item));
             item.setObjetoParametros(objetos);
             parametroEvento.getItensParametrosEvento().add(item);
 

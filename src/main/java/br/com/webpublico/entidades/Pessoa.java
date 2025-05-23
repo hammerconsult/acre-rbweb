@@ -269,7 +269,7 @@ public abstract class Pessoa extends SuperEntidadeDetectaAlteracao implements Se
     }
 
     public String getNomeAutoCompleteComId() {
-        return getId() + " - " + getCpf_Cnpj() + " - " + getNome() + " (" + getNomeTratamento() + ") " + " - " + (getSituacaoCadastralPessoa() != null ? " - " + getSituacaoCadastralPessoa().getDescricao() : "");
+        return getId() + " - " + getCpf_Cnpj() + " - " + getNome() + " (" + getNomeTratamento() + ") " + " - " + getSituacaoCadastralPessoa().getDescricao();
     }
 
     public List<PessoaClassificacaoCredor> getClassificacaoCredores() {
@@ -780,14 +780,6 @@ public abstract class Pessoa extends SuperEntidadeDetectaAlteracao implements Se
         this.arquivo = arquivo;
     }
 
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
     public Boolean getReceitaBrutaCPRB() {
         if (receitaBrutaCPRB == null) {
             receitaBrutaCPRB = Boolean.FALSE;
@@ -797,6 +789,14 @@ public abstract class Pessoa extends SuperEntidadeDetectaAlteracao implements Se
 
     public void setReceitaBrutaCPRB(Boolean receitaBrutaCPRB) {
         this.receitaBrutaCPRB = receitaBrutaCPRB;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
     }
 
     @Override

@@ -303,7 +303,7 @@ public class EquipamentoControlador extends PrettyControlador<Equipamento> imple
             ve.adicionarMensagemDeCampoObrigatorio("O campo Órgão/Entidade/Fundo deve ser informado.");
         }
 
-        if (Strings.isNullOrEmpty(selecionado.getIdentificacao().trim())) {
+        if (Strings.isNullOrEmpty(selecionado.getIdentificacao())) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo Identificação deve ser informado.");
         }
 

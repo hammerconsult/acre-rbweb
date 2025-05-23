@@ -8,25 +8,19 @@ import br.com.webpublico.consultaentidade.ConsultaEntidade;
 import br.com.webpublico.consultaentidade.ConsultaEntidadeFacade;
 import br.com.webpublico.consultaentidade.FiltroConsultaEntidade;
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.enums.ClasseDoAtributo;
-import br.com.webpublico.entidadesauxiliares.AtributoCadastroImobiliario;
-import br.com.webpublico.entidadesauxiliares.ImportacaoAtributoCadastroImobiliario;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.negocios.tributario.AuditoriaFacade;
 import br.com.webpublico.negocios.tributario.auxiliares.CalculadorIPTU;
-import br.com.webpublico.negocios.tributario.dao.JdbcCadastroImobiliarioDAO;
 import br.com.webpublico.nfse.domain.dtos.CadastroImobiliarioSearchNfseDTO;
 import br.com.webpublico.nfse.domain.dtos.Operador;
 import br.com.webpublico.nfse.domain.dtos.ParametroQuery;
 import br.com.webpublico.nfse.domain.dtos.ParametroQueryCampo;
 import br.com.webpublico.nfse.util.GeradorQuery;
-import br.com.webpublico.util.*;
+import br.com.webpublico.util.DataUtil;
+import br.com.webpublico.util.FacesUtil;
+import br.com.webpublico.util.StringUtil;
+import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
-import org.apache.logging.log4j.util.Strings;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.hibernate.Hibernate;
 import org.hibernate.envers.AuditReader;
 import org.hibernate.envers.AuditReaderFactory;
@@ -36,14 +30,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.context.ContextLoader;
 
 import javax.ejb.*;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -103,9 +95,6 @@ public class CadastroImobiliarioFacade extends AbstractFacade<CadastroImobiliari
     private ConsultaEntidadeFacade consultaEntidadeFacade;
     @EJB
     private AlvaraConstrucaoFacade alvaraConstrucaoFacade;
-    @EJB
-    private HabiteseConstrucaoFacade habiteseConstrucaoFacade;
-    private JdbcCadastroImobiliarioDAO jdbcCadastroImobiliarioDAO;
 
     public CadastroImobiliarioFacade() {
         super(CadastroImobiliario.class);
@@ -113,14 +102,6 @@ public class CadastroImobiliarioFacade extends AbstractFacade<CadastroImobiliari
 
     public CalculaITBIFacade getCalculaITBIFacade() {
         return calculaITBIFacade;
-    }
-
-    public JdbcCadastroImobiliarioDAO getJdbcCadastroImobiliarioDAO() {
-        if (jdbcCadastroImobiliarioDAO == null) {
-            jdbcCadastroImobiliarioDAO = (JdbcCadastroImobiliarioDAO) ContextLoader.getCurrentWebApplicationContext()
-                .getBean("cadastroImobiliarioJDBCDAO");
-        }
-        return jdbcCadastroImobiliarioDAO;
     }
 
     @Override
@@ -1680,64 +1661,6 @@ public class CadastroImobiliarioFacade extends AbstractFacade<CadastroImobiliari
         return !resultList.isEmpty() ? ((BigDecimal) resultList.get(0)).compareTo(BigDecimal.ZERO) != 0 : false;
     }
 
-    public void atualizarCoordenadasDoSit(CadastroImobiliario selecionado) {
-        em.createNativeQuery("UPDATE CADASTROIMOBILIARIO SET COORDENADASSIT = :coordenadas WHERE ID = :id")
-            .setParameter("coordenadas", selecionado.getCoordenadasSIT())
-            .setParameter("id", selecionado.getId())
-            .executeUpdate();
-    }
-
-    @TransactionTimeout(value = 1, unit = TimeUnit.HOURS)
-    public void importarAtributosCadastroImobiliario(AssistenteBarraProgresso assistenteBarraProgresso,
-                                                     ImportacaoAtributoCadastroImobiliario importacao) {
-        XSSFWorkbook wb = null;
-        try {
-            assistenteBarraProgresso.zerarContadoresProcesso();
-            assistenteBarraProgresso.setDescricaoProcesso("Lendo a planilha de dados.");
-            wb = new XSSFWorkbook(importacao.getUploadedFile().getInputstream());
-            XSSFSheet sheet = wb.getSheetAt(0);
-
-            assistenteBarraProgresso.zerarContadoresProcesso();
-            assistenteBarraProgresso.setDescricaoProcesso("Importando os atributos do cadastro imobiliário.");
-            assistenteBarraProgresso.setTotal(ExcelUtil.getNumeroLinhas(sheet));
-
-            Iterator<Row> itr = sheet.iterator();
-            if (itr.hasNext()) itr.next();
-            while (itr.hasNext()) {
-                Row row = itr.next();
-                if (row.getCell(0) == null)
-                    break;
-
-                String inscricaoCadastral = row.getCell(importacao.getIndexInscricaoCadastral()).getStringCellValue();
-
-                for (AtributoCadastroImobiliario atributo : importacao.getAtributos()) {
-                    Cell cell = row.getCell(atributo.getIndex());
-                    String valor = cell != null && cell.getCellType() == Cell.CELL_TYPE_STRING ?
-                        cell.getStringCellValue() : null;
-
-                    if (Strings.isNotEmpty(valor)) {
-                        getJdbcCadastroImobiliarioDAO().executarSql("call proc_insere_atributo_cadastro('" + inscricaoCadastral + "', " +
-                            atributo.getAtributo().getId() + ", '" + valor + "')");
-                    }
-                }
-                assistenteBarraProgresso.conta();
-            }
-        } catch (Exception e) {
-            logger.error("Erro ao processar a planilha de atributos do cadastro imobiliário. Erro: {}", e.getMessage());
-            logger.debug("Detalhes do erro ao processar a planilha de atributos do cadastro imobiliário.", e);
-        } finally {
-            if (wb != null) {
-                try {
-                    wb.close();
-                } catch (IOException e) {
-                    logger.error("Erro ao fechar a planilha de atributos do cadastro imobiliário. Erro: {}", e.getMessage());
-                    logger.debug("Detalhes do erro ao fechar a planilha de atributos do cadastro imobiliário.", e);
-                }
-            }
-        }
-
-    }
-
     public static class AtualizadorBCI {
         private boolean atualizando;
         private ConfiguracaoTributario configuracaoTributario;
@@ -1947,6 +1870,17 @@ public class CadastroImobiliarioFacade extends AbstractFacade<CadastroImobiliari
         return configuracaoTributarioFacade.recuperarUrlPortal();
     }
 
+    public CadastroImobiliario buscarCadastroImobiliarioPorId(Long id) {
+
+        String sql = "select cad.* from CADASTROIMOBILIARIO cad " +
+            "where cad.id = :id";
+
+        Query q = em.createNativeQuery(sql, CadastroImobiliario.class);
+        q.setParameter("id", id);
+        CadastroImobiliario cadastroImobiliario = (CadastroImobiliario) q.getResultList().get(0);
+        return cadastroImobiliario;
+    }
+
 
     public List<CadastroImobiliario> buscarCadastroImobiliarioPorSituacao(String s, Boolean ativo, String... atributos) {
         String hql = " select new CadastroImobiliario(bci.id, bci.codigo, bci.inscricaoCadastral, bci.lote) " +
@@ -1968,17 +1902,6 @@ public class CadastroImobiliarioFacade extends AbstractFacade<CadastroImobiliari
         q.setParameter("ativo", ativos);
         q.setMaxResults(10);
         return q.getResultList();
-    }
-
-    public CadastroImobiliario buscarCadastroImobiliarioPorId(Long id) {
-
-        String sql = "select cad.* from CADASTROIMOBILIARIO cad " +
-            "where cad.id = :id";
-
-        Query q = em.createNativeQuery(sql, CadastroImobiliario.class);
-        q.setParameter("id", id);
-        CadastroImobiliario cadastroImobiliario = (CadastroImobiliario) q.getResultList().get(0);
-        return cadastroImobiliario;
     }
 
     public CadastroImobiliario recuperarCadastroImobiliarioSit(Long idCadastro) {
@@ -2028,9 +1951,5 @@ public class CadastroImobiliarioFacade extends AbstractFacade<CadastroImobiliari
 
     public AlvaraConstrucaoFacade getAlvaraConstrucaoFacade() {
         return alvaraConstrucaoFacade;
-    }
-
-    public HabiteseConstrucaoFacade getHabiteseConstrucaoFacade() {
-        return habiteseConstrucaoFacade;
     }
 }

@@ -280,16 +280,6 @@ public class ConfiguracaoContabilFacade extends AbstractFacade<ConfiguracaoConta
         return q.getResultList();
     }
 
-    public boolean isGerarSaldoUtilizandoMicroService(String nomeColuna) {
-        String sql = " select cc.id, cc." + nomeColuna +
-            " from ConfiguracaoContabil cc " +
-            "   inner join ConfiguracaoModulo cm on cc.id = cm.id " +
-            " where cm.desde = (select max(cModulo.desde) from ConfiguracaoContabil cCont inner join ConfiguracaoModulo cModulo on cCont.id = cModulo.id ) " +
-            "   and cc." + nomeColuna + " = 1 ";
-        Query q = em.createNativeQuery(sql);
-        return !q.getResultList().isEmpty();
-    }
-
     public ConfiguracaoContabilArquivoLayout buscarArquivoLayouPorTipo(TipoConvenioArquivoMensal tipo) {
         String sql = " select carqlayout.* " +
             " from CONFIGCARQUIVOLAYOUT carqlayout " +

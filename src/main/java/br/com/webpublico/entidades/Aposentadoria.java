@@ -6,10 +6,11 @@ package br.com.webpublico.entidades;
 
 import br.com.webpublico.entidades.rh.esocial.TipoBeneficioEsocial;
 import br.com.webpublico.entidades.rh.esocial.TipoBeneficioPrevidenciario;
+import br.com.webpublico.enums.RegraAposentadoria;
 import br.com.webpublico.enums.TipoContagemEspecial;
 import br.com.webpublico.enums.TipoReajusteAposentadoria;
-import br.com.webpublico.enums.rh.esocial.TipoPlanoSegregacaoMassa;
 import br.com.webpublico.enums.rh.estudoatuarial.TipoBeneficioEstudoAtuarial;
+import br.com.webpublico.enums.rh.esocial.TipoPlanoSegregacaoMassa;
 import br.com.webpublico.enums.rh.sig.TipoAposentadoriaEspecialSIG;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.anotacoes.Etiqueta;
@@ -53,7 +54,7 @@ public class Aposentadoria extends VinculoFP implements Serializable {
     @Obrigatorio
     @Tabelavel
     @Pesquisavel
-    @ManyToOne
+    @Enumerated(EnumType.STRING)
     private RegraAposentadoria regraAposentadoria;
     @OneToMany(mappedBy = "aposentadoria", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AtoLegalAposentadoria> atosLegais;
@@ -101,13 +102,13 @@ public class Aposentadoria extends VinculoFP implements Serializable {
     @Obrigatorio
     @Etiqueta("Número do benefício previdenciário")
     private String numeroBeneficioPrevidenciario;
-    @Etiqueta("Tipo de Aposentadoria Especial SIG")
-    @Enumerated(EnumType.STRING)
-    private TipoAposentadoriaEspecialSIG tipoAposentadoriaEspecialSIG;
     @Tabelavel
     @Enumerated(EnumType.STRING)
     @Etiqueta("Tipo de Benefício Estudo Atuarial")
     private TipoBeneficioEstudoAtuarial tipoBeneficioEstudoAtuarial;
+    @Etiqueta("Tipo de Aposentadoria Especial SIG")
+    @Enumerated(EnumType.STRING)
+    private TipoAposentadoriaEspecialSIG tipoAposentadoriaEspecialSIG;
     @Obrigatorio
     @ManyToOne
     @Etiqueta("Tipo de Benefício Esocial")

@@ -23,7 +23,6 @@ import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 import net.sf.jasperreports.engine.JRException;
-import org.hibernate.NonUniqueResultException;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,41 +173,6 @@ public class ExoneracaoRescisaoFacade extends AbstractFacade<ExoneracaoRescisao>
         sql.append(" inner join PERIODOAQUISITIVOFL pa on concessao.periodoaquisitivofl_id = pa.id ");
         sql.append(" where pa.CONTRATOFP_ID = :idContrato and :dataExoneracao <= coalesce(concessao.DATAFINAL, :dataExoneracao) ");
         Query q = em.createNativeQuery(sql.toString(), ConcessaoFeriasLicenca.class);
-        q.setParameter("idContrato", vinculo.getId());
-        q.setParameter("dataExoneracao", dataExoneracao);
-        if (!q.getResultList().isEmpty()) {
-            return q.getResultList();
-        }
-        return null;
-    }
-
-    public ConcessaoFeriasLicenca temConcessaoNaDataExoneracao(VinculoFP vinculo, Date dataExoneracao) {
-        String sql = "select * from ConcessaoFeriasLicenca concessao " +
-             " inner join periodoaquisitivofl pa ON concessao.periodoaquisitivofl_id = pa.id " +
-             " where pa.contratofp_id = :idContrato " +
-             " and concessao.datainicial <= :dataExoneracao " +
-             " and :dataExoneracao < COALESCE(concessao.datafinal, :dataExoneracao)";
-
-        Query query = em.createNativeQuery(sql, ConcessaoFeriasLicenca.class);
-        query.setParameter("idContrato", vinculo.getId());
-        query.setParameter("dataExoneracao", dataExoneracao);
-
-        try {
-            return (ConcessaoFeriasLicenca) query.getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        } catch (NonUniqueResultException e) {
-            throw new RuntimeException("Mais de uma concessão encontrada para a data de exoneração", e);
-        }
-    }
-
-
-    public List<ConcessaoFeriasLicenca> temConcessaoAposDataExoneraca(VinculoFP vinculo, Date dataExoneracao) {
-        String sql = "select concessao.* from concessaoferiaslicenca concessao " +
-            "inner join periodoaquisitivofl pa on concessao.periodoaquisitivofl_id = pa.id " +
-            "where pa.CONTRATOFP_ID = :idContrato " +
-            "and concessao.datainicial > :dataExoneracao";
-        Query q = em.createNativeQuery(sql, ConcessaoFeriasLicenca.class);
         q.setParameter("idContrato", vinculo.getId());
         q.setParameter("dataExoneracao", dataExoneracao);
         if (!q.getResultList().isEmpty()) {
@@ -666,22 +630,6 @@ public class ExoneracaoRescisaoFacade extends AbstractFacade<ExoneracaoRescisao>
         return null;
     }
 
-    public List<Long> buscarIdsExoneracoesPorContratoFP(ContratoFP contratoFP) {
-        String sql = " select exoneracao.id from ExoneracaoRescisao exoneracao " +
-            " where exoneracao.vinculofp_id = :contrato " +
-            " order by exoneracao.id desc";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("contrato", contratoFP.getId());
-        List<BigDecimal> resultList = q.getResultList();
-        List<Long> retorno = Lists.newArrayList();
-        if (resultList != null && !resultList.isEmpty()) {
-            for (BigDecimal resultado : resultList) {
-                retorno.add(resultado.longValue());
-            }
-        }
-        return retorno;
-    }
-
     public List<String> getIdsEsocialExoneracaoPorEmpregadorFiltrandoPorInicioAndFinalVigenciaAndTipoArquivoEsocial(Date inicio, Date fim, List<Long> idsUnidade, TipoArquivoESocial tipoArquivoESocial) {
         String sql = "select registro.IDENTIFICADORWP " + " from REGISTROESOCIAL registro " + " inner join exoneracaorescisao exoneracao on exoneracao.id = registro.IDENTIFICADORWP" + " inner join vinculofp vinculo on exoneracao.VINCULOFP_ID = vinculo.ID " + " where TIPOARQUIVOESOCIAL = :tipoArquivo  " + " and (SITUACAO = 'PROCESSADO_COM_SUCESSO' or SITUACAO = 'PROCESSADO_COM_ADVERTENCIA' " + " and vinculo.UNIDADEORGANIZACIONAL_ID in (:unidades))";
         if (inicio != null || fim != null) {
@@ -699,5 +647,21 @@ public class ExoneracaoRescisaoFacade extends AbstractFacade<ExoneracaoRescisao>
             return result;
         }
         return null;
+    }
+
+    public List<Long> buscarIdsExoneracoesPorContratoFP(ContratoFP contratoFP) {
+        String sql = " select exoneracao.id from ExoneracaoRescisao exoneracao " +
+            " where exoneracao.vinculofp_id = :contrato " +
+            " order by exoneracao.id desc";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("contrato", contratoFP.getId());
+        List<BigDecimal> resultList = q.getResultList();
+        List<Long> retorno = Lists.newArrayList();
+        if (resultList != null && !resultList.isEmpty()) {
+            for (BigDecimal resultado : resultList) {
+                retorno.add(resultado.longValue());
+            }
+        }
+        return retorno;
     }
 }

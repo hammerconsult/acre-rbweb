@@ -38,9 +38,6 @@ public class ReajusteAplicado extends SuperEntidade {
     @Temporal(TemporalType.DATE)
     @Etiqueta("Início Vigência dos Reajustes")
     private Date inicioVigenciaReajustes;
-    @Temporal(TemporalType.DATE)
-    @Etiqueta("Data de Referência")
-    private Date dataReferencia;
 
     public Long getId() {
         return id;
@@ -80,13 +77,5 @@ public class ReajusteAplicado extends SuperEntidade {
 
     public void setInicioVigenciaReajustes(Date inicioVigenciaReajustes) {
         this.inicioVigenciaReajustes = inicioVigenciaReajustes;
-    }
-
-    public Date getDataReferencia() {
-        return dataReferencia;
-    }
-
-    public void setDataReferencia(Date dataReferencia) {
-        this.dataReferencia = dataReferencia;
     }
 }

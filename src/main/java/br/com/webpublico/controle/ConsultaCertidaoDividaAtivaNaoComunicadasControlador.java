@@ -86,10 +86,11 @@ public class ConsultaCertidaoDividaAtivaNaoComunicadasControlador implements Ser
         FacesUtil.atualizarComponente("Formulario");
         FacesUtil.atualizarComponente("formDetalhesEnvio");
         FacesUtil.executaJavaScript("dialogDetalhesEnvio.show()");
+
     }
 
     public void voltar() {
-        FacesUtil.redirecionamentoInterno("/consulta-e-reemissao-de-certidao-de-divida-ativa/");
+        FacesUtil.redirecionamentoInterno("/consulta-e-reemissao-de-certidao-de-divida-ativa");
     }
 
     public void recuperaCertidao(Long id) {

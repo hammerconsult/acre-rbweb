@@ -1,6 +1,9 @@
 package br.com.webpublico.entidades.rh.administracaodepagamento;
 
-import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidades.FolhaDePagamento;
+import br.com.webpublico.entidades.SuperEntidade;
+import br.com.webpublico.entidades.UsuarioSistema;
+import br.com.webpublico.entidades.VinculoFP;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
@@ -26,8 +29,6 @@ public class FilaProcessamentoFolha extends SuperEntidade {
     private Date incluidoEm;
     @Temporal(TemporalType.TIMESTAMP)
     private Date finalizadoEm;
-    @ManyToOne
-    private DetalhesCalculoRH detalhesCalculoRH;
 
     public FilaProcessamentoFolha() {
         incluidoEm = new Date();
@@ -87,13 +88,5 @@ public class FilaProcessamentoFolha extends SuperEntidade {
 
     public void setFolhaDePagamento(FolhaDePagamento folhaDePagamento) {
         this.folhaDePagamento = folhaDePagamento;
-    }
-
-    public DetalhesCalculoRH getDetalhesCalculoRH() {
-        return detalhesCalculoRH;
-    }
-
-    public void setDetalhesCalculoRH(DetalhesCalculoRH detalhesCalculoRH) {
-        this.detalhesCalculoRH = detalhesCalculoRH;
     }
 }

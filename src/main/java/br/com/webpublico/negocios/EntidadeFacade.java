@@ -7,13 +7,11 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.enums.CategoriaDeclaracaoPrestacaoContas;
 import br.com.webpublico.enums.TipoEntidade;
-import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.enums.rh.esocial.TipoClasseESocial;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.UtilRH;
 import com.google.common.collect.Lists;
 import org.hibernate.Hibernate;
-import com.google.common.collect.Maps;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.UploadedFile;
 
@@ -25,7 +23,6 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Stateless
 public class EntidadeFacade extends AbstractFacade<Entidade> {
@@ -56,10 +53,6 @@ public class EntidadeFacade extends AbstractFacade<Entidade> {
     private UnidadeOrganizacionalFacade unidadeOrganizacionalFacade;
     @EJB
     private NaturezaJuridicaEntidadeFacade naturezaJuridicaEntidadeFacade;
-    @EJB
-    private SistemaFacade sistemaFacade;
-    @EJB
-    private LotacaoFuncionalFacade lotacaoFuncionalFacade;
 
     public EntidadeFacade() {
         super(Entidade.class);
@@ -383,30 +376,6 @@ public class EntidadeFacade extends AbstractFacade<Entidade> {
         return em.find(Entidade.class, ((BigDecimal) query.getSingleResult()).longValue());
     }
 
-
-    public Entidade buscarEntidadeDeclarantePorUnidadeOrganizacional(UnidadeOrganizacional unidade, CategoriaDeclaracaoPrestacaoContas cat, Exercicio exercicio) {
-
-
-        String sql = " select distinct e.* from DeclaracaoPrestacaoContas dpc " +
-            " inner join EntidadeDPContas ents on dpc.ID = ents.declaracaoPrestacaoContas_id " +
-            " inner join ItemEntidadeDPContas iecs on ents.id = iecs.ENTIDADEDPCONTAS_ID " +
-            " inner join entidade e on iecs.ENTIDADE_ID = e.id " +
-            " inner join ITEMENTIDADEUNIDADEORG itemUnidade on iecs.id = itemUnidade.ITEMENTIDADEDPCONTAS_ID " +
-            " inner join HIERARQUIAORGANIZACIONAL ho on itemUnidade.HIERARQUIAORGANIZACIONAL_ID = ho.id " +
-            " inner join UNIDADEORGANIZACIONAL uo on ho.SUBORDINADA_ID = uo.id " +
-            " where dpc.CATEGORIADECLARACAO = :cat " +
-            " and :dataReferencia BETWEEN extract(year from (ents.iniciovigencia)) and extract(YEAR  from (coalesce(ents.finalVigencia, sysdate))) " +
-            " and uo.id = :unidade ";
-        Query q = em.createNativeQuery(sql, Entidade.class);
-        q.setParameter("cat", cat.name());
-        q.setParameter("unidade", unidade.getId());
-        q.setParameter("dataReferencia", exercicio.getAno());
-        if (q.getResultList().isEmpty()) {
-            return null;
-        }
-        return (Entidade) q.getResultList().get(0);
-    }
-
     public Entidade recuperarEntidadeDeclarantePorUnidadeOrganizacional(VinculoFP vinculoFP, CategoriaDeclaracaoPrestacaoContas cat) {
         String sql = " select distinct e.* from DeclaracaoPrestacaoContas dpc " +
             " inner join EntidadeDPContas ents on dpc.ID = ents.declaracaoPrestacaoContas_id " +
@@ -429,45 +398,6 @@ public class EntidadeFacade extends AbstractFacade<Entidade> {
         }
         return (Entidade) q.getResultList().get(0);
     }
-
-    /**
-     * Método utilizado para recuperar a entidade e hierarquia caso um servidor tenha sido transferido de uma entidade para outra no meio do ano, deverá emitir 2 registros de céudula C.
-     * <p>
-     * caso o servidor tenha mudado de orgão.. mas a entidade ainda é a prefeitura então coloca no root da hierarquia. ex:544959/1
-     * servidor que foi tranferido de uma entidade para outra: ex: 703112/1
-     */
-
-    public Map<Entidade, HierarquiaOrganizacional> buscarEntidadesDeclarantePorVinculoFP(VinculoFP vinculoFP, CategoriaDeclaracaoPrestacaoContas cat, Exercicio exercicio) {
-        List<LotacaoFuncional> lotacaoFuncionals = lotacaoFuncionalFacade.buscarLotacaoFuncionalPorExercicio(vinculoFP, exercicio);
-        Map<Entidade, HierarquiaOrganizacional> mapEntidadeHo = Maps.newHashMap();
-        for (LotacaoFuncional lotacaoFuncional : lotacaoFuncionals) {
-            HierarquiaOrganizacional orgao = hierarquiaOrganizacionalFacade.getHierarquiaOrganizacionalPorUnidade(getDataReferencia(lotacaoFuncional), lotacaoFuncional.getUnidadeOrganizacional(), TipoHierarquiaOrganizacional.ADMINISTRATIVA);
-            Entidade entidadeOrgao;
-
-            if (orgao.getSuperior() != null) {
-                orgao = hierarquiaOrganizacionalFacade.buscarOrgaoAdministrativoPorUnidadeAndVigencia(lotacaoFuncional.getUnidadeOrganizacional(), getDataReferencia(lotacaoFuncional));
-                entidadeOrgao = buscarEntidadeDeclarantePorUnidadeOrganizacional(orgao.getSubordinada(), CategoriaDeclaracaoPrestacaoContas.DIRF, exercicio);
-            } else {
-                entidadeOrgao = buscarEntidadeDeclarantePorEntidade(orgao.getSubordinada().getEntidade(), CategoriaDeclaracaoPrestacaoContas.DIRF, exercicio);
-            }
-
-
-            if (mapEntidadeHo.containsKey(entidadeOrgao)) {
-                mapEntidadeHo.put(entidadeOrgao, hierarquiaOrganizacionalFacade.getRaizHierarquia(sistemaFacade.getDataOperacao()));
-            } else {
-                mapEntidadeHo.put(entidadeOrgao, orgao);
-            }
-        }
-        return mapEntidadeHo;
-    }
-
-    private Date getDataReferencia(LotacaoFuncional lotacaoFuncional) {
-        if (lotacaoFuncional.getFinalVigencia() == null) {
-            return sistemaFacade.getDataOperacao();
-        }
-        return lotacaoFuncional.getFinalVigencia();
-    }
-
 
     public Entidade recuperarEntidadePorUnidadeOrcamentaria(UnidadeOrganizacional orcamentaria) {
         Query query = em.createNativeQuery(" select ENTIDADE_ID " +
@@ -612,26 +542,6 @@ public class EntidadeFacade extends AbstractFacade<Entidade> {
         String sql = "select entidade.* from Entidade entidade where entidade.ativa = 1 order by entidade.nome";
         Query q = em.createNativeQuery(sql, Entidade.class);
         return q.getResultList();
-    }
-
-    public Entidade buscarEntidadeDeclarantePorEntidade(Entidade entidade, CategoriaDeclaracaoPrestacaoContas cat, Exercicio exercicio) {
-        String sql = " select distinct e.* from DeclaracaoPrestacaoContas dpc " +
-            " inner join EntidadeDPContas ents on dpc.ID = ents.declaracaoPrestacaoContas_id " +
-            " inner join ItemEntidadeDPContas iecs on ents.id = iecs.ENTIDADEDPCONTAS_ID " +
-            " inner join entidade e on iecs.ENTIDADE_ID = e.id " +
-            " inner join ITEMENTIDADEUNIDADEORG itemUnidade on iecs.id = itemUnidade.ITEMENTIDADEDPCONTAS_ID " +
-            " inner join HIERARQUIAORGANIZACIONAL ho on itemUnidade.HIERARQUIAORGANIZACIONAL_ID = ho.id " +
-            " where dpc.CATEGORIADECLARACAO = :cat " +
-            " and :dataReferencia BETWEEN extract(year from (ents.iniciovigencia)) and extract(YEAR  from (coalesce(ents.finalVigencia, sysdate))) " +
-            " and e.id = :entidade ";
-        Query q = em.createNativeQuery(sql, Entidade.class);
-        q.setParameter("cat", cat.name());
-        q.setParameter("entidade", entidade.getId());
-        q.setParameter("dataReferencia", exercicio.getAno());
-        if (q.getResultList().isEmpty()) {
-            return null;
-        }
-        return (Entidade) q.getResultList().get(0);
     }
 
     public Entidade buscarEntidadePorUnidadeAdministrativa(Long idUnidade, Date data) {

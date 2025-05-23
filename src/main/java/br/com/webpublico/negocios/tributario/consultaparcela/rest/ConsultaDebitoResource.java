@@ -13,7 +13,6 @@ import br.com.webpublico.tributario.consultadebitos.dtos.PagamentoDTO;
 import br.com.webpublico.tributario.consultadebitos.dtos.ParcelaDTO;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.FacesUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +29,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 import static br.com.webpublico.nfse.util.HeaderUtil.setMessageError;
@@ -63,21 +61,17 @@ public class ConsultaDebitoResource {
 
     @RequestMapping(value = "/consultar-debito", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public ResponseEntity<List<ParcelaDTO>> consultar(@RequestBody LinkedHashMap param) {
+    public ResponseEntity<List<ParcelaDTO>> consultar(@RequestBody ConsultarDebitos consultaDebito) {
         try {
-            List<ParcelaDTO> retorno = Lists.newArrayList();
-            ConsultarDebitos consultaDebito = new ObjectMapper().convertValue(param, ConsultarDebitos.class);
             ConsultaParcela consultaParcela = new ConsultaParcela();
             consultaParcela.copiarConsultaDebitosToConsultaParcela(consultaDebito);
-            if (!consultaDebito.getFiltros().isEmpty()) {
-                consultaParcela.executaConsulta();
-                List<ResultadoParcela> resultados = consultaParcela.getResultados();
-                for (ResultadoParcela resultado : resultados) {
-                    ParcelaDTO parcelaDTO = resultado.toParcelaDTO();
-                    parcelaDTO.setEnderecoCadastro(consultaDebitoFacade.getEnderecoFacade().montarEnderecoCadastroImobiliarioIntegracaoBB(parcelaDTO.getIdCadastro()));
-                    parcelaDTO.setDivida(resultado.getDivida());
-                    retorno.add(parcelaDTO);
-                }
+            List<ResultadoParcela> resultados = consultaParcela.executaConsulta().getResultados();
+            List<ParcelaDTO> retorno = Lists.newArrayList();
+            for (ResultadoParcela resultado : resultados) {
+                ParcelaDTO parcelaDTO = resultado.toParcelaDTO();
+                parcelaDTO.setEnderecoCadastro(consultaDebitoFacade.getEnderecoFacade().montarEnderecoCadastroImobiliarioIntegracaoBB(parcelaDTO.getIdCadastro()));
+                parcelaDTO.setDivida(resultado.getDivida());
+                retorno.add(parcelaDTO);
             }
             return new ResponseEntity(retorno, HttpStatus.OK);
         } catch (Exception e) {

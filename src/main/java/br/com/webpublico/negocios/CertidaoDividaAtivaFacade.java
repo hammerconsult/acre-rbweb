@@ -1694,48 +1694,48 @@ public class CertidaoDividaAtivaFacade extends AbstractFacade<CertidaoDividaAtiv
 
     @TransactionTimeout(value = 4, unit = TimeUnit.HOURS)
     public List<Long> recuperarIdsParcelasPorCertidaoDividaAtiva(CertidaoDividaAtiva cda) {
-        String sql = "SELECT distinct id\n" +
-            "  FROM\n" +
-            "    ( WITH cteparcelamento(originada, original, calculo) AS\n" +
-            "    (SELECT COALESCE(pvd.id,pvdoriginal.id) AS originada,\n" +
-            "      pvdoriginal.id                        AS original,\n" +
-            "      vdoriginal.calculo_id                 AS calculo\n" +
-            "    FROM parcelavalordivida pvdoriginal\n" +
-            "    INNER JOIN valordivida vdoriginal\n" +
-            "    ON vdoriginal.id = pvdoriginal.valordivida_id\n" +
-            "    LEFT JOIN INSCRICAODIVIDAPARCELA idp\n" +
-            "    ON idp.parcelaValorDivida_id = pvdoriginal.id\n" +
-            "    LEFT JOIN ITEMINSCRICAODIVIDAATIVA ida\n" +
-            "    ON ida.id = idp.itemInscricaoDividaAtiva_id\n" +
-            "    LEFT JOIN valordivida vdoriginado\n" +
-            "    ON vdoriginado.calculo_id = ida.id\n" +
-            "    LEFT JOIN parcelavalordivida pvd\n" +
-            "    ON pvd.valordivida_id       = vdoriginado.id\n" +
-            "    inner join itemcertidaodividaativa icda on icda.ITEMINSCRICAODIVIDAATIVA_ID = ida.id\n" +
-            "    WHERE icda.CERTIDAO_ID = :cda\n" +
-            "    UNION ALL\n" +
-            "    SELECT originada.id AS originada,\n" +
-            "      pvd.id            AS original,\n" +
-            "      pp.id             AS calculo\n" +
-            "    FROM parcelavalordivida pvd\n" +
-            "    INNER JOIN cteparcelamento cte\n" +
-            "    ON cte.originada = pvd.id\n" +
-            "    INNER JOIN itemprocessoparcelamento ipp\n" +
-            "    ON ipp.PARCELAVALORDIVIDA_ID = pvd.id\n" +
-            "    INNER JOIN processoparcelamento pp\n" +
-            "    ON pp.id = ipp.processoparcelamento_id\n" +
-            "    INNER JOIN valordivida vd\n" +
-            "    ON vd.calculo_id = pp.id\n" +
-            "    INNER JOIN parcelavalordivida originada\n" +
-            "    ON originada.valordivida_id = vd.id\n" +
-            "   \n" +
-            "    )\n" +
-            "  SELECT pvd.id\n" +
-            "  FROM parcelavalordivida pvd\n" +
-            "  INNER JOIN CTEPARCELAMENTO cte\n" +
-            "  ON cte.originada = pvd.id\n" +
-            "   inner join situacaoparcelavalordivida spvd on spvd.id = pvd.situacaoatual_id\n" +
-            "  ORDER BY pvd.id DESC\n" +
+        String sql = "SELECT distinct id " +
+            "  FROM " +
+            "    ( WITH cteparcelamento(originada, original, calculo) AS " +
+            "    (SELECT COALESCE(pvd.id,pvdoriginal.id) AS originada, " +
+            "      pvdoriginal.id                        AS original, " +
+            "      vdoriginal.calculo_id                 AS calculo " +
+            "    FROM parcelavalordivida pvdoriginal " +
+            "    INNER JOIN valordivida vdoriginal " +
+            "    ON vdoriginal.id = pvdoriginal.valordivida_id " +
+            "    LEFT JOIN INSCRICAODIVIDAPARCELA idp " +
+            "    ON idp.parcelaValorDivida_id = pvdoriginal.id " +
+            "    LEFT JOIN ITEMINSCRICAODIVIDAATIVA ida " +
+            "    ON ida.id = idp.itemInscricaoDividaAtiva_id " +
+            "    LEFT JOIN valordivida vdoriginado " +
+            "    ON vdoriginado.calculo_id = ida.id " +
+            "    LEFT JOIN parcelavalordivida pvd " +
+            "    ON pvd.valordivida_id       = vdoriginado.id " +
+            "    inner join itemcertidaodividaativa icda on icda.ITEMINSCRICAODIVIDAATIVA_ID = ida.id " +
+            "    WHERE icda.CERTIDAO_ID = :cda " +
+            "    UNION ALL " +
+            "    SELECT originada.id AS originada, " +
+            "      pvd.id            AS original, " +
+            "      pp.id             AS calculo " +
+            "    FROM parcelavalordivida pvd " +
+            "    INNER JOIN cteparcelamento cte " +
+            "    ON cte.originada = pvd.id " +
+            "    INNER JOIN itemprocessoparcelamento ipp " +
+            "    ON ipp.PARCELAVALORDIVIDA_ID = pvd.id " +
+            "    INNER JOIN processoparcelamento pp " +
+            "    ON pp.id = ipp.processoparcelamento_id " +
+            "    INNER JOIN valordivida vd " +
+            "    ON vd.calculo_id = pp.id " +
+            "    INNER JOIN parcelavalordivida originada " +
+            "    ON originada.valordivida_id = vd.id " +
+            "    " +
+            "    ) " +
+            "  SELECT pvd.id " +
+            "  FROM parcelavalordivida pvd " +
+            "  INNER JOIN CTEPARCELAMENTO cte " +
+            "  ON cte.originada = pvd.id " +
+            "   inner join situacaoparcelavalordivida spvd on spvd.id = pvd.situacaoatual_id " +
+            "  ORDER BY pvd.id DESC " +
             "    )";
         Query q = em.createNativeQuery(sql);
         q.setParameter("cda", cda.getId());
@@ -2045,6 +2045,7 @@ public class CertidaoDividaAtivaFacade extends AbstractFacade<CertidaoDividaAtiv
             return Lists.newArrayList();
         }
     }
+
 
     public List<ResultadoParcela> separarParcelasDoUltimoParcelamentoAtivo(ValoresAtualizadosCDA valoresAtualizadosCDA, List<ResultadoParcela> parcelasDaCda) {
         List<Long> idsParcelamento = Lists.newArrayList();

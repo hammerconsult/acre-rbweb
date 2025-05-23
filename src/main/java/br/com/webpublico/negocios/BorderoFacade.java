@@ -415,7 +415,8 @@ public class BorderoFacade extends AbstractFacade<Bordero> implements Serializab
         Query q = em.createNativeQuery(" update borderopagamentoextra " +
             " set situacaoitembordero = :situacao " +
             " where bordero_id = (select id from bordero where sequenciaarquivo = :numero " +
-            "                                              and exercicio_id = :idExercicio) " +
+            "                                            and situacao = '" + SituacaoBordero.AGUARDANDO_BAIXA.name() + "'" +
+            "                                            and exercicio_id = :idExercicio) " +
             " and pagamentoExtra_id = :idPagamento");
         q.setParameter("numero", pagamentoExtra.getNumeroPagamento());
         q.setParameter("idPagamento", pagamentoExtra.getId());

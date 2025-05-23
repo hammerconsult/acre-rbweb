@@ -99,9 +99,10 @@ public class CargoConfianca implements Serializable, ValidadorVigenciaFolha {
     @Transient
     private Long criadoEm;
     @Etiqueta("Observação")
-    private String observacao;
-    @Etiqueta("Observação")
     private String observacaoRCC;
+    @Etiqueta("Observação")
+    private String observacao;
+
 
     public String getObservacaoRCC() {
         return observacaoRCC;

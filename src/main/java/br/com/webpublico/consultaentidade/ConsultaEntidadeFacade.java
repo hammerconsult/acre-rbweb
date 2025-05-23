@@ -1,5 +1,6 @@
 package br.com.webpublico.consultaentidade;
 
+import br.com.webpublico.entidades.Arquivo;
 import br.com.webpublico.enums.Operador;
 import br.com.webpublico.enums.OperadorLogico;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
@@ -7,12 +8,9 @@ import br.com.webpublico.interfaces.EnumComDescricao;
 import br.com.webpublico.negocios.ArquivoFacade;
 import br.com.webpublico.negocios.DocumentoOficialFacade;
 import br.com.webpublico.negocios.SistemaFacade;
-import br.com.webpublico.report.ReportService;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.ExcelUtil;
 import br.com.webpublico.util.Util;
-import br.com.webpublico.webreportdto.dto.comum.RelatorioDTO;
-import br.com.webpublico.webreportdto.dto.comum.TipoRelatorioDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -20,11 +18,13 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import org.apache.commons.io.IOUtils;
 import org.jboss.ejb3.annotation.TransactionTimeout;
+import org.primefaces.model.StreamedContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ejb.AsyncResult;
+import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @Stateless
@@ -52,6 +53,7 @@ public class ConsultaEntidadeFacade {
     @EJB
     private ArquivoFacade arquivoFacade;
     DecimalFormat decimalFormat = new DecimalFormat("#,##0.00");
+    public static final ExcelUtil excelUtil = new ExcelUtil();
 
     public SistemaFacade getSistemaFacade() {
         return sistemaFacade;
@@ -302,36 +304,6 @@ public class ConsultaEntidadeFacade {
         }
     }
 
-    private <T extends Enum<T>> String montarOrderByPelaDescricaoDoEnum(Class<T> enumClass, FieldConsultaEntidade tabelavel) {
-        T[] enumConstants = enumClass.getEnumConstants();
-        ordenarEnumPelaDescricao(enumConstants, tabelavel.getTipoOrdenacao());
-
-        StringBuilder caseWhen = new StringBuilder();
-        String when = " when ";
-        caseWhen.append(" case ").append(tabelavel.getValor()).append(when);
-
-        for (int i = 0; i < enumConstants.length; i++) {
-            caseWhen.append("'").append(enumConstants[i].name()).append("'").append(" then ").append(i + 1)
-                .append(i == (enumConstants.length - 1) ? "" : when);
-        }
-        caseWhen.append("end");
-        return caseWhen.toString();
-    }
-
-    private <T> void ordenarEnumPelaDescricao(T[] enumConstants, TipoOrdenacao tipoOrdenacao) {
-        final Ordering<Comparable> ordem = TipoOrdenacao.ASC.equals(tipoOrdenacao) ? Ordering.natural() : Ordering.natural().reverse();
-        Arrays.sort(enumConstants, new Comparator<T>() {
-            @Override
-            public int compare(T o1, T o2) {
-                return ComparisonChain.start().compare(
-                    (o1 instanceof EnumComDescricao ? ((EnumComDescricao) o1).getDescricao() : o1.toString()),
-                    (o2 instanceof EnumComDescricao ? ((EnumComDescricao) o2).getDescricao() : o2.toString()),
-                    ordem
-                ).result();
-            }
-        });
-    }
-
     public StringBuilder agruparCondicoesPeloOperador(ConsultaEntidade consulta, String sql) {
         List<Map<OperadorLogico, String>> condicoes = adicionarCondicoes(consulta);
 
@@ -414,108 +386,89 @@ public class ConsultaEntidadeFacade {
         return indexProximaCondicao;
     }
 
+    private <T extends Enum<T>> String montarOrderByPelaDescricaoDoEnum(Class<T> enumClass, FieldConsultaEntidade tabelavel) {
+        T[] enumConstants = enumClass.getEnumConstants();
+        ordenarEnumPelaDescricao(enumConstants, tabelavel.getTipoOrdenacao());
+
+        StringBuilder caseWhen = new StringBuilder();
+        String when = " when ";
+        caseWhen.append(" case ").append(tabelavel.getValor()).append(when);
+
+        for (int i = 0; i < enumConstants.length; i++) {
+            caseWhen.append("'").append(enumConstants[i].name()).append("'").append(" then ").append(i + 1)
+                .append(i == (enumConstants.length - 1) ? "" : when);
+        }
+        caseWhen.append("end");
+        return caseWhen.toString();
+    }
+
+    private <T> void ordenarEnumPelaDescricao(T[] enumConstants, TipoOrdenacao tipoOrdenacao) {
+        final Ordering<Comparable> ordem = TipoOrdenacao.ASC.equals(tipoOrdenacao) ? Ordering.natural() : Ordering.natural().reverse();
+        Arrays.sort(enumConstants, new Comparator<T>() {
+            @Override
+            public int compare(T o1, T o2) {
+                return ComparisonChain.start().compare(
+                    (o1 instanceof EnumComDescricao ? ((EnumComDescricao) o1).getDescricao() : o1.toString()),
+                    (o2 instanceof EnumComDescricao ? ((EnumComDescricao) o2).getDescricao() : o2.toString()),
+                    ordem
+                ).result();
+            }
+        });
+    }
+
     private void defineValorPadrao(Map<String, Object> objeto, Object[] resultado, String valor, int i2) {
         objeto.put(valor, resultado[i2]);
     }
 
     private String getOperadorIsNull(FiltroConsultaEntidade filtro) {
+        if (filtro.getField().getDinamico() && TipoCampo.STRING.equals(filtro.getField().getTipo())) {
+            return "''";
+        }
         if (!Operador.IS_NOT_NULL.equals(filtro.getOperacao()) && !Operador.IS_NULL.equals(filtro.getOperacao())) {
             return Operador.DIFERENTE.equals(filtro.getOperacao()) ? Operador.IS_NOT_NULL.getOperador() : Operador.IS_NULL.getOperador();
         }
         return filtro.getOperacao().getOperador();
     }
 
+    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 1)
-    public void gerarExcel(ConsultaEntidade consulta, Boolean todosRegistros) {
-        ExcelUtil excelUtil = new ExcelUtil();
-        excelUtil.setAjustarTamanhoColuna(!todosRegistros);
+    public Future<StreamedContent> gerarExcel(ConsultaEntidade consulta, Boolean todosRegistros) {
+        StreamedContent retorno = null;
         try {
-            ResultadoConsultaEmLinhas result = montarRelatorioEmLinhas(consulta, todosRegistros, TipoRelatorioDTO.XLS);
-            adicionarTotalizadorExcel(consulta, result.valores);
-            ReportService.getInstance().porcentagemRelatorio(result.uuidRelatorio, BigDecimal.valueOf(95));
+            List<String> colunas = Lists.newArrayList();
+            List<Object[]> valores = Lists.newArrayList();
+            List<Map<String, Object>> resultados = Lists.newArrayList();
+            if (todosRegistros) {
+                ConsultaEntidade consultaEntidadeTodos = (ConsultaEntidade) Util.clonarObjeto(consulta);
+                consultaEntidadeTodos.setPaginaAtual(-1);
+                consultarEntidades(consultaEntidadeTodos);
+                resultados = consultaEntidadeTodos.getResultados();
+            } else {
+                resultados = consulta.getResultados();
+            }
+            for (FieldConsultaEntidade tabelavel : consulta.getTabelaveis()) {
+                colunas.add(tabelavel.getDescricao());
+            }
+            for (Map<String, Object> resultado : resultados) {
+                Object[] obj = new Object[resultado.size()];
+                int i = 0;
+                for (FieldConsultaEntidade tabelavel : consulta.getTabelaveis()) {
+                    obj[i] = resultado.get(tabelavel.getValor());
+                    i++;
+                }
+                valores.add(obj);
+            }
+            adicionarTotalizadorExcel(consulta, valores);
             excelUtil
                 .gerarExcel("Relatório de " + consulta.getNomeTela(),
                     "relatorio_" + consulta.getChave(),
-                    result.colunas, result.valores, "", consulta.getUsuarioCorrente().getPessoaFisica().toString(),
+                    colunas, valores, "", consulta.getUsuarioCorrente().getPessoaFisica().toString(),
                     consulta.getDataOperacao());
-            byte[] conteudo = null;
-            if (excelUtil.getFile() != null) {
-                conteudo = IOUtils.toByteArray(excelUtil.fileDownload().getStream());
-            }
-            Thread.sleep(3000);
-            ReportService.getInstance().finalizarRelatorio(result.uuidRelatorio, consulta.getUsuarioCorrente(), conteudo);
+            retorno = excelUtil.fileDownload();
         } catch (Exception e) {
             logger.error("Erro ao gerar Excel. {}", e);
         }
-    }
-
-
-    @TransactionTimeout(unit = TimeUnit.HOURS, value = 1)
-    public void gerarCSV(ConsultaEntidade consulta, Boolean todosRegistros) {
-        ExcelUtil excelUtil = new ExcelUtil();
-        try {
-            ResultadoConsultaEmLinhas result = montarRelatorioEmLinhas(consulta, todosRegistros, TipoRelatorioDTO.CSV);
-            adicionarTotalizadorExcel(consulta, result.valores);
-            ReportService.getInstance().porcentagemRelatorio(result.uuidRelatorio, BigDecimal.valueOf(95));
-            excelUtil
-                .gerarCSV("Relatório de " + consulta.getNomeTela(),
-                    "relatorio_" + consulta.getChave(),
-                    result.colunas, result.valores, false);
-            byte[] conteudo = null;
-            if (excelUtil.getFile() != null) {
-                conteudo = IOUtils.toByteArray(excelUtil.fileDownload().getStream());
-            }
-            Thread.sleep(3000);
-            ReportService.getInstance().finalizarRelatorio(result.uuidRelatorio, consulta.getUsuarioCorrente(), conteudo);
-        } catch (Exception e) {
-            logger.error("Erro ao gerar Excel. {}", e);
-        }
-    }
-
-    private ResultadoConsultaEmLinhas montarRelatorioEmLinhas(ConsultaEntidade consulta, Boolean todosRegistros, TipoRelatorioDTO tipo) {
-        RelatorioDTO dto = new RelatorioDTO();
-        dto.setTipoRelatorio(tipo);
-        dto.setNomeRelatorio("Exportaçao de " + consulta.getNomeTela());
-        String uuidRelatorio = ReportService.getInstance().addRelatorio(consulta.getUsuarioCorrente(), dto);
-        ReportService.getInstance().porcentagemRelatorio(uuidRelatorio, BigDecimal.valueOf(10));
-        List<String> colunas = Lists.newArrayList();
-        List<Object[]> valores = Lists.newArrayList();
-        List<Map<String, Object>> resultados;
-        if (todosRegistros) {
-            ConsultaEntidade consultaEntidadeTodos = (ConsultaEntidade) Util.clonarObjeto(consulta);
-            consultaEntidadeTodos.setPaginaAtual(-1);
-            consultarEntidades(consultaEntidadeTodos);
-            resultados = consultaEntidadeTodos.getResultados();
-        } else {
-            consultarEntidades(consulta);
-            resultados = consulta.getResultados();
-        }
-        ReportService.getInstance().porcentagemRelatorio(uuidRelatorio, BigDecimal.valueOf(60));
-        for (FieldConsultaEntidade tabelavel : consulta.getTabelaveis()) {
-            colunas.add(tabelavel.getDescricao());
-        }
-        for (Map<String, Object> resultado : resultados) {
-            Object[] obj = new Object[resultado.size()];
-            int i = 0;
-            for (FieldConsultaEntidade tabelavel : consulta.getTabelaveis()) {
-                obj[i] = resultado.get(tabelavel.getValor());
-                i++;
-            }
-            valores.add(obj);
-        }
-        return new ResultadoConsultaEmLinhas(uuidRelatorio, colunas, valores);
-    }
-
-    private static class ResultadoConsultaEmLinhas {
-        public final String uuidRelatorio;
-        public final List<String> colunas;
-        public final List<Object[]> valores;
-
-        public ResultadoConsultaEmLinhas(String uuidRelatorio, List<String> colunas, List<Object[]> valores) {
-            this.uuidRelatorio = uuidRelatorio;
-            this.colunas = colunas;
-            this.valores = valores;
-        }
+        return new AsyncResult<>(retorno);
     }
 
     private void adicionarTotalizadorExcel(ConsultaEntidade consulta, List<Object[]> valores) {

@@ -2,7 +2,6 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.controlerelatorio.AbstractReport;
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.ObraAtribuicao;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
@@ -619,29 +618,6 @@ public class ObraControlador extends PrettyControlador<Obra> implements Serializ
         return new ConverterAutoComplete(Contrato.class, obraFacade.getContratoFacade());
     }
 
-    public List<Contrato> completarContratoFirmado(String parte) {
-        return obraFacade.getContratoFacade().buscarContratoPorNumeroOrExercicio(parte.trim());
-    }
-
-    public List<ProfissionalConfea> completaProfissionalConfea(String parte) {
-        return obraFacade.getProfissionalConfeaFacade().listaFiltrando(parte.trim(), "codigo", "tituloMasculino", "tituloFeminino", "tituloAbreviado");
-    }
-
-    public ConverterAutoComplete getConverterProfissionalConfea() {
-        return new ConverterAutoComplete(ProfissionalConfea.class, obraFacade.getProfissionalConfeaFacade());
-    }
-
-    //Serviços e Medições
-
-    public List<SelectItem> getTiposART() {
-        List<SelectItem> itens = new ArrayList<>();
-        itens.add(new SelectItem(null, " "));
-        for (TipoArt t : TipoArt.values()) {
-            itens.add(new SelectItem(t, t.getDescricao()));
-        }
-        return itens;
-    }
-
     public void novoObraServico() {
         this.obraServico = new ObraServico();
         this.obraServico.setObra(selecionado);
@@ -1059,7 +1035,7 @@ public class ObraControlador extends PrettyControlador<Obra> implements Serializ
             + "        display:none;\n"
             + "    }\n"
             + "}"
-            + "@page{\n"
+            + " @page{ \n"
             + "    \n"
             + "}\n"
             + "}\n"
@@ -1069,13 +1045,13 @@ public class ObraControlador extends PrettyControlador<Obra> implements Serializ
             + "    -ms-transform: rotate(-45deg);\n"
             + "    -o-transform: rotate(-90deg);\n"
             + "    font-size: 92pt;\n"
-            + " font-weight: bold;\n"
-            + " position: absolute;\n"
+            + "    font-weight: bold;\n"
+            + "    position: absolute;\n"
             + "    opacity: 0.25;\n"
             + "    width: 100%;\n"
-            + "text-align: center;\n"
+            + "    text-align: center;\n"
             + "    z-index: 1000;\n"
-            + " top: 40%;\n"
+            + "    top: 40%;\n"
             + "}\n"
             + "#footer { \n"
             + "     display: block;"
@@ -1140,39 +1116,6 @@ public class ObraControlador extends PrettyControlador<Obra> implements Serializ
         return null;
     }
 
-    public List<SelectItem> getFiscaisObra() {
-        List<SelectItem> retorno = new ArrayList<>();
-        for (ResponsavelTecnicoFiscal responsavelTecnicoFiscal : obraFacade.recuperarFiscaisObra(selecionado)) {
-            if (responsavelTecnicoFiscal.getId() != null) {
-                retorno.add(new SelectItem(responsavelTecnicoFiscal, responsavelTecnicoFiscal.toString()));
-            }
-        }
-        return retorno;
-    }
-
-    public String getDataEmissaoTermoDefinitivo() {
-        for (ObraTermo obraTermo : selecionado.getItemObraTermo()) {
-            if (obraTermo.getDefinitivo())
-                return DataUtil.getDataFormatadaDiaHora(obraTermo.getDataEmissao());
-        }
-        return "";
-    }
-
-    public String getValorTotalReservadoSolicitado(boolean formatado) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (ObraMedicaoSolicitacaoEmpenho solicitado : obraMedicao.getObraMedicaoSolicitacaoEmpenhos()) {
-            total = total.add(solicitado.getValor());
-        }
-        if (formatado) {
-            return Util.formataValor(total);
-        }
-        return String.valueOf(total);
-    }
-
-    public List<Empenho> buscarEmpenhosObraMedicao() {
-        return obraFacade.buscarEmpenhosObraMedicao(obraMedicao);
-    }
-
     public ConverterAutoComplete getConverterTipoDocumentoAnexo() {
         if (converterTipoDocumentoAnexo == null) {
             converterTipoDocumentoAnexo = new ConverterAutoComplete(TipoDocumentoAnexo.class, obraFacade.getTipoDocumentoAnexoFacade());
@@ -1202,7 +1145,6 @@ public class ObraControlador extends PrettyControlador<Obra> implements Serializ
         }
         return Lists.newArrayList();
     }
-
 
     public List<ResponsavelTecnicoFiscal> completarResponsaveisFiscaisAprovados(String filtro) {
         return obraFacade.buscarResponsaveisFiscaisDaObraPorSituacao(selecionado, SituacaoSolicitacaoFiscal.APROVADA, filtro);

@@ -62,6 +62,10 @@ public class AprovacaoEmenda extends SuperEntidade {
         return usuarios;
     }
 
+    public void setUsuarios(List<AprovacaoEmendaUsuario> usuarios) {
+        this.usuarios = usuarios;
+    }
+
     public List<AprovacaoEmendaUsuario> getUsuariosPrefeitura() {
         List<AprovacaoEmendaUsuario> retorno = Lists.newArrayList();
         for (AprovacaoEmendaUsuario usuario : usuarios) {
@@ -80,9 +84,5 @@ public class AprovacaoEmenda extends SuperEntidade {
             }
         }
         return retorno;
-    }
-
-    public void setUsuarios(List<AprovacaoEmendaUsuario> usuarios) {
-        this.usuarios = usuarios;
     }
 }

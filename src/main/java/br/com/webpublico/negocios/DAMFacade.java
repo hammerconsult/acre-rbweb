@@ -647,11 +647,11 @@ public class DAMFacade implements Serializable {
         return imprimeDAM.gerarByteImpressaoDamUnicoViaApi(dams, tipoImpressao);
     }
 
-    public DAM gerarDamAgrupado(List<ResultadoParcela> resultadoParcelas, Date vencimentoDam, UsuarioSistema usuarioSistema) {
-        return gerarDamAgrupado(resultadoParcelas, vencimentoDam, null, usuarioSistema);
+    public DAM gerarDamAgrupado(List<ResultadoParcela> resultadoParcelas, Date vencimentoDam) {
+        return gerarDamAgrupado(resultadoParcelas, vencimentoDam, sistemaFacade.getUsuarioCorrente());
     }
 
-    public DAM gerarDamAgrupado(List<ResultadoParcela> resultadoParcelas, Date vencimentoDam, Exercicio exercicio, UsuarioSistema usuarioSistema) {
+    public DAM gerarDamAgrupado(List<ResultadoParcela> resultadoParcelas, Date vencimentoDam, UsuarioSistema usuarioSistema) {
         return gerarDAMCompostoViaApi(usuarioSistema, resultadoParcelas, vencimentoDam);
     }
 

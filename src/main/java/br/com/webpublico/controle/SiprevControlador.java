@@ -1005,11 +1005,14 @@ public class SiprevControlador extends PrettyControlador<Siprev> implements Seri
     private void preencherTagOrgao(Document doc, Element orgao, EnquadramentoPCS epcs) {
         if (epcs.getCategoriaPCS() != null && epcs.getCategoriaPCS().getPlanoCargosSalarios() != null) {
             PlanoCargosSalarios pcs = planoCargosSalariosFacade.recuperar(epcs.getCategoriaPCS().getPlanoCargosSalarios().getId());
-            if (!pcs.getEntidadesPCS().isEmpty()) {
-                orgao.setAttributeNode(criarAtributo(doc, "nome", pcs.getEntidadesPCS().get(0).getEntidade().getNome()));
+            if (pcs.getEntidadesPCS() != null) {
+                if (pcs.getEntidadesPCS().isEmpty()) {
+                    selecionado.getErros().add(new SiprevErro(selecionado, "Não há Entidade vinculada com o plano de cargos e salários: " + pcs.getDescricao() + " da Carreira: " + epcs.getCategoriaPCS().getDescricao() + " " + epcs.getProgressaoPCS().getDescricao()));
+                }
+                orgao.setAttributeNode(criarAtributo(doc, "nome", !pcs.getEntidadesPCS().isEmpty() ? pcs.getEntidadesPCS().get(0).getEntidade().getNome().trim() : ""));
                 orgao.setAttributeNode(criarAtributo(doc, "poder", "1"));
             } else {
-                selecionado.getErros().add(new SiprevErro(selecionado, "Não há Entidade vinculada com o plano de cargos e salários: " + pcs.getDescricao() + " da Carreira: " + epcs.getCategoriaPCS().getDescricao() + " " + epcs.getProgressaoPCS().getDescricao()));
+                logger.error("Nome do orgão é obrigatório para [{}]", epcs);
             }
         }
     }

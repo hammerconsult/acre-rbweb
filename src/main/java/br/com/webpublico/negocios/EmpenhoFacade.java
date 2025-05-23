@@ -8,7 +8,7 @@ import br.com.webpublico.controle.portaltransparencia.PortalTransparenciaNovoFac
 import br.com.webpublico.controle.portaltransparencia.entidades.EmpenhoPortal;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.NotaExecucaoOrcamentaria;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.interfaces.EntidadeContabil;
 import br.com.webpublico.negocios.contabil.reprocessamento.ReprocessamentoLancamentoContabilSingleton;
@@ -22,10 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.hibernate.Hibernate;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.context.ContextLoader;
 
-import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -120,8 +117,6 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     @EJB
     private ExecucaoContratoFacade execucaoContratoFacade;
     @EJB
-    private ConfiguracaoExcecaoDespesaContratoFacade configuracaoExcecaoDespesaContratoFacade;
-    @EJB
     private ExecucaoProcessoFacade execucaoProcessoFacade;
     @EJB
     private NotaOrcamentariaFacade notaOrcamentariaFacade;
@@ -130,7 +125,7 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     @EJB
     private CodigoCOFacade codigoCOFacade;
     @EJB
-    private ReconhecimentoDividaFacade reconhecimentoDividaFacade;
+    private ConfiguracaoExcecaoDespesaContratoFacade configuracaoExcecaoDespesaContratoFacade;
 
     public EmpenhoFacade() {
         super(Empenho.class);
@@ -140,7 +135,6 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     protected EntityManager getEntityManager() {
         return em;
     }
-
 
     @Override
     public Empenho recuperar(Object id) {
@@ -208,7 +202,40 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoAnterioresAoExercicio(String parte, Integer ano, UnidadeOrganizacional unidadeOrganizacional) {
-        String sql = "SELECT e.* FROM empenho e" + " INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano < :ano" + " left join pessoafisica pf ON pf.id = e.fornecedor_id" + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))" + " left join pessoajuridica pj ON pj.id = e.fornecedor_id" + " and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte))" + " WHERE e.saldo > 0 AND e.importado = 0 " + " and e.unidadeOrganizacional_id = :uni" + " UNION" + " SELECT DISTINCT e. * FROM empenho e" + " INNER JOIN exercicio ex ON ex.id = e.exercicio_id" + " left join pessoafisica pf ON pf.id = e.fornecedor_id" + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))" + " left join pessoajuridica pj ON pj.id = e.fornecedor_id" + " and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte))" + " AND ex.ano< :ano" + " RIGHT JOIN liquidacao l ON l.empenho_id = e.id" + " AND l.saldo > 0" + " WHERE e.id IS NOT NULL AND e.importado = 0" + " and e.unidadeOrganizacional_id = :uni" + " UNION" + " SELECT DISTINCT e. * FROM empenho e" + " INNER JOIN exercicio ex ON ex.id = e.exercicio_id" + " left join pessoafisica pf ON pf.id = e.fornecedor_id" + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))" + " left join pessoajuridica pj ON pj.id = e.fornecedor_id" + " and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte))" + " AND ex.ano< :ano" + " RIGHT JOIN liquidacao l ON l.empenho_id = e.id" + " RIGHT JOIN pagamento p ON p.liquidacao_id = l.id" + " AND p.status != 'PAGO'" + " AND p.saldo > 0" + " WHERE e.id IS NOT NULL AND e.importado = 0" + " and e.unidadeOrganizacional_id = :uni";
+        String sql = "SELECT e.* FROM empenho e"
+            + " INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano < :ano"
+            + " left join pessoafisica pf ON pf.id = e.fornecedor_id"
+            + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))"
+            + " left join pessoajuridica pj ON pj.id = e.fornecedor_id"
+            + " and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte))"
+            + " WHERE e.saldo > 0 AND e.importado = 0 "
+            + " and e.unidadeOrganizacional_id = :uni"
+            + " UNION"
+            + " SELECT DISTINCT e. * FROM empenho e"
+            + " INNER JOIN exercicio ex ON ex.id = e.exercicio_id"
+            + " left join pessoafisica pf ON pf.id = e.fornecedor_id"
+            + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))"
+            + " left join pessoajuridica pj ON pj.id = e.fornecedor_id"
+            + " and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte))"
+            + " AND ex.ano< :ano"
+            + " RIGHT JOIN liquidacao l ON l.empenho_id = e.id"
+            + " AND l.saldo > 0"
+            + " WHERE e.id IS NOT NULL AND e.importado = 0"
+            + " and e.unidadeOrganizacional_id = :uni"
+            + " UNION"
+            + " SELECT DISTINCT e. * FROM empenho e"
+            + " INNER JOIN exercicio ex ON ex.id = e.exercicio_id"
+            + " left join pessoafisica pf ON pf.id = e.fornecedor_id"
+            + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))"
+            + " left join pessoajuridica pj ON pj.id = e.fornecedor_id"
+            + " and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte))"
+            + " AND ex.ano< :ano"
+            + " RIGHT JOIN liquidacao l ON l.empenho_id = e.id"
+            + " RIGHT JOIN pagamento p ON p.liquidacao_id = l.id"
+            + " AND p.status != 'PAGO'"
+            + " AND p.saldo > 0"
+            + " WHERE e.id IS NOT NULL AND e.importado = 0"
+            + " and e.unidadeOrganizacional_id = :uni";
 
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.toLowerCase().trim() + "%");
@@ -219,7 +246,15 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoPorUnidadesAndPessoaAndDataInicialEFinal(String parte, List<HierarquiaOrganizacional> listaUnidades, Pessoa p, Date dataInicial, Date dataFinal) {
-        String sql = " select emp.* from empenho emp" + " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  " + " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  " + " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  " + " where p.id = :pessoa and ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " + " OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " + " OR (EMP.NUMERO LIKE :parte )) " + " and emp.unidadeorganizacional_id in ( :unidades )" + " and trunc(emp.dataempenho) between to_date(:DATAINICIAL, 'dd/mm/yyyy') and to_date(:DATAFINAL, 'dd/mm/yyyy') ";
+        String sql = " select emp.* from empenho emp" +
+            " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  " +
+            " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  " +
+            " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  " +
+            " where p.id = :pessoa and ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " +
+            " OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " +
+            " OR (EMP.NUMERO LIKE :parte )) " +
+            " and emp.unidadeorganizacional_id in ( :unidades )" +
+            " and trunc(emp.dataempenho) between to_date(:DATAINICIAL, 'dd/mm/yyyy') and to_date(:DATAFINAL, 'dd/mm/yyyy') ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.trim() + "%");
         q.setParameter("pessoa", p.getId());
@@ -240,7 +275,20 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoPorUnidadeGestoraEPessoaEExercicioEDataInicialEFinal(String parte, UnidadeGestora unidadeGestora, Exercicio exercicio, Pessoa p, Date dataInicial, Date dataFinal) {
-        String sql = " select emp.* from empenho emp" + " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  " + " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  " + " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  " + " inner join vwhierarquiaorcamentaria vw on emp.unidadeorganizacional_id = vw.subordinada_id " + " inner join UGESTORAUORGANIZACIONAL UgUnidade on vw.subordinada_id = ugunidade.unidadeorganizacional_id " + " inner join unidadegestora ug on ugunidade.unidadegestora_id = ug.id " + " where p.id = :pessoa and ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " + " OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " + " OR (EMP.NUMERO LIKE :parte )) " + " and ug.exercicio_id = :exercicio " + " and ug.id = :ugId " + " and trunc(emp.dataempenho) between to_date(:DATAINICIAL, 'dd/mm/yyyy') and to_date(:DATAFINAL, 'dd/mm/yyyy') " + " and trunc(emp.dataempenho) between vw.iniciovigencia and coalesce(vw.fimvigencia, trunc(emp.dataempenho)) ";
+        String sql = " select emp.* from empenho emp" +
+            " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  " +
+            " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  " +
+            " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  " +
+            " inner join vwhierarquiaorcamentaria vw on emp.unidadeorganizacional_id = vw.subordinada_id " +
+            " inner join UGESTORAUORGANIZACIONAL UgUnidade on vw.subordinada_id = ugunidade.unidadeorganizacional_id " +
+            " inner join unidadegestora ug on ugunidade.unidadegestora_id = ug.id " +
+            " where p.id = :pessoa and ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " +
+            " OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " +
+            " OR (EMP.NUMERO LIKE :parte )) " +
+            " and ug.exercicio_id = :exercicio " +
+            " and ug.id = :ugId " +
+            " and trunc(emp.dataempenho) between to_date(:DATAINICIAL, 'dd/mm/yyyy') and to_date(:DATAFINAL, 'dd/mm/yyyy') " +
+            " and trunc(emp.dataempenho) between vw.iniciovigencia and coalesce(vw.fimvigencia, trunc(emp.dataempenho)) ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.trim() + "%");
         q.setParameter("pessoa", p.getId());
@@ -256,7 +304,14 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoPorUnidades(String parte, List<HierarquiaOrganizacional> listaUnidades) {
-        String sql = " select emp.* from empenho emp" + " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  " + " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  " + " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  " + " where ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " + " OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " + " OR (EMP.NUMERO LIKE :parte )) " + " and emp.unidadeorganizacional_id in ( :unidades )";
+        String sql = " select emp.* from empenho emp" +
+            " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  " +
+            " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  " +
+            " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  " +
+            " where ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " +
+            " OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " +
+            " OR (EMP.NUMERO LIKE :parte )) " +
+            " and emp.unidadeorganizacional_id in ( :unidades )";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.trim() + "%");
         StringBuilder idUnidades = new StringBuilder();
@@ -279,7 +334,10 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
             unidades.add(lista.getSubordinada());
         }
 
-        String hql = " select emp from Empenho emp " + " where emp.unidadeOrganizacional in (:unidades)" + " and emp.exercicio.id = :ano" + " and emp.categoriaOrcamentaria = :categoria";
+        String hql = " select emp from Empenho emp " +
+            " where emp.unidadeOrganizacional in (:unidades)" +
+            " and emp.exercicio.id = :ano" +
+            " and emp.categoriaOrcamentaria = :categoria";
         Query consulta = em.createQuery(hql, Empenho.class);
         consulta.setParameter("unidades", unidades);
         consulta.setParameter("ano", ano.getId());
@@ -293,7 +351,41 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoRestoPagarPorExercicio(String parte, Exercicio exercicio, UnidadeOrganizacional unidadeOrganizacional) {
-        String sql = "SELECT e.* FROM empenho e " + "INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano = :exercicio " + "left join pessoafisica pf ON pf.id = e.fornecedor_id " + "and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte)) " + "left join pessoajuridica pj ON pj.id = e.fornecedor_id " + "and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte)) " + "WHERE e.saldo > 0 AND e.importado = 0 " + "and e.categoriaorcamentaria = '" + CategoriaOrcamentaria.RESTO + "' " + "and e.unidadeOrganizacional_id = :uni " + "UNION " + "SELECT DISTINCT e.* FROM empenho e " + "INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano = :exercicio " + "left join pessoafisica pf ON pf.id = e.fornecedor_id " + "and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte)) " + "left join pessoajuridica pj ON pj.id = e.fornecedor_id " + "and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte)) " + "inner JOIN liquidacao l ON l.empenho_id = e.id " + "AND l.saldo > 0 " + "WHERE e.id IS NOT NULL AND e.importado = 0 " + "and e.categoriaorcamentaria = '" + CategoriaOrcamentaria.RESTO + "' " + "and e.unidadeOrganizacional_id = :uni " + "UNION " + "SELECT DISTINCT e.* FROM empenho e " + "INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano = :exercicio " + "left join pessoafisica pf ON pf.id = e.fornecedor_id " + "and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte)) " + "left join pessoajuridica pj ON pj.id = e.fornecedor_id " + "and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte)) " + "inner JOIN liquidacao l ON l.empenho_id = e.id " + "inner JOIN pagamento p ON p.liquidacao_id = l.id " + "AND p.status !=  '" + StatusPagamento.PAGO + "' " + "AND p.saldo > 0 " + "WHERE e.id IS NOT NULL AND e.importado = 0 " + "and e.categoriaorcamentaria = '" + CategoriaOrcamentaria.RESTO + "' " + "and e.unidadeOrganizacional_id = :uni ";
+        String sql = "SELECT e.* FROM empenho e "
+            + "INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano = :exercicio "
+            + "left join pessoafisica pf ON pf.id = e.fornecedor_id "
+            + "and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte)) "
+            + "left join pessoajuridica pj ON pj.id = e.fornecedor_id "
+            + "and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte)) "
+            + "WHERE e.saldo > 0 AND e.importado = 0 "
+            + "and e.categoriaorcamentaria = '" + CategoriaOrcamentaria.RESTO + "' "
+            + "and e.unidadeOrganizacional_id = :uni "
+            + "UNION "
+            + "SELECT DISTINCT e.* FROM empenho e "
+            + "INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano = :exercicio "
+            + "left join pessoafisica pf ON pf.id = e.fornecedor_id "
+            + "and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte)) "
+            + "left join pessoajuridica pj ON pj.id = e.fornecedor_id "
+            + "and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte)) "
+            + "inner JOIN liquidacao l ON l.empenho_id = e.id "
+            + "AND l.saldo > 0 "
+            + "WHERE e.id IS NOT NULL AND e.importado = 0 "
+            + "and e.categoriaorcamentaria = '" + CategoriaOrcamentaria.RESTO + "' "
+            + "and e.unidadeOrganizacional_id = :uni "
+            + "UNION "
+            + "SELECT DISTINCT e.* FROM empenho e "
+            + "INNER JOIN exercicio ex ON ex.id = e.exercicio_id AND ex.ano = :exercicio "
+            + "left join pessoafisica pf ON pf.id = e.fornecedor_id "
+            + "and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte)) "
+            + "left join pessoajuridica pj ON pj.id = e.fornecedor_id "
+            + "and ((lower(pj.nomefantasia) LIKE :parte) OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte)) "
+            + "inner JOIN liquidacao l ON l.empenho_id = e.id "
+            + "inner JOIN pagamento p ON p.liquidacao_id = l.id "
+            + "AND p.status !=  '" + StatusPagamento.PAGO + "' "
+            + "AND p.saldo > 0 "
+            + "WHERE e.id IS NOT NULL AND e.importado = 0 "
+            + "and e.categoriaorcamentaria = '" + CategoriaOrcamentaria.RESTO + "' "
+            + "and e.unidadeOrganizacional_id = :uni ";
 
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("exercicio", exercicio.getAno());
@@ -308,7 +400,18 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarPorNumeroEPessoa(String parte, Integer ano) {
-        String sql = "SELECT e.* FROM empenho e " + "INNER JOIN pessoafisica pf ON pf.id = e.fornecedor_id " + "WHERE e.saldo > 0 AND extract(year from e.dataEmpenho) = :ano " + "AND e.categoriaorcamentaria = 'NORMAL' " + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))" + "UNION ALL " + "SELECT e.* FROM empenho e " + "INNER JOIN pessoajuridica pj ON pj.id = e.fornecedor_id " + "WHERE e.saldo > 0 AND extract(year from e.dataEmpenho) = :ano " + " AND e.categoriaorcamentaria = 'NORMAL'" + " AND ((lower(pj.nomefantasia) LIKE :parte) " + " OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte) OR (e.numero LIKE :parte)) ";
+        String sql = "SELECT e.* FROM empenho e "
+            + "INNER JOIN pessoafisica pf ON pf.id = e.fornecedor_id "
+            + "WHERE e.saldo > 0 AND extract(year from e.dataEmpenho) = :ano "
+            + "AND e.categoriaorcamentaria = 'NORMAL' "
+            + " and ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))"
+            + "UNION ALL "
+            + "SELECT e.* FROM empenho e "
+            + "INNER JOIN pessoajuridica pj ON pj.id = e.fornecedor_id "
+            + "WHERE e.saldo > 0 AND extract(year from e.dataEmpenho) = :ano "
+            + " AND e.categoriaorcamentaria = 'NORMAL'"
+            + " AND ((lower(pj.nomefantasia) LIKE :parte) "
+            + " OR (lower(pj.nomereduzido) LIKE :parte) OR (pj.cnpj LIKE :parte) OR (e.numero LIKE :parte)) ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.toLowerCase().trim() + "%");
         q.setParameter("ano", ano.toString());
@@ -317,7 +420,30 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoPorNumeroEPessoaCategoriaNormal(String parte, Integer ano, UnidadeOrganizacional uo) {
-        String sql = "" + "  SELECT * FROM ( " + " SELECT e.* FROM empenho e " + "  INNER JOIN pessoa p ON p.id = e.fornecedor_id " + "  inner join pessoafisica pf on pf.id = p.id " + "  WHERE (e.saldo > 0 or e.saldoobrigacaopagarantesemp > 0 )" + "  AND extract(year from e.dataEmpenho) = :ano " + "  AND e.categoriaorcamentaria = 'NORMAL' " + "  AND E.UNIDADEORGANIZACIONAL_ID = :unidade " + "  AND ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))" + " UNION ALL " + " SELECT e.* FROM empenho e " + "  INNER JOIN pessoa p ON p.id = e.fornecedor_id " + "  INNER JOIN pessoajuridica pj ON pj.id = p.id " + "  WHERE (e.saldo > 0 or e.saldoobrigacaopagarantesemp > 0 )" + "  AND extract(year from e.dataEmpenho) = :ano " + "  AND e.categoriaorcamentaria = 'NORMAL'" + "  AND E.UNIDADEORGANIZACIONAL_ID = :unidade " + "  AND ((lower(pj.nomefantasia) LIKE :parte) " + "  OR (lower(pj.nomereduzido) LIKE :parte) " + "  OR (pj.cnpj LIKE :parte) " + "  OR (e.numero LIKE :parte)) " + ") X " + " ORDER BY X.NUMERO DESC ";
+        String sql = "" +
+            "  SELECT * FROM ( "
+            + " SELECT e.* FROM empenho e "
+            + "  INNER JOIN pessoa p ON p.id = e.fornecedor_id "
+            + "  inner join pessoafisica pf on pf.id = p.id "
+            + "  WHERE (e.saldo > 0 or e.saldoobrigacaopagarantesemp > 0 )"
+            + "  AND extract(year from e.dataEmpenho) = :ano "
+            + "  AND e.categoriaorcamentaria = 'NORMAL' "
+            + "  AND E.UNIDADEORGANIZACIONAL_ID = :unidade "
+            + "  AND ((lower(pf.nome) LIKE :parte) OR (pf.cpf LIKE :parte) OR (e.numero LIKE :parte))"
+            + " UNION ALL "
+            + " SELECT e.* FROM empenho e "
+            + "  INNER JOIN pessoa p ON p.id = e.fornecedor_id "
+            + "  INNER JOIN pessoajuridica pj ON pj.id = p.id "
+            + "  WHERE (e.saldo > 0 or e.saldoobrigacaopagarantesemp > 0 )"
+            + "  AND extract(year from e.dataEmpenho) = :ano "
+            + "  AND e.categoriaorcamentaria = 'NORMAL'"
+            + "  AND E.UNIDADEORGANIZACIONAL_ID = :unidade "
+            + "  AND ((lower(pj.nomefantasia) LIKE :parte) "
+            + "  OR (lower(pj.nomereduzido) LIKE :parte) "
+            + "  OR (pj.cnpj LIKE :parte) "
+            + "  OR (e.numero LIKE :parte)) "
+            + ") X "
+            + " ORDER BY X.NUMERO DESC ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.toLowerCase().trim() + "%");
         q.setParameter("ano", ano.toString());
@@ -361,11 +487,22 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarPorNumeroAndPessoaRelatorio(String parte, Integer ano) {
-        return buscarPorNumeroAndPessoaRelatorioPorCategoria(parte, ano, Lists.<CategoriaOrcamentaria>newArrayList(CategoriaOrcamentaria.NORMAL));
+        return buscarPorNumeroAndPessoaRelatorioPorCategoria(parte, ano,
+            Lists.<CategoriaOrcamentaria>newArrayList(CategoriaOrcamentaria.NORMAL));
     }
 
     public List<Empenho> buscarPorNumeroAndPessoaRelatorioPorCategoria(String parte, Integer ano, List<CategoriaOrcamentaria> categorias) {
-        String sql = "SELECT e.* FROM empenho e " + " inner join pessoa p on e.fornecedor_id = p.id " + " left join  pessoafisica pf ON pf.id = p.id " + " left join pessoajuridica pj on pj.id = p.id " + " where ((lower(pf.nome) LIKE :parte) " + " OR (pf.cpf LIKE :parte) " + " or (lower(pj.nomefantasia) LIKE :parte) " + " OR (lower(pj.nomereduzido) LIKE :parte) " + " OR (pj.cnpj LIKE :parte) " + " OR (e.numero LIKE :parte)) " + " AND e.categoriaorcamentaria in :categorias";
+        String sql = "SELECT e.* FROM empenho e "
+            + " inner join pessoa p on e.fornecedor_id = p.id "
+            + " left join  pessoafisica pf ON pf.id = p.id "
+            + " left join pessoajuridica pj on pj.id = p.id "
+            + " where ((lower(pf.nome) LIKE :parte) "
+            + " OR (pf.cpf LIKE :parte) "
+            + " or (lower(pj.nomefantasia) LIKE :parte) "
+            + " OR (lower(pj.nomereduzido) LIKE :parte) "
+            + " OR (pj.cnpj LIKE :parte) "
+            + " OR (e.numero LIKE :parte)) "
+            + " AND e.categoriaorcamentaria in :categorias";
         if (ano != null) {
             sql += " and extract(year from e.dataEmpenho) = :ano ";
         }
@@ -388,7 +525,23 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhosPorUnidadeEUsuarioVinculados(String parte, UsuarioSistema usu, Exercicio exercicio, UnidadeOrganizacional unidadeOrganizacional) {
-        String sql = "SELECT DISTINCT EMP.* " + "  FROM USUARIOSISTEMA USU " + " INNER JOIN USUARIOUNIDADEORGANIZACORC USUUND ON USUUND.USUARIOSISTEMA_ID = USU.ID " + " INNER JOIN UNIDADEORGANIZACIONAL UO_ORC ON USUUND.UNIDADEORGANIZACIONAL_ID = UO_ORC.ID " + " INNER JOIN EMPENHO EMP ON UO_ORC.ID = EMP.UNIDADEORGANIZACIONAL_ID " + " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID " + "  LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID " + "  LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID " + " WHERE EMP.SALDO > 0  " + "   AND EMP.EXERCICIO_ID = :EXERCICIO" + "   AND USU.ID = :USUARIO " + "   AND EMP.UNIDADEORGANIZACIONAL_ID = :UNIDADE " + "   AND EMP.CATEGORIAORCAMENTARIA = 'NORMAL' " + "   AND ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " + "       OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " + "       OR (EMP.NUMERO LIKE :parte ))" + " ORDER BY EMP.DATAEMPENHO desc, emp.numero DESC";
+        String sql = "SELECT DISTINCT EMP.* "
+            + "  FROM USUARIOSISTEMA USU "
+            + " INNER JOIN USUARIOUNIDADEORGANIZACORC USUUND ON USUUND.USUARIOSISTEMA_ID = USU.ID "
+            + " INNER JOIN UNIDADEORGANIZACIONAL UO_ORC ON USUUND.UNIDADEORGANIZACIONAL_ID = UO_ORC.ID "
+            + " INNER JOIN EMPENHO EMP ON UO_ORC.ID = EMP.UNIDADEORGANIZACIONAL_ID "
+            + " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID "
+            + "  LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID "
+            + "  LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID "
+            + " WHERE EMP.SALDO > 0  "
+            + "   AND EMP.EXERCICIO_ID = :EXERCICIO"
+            + "   AND USU.ID = :USUARIO "
+            + "   AND EMP.UNIDADEORGANIZACIONAL_ID = :UNIDADE "
+            + "   AND EMP.CATEGORIAORCAMENTARIA = 'NORMAL' "
+            + "   AND ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) "
+            + "       OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) "
+            + "       OR (EMP.NUMERO LIKE :parte ))"
+            + " ORDER BY EMP.DATAEMPENHO desc, emp.numero DESC";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
         q.setParameter("USUARIO", usu.getId());
@@ -403,8 +556,27 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         }
     }
 
-    public List<Empenho> buscarEmpenhoObrigacaoPagar(String parte, UsuarioSistema usu, Exercicio exercicio, UnidadeOrganizacional unidadeOrganizacional) {
-        String sql = " " + " select distinct emp.* " + "   from usuariosistema usu " + "   inner join usuariounidadeorganizacorc usuund on usuund.usuariosistema_id = usu.id " + "   inner join unidadeorganizacional unid on usuund.unidadeorganizacional_id = unid.id  " + "   inner join empenho emp on unid.id = emp.unidadeorganizacional_id " + "   inner join pessoa p on emp.fornecedor_id = p.id " + "   left join pessoafisica pf on p.id = pf.id " + "   left join pessoajuridica pj on p.id = pj.id " + " where emp.saldo > 0 " + "  and (select e.valor - e.saldoobrigacaopagardepoisemp from empenho e where e.id = emp.id) > 0 " + "  and emp.exercicio_id = :idExercicio " + "  and usu.id = :idUsuario " + "  and emp.unidadeorganizacional_id = :idUnidade " + "  and (emp.tipocontadespesa = :variacaoPatrimonial or emp.tipocontadespesa = :servicoTerceiro or emp.tipocontadespesa = :pessoalEncargos)" + "  and ((lower(pf.nome) like :parte) or (pf.cpf like :parte) or (emp.numero like :parte) " + "     or (lower(pj.nomefantasia) like :parte) or (lower(pj.nomereduzido) like :parte) or (pj.cnpj like :parte) " + "     or (emp.numero like :parte )) " + " order by emp.numero desc ";
+    public List<Empenho> buscarEmpenhoObrigacaoPagar(String parte, UsuarioSistema usu,
+                                                     Exercicio exercicio, UnidadeOrganizacional unidadeOrganizacional) {
+        String sql = " " +
+            " select distinct emp.* " +
+            "   from usuariosistema usu " +
+            "   inner join usuariounidadeorganizacorc usuund on usuund.usuariosistema_id = usu.id " +
+            "   inner join unidadeorganizacional unid on usuund.unidadeorganizacional_id = unid.id  " +
+            "   inner join empenho emp on unid.id = emp.unidadeorganizacional_id " +
+            "   inner join pessoa p on emp.fornecedor_id = p.id " +
+            "   left join pessoafisica pf on p.id = pf.id " +
+            "   left join pessoajuridica pj on p.id = pj.id " +
+            " where emp.saldo > 0 " +
+            "  and (select e.valor - e.saldoobrigacaopagardepoisemp from empenho e where e.id = emp.id) > 0 " +
+            "  and emp.exercicio_id = :idExercicio " +
+            "  and usu.id = :idUsuario " +
+            "  and emp.unidadeorganizacional_id = :idUnidade " +
+            "  and (emp.tipocontadespesa = :variacaoPatrimonial or emp.tipocontadespesa = :servicoTerceiro or emp.tipocontadespesa = :pessoalEncargos)" +
+            "  and ((lower(pf.nome) like :parte) or (pf.cpf like :parte) or (emp.numero like :parte) " +
+            "     or (lower(pj.nomefantasia) like :parte) or (lower(pj.nomereduzido) like :parte) or (pj.cnpj like :parte) " +
+            "     or (emp.numero like :parte )) " +
+            " order by emp.numero desc ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
         q.setParameter("idUsuario", usu.getId());
@@ -422,7 +594,32 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoPorContratoEUnidadeUsuarioVinculados(String parte, Contrato contrato, UsuarioSistema usu, Date data, Exercicio exercicio, UnidadeOrganizacional unidadeOrganizacional) {
-        String sql = "SELECT DISTINCT EMP.* " + "  FROM USUARIOSISTEMA USU " + " INNER JOIN USUARIOUNIDADEORGANIZACIO USUUND ON USUUND.USUARIOSISTEMA_ID = USU.ID " + " INNER JOIN UNIDADEORGANIZACIONAL UO_ADM ON USUUND.UNIDADEORGANIZACIONAL_ID = UO_ADM.ID " + " INNER JOIN HIERARQUIAORGANIZACIONAL HO_ADM ON HO_ADM.SUBORDINADA_ID = UO_ADM.ID " + "       AND HO_ADM.TIPOHIERARQUIAORGANIZACIONAL = 'ADMINISTRATIVA' " + "       AND (TO_DATE(:DATA, 'dd/MM/yyyy') BETWEEN trunc(HO_ADM.INICIOVIGENCIA) AND COALESCE(trunc(HO_ADM.FIMVIGENCIA),TO_DATE(:DATA, 'dd/MM/yyyy'))) " + " INNER JOIN HIERARQUIAORGANIZACIONAL HO_ORC ON HO_ORC.ID = HO_ADM.HIERARQUIAORC_ID " + "       AND HO_ORC.TIPOHIERARQUIAORGANIZACIONAL = 'ORCAMENTARIA' " + "       AND (TO_DATE(:DATA, 'dd/MM/yyyy') BETWEEN trunc(HO_ORC.INICIOVIGENCIA) AND COALESCE(trunc(HO_ORC.FIMVIGENCIA),TO_DATE(:DATA, 'dd/MM/yyyy'))) " + " INNER JOIN UNIDADEORGANIZACIONAL UO_ORC ON HO_ORC.SUBORDINADA_ID= UO_ORC.ID " + " INNER JOIN EMPENHO EMP ON UO_ORC.ID = EMP.UNIDADEORGANIZACIONAL_ID " + "       AND EMP.EXERCICIO_ID = :EXERCICIO" + "       AND USU.ID = :USUARIO " + " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID " + " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID " + " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID " + " WHERE EMP.SALDO > 0  " + " AND EMP.CONTRATO_ID = :CONTRATO" + " AND EMP.UNIDADEORGANIZACIONAL_ID = :UNIDADE " + " AND EMP.CATEGORIAORCAMENTARIA = 'NORMAL' " + " AND ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) " + "       OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) " + "       OR (EMP.NUMERO LIKE :parte ))" + " AND EMP.TIPOCONTADESPESA IN('BEM_MOVEL','BEM_ESTOQUE')" + " ORDER BY EMP.DATAEMPENHO DESC";
+        String sql = "SELECT DISTINCT EMP.* "
+            + "  FROM USUARIOSISTEMA USU "
+            + " INNER JOIN USUARIOUNIDADEORGANIZACIO USUUND ON USUUND.USUARIOSISTEMA_ID = USU.ID "
+            + " INNER JOIN UNIDADEORGANIZACIONAL UO_ADM ON USUUND.UNIDADEORGANIZACIONAL_ID = UO_ADM.ID "
+            + " INNER JOIN HIERARQUIAORGANIZACIONAL HO_ADM ON HO_ADM.SUBORDINADA_ID = UO_ADM.ID "
+            + "       AND HO_ADM.TIPOHIERARQUIAORGANIZACIONAL = 'ADMINISTRATIVA' "
+            + "       AND (TO_DATE(:DATA, 'dd/MM/yyyy') BETWEEN trunc(HO_ADM.INICIOVIGENCIA) AND COALESCE(trunc(HO_ADM.FIMVIGENCIA),TO_DATE(:DATA, 'dd/MM/yyyy'))) "
+            + " INNER JOIN HIERARQUIAORGANIZACIONAL HO_ORC ON HO_ORC.ID = HO_ADM.HIERARQUIAORC_ID "
+            + "       AND HO_ORC.TIPOHIERARQUIAORGANIZACIONAL = 'ORCAMENTARIA' "
+            + "       AND (TO_DATE(:DATA, 'dd/MM/yyyy') BETWEEN trunc(HO_ORC.INICIOVIGENCIA) AND COALESCE(trunc(HO_ORC.FIMVIGENCIA),TO_DATE(:DATA, 'dd/MM/yyyy'))) "
+            + " INNER JOIN UNIDADEORGANIZACIONAL UO_ORC ON HO_ORC.SUBORDINADA_ID= UO_ORC.ID "
+            + " INNER JOIN EMPENHO EMP ON UO_ORC.ID = EMP.UNIDADEORGANIZACIONAL_ID "
+            + "       AND EMP.EXERCICIO_ID = :EXERCICIO"
+            + "       AND USU.ID = :USUARIO "
+            + " INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID "
+            + " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID "
+            + " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID "
+            + " WHERE EMP.SALDO > 0  "
+            + " AND EMP.CONTRATO_ID = :CONTRATO"
+            + " AND EMP.UNIDADEORGANIZACIONAL_ID = :UNIDADE "
+            + " AND EMP.CATEGORIAORCAMENTARIA = 'NORMAL' "
+            + " AND ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) "
+            + "       OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) "
+            + "       OR (EMP.NUMERO LIKE :parte ))"
+            + " AND EMP.TIPOCONTADESPESA IN('BEM_MOVEL','BEM_ESTOQUE')"
+            + " ORDER BY EMP.DATAEMPENHO DESC";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
         q.setParameter("CONTRATO", contrato.getId());
@@ -441,7 +638,10 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public String retornaUltimoNumeroEmpenho(UnidadeOrganizacional uni) {
-        String hql = "from Empenho e " + "where e.categoriaOrcamentaria = :categoria " + "and e.unidadeOrganizacional = :uni " + "order by to_number(e.numero) desc";
+        String hql = "from Empenho e "
+            + "where e.categoriaOrcamentaria = :categoria "
+            + "and e.unidadeOrganizacional = :uni "
+            + "order by to_number(e.numero) desc";
         Query q = em.createQuery(hql);
         q.setParameter("uni", uni);
         q.setParameter("categoria", CategoriaOrcamentaria.NORMAL);
@@ -460,8 +660,8 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         item.setValor(empenho.getValor());
         //Criando os objetos para depois ser adicionado na lista de cada item.
         List<ObjetoParametro> listaObj = new ArrayList<>();
-        listaObj.add(new ObjetoParametro(empenho.getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa(), item));
-        listaObj.add(new ObjetoParametro(empenho.getClasseCredor(), item));
+        listaObj.add(new ObjetoParametro(empenho.getDespesaORC().getProvisaoPPADespesa().getContaDeDespesa().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+        listaObj.add(new ObjetoParametro(empenho.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
         item.setObjetoParametros(listaObj);
         return item;
     }
@@ -567,7 +767,10 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     public BigDecimal getSaldoFonteDespesaORC(Empenho selecionado) {
         try {
             if (selecionado.getFonteDespesaORC() != null) {
-                return saldoFonteDespesaORCFacade.saldoRealPorFonte(selecionado.getFonteDespesaORC(), selecionado.getDataEmpenho(), selecionado.getUnidadeOrganizacional()).add(adicionarValorReservadoNoSaldoAnterior(selecionado));
+                return saldoFonteDespesaORCFacade.saldoRealPorFonte(
+                    selecionado.getFonteDespesaORC(),
+                    selecionado.getDataEmpenho(),
+                    selecionado.getUnidadeOrganizacional()).add(adicionarValorReservadoNoSaldoAnterior(selecionado));
             }
             return BigDecimal.ZERO;
         } catch (Exception ex) {
@@ -587,30 +790,48 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         if (getReprocessamentoLancamentoContabilSingleton().isCalculando()) {
             throw new ExcecaoNegocioGenerica(getReprocessamentoLancamentoContabilSingleton().getMensagemConcorrenciaEnquantoReprocessa());
         } else {
-            hierarquiaOrganizacionalFacade.validaVigenciaHIerarquiaAdministrativaOrcamentaria(entity.getUnidadeOrganizacionalAdm(), entity.getUnidadeOrganizacional(), entity.getDataEmpenho());
-            definirValoresNoEmpenho(entity);
-            validaSaldoPosterior(entity);
-            validarSaldoGrupoOrcamentario(entity.getDataEmpenho(), entity.getValor(), entity.getFonteDespesaORC());
-            entity = salvarNovoEmpenhoGerandoHistorico(entity);
-            removerReservaDotacaoParaIntegracaoDeDiaria(entity);
-            removerReservaDotacaoParaIntegracaoReconhecimento(entity);
-            movimentarEmpenho(entity);
-            gerarMovimentoDespesaORC(entity);
-            gerarSaldoDividaPublica(entity);
-            movimentarObrigacaoPagar(entity);
-            atribuirSolicitacaoEmpenhoNoEmpenho(entity);
-            contabilizarEmpenho(entity);
-            salvarPortal(entity);
+            if (singletonConcorrenciaContabil.isDisponivel(entity.getUnidadeOrganizacional())) {
+                singletonConcorrenciaContabil.bloquear(entity.getUnidadeOrganizacional());
+                hierarquiaOrganizacionalFacade.validaVigenciaHIerarquiaAdministrativaOrcamentaria(entity.getUnidadeOrganizacionalAdm(), entity.getUnidadeOrganizacional(), entity.getDataEmpenho());
+                definirValoresNoEmpenho(entity);
+                validaSaldoPosterior(entity);
+                validarSaldoGrupoOrcamentario(entity.getDataEmpenho(), entity.getValor(), entity.getFonteDespesaORC());
+                entity = salvarNovoEmpenhoGerandoHistorico(entity);
+                removerReservaDotacaoParaIntegracaoDeDiaria(entity);
+                removerReservaDotacaoParaIntegracaoReconhecimento(entity);
+                movimentarEmpenho(entity);
+                gerarMovimentoDespesaORC(entity);
+                gerarSaldoDividaPublica(entity);
+                movimentarObrigacaoPagar(entity);
+                atribuirSolicitacaoEmpenhoNoEmpenho(entity);
+                contabilizarEmpenho(entity);
+                salvarPortal(entity);
+                singletonConcorrenciaContabil.desbloquear(entity.getUnidadeOrganizacional());
+            } else {
+                throw new ExcecaoNegocioGenerica("Existe empenho sendo salvo nesta mesma unidade. Inicio o processo novamente para garantir a integridade dos dados.");
+            }
         }
         return entity;
     }
 
     private void gerarSaldoDividaPublica(Empenho entity) {
-        if (entity.getDividaPublica() != null && SubTipoDespesa.VALOR_PRINCIPAL.equals(entity.getSubTipoDespesa()) && (TipoContaDespesa.PRECATORIO.equals(entity.getTipoContaDespesa()) || TipoContaDespesa.DIVIDA_PUBLICA.equals(entity.getTipoContaDespesa()))) {
+        if (entity.getDividaPublica() != null &&
+            SubTipoDespesa.VALOR_PRINCIPAL.equals(entity.getSubTipoDespesa()) &&
+            (TipoContaDespesa.PRECATORIO.equals(entity.getTipoContaDespesa()) ||
+                TipoContaDespesa.DIVIDA_PUBLICA.equals(entity.getTipoContaDespesa()))) {
             ConfiguracaoContabil configuracaoContabil = configuracaoContabilFacade.configuracaoContabilVigente();
             try {
                 if (hasContaDeDespesaConfiguradaParaGerarSaldoDividaPublica(entity, configuracaoContabil)) {
-                    saldoDividaPublicaFacade.gerarMovimento(entity.getDataEmpenho(), entity.getValor(), entity.getUnidadeOrganizacional(), entity.getDividaPublica(), OperacaoMovimentoDividaPublica.EMPENHO, false, OperacaoDiarioDividaPublica.EMPENHO, Intervalo.CURTO_PRAZO, entity.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao(), true);
+                    saldoDividaPublicaFacade.gerarMovimento(entity.getDataEmpenho(),
+                        entity.getValor(),
+                        entity.getUnidadeOrganizacional(),
+                        entity.getDividaPublica(),
+                        OperacaoMovimentoDividaPublica.EMPENHO,
+                        false,
+                        OperacaoDiarioDividaPublica.EMPENHO,
+                        Intervalo.CURTO_PRAZO,
+                        entity.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursosAsContaDeDestinacao(),
+                        true);
                 }
             } catch (Exception e) {
                 throw new ExcecaoNegocioGenerica(e.getMessage());
@@ -633,9 +854,6 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
             entity.setSaldo(entity.getValor());
             entity.gerarHistoricos();
             em.persist(entity);
-        } else {
-            entity.gerarHistoricos();
-            entity = em.merge(entity);
         }
         return entity;
     }
@@ -689,7 +907,18 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     private MovimentoDespesaORC gerarMovimentoDespesaOrcPorOperacao(Empenho entity, OperacaoORC operacaoORC, TipoOperacaoORC tipoOperacaoORC) {
-        SaldoFonteDespesaORCVO vo = new SaldoFonteDespesaORCVO(entity.getFonteDespesaORC(), operacaoORC, tipoOperacaoORC, entity.getValor(), DataUtil.getDataComHoraAtual(entity.getDataEmpenho()), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName(), entity.getNumero(), entity.getHistoricoRazao());
+        SaldoFonteDespesaORCVO vo = new SaldoFonteDespesaORCVO(
+            entity.getFonteDespesaORC(),
+            operacaoORC,
+            tipoOperacaoORC,
+            entity.getValor(),
+            DataUtil.getDataComHoraAtual(entity.getDataEmpenho()),
+            entity.getUnidadeOrganizacional(),
+            entity.getId().toString(),
+            entity.getClass().getSimpleName(),
+            entity.getNumero(),
+            entity.getHistoricoRazao()
+        );
         return saldoFonteDespesaORCFacade.gerarSaldoOrcamentario(vo);
     }
 
@@ -707,7 +936,8 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
                 for (DesdobramentoEmpenho desdEmpenho : entity.getDesdobramentos()) {
                     for (DesdobramentoObrigacaoPagar desdObrigacao : obrigacaoAPagar.getDesdobramentos()) {
-                        if (desdEmpenho.getConta().equals(desdObrigacao.getConta()) && desdEmpenho.getDesdobramentoObrigacaoPagar().getObrigacaoAPagar().equals(obrigacaoAPagar)) {
+                        if (desdEmpenho.getConta().equals(desdObrigacao.getConta())
+                            && desdEmpenho.getDesdobramentoObrigacaoPagar().getObrigacaoAPagar().equals(obrigacaoAPagar)) {
                             desdObrigacao.setSaldo(desdObrigacao.getSaldo().subtract(desdEmpenho.getValor()));
                             obrigacaoAPagar.setSaldoEmpenho(obrigacaoAPagar.getSaldoEmpenho().subtract(desdEmpenho.getValor()));
                         }
@@ -797,7 +1027,9 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
      * @throws ExcecaoNegocioGenerica
      */
 
-    public Empenho geraEmpenho(BigDecimal valor, UnidadeOrganizacional unidade, TipoEmpenho tipoEmpenho, HistoricoContabil historicoContabil, Pessoa fornecedor, FonteDespesaORC fonteDespesaORC, DespesaORC despesaORC, Date data, Conta contaDespesaDesdobrada, String complementoHistorico, SolicitacaoEmpenho solicitacao) throws ExcecaoNegocioGenerica {
+    public Empenho geraEmpenho(BigDecimal valor, UnidadeOrganizacional unidade, TipoEmpenho tipoEmpenho, HistoricoContabil historicoContabil, Pessoa fornecedor,
+                               FonteDespesaORC fonteDespesaORC, DespesaORC despesaORC, Date data, Conta contaDespesaDesdobrada, String complementoHistorico, SolicitacaoEmpenho solicitacao)
+        throws ExcecaoNegocioGenerica {
 
         try {
             verificarSaldoGrupoOrcamentario(data, valor, fonteDespesaORC);
@@ -852,7 +1084,8 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     public void empenharSolicitacao(SolicitacaoEmpenho se) throws ExcecaoNegocioGenerica {
         try {
-            Empenho emp = geraEmpenho(se.getValor(), se.getUnidadeOrganizacional(), se.getTipoEmpenho(), se.getHistoricoContabil(), se.getFornecedor(), se.getFonteDespesaORC(), se.getDespesaORC(), se.getDataSolicitacao(), se.getContaDespesaDesdobrada(), se.getComplementoHistorico(), se);
+            Empenho emp = geraEmpenho(se.getValor(), se.getUnidadeOrganizacional(), se.getTipoEmpenho(), se.getHistoricoContabil(), se.getFornecedor(), se.getFonteDespesaORC(),
+                se.getDespesaORC(), se.getDataSolicitacao(), se.getContaDespesaDesdobrada(), se.getComplementoHistorico(), se);
             se.setEmpenho(emp);
             em.merge(se);
         } catch (ExcecaoNegocioGenerica ex) {
@@ -862,22 +1095,27 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     public void removerReservaDotacaoParaIntegracaoDeDiaria(Empenho entity) {
         if (entity.getPropostaConcessaoDiaria() != null && entity.getSolicitacaoEmpenho() != null) {
-            if (entity.isEmpenhoNormal()
+
+            if (CategoriaOrcamentaria.NORMAL.equals(entity.getCategoriaOrcamentaria())
                 && entity.getDespesaORC() != null
-                && entity.getSolicitacaoEmpenho().getGerarReserva()
-                && TipoContaDespesa.retornaTipoContaConcessaoDiaria().contains(entity.getTipoContaDespesa())) {
-                SaldoFonteDespesaORCVO vo = new SaldoFonteDespesaORCVO(
-                    entity.getFonteDespesaORC(),
-                    OperacaoORC.RESERVADO,
-                    TipoOperacaoORC.ESTORNO,
-                    entity.getValor(),
-                    entity.getDataEmpenho(),
-                    entity.getUnidadeOrganizacional(),
-                    entity.getId().toString(),
-                    entity.getClass().getSimpleName(),
-                    entity.getNumero(),
-                    entity.getHistoricoRazao());
-                saldoFonteDespesaORCFacade.gerarSaldoOrcamentario(vo);
+                && entity.getSolicitacaoEmpenho().getGerarReserva()) {
+                if (TipoContaDespesa.DIARIA_CIVIL.equals(entity.getTipoContaDespesa())
+                    || TipoContaDespesa.SUPRIMENTO_FUNDO.equals(entity.getTipoContaDespesa())) {
+                    SaldoFonteDespesaORCVO vo = new SaldoFonteDespesaORCVO(
+                        entity.getFonteDespesaORC(),
+                        OperacaoORC.RESERVADO,
+                        TipoOperacaoORC.ESTORNO,
+                        entity.getValor(),
+                        DataUtil.getDataComHoraAtual(entity.getDataEmpenho()),
+                        entity.getUnidadeOrganizacional(),
+                        entity.getId().toString(),
+                        entity.getClass().getSimpleName(),
+                        entity.getNumero(),
+                        entity.getHistoricoRazao());
+                    saldoFonteDespesaORCFacade.gerarSaldoOrcamentario(vo);
+                }
+                entity.getSolicitacaoEmpenho().setTipoEmpenho(entity.getTipoEmpenho());
+                entity.getSolicitacaoEmpenho().setEmpenho(entity);
             }
             entity.getSolicitacaoEmpenho().setTipoEmpenho(entity.getTipoEmpenho());
             entity.getSolicitacaoEmpenho().setEmpenho(entity);
@@ -900,8 +1138,20 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     private void removerReservaDotacaoParaIntegracaoReconhecimento(Empenho entity) {
         if (entity.getReconhecimentoDivida() != null && entity.getSolicitacaoEmpenho() != null) {
-            if (CategoriaOrcamentaria.NORMAL.equals(entity.getCategoriaOrcamentaria()) && entity.getDespesaORC() != null && entity.getSolicitacaoEmpenho().getGerarReserva()) {
-                SaldoFonteDespesaORCVO vo = new SaldoFonteDespesaORCVO(entity.getFonteDespesaORC(), OperacaoORC.RESERVADO, TipoOperacaoORC.ESTORNO, entity.getValor(), entity.getDataEmpenho(), entity.getUnidadeOrganizacional(), entity.getId().toString(), entity.getClass().getSimpleName(), entity.getNumero(), entity.getHistoricoRazao());
+            if (CategoriaOrcamentaria.NORMAL.equals(entity.getCategoriaOrcamentaria())
+                && entity.getDespesaORC() != null
+                && entity.getSolicitacaoEmpenho().getGerarReserva()) {
+                SaldoFonteDespesaORCVO vo = new SaldoFonteDespesaORCVO(
+                    entity.getFonteDespesaORC(),
+                    OperacaoORC.RESERVADO,
+                    TipoOperacaoORC.ESTORNO,
+                    entity.getValor(),
+                    DataUtil.getDataComHoraAtual(entity.getDataEmpenho()),
+                    entity.getUnidadeOrganizacional(),
+                    entity.getId().toString(),
+                    entity.getClass().getSimpleName(),
+                    entity.getNumero(),
+                    entity.getHistoricoRazao());
                 saldoFonteDespesaORCFacade.gerarSaldoOrcamentario(vo);
                 entity.getSolicitacaoEmpenho().setTipoEmpenho(entity.getTipoEmpenho());
                 entity.getSolicitacaoEmpenho().setEmpenho(entity);
@@ -912,7 +1162,11 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     /*
      * Gera Empenho passando usuário como parâmetro
      */
-    private Empenho geraEmpenho(UsuarioSistema usuario, BigDecimal valor, UnidadeOrganizacional unidade, TipoEmpenho tipoEmpenho, HistoricoContabil historicoContabil, Pessoa fornecedor, FonteDespesaORC fonteDespesaORC, DespesaORC despesaORC, Date data, Conta contaDespesaDesdobrada, String complementoHistorico, SolicitacaoEmpenho solicitacao) throws ExcecaoNegocioGenerica {
+    private Empenho geraEmpenho(UsuarioSistema usuario, BigDecimal valor, UnidadeOrganizacional
+        unidade, TipoEmpenho tipoEmpenho, HistoricoContabil historicoContabil, Pessoa fornecedor,
+                                FonteDespesaORC fonteDespesaORC, DespesaORC despesaORC, Date data, Conta contaDespesaDesdobrada, String
+                                    complementoHistorico, SolicitacaoEmpenho solicitacao)
+        throws ExcecaoNegocioGenerica {
 
         try {
             verificarSaldoGrupoOrcamentario(data, valor, fonteDespesaORC);
@@ -1032,7 +1286,9 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public Empenho getEmpenhoPorSolicitacaoEmpenho(SolicitacaoEmpenho se) {
-        String hql = " select new Empenho(e.id) from SolicitacaoEmpenho se " + " inner join se.empenho e" + " where se = :solicitacao";
+        String hql = " select new Empenho(e.id) from SolicitacaoEmpenho se "
+            + " inner join se.empenho e"
+            + " where se = :solicitacao";
 
         Query q = em.createQuery(hql);
         q.setParameter("solicitacao", se);
@@ -1194,22 +1450,22 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return item;
     }
 
-    private List<ObjetoParametro> criarObjetosParametros(Empenho entity, DesdobramentoEmpenho desdobramentoEmpenho, ItemParametroEvento item) {
+    private List<ObjetoParametro> criarObjetosParametros(Empenho entity, DesdobramentoEmpenho
+        desdobramentoEmpenho, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
         if (desdobramentoEmpenho == null) {
-            objetos.add(new ObjetoParametro(entity, item));
-            Conta contaDespesaEmpenho = getContaDespesaEmpenho(entity);
-            objetos.add(new ObjetoParametro(contaDespesaEmpenho, item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), Empenho.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(getContaDespesaEmpenho(entity).getId().toString(), ContaDespesa.class.getSimpleName(), item));
         } else {
-            objetos.add(new ObjetoParametro(desdobramentoEmpenho, item));
-            objetos.add(new ObjetoParametro(desdobramentoEmpenho, item));
+            objetos.add(new ObjetoParametro(desdobramentoEmpenho.getId().toString(), DesdobramentoEmpenho.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(desdobramentoEmpenho.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
         }
 
         Preconditions.checkNotNull(entity.getClasseCredor(), "A Classe credor do empenho não foi preenchida.");
-        objetos.add(new ObjetoParametro(entity.getClasseCredor(), item));
-        objetos.add(new ObjetoParametro(entity.getFornecedor(), item));
+        objetos.add(new ObjetoParametro(entity.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getFornecedor().getId().toString(), Pessoa.class.getSimpleName(), item));
         if (entity.getId() != null) {
-            objetos.add(new ObjetoParametro(entity, item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), Empenho.class.getSimpleName(), item));
         }
         return objetos;
     }
@@ -1240,9 +1496,21 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         EventoContabil eventoContabil = null;
         ConfigEmpenho configuracao = null;
         if (!configuracaoContabilFacade.configuracaoContabilVigente().getBuscarEventoEmpDiferenteObrig()) {
-            configuracao = configEmpenhoFacade.buscarCDEEmpenho(contaDespesa, TipoLancamento.NORMAL, entity.getDataEmpenho(), entity.getTipoReconhecimento(), entity.getTipoContaDespesa(), entity.getSubTipoDespesa());
+            configuracao = configEmpenhoFacade.buscarCDEEmpenho(
+                contaDespesa,
+                TipoLancamento.NORMAL,
+                entity.getDataEmpenho(),
+                entity.getTipoReconhecimento(),
+                entity.getTipoContaDespesa(),
+                entity.getSubTipoDespesa());
         } else {
-            configuracao = configEmpenhoFacade.buscarCDEEmpenho(contaDespesa, TipoLancamento.NORMAL, entity.getDataEmpenho(), TipoReconhecimentoObrigacaoPagar.SEM_RECONHECIMENTO_OBRIGACAO_ANTES_EMPENHO_DESPESA, entity.getTipoContaDespesa(), entity.getSubTipoDespesa());
+            configuracao = configEmpenhoFacade.buscarCDEEmpenho(
+                contaDespesa,
+                TipoLancamento.NORMAL,
+                entity.getDataEmpenho(),
+                TipoReconhecimentoObrigacaoPagar.SEM_RECONHECIMENTO_OBRIGACAO_ANTES_EMPENHO_DESPESA,
+                entity.getTipoContaDespesa(),
+                entity.getSubTipoDespesa());
         }
         if (configuracao != null) {
             eventoContabil = configuracao.getEventoContabil();
@@ -1252,7 +1520,13 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     public EventoContabil buscarEventoContabilPorDesdobramento(DesdobramentoEmpenho desdobramento) {
         EventoContabil eventoContabil = null;
-        ConfigEmpenho configuracao = configEmpenhoFacade.buscarCDEEmpenho(desdobramento.getConta(), TipoLancamento.NORMAL, desdobramento.getEmpenho().getDataEmpenho(), desdobramento.getEmpenho().getTipoReconhecimento(), desdobramento.getEmpenho().getTipoContaDespesa(), desdobramento.getEmpenho().getSubTipoDespesa());
+        ConfigEmpenho configuracao = configEmpenhoFacade.buscarCDEEmpenho(
+            desdobramento.getConta(),
+            TipoLancamento.NORMAL,
+            desdobramento.getEmpenho().getDataEmpenho(),
+            desdobramento.getEmpenho().getTipoReconhecimento(),
+            desdobramento.getEmpenho().getTipoContaDespesa(),
+            desdobramento.getEmpenho().getSubTipoDespesa());
         if (configuracao != null) {
             eventoContabil = configuracao.getEventoContabil();
         }
@@ -1261,7 +1535,12 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     private EventoContabil buscarEventoContabilRestoPagar(Empenho entity, Conta contaDespesa) {
         EventoContabil eventoContabil = null;
-        ConfigEmpenhoRestoPagar configuracao = configEmpenhoRestoFacade.recuperarEventoPorContaDespesa(contaDespesa, TipoLancamento.NORMAL, entity.getDataEmpenho(), entity.getTipoRestosProcessados(), !entity.getObrigacoesPagar().isEmpty());
+        ConfigEmpenhoRestoPagar configuracao = configEmpenhoRestoFacade.recuperarEventoPorContaDespesa(
+            contaDespesa,
+            TipoLancamento.NORMAL,
+            entity.getDataEmpenho(),
+            entity.getTipoRestosProcessados(),
+            !entity.getObrigacoesPagar().isEmpty());
         if (configuracao != null) {
             eventoContabil = configuracao.getEventoContabil();
         }
@@ -1334,7 +1613,9 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Liquidacao> buscarLiquidacoesPorEmpenho(Empenho e) {
-        String sql = " SELECT LIQ.* FROM EMPENHO EMP " + " INNER JOIN LIQUIDACAO LIQ ON LIQ.EMPENHO_ID = EMP.ID " + " WHERE EMP.ID = :param ";
+        String sql = " SELECT LIQ.* FROM EMPENHO EMP "
+            + " INNER JOIN LIQUIDACAO LIQ ON LIQ.EMPENHO_ID = EMP.ID "
+            + " WHERE EMP.ID = :param ";
         Query q = getEntityManager().createNativeQuery(sql.toString(), Liquidacao.class);
         q.setParameter("param", e.getId());
         if (q.getResultList() != null) {
@@ -1345,7 +1626,8 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> recuperarEmpenhosDaPessoa(Pessoa pessoa) {
-        String sql = " select e.* from empenho e " + " where e.fornecedor_id = :pessoa ";
+        String sql = " select e.* from empenho e " +
+            " where e.fornecedor_id = :pessoa ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("pessoa", pessoa.getId());
         if (q.getResultList().isEmpty()) {
@@ -1355,7 +1637,9 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhosPorDoctoFiscalLiquidacao(DoctoFiscalLiquidacao doctoFiscalLiquidacao) {
-        String hql = " select distinct liq.empenho from Liquidacao liq " + " join liq.doctoFiscais docto " + " where docto.doctoFiscalLiquidacao.id = :idDoctoFiscalLiquidacao ";
+        String hql = " select distinct liq.empenho from Liquidacao liq " +
+            " join liq.doctoFiscais docto " +
+            " where docto.doctoFiscalLiquidacao.id = :idDoctoFiscalLiquidacao ";
         Query q = em.createQuery(hql);
         q.setParameter("idDoctoFiscalLiquidacao", doctoFiscalLiquidacao.getId());
         try {
@@ -1370,7 +1654,18 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoSemVinculoComContratoPorNumeroOrPessoa(String parte, Pessoa fornecedor) {
-        String sql = "SELECT E.* FROM EMPENHO E " + " INNER JOIN PESSOA P ON E.FORNECEDOR_ID = P.ID" + " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID " + " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID " + " WHERE (E.NUMERO like :parte " + "    or LOWER(PF.NOME) LIKE :parte or replace(replace(pf.cpf,'.',''),'-','') LIKE :cpfCnpj " + "    or LOWER(PJ.RAZAOSOCIAL) LIKE :parte or replace(replace(pj.cnpj,'.',''),'-','') LIKE :cpfCnpj) " + "  AND E.UNIDADEORGANIZACIONAL_ID = :unidadeAtual " + "  AND E.categoriaOrcamentaria =  :categoria " + "  and e.CONTRATO_ID is null " + "    and E.FORNECEDOR_ID = :idFornecedor " + "    ORDER BY E.ID DESC ";
+        String sql = "SELECT E.* FROM EMPENHO E "
+            + " INNER JOIN PESSOA P ON E.FORNECEDOR_ID = P.ID"
+            + " LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID "
+            + " LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID "
+            + " WHERE (E.NUMERO like :parte "
+            + "    or LOWER(PF.NOME) LIKE :parte or replace(replace(pf.cpf,'.',''),'-','') LIKE :cpfCnpj "
+            + "    or LOWER(PJ.RAZAOSOCIAL) LIKE :parte or replace(replace(pj.cnpj,'.',''),'-','') LIKE :cpfCnpj) "
+            + "  AND E.UNIDADEORGANIZACIONAL_ID = :unidadeAtual "
+            + "  AND E.categoriaOrcamentaria =  :categoria "
+            + "  and e.CONTRATO_ID is null "
+            + "    and E.FORNECEDOR_ID = :idFornecedor "
+            + "    ORDER BY E.ID DESC ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("parte", "%" + parte.toLowerCase().trim() + "%");
         q.setParameter("categoria", CategoriaOrcamentaria.NORMAL.name());
@@ -1386,7 +1681,9 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Empenho> buscarEmpenhoPorObrigacaoPagar(ObrigacaoAPagar obrigacaoAPagar) {
-        String sql = " select e.* from empenho e " + "inner join empenhoobrigacaopagar eop on eop.empenho_id = e.id " + " where eop.obrigacaoAPagar_id = :idObrigacao ";
+        String sql = " select e.* from empenho e " +
+            "inner join empenhoobrigacaopagar eop on eop.empenho_id = e.id " +
+            " where eop.obrigacaoAPagar_id = :idObrigacao ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("idObrigacao", obrigacaoAPagar.getId());
         if (q.getResultList().isEmpty()) {
@@ -1396,7 +1693,17 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public Boolean verificarSeEmpenhoPossuiObrigacaoPagar(Empenho empenho) {
-        String sql = " " + "   select op.* from empenho emp " + "   inner join empenhoobrigacaopagar eop on eop.empenho_id = emp.id " + "    inner join obrigacaoapagar op on op.id =  eop.obrigacaoapagar_id " + "   where emp.id = :idEmpenho " + "   and op.saldo > 0 " + "   union " + "   select op.* from obrigacaoapagar op " + "    inner join empenho emp on emp.id = op.empenho_id " + "   where emp.id = :idEmpenho " + "   and op.saldo > 0 ";
+        String sql = " " +
+            "   select op.* from empenho emp " +
+            "   inner join empenhoobrigacaopagar eop on eop.empenho_id = emp.id " +
+            "    inner join obrigacaoapagar op on op.id =  eop.obrigacaoapagar_id " +
+            "   where emp.id = :idEmpenho " +
+            "   and op.saldo > 0 " +
+            "   union " +
+            "   select op.* from obrigacaoapagar op " +
+            "    inner join empenho emp on emp.id = op.empenho_id " +
+            "   where emp.id = :idEmpenho " +
+            "   and op.saldo > 0 ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idEmpenho", empenho.getId());
         return !q.getResultList().isEmpty();
@@ -1404,7 +1711,14 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
 
     public List<Conta> buscarContaDesdobradaPorEmpenho(String parte, Empenho empenho) {
-        String sql = " " + "   select c.*, cd.* " + "    from desdobramentoempenho desd " + "    inner join conta c on c.id = desd.conta_id " + "    inner join contadespesa cd on cd.id = c.id " + "    where desd.empenho_id = :idEmpenho " + "    AND (LOWER(C.DESCRICAO) LIKE :parte OR (replace(C.CODIGO,'.','') LIKE :parte or C.CODIGO LIKE :parte))" + "    ORDER BY C.CODIGO ";
+        String sql = " " +
+            "   select c.*, cd.* " +
+            "    from desdobramentoempenho desd " +
+            "    inner join conta c on c.id = desd.conta_id " +
+            "    inner join contadespesa cd on cd.id = c.id " +
+            "    where desd.empenho_id = :idEmpenho " +
+            "    AND (LOWER(C.DESCRICAO) LIKE :parte OR (replace(C.CODIGO,'.','') LIKE :parte or C.CODIGO LIKE :parte))" +
+            "    ORDER BY C.CODIGO ";
         Query q = em.createNativeQuery(sql, ContaDespesa.class);
         q.setParameter("idEmpenho", empenho.getId());
         q.setParameter("parte", "%" + parte + "%");
@@ -1415,7 +1729,9 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public DesdobramentoEmpenho buscarDesdobramento(Empenho empenho) {
-        String sql = " " + "   select desd.* from desdobramentoempenho desd " + "    where desd.empenho_id = :idEmpenho ";
+        String sql = " " +
+            "   select desd.* from desdobramentoempenho desd " +
+            "    where desd.empenho_id = :idEmpenho ";
         Query q = em.createNativeQuery(sql, DesdobramentoEmpenho.class);
         q.setParameter("idEmpenho", empenho.getId());
         q.setMaxResults(1);
@@ -1438,9 +1754,20 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return extensaoFonteRecursoFacade;
     }
 
-    public List<Empenho> buscarEmpenhosSemSolicitacaoPorUnidade(UnidadeOrganizacional unidadeOrganizacional, String filtro, Exercicio exercicio) {
+    public List<Empenho> buscarEmpenhosSemSolicitacaoPorUnidade(UnidadeOrganizacional unidadeOrganizacional, String
+        filtro, Exercicio exercicio) {
         StringBuilder sql = new StringBuilder();
-        sql.append(" select emp.* from empenho emp").append(" INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  ").append(" LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  ").append(" LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  ").append(" where ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) ").append(" OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) ").append(" OR (EMP.NUMERO LIKE :parte)) ").append(" and emp.unidadeorganizacional_id = :unidade ").append(" and emp.exercicio_id = :exercicio ").append(" and emp.id not in (select sol.empenho_id from solicitacaoempenho sol where sol.unidadeorganizacional_id = :unidade and sol.empenho_id is not null) ").append(" order by emp.numero desc ");
+        sql.append(" select emp.* from empenho emp")
+            .append(" INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  ")
+            .append(" LEFT JOIN PESSOAFISICA PF ON P.ID = PF.ID  ")
+            .append(" LEFT JOIN PESSOAJURIDICA PJ ON P.ID = PJ.ID  ")
+            .append(" where ((LOWER(PF.NOME) LIKE :parte) OR (PF.CPF LIKE :parte) OR (EMP.NUMERO LIKE :parte) ")
+            .append(" OR (LOWER(PJ.NOMEFANTASIA) LIKE :parte) OR (LOWER(PJ.NOMEREDUZIDO) LIKE :parte) OR (PJ.CNPJ LIKE :parte) ")
+            .append(" OR (EMP.NUMERO LIKE :parte)) ")
+            .append(" and emp.unidadeorganizacional_id = :unidade ")
+            .append(" and emp.exercicio_id = :exercicio ")
+            .append(" and emp.id not in (select sol.empenho_id from solicitacaoempenho sol where sol.unidadeorganizacional_id = :unidade and sol.empenho_id is not null) ")
+            .append(" order by emp.numero desc ");
         Query q = em.createNativeQuery(sql.toString(), Empenho.class);
         q.setParameter("unidade", unidadeOrganizacional.getId());
         q.setParameter("exercicio", exercicio.getId());
@@ -1467,8 +1794,26 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return Arrays.asList(consulta);
     }
 
-    public BigDecimal buscarValorPorFonteDespesaOrc(FonteDespesaORC fonteDespesaORC, Date dataInicial, Date dataFinal) {
-        String sql = "select sum(valor) from ( " + "select coalesce(sum(emp.valor), 0) as valor " + "  FROM empenho emp  " + " INNER JOIN FONTEDESPESAORC fontdesp ON emp.FONTEDESPESAORC_ID = fontdesp.ID  " + " where emp.categoriaorcamentaria = :categoria  " + " and fontdesp.id = :fontedespesaorc" + " and trunc(emp.dataempenho) between to_date(:dataInicial, 'dd/mm/yyyy') and to_date(:dataFinal, 'dd/mm/yyyy') " + "  " + " union all " + "  " + " select coalesce(sum(est.valor), 0) *-1 as valor " + "  FROM empenhoestorno est  " + " inner join empenho emp on est.empenho_id = emp.id  " + " INNER JOIN FONTEDESPESAORC fontdesp ON emp.FONTEDESPESAORC_ID = fontdesp.ID  " + " where emp.categoriaorcamentaria = :categoria  " + " and fontdesp.id = :fontedespesaorc" + " and trunc(est.dataestorno) between to_date(:dataInicial, 'dd/mm/yyyy') and to_date(:dataFinal, 'dd/mm/yyyy') " + " ) ";
+    public BigDecimal buscarValorPorFonteDespesaOrc(FonteDespesaORC fonteDespesaORC, Date dataInicial, Date
+        dataFinal) {
+        String sql = "select sum(valor) from ( " +
+            "select coalesce(sum(emp.valor), 0) as valor " +
+            "  FROM empenho emp  " +
+            " INNER JOIN FONTEDESPESAORC fontdesp ON emp.FONTEDESPESAORC_ID = fontdesp.ID  " +
+            " where emp.categoriaorcamentaria = :categoria  " +
+            " and fontdesp.id = :fontedespesaorc" +
+            " and trunc(emp.dataempenho) between to_date(:dataInicial, 'dd/mm/yyyy') and to_date(:dataFinal, 'dd/mm/yyyy') " +
+            "  " +
+            " union all " +
+            "  " +
+            " select coalesce(sum(est.valor), 0) *-1 as valor " +
+            "  FROM empenhoestorno est  " +
+            " inner join empenho emp on est.empenho_id = emp.id  " +
+            " INNER JOIN FONTEDESPESAORC fontdesp ON emp.FONTEDESPESAORC_ID = fontdesp.ID  " +
+            " where emp.categoriaorcamentaria = :categoria  " +
+            " and fontdesp.id = :fontedespesaorc" +
+            " and trunc(est.dataestorno) between to_date(:dataInicial, 'dd/mm/yyyy') and to_date(:dataFinal, 'dd/mm/yyyy') " +
+            " ) ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("fontedespesaorc", fonteDespesaORC.getId());
         q.setParameter("categoria", CategoriaOrcamentaria.NORMAL.name());
@@ -1484,11 +1829,13 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         try {
             String sql = "select max(trunc(emp.dataempenho)) from requisicaodecompra req " +
                 "           left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
-                "           left join execucaocontratoempenho exEmp on  exEmp.id = reqEx.execucaocontratoempenho_id " +
-                "           left join execucaoprocessoempenho exEmpProc on exEmpProc.id = reqEx.execucaoprocessoempenho_id " +
-                "           left join solicitacaoempenhorecdiv solrd on solrd.id = reqEx.execucaoreconhecimentodiv_id " +
-                "           left join solicitacaoempenho sol on sol.id = solrd.solicitacaoempenho_id " +
-                "           inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
+                "           left join execucaocontrato ex on ex.id = reqEx.execucaocontrato_id " +
+                "           left join execucaocontratoempenho exEmp on ex.id = exEmp.execucaocontrato_id " +
+                "           left join execucaoprocesso exproc on exproc.id = reqEx.execucaoprocesso_id " +
+                "           left join execucaoprocessoempenho exProcEmp on exproc.id = exProcEmp.execucaoprocesso_id " +
+                "           left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " +
+                "           left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
+                "           inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exProcEmp.empenho_id, sol.empenho_id) " +
                 "         where req.id = :requisicao " +
                 "         order by emp.dataempenho desc ";
             Query q = em.createNativeQuery(sql);
@@ -1502,7 +1849,9 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     public Date buscarMenorDataEmpenhosPorRequisicaoDeCompra(List<Long> idsEmpenho) {
         try {
-            String sql = "select min(cast(emp.dataempenho as date)) from empenho emp " + "         where emp.id in (:idsEmpenhos) " + "         order by emp.dataempenho ";
+            String sql = "select min(cast(emp.dataempenho as date)) from empenho emp " +
+                "         where emp.id in (:idsEmpenhos) " +
+                "         order by emp.dataempenho ";
             Query q = em.createNativeQuery(sql);
             q.setParameter("idsEmpenhos", idsEmpenho);
             q.setMaxResults(1);
@@ -1513,7 +1862,105 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
     }
 
     public List<Object[]> buscarEmpenhos(Exercicio exercicio, Date dataOperacao) {
-        String sql = " select ano,  " + "       mes, " + "       dia, " + "       contaCodigo, " + "       orgao, " + "       funcaoCodigo, " + "       subFuncaoCodigo, " + "       programaCodigo, " + "       tipoAcaoCodigo, " + "       acaoCodigo, " + "       fonteCodigo, " + "       subFonteCodigo, " + "       fornecedor, " + "        coalesce(numerotermo, 0) as NUMEROCONTRATO, " + "       valor " + "  from ( " + "select extract(year from emp.dataEmpenho) as ano, " + "       extract(month from emp.dataEmpenho) as mes, " + "       extract(day from emp.dataEmpenho) as dia, " + "       substr(c.codigo, 0, 12) as contaCodigo,  " + "       VW.codigo as orgao,  " + "       f.codigo as funcaoCodigo,  " + "       sf.codigo as subFuncaoCodigo,  " + "       prog.codigo as programaCodigo,  " + "       tpa.codigo as tipoAcaoCodigo,  " + "       a.codigo as acaoCodigo,  " + "       fr.codigo as fonteCodigo,  " + "       case when coalesce((select '1' from CALAMIDADEPUBLICACONTRATO cpc " + "                 where cpc.CONTRATO_ID = cont.id), '0') = '1' then '1' " + "            when tpa.codigo || a.codigo || '.' || sub.codigo in ('1396.0000', '1397.0000', '1398.0000', '1399.0000', '1400.0000', '1400.0001', '1401.0000') " + "                 then '1' " + "            when fr.codigo = '126' then '1' " + "            else '0' " + "       end as subFonteCodigo, " + "       emp.FORNECEDOR_ID as fornecedor, " + "       to_number(cont.numerotermo) as numerotermo, " + "       emp.valor as valor " + "  from empenho emp " + "  left join contrato cont on emp.contrato_id = cont.id " + " inner join fontedespesaorc fontOrc on emp.FONTEDESPESAORC_ID = fontOrc.id " + " inner join provisaoppafonte provFonte on fontOrc.PROVISAOPPAFONTE_ID = provFonte.id " + " inner join CONTADEDESTINACAO cd on provFonte.DESTINACAODERECURSOS_ID= cd.id " + " inner join FONTEDERECURSOS fr on cd.FONTEDERECURSOS_ID = fr.id " + " inner join despesaorc desp on emp.DESPESAORC_ID = desp.id " + " inner join provisaoppadespesa provDesp on desp.PROVISAOPPADESPESA_ID = provDesp.id " + " inner join conta c on provDesp.CONTADEDESPESA_ID = c.id " + " inner join VWHIERARQUIAORCAMENTARIA vw on emp.UNIDADEORGANIZACIONAL_ID = vw.SUBORDINADA_ID " + " INNER JOIN SUBACAOPPA SUB ON SUB.ID = provdesp.subacaoppa_id " + " INNER JOIN ACAOPPA A ON A.ID = sub.acaoppa_id " + " INNER JOIN TIPOACAOPPA TPA ON TPA.ID = A.TIPOACAOPPA_ID " + " INNER JOIN programappa PROG ON PROG.ID = A.programa_id " + " INNER JOIN FUNCAO F ON F.ID = A.funcao_id " + " INNER JOIN SUBFUNCAO SF ON SF.ID = A.subfuncao_id " + " where TO_DATE(:dataOperacao, 'dd/mm/yyyy') between vw.INICIOVIGENCIA and coalesce(vw.FIMVIGENCIA, TO_DATE(:dataOperacao, 'dd/mm/yyyy')) " + "   and emp.EXERCICIO_ID = :exercicio " + "   and emp.CATEGORIAORCAMENTARIA = :categoria " + " union all " + "select extract(year from est.dataEstorno) as ano, " + "       extract(month from est.dataEstorno) as mes, " + "       extract(day from est.dataEstorno) as dia, " + "       substr(c.codigo, 0, 12) as contaCodigo,  " + "       VW.codigo as orgao,  " + "       f.codigo as funcaoCodigo,  " + "       sf.codigo as subFuncaoCodigo,  " + "       prog.codigo as programaCodigo,  " + "       tpa.codigo as tipoAcaoCodigo,  " + "       a.codigo as acaoCodigo,  " + "       fr.codigo as fonteCodigo,  " + "       case when coalesce((select '1' from CALAMIDADEPUBLICACONTRATO cpc " + "                 where cpc.CONTRATO_ID = cont.id), '0') = '1' then '1' " + "            when tpa.codigo || a.codigo || '.' || sub.codigo in ('1396.0000', '1397.0000', '1398.0000', '1399.0000', '1400.0000', '1400.0001', '1401.0000') " + "                 then '1' " + "            when fr.codigo = '126' then '1' " + "            else '0' " + "       end as subFonteCodigo, " + "       emp.FORNECEDOR_ID as fornecedor, " + "       to_number(cont.numerotermo) as numerotermo, " + "       est.valor * -1 as valor " + "  from empenhoestorno est " + " inner join empenho emp on est.empenho_id = emp.id" + "  left join contrato cont on emp.contrato_id = cont.id " + " inner join fontedespesaorc fontOrc on emp.FONTEDESPESAORC_ID = fontOrc.id " + " inner join provisaoppafonte provFonte on fontOrc.PROVISAOPPAFONTE_ID = provFonte.id " + " inner join CONTADEDESTINACAO cd on provFonte.DESTINACAODERECURSOS_ID= cd.id " + " inner join FONTEDERECURSOS fr on cd.FONTEDERECURSOS_ID = fr.id " + " inner join despesaorc desp on emp.DESPESAORC_ID = desp.id " + " inner join provisaoppadespesa provDesp on desp.PROVISAOPPADESPESA_ID = provDesp.id " + " inner join conta c on provDesp.CONTADEDESPESA_ID = c.id " + " inner join VWHIERARQUIAORCAMENTARIA vw on est.UNIDADEORGANIZACIONAL_ID = vw.SUBORDINADA_ID " + " INNER JOIN SUBACAOPPA SUB ON SUB.ID = provdesp.subacaoppa_id " + " INNER JOIN ACAOPPA A ON A.ID = sub.acaoppa_id " + " INNER JOIN TIPOACAOPPA TPA ON TPA.ID = A.TIPOACAOPPA_ID " + " INNER JOIN programappa PROG ON PROG.ID = A.programa_id " + " INNER JOIN FUNCAO F ON F.ID = A.funcao_id " + " INNER JOIN SUBFUNCAO SF ON SF.ID = A.subfuncao_id " + " where TO_DATE(:dataOperacao, 'dd/mm/yyyy') between vw.INICIOVIGENCIA and coalesce(vw.FIMVIGENCIA, TO_DATE(:dataOperacao, 'dd/mm/yyyy')) " + "   and est.EXERCICIO_ID = :exercicio " + "   and est.CATEGORIAORCAMENTARIA = :categoria) " + " order by dia, mes, ano ";
+        String sql = " select ano,  " +
+            "       mes, " +
+            "       dia, " +
+            "       contaCodigo, " +
+            "       orgao, " +
+            "       funcaoCodigo, " +
+            "       subFuncaoCodigo, " +
+            "       programaCodigo, " +
+            "       tipoAcaoCodigo, " +
+            "       acaoCodigo, " +
+            "       fonteCodigo, " +
+            "       subFonteCodigo, " +
+            "       fornecedor, " +
+            "        coalesce(numerotermo, 0) as NUMEROCONTRATO, " +
+            "       valor " +
+            "  from ( " +
+            "select extract(year from emp.dataEmpenho) as ano, " +
+            "       extract(month from emp.dataEmpenho) as mes, " +
+            "       extract(day from emp.dataEmpenho) as dia, " +
+            "       substr(c.codigo, 0, 12) as contaCodigo,  " +
+            "       VW.codigo as orgao,  " +
+            "       f.codigo as funcaoCodigo,  " +
+            "       sf.codigo as subFuncaoCodigo,  " +
+            "       prog.codigo as programaCodigo,  " +
+            "       tpa.codigo as tipoAcaoCodigo,  " +
+            "       a.codigo as acaoCodigo,  " +
+            "       fr.codigo as fonteCodigo,  " +
+            "       case when coalesce((select '1' from CALAMIDADEPUBLICACONTRATO cpc " +
+            "                 where cpc.CONTRATO_ID = cont.id), '0') = '1' then '1' " +
+            "            when tpa.codigo || a.codigo || '.' || sub.codigo in ('1396.0000', '1397.0000', '1398.0000', '1399.0000', '1400.0000', '1400.0001', '1401.0000') " +
+            "                 then '1' " +
+            "            when fr.codigo = '126' then '1' " +
+            "            else '0' " +
+            "       end as subFonteCodigo, " +
+            "       emp.FORNECEDOR_ID as fornecedor, " +
+            "       to_number(cont.numerotermo) as numerotermo, " +
+            "       emp.valor as valor " +
+            "  from empenho emp " +
+            "  left join contrato cont on emp.contrato_id = cont.id " +
+            " inner join fontedespesaorc fontOrc on emp.FONTEDESPESAORC_ID = fontOrc.id " +
+            " inner join provisaoppafonte provFonte on fontOrc.PROVISAOPPAFONTE_ID = provFonte.id " +
+            " inner join CONTADEDESTINACAO cd on provFonte.DESTINACAODERECURSOS_ID= cd.id " +
+            " inner join FONTEDERECURSOS fr on cd.FONTEDERECURSOS_ID = fr.id " +
+            " inner join despesaorc desp on emp.DESPESAORC_ID = desp.id " +
+            " inner join provisaoppadespesa provDesp on desp.PROVISAOPPADESPESA_ID = provDesp.id " +
+            " inner join conta c on provDesp.CONTADEDESPESA_ID = c.id " +
+            " inner join VWHIERARQUIAORCAMENTARIA vw on emp.UNIDADEORGANIZACIONAL_ID = vw.SUBORDINADA_ID " +
+            " INNER JOIN SUBACAOPPA SUB ON SUB.ID = provdesp.subacaoppa_id " +
+            " INNER JOIN ACAOPPA A ON A.ID = sub.acaoppa_id " +
+            " INNER JOIN TIPOACAOPPA TPA ON TPA.ID = A.TIPOACAOPPA_ID " +
+            " INNER JOIN programappa PROG ON PROG.ID = A.programa_id " +
+            " INNER JOIN FUNCAO F ON F.ID = A.funcao_id " +
+            " INNER JOIN SUBFUNCAO SF ON SF.ID = A.subfuncao_id " +
+            " where TO_DATE(:dataOperacao, 'dd/mm/yyyy') between vw.INICIOVIGENCIA and coalesce(vw.FIMVIGENCIA, TO_DATE(:dataOperacao, 'dd/mm/yyyy')) " +
+            "   and emp.EXERCICIO_ID = :exercicio " +
+            "   and emp.CATEGORIAORCAMENTARIA = :categoria " +
+            " union all " +
+            "select extract(year from est.dataEstorno) as ano, " +
+            "       extract(month from est.dataEstorno) as mes, " +
+            "       extract(day from est.dataEstorno) as dia, " +
+            "       substr(c.codigo, 0, 12) as contaCodigo,  " +
+            "       VW.codigo as orgao,  " +
+            "       f.codigo as funcaoCodigo,  " +
+            "       sf.codigo as subFuncaoCodigo,  " +
+            "       prog.codigo as programaCodigo,  " +
+            "       tpa.codigo as tipoAcaoCodigo,  " +
+            "       a.codigo as acaoCodigo,  " +
+            "       fr.codigo as fonteCodigo,  " +
+            "       case when coalesce((select '1' from CALAMIDADEPUBLICACONTRATO cpc " +
+            "                 where cpc.CONTRATO_ID = cont.id), '0') = '1' then '1' " +
+            "            when tpa.codigo || a.codigo || '.' || sub.codigo in ('1396.0000', '1397.0000', '1398.0000', '1399.0000', '1400.0000', '1400.0001', '1401.0000') " +
+            "                 then '1' " +
+            "            when fr.codigo = '126' then '1' " +
+            "            else '0' " +
+            "       end as subFonteCodigo, " +
+            "       emp.FORNECEDOR_ID as fornecedor, " +
+            "       to_number(cont.numerotermo) as numerotermo, " +
+            "       est.valor * -1 as valor " +
+            "  from empenhoestorno est " +
+            " inner join empenho emp on est.empenho_id = emp.id" +
+            "  left join contrato cont on emp.contrato_id = cont.id " +
+            " inner join fontedespesaorc fontOrc on emp.FONTEDESPESAORC_ID = fontOrc.id " +
+            " inner join provisaoppafonte provFonte on fontOrc.PROVISAOPPAFONTE_ID = provFonte.id " +
+            " inner join CONTADEDESTINACAO cd on provFonte.DESTINACAODERECURSOS_ID= cd.id " +
+            " inner join FONTEDERECURSOS fr on cd.FONTEDERECURSOS_ID = fr.id " +
+            " inner join despesaorc desp on emp.DESPESAORC_ID = desp.id " +
+            " inner join provisaoppadespesa provDesp on desp.PROVISAOPPADESPESA_ID = provDesp.id " +
+            " inner join conta c on provDesp.CONTADEDESPESA_ID = c.id " +
+            " inner join VWHIERARQUIAORCAMENTARIA vw on est.UNIDADEORGANIZACIONAL_ID = vw.SUBORDINADA_ID " +
+            " INNER JOIN SUBACAOPPA SUB ON SUB.ID = provdesp.subacaoppa_id " +
+            " INNER JOIN ACAOPPA A ON A.ID = sub.acaoppa_id " +
+            " INNER JOIN TIPOACAOPPA TPA ON TPA.ID = A.TIPOACAOPPA_ID " +
+            " INNER JOIN programappa PROG ON PROG.ID = A.programa_id " +
+            " INNER JOIN FUNCAO F ON F.ID = A.funcao_id " +
+            " INNER JOIN SUBFUNCAO SF ON SF.ID = A.subfuncao_id " +
+            " where TO_DATE(:dataOperacao, 'dd/mm/yyyy') between vw.INICIOVIGENCIA and coalesce(vw.FIMVIGENCIA, TO_DATE(:dataOperacao, 'dd/mm/yyyy')) " +
+            "   and est.EXERCICIO_ID = :exercicio " +
+            "   and est.CATEGORIAORCAMENTARIA = :categoria) " +
+            " order by dia, mes, ano ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("exercicio", exercicio.getId());
         q.setParameter("dataOperacao", DataUtil.getDataFormatada(dataOperacao));
@@ -1523,14 +1970,16 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
 
     public List<Empenho> buscarEmpenhosPorRequisicaoCompra(Long idRequisicao) {
         String sql = " select distinct emp.* from requisicaodecompra req  " +
-            "           inner join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
-            "           left join execucaocontratoempenho exEmp on  exEmp.id = reqEx.execucaocontratoempenho_id " +
-            "           left join execucaoprocessoempenho exEmpProc on exEmpProc.id = reqEx.execucaoprocessoempenho_id " +
-            "           left join solicitacaoempenhorecdiv solrd on solrd.id = reqEx.execucaoreconhecimentodiv_id " +
-            "           left join solicitacaoempenho sol on sol.id = solrd.solicitacaoempenho_id " +
-            "           inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
-            "          where req.id = :idRequisicao " +
-            "          order by emp.numero ";
+            " left join requisicaocompraexecucao reqEx on reqEx.requisicaocompra_id = req.id " +
+            " left join execucaocontrato ex on ex.id = reqEx.execucaocontrato_id " +
+            " left join execucaocontratoempenho exEmp on ex.id = exEmp.execucaocontrato_id " +
+            " left join execucaoprocesso exProc on exProc.id = reqEx.execucaoprocesso_id " +
+            " left join execucaoprocessoempenho exEmpProc on exProc.id = exEmpProc.execucaoprocesso_id " +
+            " left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " +
+            " left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
+            " inner join empenho emp on emp.id = coalesce(exEmp.empenho_id, exEmpProc.empenho_id, sol.empenho_id) " +
+            " where req.id = :idRequisicao " +
+            " order by emp.numero ";
         Query q = em.createNativeQuery(sql, Empenho.class);
         q.setParameter("idRequisicao", idRequisicao);
         return q.getResultList();
@@ -1548,7 +1997,48 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         }
     }
 
-    public List<Empenho> buscarEmpenhosNormaisAndRestos(UnidadeOrganizacional unidadeOrganizacional, String filtro, Exercicio exercicio) {
+    public Empenho recuperarEmpenhoPorGrupoBemAndProcesso(GrupoBem grupoBem, Long idProcesso) {
+        String sql = "" +
+            " select emp.* from empenho emp " +
+            "   inner join desdobramentoempenho desd on desd.EMPENHO_ID = emp.id " +
+            "   inner join ConfigDespesaBens config on config.CONTADESPESA_ID = desd.CONTA_ID " +
+            " where config.GRUPOBEM_ID = :idGrupo " +
+            "   and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(config.iniciovigencia) and coalesce(trunc(config.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " +
+            "   and coalesce(emp.contrato_id, emp.execucaoprocesso_id) = :idProcesso ";
+        Query q = em.createNativeQuery(sql, Empenho.class);
+        q.setParameter("idGrupo", grupoBem.getId());
+        q.setParameter("idProcesso", idProcesso);
+        q.setParameter("dataOperacao", DataUtil.getDataFormatada(sistemaFacade.getDataOperacao()));
+        q.setMaxResults(1);
+        try {
+            return (Empenho) q.getSingleResult();
+        } catch (NoResultException ex) {
+            return null;
+        }
+    }
+
+    public Empenho recuperarEmpenhoPorGrupoMaterialAndContrato(GrupoMaterial grupoMaterial, Long idProcesso) {
+        String sql = "" +
+            " select emp.* from empenho emp " +
+            "   inner join desdobramentoempenho desd on desd.EMPENHO_ID = emp.id " +
+            "   inner join CONFIGGRUPOMATERIAL config on config.CONTADESPESA_ID = desd.CONTA_ID " +
+            " where config.GRUPOMATERIAL_ID = :idGrupo " +
+            "   and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(config.iniciovigencia) and coalesce(trunc(config.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " +
+            "   and coalesce(emp.contrato_id, emp.execucaoprocesso_id) = :idProcesso ";
+        Query q = em.createNativeQuery(sql, Empenho.class);
+        q.setParameter("idGrupo", grupoMaterial.getId());
+        q.setParameter("idProcesso", idProcesso);
+        q.setParameter("dataOperacao", DataUtil.getDataFormatada(sistemaFacade.getDataOperacao()));
+        q.setMaxResults(1);
+        try {
+            return (Empenho) q.getSingleResult();
+        } catch (NoResultException ex) {
+            return null;
+        }
+    }
+
+    public List<Empenho> buscarEmpenhosNormaisAndRestos(UnidadeOrganizacional unidadeOrganizacional, String
+        filtro, Exercicio exercicio) {
         StringBuilder sql = new StringBuilder();
         sql.append(" select emp.* from empenho emp")
             .append(" INNER JOIN PESSOA P ON EMP.FORNECEDOR_ID = P.ID  ")
@@ -1565,34 +2055,6 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         q.setParameter("exercicio", exercicio.getId());
         q.setParameter("parte", "%" + filtro.trim().toLowerCase() + "%");
         return q.getResultList();
-    }
-
-    public Empenho recuperarEmpenhoPorGrupoBemAndProcesso(GrupoBem grupoBem, Long idProcesso) {
-        String sql = "" + " select emp.* from empenho emp " + "   inner join desdobramentoempenho desd on desd.EMPENHO_ID = emp.id " + "   inner join ConfigDespesaBens config on config.CONTADESPESA_ID = desd.CONTA_ID " + " where config.GRUPOBEM_ID = :idGrupo " + "   and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(config.iniciovigencia) and coalesce(trunc(config.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " + "   and coalesce(emp.contrato_id, emp.execucaoprocesso_id) = :idProcesso ";
-        Query q = em.createNativeQuery(sql, Empenho.class);
-        q.setParameter("idGrupo", grupoBem.getId());
-        q.setParameter("idProcesso", idProcesso);
-        q.setParameter("dataOperacao", DataUtil.getDataFormatada(sistemaFacade.getDataOperacao()));
-        q.setMaxResults(1);
-        try {
-            return (Empenho) q.getSingleResult();
-        } catch (NoResultException ex) {
-            return null;
-        }
-    }
-
-    public Empenho recuperarEmpenhoPorGrupoMaterialAndContrato(GrupoMaterial grupoMaterial, Long idProcesso) {
-        String sql = "" + " select emp.* from empenho emp " + "   inner join desdobramentoempenho desd on desd.EMPENHO_ID = emp.id " + "   inner join CONFIGGRUPOMATERIAL config on config.CONTADESPESA_ID = desd.CONTA_ID " + " where config.GRUPOMATERIAL_ID = :idGrupo " + "   and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(config.iniciovigencia) and coalesce(trunc(config.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " + "   and coalesce(emp.contrato_id, emp.execucaoprocesso_id) = :idProcesso ";
-        Query q = em.createNativeQuery(sql, Empenho.class);
-        q.setParameter("idGrupo", grupoMaterial.getId());
-        q.setParameter("idProcesso", idProcesso);
-        q.setParameter("dataOperacao", DataUtil.getDataFormatada(sistemaFacade.getDataOperacao()));
-        q.setMaxResults(1);
-        try {
-            return (Empenho) q.getSingleResult();
-        } catch (NoResultException ex) {
-            return null;
-        }
     }
 
     public List<Empenho> buscarEmpenhoRestoPagarExercicio(Empenho empenhoOriginal, Exercicio exercicio) {
@@ -1619,7 +2081,8 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return dividaPublicaFacade.recuperarIdENumeroDividaPublica(solicitacaoEmpenho);
     }
 
-    public Object[] recuperarIdENumeroPropostaConcessaoDiaria(SolicitacaoEmpenho solicitacaoEmpenho, boolean isSuprimentoFundo) {
+    public Object[] recuperarIdENumeroPropostaConcessaoDiaria(SolicitacaoEmpenho solicitacaoEmpenho,
+                                                              boolean isSuprimentoFundo) {
         return propostaConcessaoDiariaFacade.recuperarIdENumeroPropostaConcessaoDiaria(solicitacaoEmpenho, isSuprimentoFundo);
     }
 
@@ -1627,16 +2090,78 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return convenioDespesaFacade.recuperarIdENumeroConvenioDespesa(solicitacaoEmpenho);
     }
 
-    public boolean hasConfiguracaoExcecaoVigente(Date dataOperacao, Conta contaDespesa) {
-        return configuracaoExcecaoDespesaContratoFacade.hasConfiguracaoVigente(dataOperacao, contaDespesa);
-    }
-
     public NotaOrcamentariaFacade getNotaOrcamentariaFacade() {
         return notaOrcamentariaFacade;
     }
 
-    public List<NotaExecucaoOrcamentaria> buscarNotaEmpenho(String condicao, CategoriaOrcamentaria categoriaOrcamentaria, String nomeDaNota) {
-        String sql = " SELECT " + " EMP.numero||'/'||exerc.ano as numero, " + " emp.dataempenho as data_EMPENHO, " + " EMP.COMPLEMENTOHISTORICO as historico_emp, " + " emp.tipoempenho as tipo, " + " TRIM(HO_ORGAO.CODIGO) AS CD_ORGAO, " + " TRIM(ho_orgao.DESCRICAO) AS DESC_ORAGAO, " + " TRIM(HO_UNIDADE.CODIGO) AS CD_UNIDADE, " + " TRIM(HO_UNIDADE.DESCRICAO) AS DESC_UNIDADE, " + " f.codigo || '.' || sf.codigo || '.' || p.codigo || '.' || tpa.codigo || a.codigo || '.' || sub.codigo as CD_PROG_TRABALHO, " + " ct_desp.codigo as elemento, " + " ct_desp.descricao as especificao_despesa, " + " coalesce(pf.nome, pj.razaosocial) as nome_pessoa, " + " formatacpfcnpj(coalesce(pf.cpf, pj.cnpj)) as cpf_cnpj, " + " fonte_r.codigo || ' - ' || trim(fonte_r.descricao)  || ' (' || cdest.codigo || ')' as desc_destinacao, " + " EMP.valor as valor, " + " RPAD(FRT_EXTENSO_MONETARIO(EMP.VALOR)||' ',600,'* ') AS VALOR_EXTENSO, " + " COALESCE(ENDERECO.LOGRADOURO,'Pessoa não possui Logradouro') AS LOGRADOURO, " + " coalesce(endereco.localidade,'Pessoa não possui Localidade') as localidade, " + " A.DESCRICAO AS DESC_ACAO, " + " coalesce(lic.numero, disp.numeroDaDispensa, regext.numeromodalidade)  || ' - Processo Licitatório ' || coalesce(lic.numerolicitacao, disp.numerodadispensa, regext.numeroregistro) || ' - ' || to_char(coalesce(lic.emitidaem, disp.datadadispensa, regext.dataregistrocarona),'dd/MM/YYYY') as modalidade, " + " emp.MODALIDADELICITACAO as MODALIDADELICITACAO, " + " classe.codigo || ' - ' || classe.descricao as desc_classepessoa, " + " COALESCE(EMP.SALDODISPONIVEL,0) AS SALDO_ANTERIOR, " + " COALESCE(EMP.SALDODISPONIVEL,0)- EMP.VALOR AS SALDO_POSTERIOR, " + " COALESCE(endereco.bairro,'Pessoa não possui bairro cadastrado') as bairro, " + " COALESCE(ENDERECO.uf,'sem UF ') AS UF, " + " COALESCE(SUBSTR(ENDERECO.CEP,1,5)||'-'||SUBSTR(ENDERECO.CEP,6,3),'sem CEP') AS CEP," + " HO_UNIDADE.subordinada_id, " + " emp.id as idNota " + " FROM empenho EMP " + (categoriaOrcamentaria.isResto() ? " inner join empenho emp_original on emp.empenho_id = emp_original.id " : "") + " INNER JOIN fontedespesaorc FONTE ON EMP.fontedespesaorc_id = fonte.id " + " INNER JOIN despesaorc DESPESA ON fonte.despesaorc_id = despesa.id " + " INNER JOIN provisaoppadespesa PROVISAO ON despesa.provisaoppadespesa_id= provisao.id " + " INNER JOIN SUBACAOPPA SUB ON SUB.ID = provisao.subacaoppa_id " + " inner join provisaoppafonte ppf on ppf.id = fonte.PROVISAOPPAFONTE_ID " + " INNER JOIN ACAOPPA A ON A.ID = sub.acaoppa_id " + " INNER JOIN TIPOACAOPPA TPA ON TPA.ID = A.TIPOACAOPPA_ID " + " INNER JOIN programappa P ON P.ID = A.programa_id " + " INNER JOIN FUNCAO F ON F.ID = A.funcao_id " + " INNER JOIN SUBFUNCAO SF ON SF.ID = A.subfuncao_id " + " INNER JOIN CONTA CT_DESP ON provisao.contadedespesa_id = CT_DESP.ID " + " inner join exercicio exerc on emp.exercicio_id = exerc.id " + " INNER JOIN vwhierarquiaorcamentaria HO_UNIDADE ON emp.unidadeorganizacional_id = ho_unidade.subordinada_id " + " INNER JOIN vwhierarquiaorcamentaria HO_ORGAO ON ho_unidade.superior_id = ho_orgao.subordinada_id " + " INNER JOIN PESSOA Pes ON emp.fornecedor_id = Pes.id " + " left join pessoafisica pf on pes.id = pf.id " + " left join pessoajuridica pj on pes.id = pj.id " + " left join enderecocorreio endereco on pes.enderecoprincipal_id = endereco.id " + " left join contadedestinacao cd on cd.id = ppf.destinacaoderecursos_id " + " left join conta cdest on cdest.id = cd.id " + " left join fontederecursos fonte_r on fonte_r.id = cd.fontederecursos_id " + (categoriaOrcamentaria.isResto() ? " and fonte_r.exercicio_id = emp_original.exercicio_id " : " and fonte_r.exercicio_id = exerc.id ") + " left join contrato contrato on emp.contrato_id = contrato.id " + " left join conlicitacao conlic on conlic.contrato_id = contrato.id " + " left join licitacao lic on lic.id = conlic.licitacao_id " + " left join condispensalicitacao conDisp on condisp.contrato_id = contrato.id " + " left join dispensadelicitacao disp on disp.id = condisp.dispensadelicitacao_id " + " left join CONREGPRECOEXTERNO conReg on conreg.contrato_id = contrato.id " + " left join REGISTROSOLMATEXT regExt on regExt.id = conreg.regsolmatext_id " + " left join classecredor classe on emp.classecredor_id = classe.id " + " where trunc(emp.dataempenho) between ho_unidade.iniciovigencia and coalesce(ho_unidade.fimvigencia, trunc(emp.dataempenho)) " + "   and trunc(emp.dataempenho) between ho_orgao.iniciovigencia and coalesce(ho_orgao.fimvigencia, trunc(emp.dataempenho)) " + "   and emp.categoriaOrcamentaria = :categoriaOrcamentaria " + condicao;
+    public List<NotaExecucaoOrcamentaria> buscarNotaEmpenho(String condicao, CategoriaOrcamentaria
+        categoriaOrcamentaria, String nomeDaNota) {
+        String sql = " SELECT " +
+            " EMP.numero||'/'||exerc.ano as numero, " +
+            " emp.dataempenho as data_EMPENHO, " +
+            " EMP.COMPLEMENTOHISTORICO as historico_emp, " +
+            " emp.tipoempenho as tipo, " +
+            " TRIM(HO_ORGAO.CODIGO) AS CD_ORGAO, " +
+            " TRIM(ho_orgao.DESCRICAO) AS DESC_ORAGAO, " +
+            " TRIM(HO_UNIDADE.CODIGO) AS CD_UNIDADE, " +
+            " TRIM(HO_UNIDADE.DESCRICAO) AS DESC_UNIDADE, " +
+            " f.codigo || '.' || sf.codigo || '.' || p.codigo || '.' || tpa.codigo || a.codigo || '.' || sub.codigo as CD_PROG_TRABALHO, " +
+            " ct_desp.codigo as elemento, " +
+            " ct_desp.descricao as especificao_despesa, " +
+            " coalesce(pf.nome, pj.razaosocial) as nome_pessoa, " +
+            " formatacpfcnpj(coalesce(pf.cpf, pj.cnpj)) as cpf_cnpj, " +
+            " fonte_r.codigo || ' - ' || trim(fonte_r.descricao)  || ' (' || cdest.codigo || ')' as desc_destinacao, " +
+            " EMP.valor as valor, " +
+            " RPAD(FRT_EXTENSO_MONETARIO(EMP.VALOR)||' ',600,'* ') AS VALOR_EXTENSO, " +
+            " COALESCE(ENDERECO.LOGRADOURO,'Pessoa não possui Logradouro') AS LOGRADOURO, " +
+            " coalesce(endereco.localidade,'Pessoa não possui Localidade') as localidade, " +
+            " A.DESCRICAO AS DESC_ACAO, " +
+            " coalesce(lic.numero, disp.numeroDaDispensa, regext.numeromodalidade)  || ' - Processo Licitatório ' || coalesce(lic.numerolicitacao, disp.numerodadispensa, regext.numeroregistro) || ' - ' || to_char(coalesce(lic.emitidaem, disp.datadadispensa, regext.dataregistrocarona),'dd/MM/YYYY') as modalidade, " +
+            " emp.MODALIDADELICITACAO as MODALIDADELICITACAO, " +
+            " classe.codigo || ' - ' || classe.descricao as desc_classepessoa, " +
+            " COALESCE(EMP.SALDODISPONIVEL,0) AS SALDO_ANTERIOR, " +
+            " COALESCE(EMP.SALDODISPONIVEL,0)- EMP.VALOR AS SALDO_POSTERIOR, " +
+            " COALESCE(endereco.bairro,'Pessoa não possui bairro cadastrado') as bairro, " +
+            " COALESCE(ENDERECO.uf,'sem UF ') AS UF, " +
+            " COALESCE(SUBSTR(ENDERECO.CEP,1,5)||'-'||SUBSTR(ENDERECO.CEP,6,3),'sem CEP') AS CEP," +
+            " HO_UNIDADE.subordinada_id, " +
+            " emp.id as idNota " +
+            " FROM empenho EMP " +
+            (categoriaOrcamentaria.isResto() ? " inner join empenho emp_original on emp.empenho_id = emp_original.id " : "") +
+            " INNER JOIN fontedespesaorc FONTE ON EMP.fontedespesaorc_id = fonte.id " +
+            " INNER JOIN despesaorc DESPESA ON fonte.despesaorc_id = despesa.id " +
+            " INNER JOIN provisaoppadespesa PROVISAO ON despesa.provisaoppadespesa_id= provisao.id " +
+            " INNER JOIN SUBACAOPPA SUB ON SUB.ID = provisao.subacaoppa_id " +
+            " inner join provisaoppafonte ppf on ppf.id = fonte.PROVISAOPPAFONTE_ID " +
+            " INNER JOIN ACAOPPA A ON A.ID = sub.acaoppa_id " +
+            " INNER JOIN TIPOACAOPPA TPA ON TPA.ID = A.TIPOACAOPPA_ID " +
+            " INNER JOIN programappa P ON P.ID = A.programa_id " +
+            " INNER JOIN FUNCAO F ON F.ID = A.funcao_id " +
+            " INNER JOIN SUBFUNCAO SF ON SF.ID = A.subfuncao_id " +
+            " INNER JOIN CONTA CT_DESP ON provisao.contadedespesa_id = CT_DESP.ID " +
+            " inner join exercicio exerc on emp.exercicio_id = exerc.id " +
+            " INNER JOIN vwhierarquiaorcamentaria HO_UNIDADE ON emp.unidadeorganizacional_id = ho_unidade.subordinada_id " +
+            " INNER JOIN vwhierarquiaorcamentaria HO_ORGAO ON ho_unidade.superior_id = ho_orgao.subordinada_id " +
+            " INNER JOIN PESSOA Pes ON emp.fornecedor_id = Pes.id " +
+            " left join pessoafisica pf on pes.id = pf.id " +
+            " left join pessoajuridica pj on pes.id = pj.id " +
+            " left join enderecocorreio endereco on pes.enderecoprincipal_id = endereco.id " +
+            " left join contadedestinacao cd on cd.id = ppf.destinacaoderecursos_id " +
+            " left join conta cdest on cdest.id = cd.id " +
+            " left join fontederecursos fonte_r on fonte_r.id = cd.fontederecursos_id " +
+            (categoriaOrcamentaria.isResto() ? " and fonte_r.exercicio_id = emp_original.exercicio_id " : " and fonte_r.exercicio_id = exerc.id ") +
+            " left join contrato contrato on emp.contrato_id = contrato.id " +
+            " left join conlicitacao conlic on conlic.contrato_id = contrato.id " +
+            " left join licitacao lic on lic.id = conlic.licitacao_id " +
+            " left join condispensalicitacao conDisp on condisp.contrato_id = contrato.id " +
+            " left join dispensadelicitacao disp on disp.id = condisp.dispensadelicitacao_id " +
+            " left join CONREGPRECOEXTERNO conReg on conreg.contrato_id = contrato.id " +
+            " left join REGISTROSOLMATEXT regExt on regExt.id = conreg.regsolmatext_id " +
+            " left join classecredor classe on emp.classecredor_id = classe.id " +
+            " where trunc(emp.dataempenho) between ho_unidade.iniciovigencia and coalesce(ho_unidade.fimvigencia, trunc(emp.dataempenho)) " +
+            "   and trunc(emp.dataempenho) between ho_orgao.iniciovigencia and coalesce(ho_orgao.fimvigencia, trunc(emp.dataempenho)) " +
+            "   and emp.categoriaOrcamentaria = :categoriaOrcamentaria " +
+            condicao;
         Query q = em.createNativeQuery(sql);
         q.setParameter("categoriaOrcamentaria", categoriaOrcamentaria.name());
         List<Object[]> resultado = q.getResultList();
@@ -1680,12 +2205,16 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return retorno;
     }
 
-    public BigDecimal buscarValorEmpenhadoPorTipoObjetoCompra(Contrato contrato, TipoObjetoCompra tipoObjetoCompra, CategoriaOrcamentaria categoria) {
+    public BigDecimal buscarValorEmpenhadoPorTipoObjetoCompra(Contrato contrato, TipoObjetoCompra
+        tipoObjetoCompra, CategoriaOrcamentaria categoria) {
         TipoContaDespesa tipoConta = TipoContaDespesa.getContaDespesaPorTipoObjetoCompra(tipoObjetoCompra);
         if (tipoConta == null) {
             throw new ExcecaoNegocioGenerica("Tipo conta de despesa não encontratda para o tipo de objeto de compra: " + tipoObjetoCompra.getDescricao());
         }
-        String sql = " select coalesce(sum(emp.valor),0) from empenho emp " + "           where emp.contrato_id = :idContrato " + "           and emp.tipocontadespesa = :tipoContaDespesa " + "           and emp.categoriaorcamentaria = :categoriaNormal ";
+        String sql = " select coalesce(sum(emp.valor),0) from empenho emp " +
+            "           where emp.contrato_id = :idContrato " +
+            "           and emp.tipocontadespesa = :tipoContaDespesa " +
+            "           and emp.categoriaorcamentaria = :categoriaNormal ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idContrato", contrato.getId());
         q.setParameter("categoriaNormal", categoria.name());
@@ -1693,14 +2222,14 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return q.getResultList().isEmpty() ? BigDecimal.ZERO : (BigDecimal) q.getSingleResult();
     }
 
-    public List<TipoContaDespesa> buscarTiposContaDespesaExecucaoEmpenho(Long idExecucao) {
+    public List<TipoContaDespesa> buscarTiposContaDespesaExecucaoEmpenho(Long idProcesso) {
         String sql = " select distinct emp.tipocontadespesa from empenho emp " +
             "           left join execucaoprocessoempenho exproc on exproc.empenho_id = emp.id " +
             "           left join execucaocontratoempenho excont on excont.empenho_id = emp.id " +
             "           left join reconhecimentodivida rd on rd.id = emp.reconhecimentodivida_id " +
-            "          where coalesce(exproc.execucaoprocesso_id, excont.execucaocontrato_id, rd.id) = :idExecucao ";
+            "          where coalesce(exproc.execucaoprocesso_id, excont.execucaocontrato_id, rd.id) = :idProcesso ";
         Query q = em.createNativeQuery(sql);
-        q.setParameter("idExecucao", idExecucao);
+        q.setParameter("idProcesso", idProcesso);
         List<String> resultado = q.getResultList();
         if (Util.isListNullOrEmpty(q.getResultList())) {
             return Lists.newArrayList();
@@ -1715,6 +2244,10 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         return Lists.newArrayList(toReturn);
     }
 
+    public boolean hasConfiguracaoExcecaoVigente(Date dataOperacao, Conta contaDespesa) {
+        return configuracaoExcecaoDespesaContratoFacade.hasConfiguracaoVigente(dataOperacao, contaDespesa);
+    }
+
     public boolean isEmpenhoTotalmenteEstornado(Empenho empenho) {
         String sql = " select 1 from empenho emp " +
             " left join empenhoestorno est on emp.id = est.empenho_id " +
@@ -1723,10 +2256,6 @@ public class EmpenhoFacade extends SuperFacadeContabil<Empenho> {
         Query q = em.createNativeQuery(sql);
         q.setParameter("idEmpenho", empenho.getId());
         return !q.getResultList().isEmpty();
-    }
-
-    public ReconhecimentoDividaFacade getReconhecimentoDividaFacade() {
-        return reconhecimentoDividaFacade;
     }
 }
 

@@ -141,10 +141,10 @@ public class AjusteDepositoEstornoFacade extends SuperFacadeContabil<AjusteDepos
 
     private List<ObjetoParametro> criarObjetosParametros(AjusteDepositoEstorno entity, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getAjusteDeposito().getContaExtraorcamentaria(), item));
-        objetos.add(new ObjetoParametro(entity.getAjusteDeposito().getClasseCredor(), item));
-        objetos.add(new ObjetoParametro(entity.getAjusteDeposito().getFonteDeRecurso(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), AjusteDepositoEstorno.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getAjusteDeposito().getContaExtraorcamentaria().getId().toString(), ContaExtraorcamentaria.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getAjusteDeposito().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getAjusteDeposito().getFonteDeRecurso().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
         return objetos;
     }
 
@@ -167,8 +167,7 @@ public class AjusteDepositoEstornoFacade extends SuperFacadeContabil<AjusteDepos
                 selecionado.getValor(),
                 selecionado.getAjusteDeposito().getContaExtraorcamentaria(),
                 selecionado.getAjusteDeposito().getContaDeDestinacao(),
-                selecionado.getUnidadeOrganizacional(),
-                selecionado.getId().toString(), selecionado.getClass().getSimpleName());
+                selecionado.getUnidadeOrganizacional());
         }
     }
 

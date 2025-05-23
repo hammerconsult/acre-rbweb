@@ -15,6 +15,7 @@ import br.com.webpublico.exception.WebReportRelatorioExistenteException;
 import br.com.webpublico.negocios.*;
 import br.com.webpublico.report.ReportService;
 import br.com.webpublico.report.WebReportDTO;
+import br.com.webpublico.seguranca.NotificacaoService;
 import br.com.webpublico.seguranca.SingletonRecursosSistema;
 import br.com.webpublico.seguranca.VerificadorSessoesAtivasUsuario;
 import br.com.webpublico.seguranca.resources.UsuarioSistemaResource;
@@ -565,7 +566,7 @@ public class SistemaControlador implements Serializable {
         } catch (ValidacaoException e) {
             FacesUtil.printAllFacesMessages(e.getMensagens());
         } catch (Exception e) {
-            FacesUtil.addOperacaoNaoRealizada("Erro ao trocar unidade do usuário. Erro: " + e.getMessage());
+            FacesUtil.addOperacaoRealizada("Erro ao trocar unidade do usuário. Erro: " + e.getMessage());
         }
     }
 
@@ -606,17 +607,9 @@ public class SistemaControlador implements Serializable {
     public List<SelectItem> buscarHierarquiasAdministrativaDaOrcamentaria() {
         List<SelectItem> toReturn = new ArrayList<>();
         if (alterarDataUnidadeLogada != null) {
-            UsuarioSistema usuarioCorrente = sistemaFacade.getUsuarioCorrente();
             if (alterarDataUnidadeLogada.getOrcamentaria() != null && alterarDataUnidadeLogada.getOrcamentaria().getSubordinada() != null) {
-                for (HierarquiaOrganizacional obj : hierarquiaOrganizacionalFacade.buscarHierarquiaAdministrativaPorUnidadeOrcamentaria(
-                    usuarioCorrente, alterarDataUnidadeLogada.getOrcamentaria().getSubordinada(), alterarDataUnidadeLogada.getDataOperacao())) {
+                for (HierarquiaOrganizacional obj : hierarquiaOrganizacionalFacade.buscarHierarquiaAdministrativaPorUnidadeOrcamentaria(alterarDataUnidadeLogada.getOrcamentaria().getSubordinada(), alterarDataUnidadeLogada.getDataOperacao())) {
                     toReturn.add(new SelectItem(obj, obj.toString()));
-                }
-                if (toReturn.isEmpty()) {
-                    for (HierarquiaOrganizacional obj : hierarquiaOrganizacionalFacade.retornarHierarquiAdministrativaPresenteNoUsuario(
-                        usuarioCorrente, alterarDataUnidadeLogada.getOrcamentaria().getSubordinada(), alterarDataUnidadeLogada.getDataOperacao())) {
-                        toReturn.add(new SelectItem(obj, obj.toString()));
-                    }
                 }
             }
         }

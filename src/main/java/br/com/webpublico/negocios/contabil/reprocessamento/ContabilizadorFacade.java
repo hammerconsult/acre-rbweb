@@ -148,7 +148,7 @@ public class ContabilizadorFacade implements Serializable {
 
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
-    @TransactionTimeout(value = 2, unit = TimeUnit.HOURS)
+    @TransactionTimeout(value = 1, unit = TimeUnit.HOURS)
     public void contabilizar(EventosReprocessar eventosReprocessar, EntidadeContabil entidadeContabil) {
         getFacade(eventosReprocessar).contabilizarReprocessamento(entidadeContabil);
     }

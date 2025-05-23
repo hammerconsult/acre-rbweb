@@ -5,7 +5,6 @@ import br.com.webpublico.enums.TipoMatrizSaldoContabil;
 import java.math.BigDecimal;
 
 public class ValidadorMatrizSaldoContabil {
-
     private String codigo;
     private BigDecimal credito;
     private BigDecimal debito;
@@ -47,5 +46,4 @@ public class ValidadorMatrizSaldoContabil {
     public void setTipoValor(TipoMatrizSaldoContabil tipoValor) {
         this.tipoValor = tipoValor;
     }
-
 }

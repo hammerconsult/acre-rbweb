@@ -325,10 +325,6 @@ public class ParametroPatrimonioControlador extends PrettyControlador<ParametroP
             return entidadesGeradorasSequenciaPropria;
         }
 
-        public void setEntidadesGeradorasSequenciaPropria(List<EntidadeSequenciaPropria> entidadesGeradorasSequenciaPropria) {
-            this.entidadesGeradorasSequenciaPropria = entidadesGeradorasSequenciaPropria;
-        }
-
         public List<EntidadeSequenciaPropria> getEntidadesGeradorasSequenciaPropriaMoveis() {
             List<EntidadeSequenciaPropria> retorno = Lists.newArrayList();
             for (EntidadeSequenciaPropria entidadeSequenciaPropria : entidadesGeradorasSequenciaPropria) {
@@ -349,6 +345,10 @@ public class ParametroPatrimonioControlador extends PrettyControlador<ParametroP
             return retorno;
         }
 
+        public void setEntidadesGeradorasSequenciaPropria(List<EntidadeSequenciaPropria> entidadesGeradorasSequenciaPropria) {
+            this.entidadesGeradorasSequenciaPropria = entidadesGeradorasSequenciaPropria;
+        }
+
         public Entidade getEntidadeSelecionada() {
             return entidadeSelecionada;
         }
@@ -357,6 +357,9 @@ public class ParametroPatrimonioControlador extends PrettyControlador<ParametroP
             this.entidadeSelecionada = entidadeSelecionada;
         }
 
+        public void setConverterEntidadeSequenciaPropria(ConverterEntidadeSequenciaPropria converterEntidadeSequenciaPropria) {
+            this.converterEntidadeSequenciaPropria = converterEntidadeSequenciaPropria;
+        }
 
         public void instanciarGeradoraSequenciaPropria() {
             entidadeGeradora = new EntidadeSequenciaPropria();

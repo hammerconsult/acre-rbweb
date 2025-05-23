@@ -1,7 +1,7 @@
 package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.MovimentoDespesaORC;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.OperacaoORC;
 import br.com.webpublico.enums.TipoOperacaoORC;
 import br.com.webpublico.negocios.AberturaFechamentoExercicioFacade;

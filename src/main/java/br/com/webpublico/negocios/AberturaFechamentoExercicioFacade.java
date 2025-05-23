@@ -5,7 +5,7 @@ import br.com.webpublico.entidades.contabil.ConfiguracaoTransporteSaldoSubContaD
 import br.com.webpublico.entidadesauxiliares.AssistenteAberturaFechamentoExercicio;
 import br.com.webpublico.entidadesauxiliares.BarraProgressoItens;
 import br.com.webpublico.entidadesauxiliares.contabil.ContaAuxiliarDetalhada;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
+import br.com.webpublico.entidadesauxiliares.contabil.SaldoFonteDespesaORCVO;
 import br.com.webpublico.enums.PatrimonioLiquido;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
@@ -3194,8 +3194,8 @@ public class AberturaFechamentoExercicioFacade extends SuperFacadeContabil<Abert
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(transporteDeSaldoAbertura, item));
-            objetos.add(new ObjetoParametro(transporteDeSaldoAbertura.getConta(), item));
+            objetos.add(new ObjetoParametro(transporteDeSaldoAbertura.getId().toString(), TransporteDeSaldoAbertura.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(transporteDeSaldoAbertura.getConta().getId().toString(), ContaContabil.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetos);
             parametroEvento.getItensParametrosEvento().add(item);
@@ -3223,7 +3223,7 @@ public class AberturaFechamentoExercicioFacade extends SuperFacadeContabil<Abert
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(aberturaInscricaoResto, item));
+            objetos.add(new ObjetoParametro(aberturaInscricaoResto.getId().toString(), AberturaInscricaoResto.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetos);
             parametroEvento.getItensParametrosEvento().add(item);
@@ -3626,8 +3626,8 @@ public class AberturaFechamentoExercicioFacade extends SuperFacadeContabil<Abert
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(conta, item));
-            listaObj.add(new ObjetoParametro(conta.getConta(), item));
+            listaObj.add(new ObjetoParametro(conta.getId().toString(), ContaFechamentoExercicio.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(conta.getConta().getId().toString(), ContaContabil.class.getSimpleName(), item));
 
             item.setObjetoParametros(listaObj);
             parametroEvento.getItensParametrosEvento().add(item);
@@ -3658,8 +3658,8 @@ public class AberturaFechamentoExercicioFacade extends SuperFacadeContabil<Abert
                 item.setTagValor(TagValor.LANCAMENTO);
 
                 List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-                listaObj.add(new ObjetoParametro(fonte, item));
-                listaObj.add(new ObjetoParametro(fonte.getFonteDeRecursos(), item));
+                listaObj.add(new ObjetoParametro(fonte.getId().toString(), FonteDeRecursoFechamentoExercicio.class.getSimpleName(), item));
+                listaObj.add(new ObjetoParametro(fonte.getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
 
                 item.setObjetoParametros(listaObj);
                 parametroEvento.getItensParametrosEvento().add(item);
@@ -3721,12 +3721,12 @@ public class AberturaFechamentoExercicioFacade extends SuperFacadeContabil<Abert
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(despesa, item));
-            listaObj.add(new ObjetoParametro(despesa.getConta(), item));
-            listaObj.add(new ObjetoParametro(despesa.getFonteDeRecursos(), item));
-            listaObj.add(new ObjetoParametro(despesa.getEmpenho().getClasseCredor(), item));
-            listaObj.add(new ObjetoParametro(despesa.getEmpenho().getFonteDespesaORC(), item));
-            listaObj.add(new ObjetoParametro(despesa.getEmpenho().getFonteDespesaORC().getDespesaORC().getProvisaoPPADespesa(), item));
+            listaObj.add(new ObjetoParametro(despesa.getId().toString(), DespesaFechamentoExercicio.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(despesa.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(despesa.getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(despesa.getEmpenho().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(despesa.getEmpenho().getFonteDespesaORC().getId().toString(), FonteDespesaORC.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(despesa.getEmpenho().getFonteDespesaORC().getDespesaORC().getProvisaoPPADespesa().getId().toString(), ProvisaoPPADespesa.class.getSimpleName(), item));
 
             item.setObjetoParametros(listaObj);
             parametroEvento.getItensParametrosEvento().add(item);
@@ -3802,13 +3802,13 @@ public class AberturaFechamentoExercicioFacade extends SuperFacadeContabil<Abert
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(dotacao, item));
-            listaObj.add(new ObjetoParametro(dotacao.getConta(), item));
-            listaObj.add(new ObjetoParametro(dotacao.getFonteDeRecursos(), item));
+            listaObj.add(new ObjetoParametro(dotacao.getId().toString(), DotacaoFechamentoExercicio.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(dotacao.getConta().getId().toString(), ContaDespesa.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(dotacao.getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
 
             FonteDespesaORC fonteDespesaORC = empenhoFacade.getFonteDespesaORCFacade().recuperaPorContaFonteUnidade(dotacao.getConta(), dotacao.getUnidadeOrganizacional(), dotacao.getFonteDeRecursos(), dotacao.getSubProjetoAtividade(), dotacao.getProjetoAtividade());
             if (fonteDespesaORC != null) {
-                listaObj.add(new ObjetoParametro(fonteDespesaORC, item));
+                listaObj.add(new ObjetoParametro(fonteDespesaORC.getId().toString(), FonteDespesaORC.class.getSimpleName(), item));
             }
             item.setObjetoParametros(listaObj);
             parametroEvento.getItensParametrosEvento().add(item);
@@ -3860,9 +3860,9 @@ public class AberturaFechamentoExercicioFacade extends SuperFacadeContabil<Abert
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> listaObj = new ArrayList<ObjetoParametro>();
-            listaObj.add(new ObjetoParametro(receita, item));
-            listaObj.add(new ObjetoParametro(receita.getConta(), item));
-            listaObj.add(new ObjetoParametro(receita.getFonteDeRecursos(), item));
+            listaObj.add(new ObjetoParametro(receita.getId().toString(), ReceitaFechamentoExercicio.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(receita.getConta().getId().toString(), ContaReceita.class.getSimpleName(), item));
+            listaObj.add(new ObjetoParametro(receita.getFonteDeRecursos().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
 
             item.setObjetoParametros(listaObj);
             parametroEvento.getItensParametrosEvento().add(item);

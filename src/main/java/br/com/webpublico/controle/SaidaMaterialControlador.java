@@ -182,7 +182,7 @@ public class SaidaMaterialControlador extends PrettyControlador<SaidaMaterial> i
             validarRegrasDeNegocio();
             validarMaterialDuplicado();
             facade.validarEstoquePorItem(selecionado);
-            facade.definirValorFinanceiroDeCadaItem(selecionado);
+            definirValorUnitarioComBaseEstoqueAtualizado();
             selecionado.setDataConclusao(facade.getSistemaFacade().getDataOperacao());
             validarDiferencaValorTotalComEstoqueAtual();
             FacesUtil.executaJavaScript("dlgConcluir.show()");
@@ -190,6 +190,14 @@ public class SaidaMaterialControlador extends PrettyControlador<SaidaMaterial> i
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception ex) {
             FacesUtil.addOperacaoNaoRealizada(ex.getMessage());
+        }
+    }
+
+    private void definirValorUnitarioComBaseEstoqueAtualizado() throws OperacaoEstoqueException {
+        for (ItemSaidaMaterialVO ism : itensSaidaMaterialVO) {
+            Estoque estoque = facade.getEstoqueFacade().recuperarEstoque(ism.getLocalEstoqueOrcamentario(), ism.getMaterial(), facade.getSistemaFacade().getDataOperacao());
+            BigDecimal custoMedio = facade.calcularCustoMedio(estoque);
+            ism.setValorUnitario(custoMedio);
         }
     }
 
@@ -655,6 +663,7 @@ public class SaidaMaterialControlador extends PrettyControlador<SaidaMaterial> i
             itensSaidaMaterialVO = Lists.newArrayList();
             for (ItemSaidaMaterial itemSaida : selecionado.getListaDeItemSaidaMaterial()) {
                 ItemSaidaMaterialVO itemVo = new ItemSaidaMaterialVO();
+                itemVo.setNumero(itemSaida.getNumeroItem());
                 itemVo.setMaterial(itemSaida.getMaterial());
                 itemVo.setHierarquiaAdm(getHierarquiaDaUnidade(itemSaida.getLocalEstoqueOrcamentario().getLocalEstoque().getUnidadeOrganizacional(), TipoHierarquiaOrganizacional.ADMINISTRATIVA));
                 itemVo.setHierarquiaOrc(getHierarquiaDaUnidade(itemSaida.getUnidadeOrcamentaria(), TipoHierarquiaOrganizacional.ORCAMENTARIA));
@@ -678,6 +687,7 @@ public class SaidaMaterialControlador extends PrettyControlador<SaidaMaterial> i
                 }
                 itensSaidaMaterialVO.add(itemVo);
             }
+            Collections.sort(itensSaidaMaterialVO);
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
         }

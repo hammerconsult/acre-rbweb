@@ -11,7 +11,6 @@ public enum SituacaoEntradaMaterial implements EnumComDescricao {
     ATESTO_PROVISORIO_COM_PENDENCIA("Atesto Provisório - Com Pendência", SituacaoEntradaMaterialDTO.ATESTO_PROVISORIO_COM_PENDENCIA),
     ATESTO_DEFINITIVO_ESTORNADO("Atesto Definitivo - Estornado", SituacaoEntradaMaterialDTO.ATESTO_DEFINITIVO_ESTORNADO),
     ATESTO_DEFINITIVO_LIQUIDADO("Atesto Definitivo - Liquidado", SituacaoEntradaMaterialDTO.ATESTO_DEFINITIVO_LIQUIDADO);
-
     private String descricao;
     private SituacaoEntradaMaterialDTO toDto;
 

@@ -1070,6 +1070,7 @@ public class AlteracaoCargoControlador extends PrettyControlador<AlteracaoCargo>
         this.converterRegime = converterRegime;
     }
 
+
     public EnquadramentoPCS getEnquadramentoPCS() {
         try {
             Date dataParametro = enquadramentoFuncionalSelecionado.getFinalVigencia() == null ? new Date() : enquadramentoFuncionalSelecionado.getFinalVigencia();

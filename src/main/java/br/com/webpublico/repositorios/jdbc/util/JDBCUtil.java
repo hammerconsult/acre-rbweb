@@ -119,24 +119,8 @@ public class JDBCUtil {
         }
     }
 
-    public static <T extends Enum<T>> T getEnum(ResultSet rs, String fieldName, Class<T> enumClass) throws SQLException {
+    public static <T extends Enum<T>>T getEnum(ResultSet rs, String fieldName, Class<T> enumClass) throws SQLException {
         return getEnum(getString(rs, fieldName), enumClass);
-    }
-
-    public static void atribuirLong(PreparedStatement ps, int posicao, Long id) throws SQLException {
-        if (id != null) {
-            ps.setLong(posicao, id);
-        } else {
-            ps.setNull(posicao, Types.LONGNVARCHAR);
-        }
-    }
-
-    public static void atribuirString(PreparedStatement ps, int posicao, String valor) throws SQLException {
-        if (valor != null) {
-            ps.setString(posicao, valor);
-        } else {
-            ps.setNull(posicao, Types.VARCHAR);
-        }
     }
 
     public static void setBoolean(PreparedStatement preparedStatement, int index, Boolean value) throws SQLException {

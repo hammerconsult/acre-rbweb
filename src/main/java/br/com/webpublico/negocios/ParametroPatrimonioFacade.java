@@ -184,7 +184,7 @@ public class ParametroPatrimonioFacade extends AbstractFacade<ParametroPatrimoni
         }
     }
 
-    public ParametroPatrimonio recuperarParametroComDependenciasEntidadeGeradoCodigo() {
+    public ParametroPatrimonio recuperarParametroPatrimonio() {
         try {
             return recuperarComDependenciasEntidadesGeradoraCodigoPatrimonio(getParametroPatrimonio().getId());
         } catch (NoResultException ex) {

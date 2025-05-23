@@ -27,7 +27,9 @@ import javax.faces.convert.Converter;
 import javax.faces.model.SelectItem;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @ManagedBean(name = "beneficiarioControlador")
 @ViewScoped
@@ -61,10 +63,8 @@ public class BeneficiarioControlador extends PrettyControlador<Beneficiario> imp
     private MatriculaFP matriculaSelecionado;
     private String numeroSelecionado;
     @EJB
-    private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
+    private HierarquiaOrganizacionalFacadeOLD hierarquiaOrganizacionalFacade;
     private ItemBeneficiario itemBeneficiario;
-    @EJB
-    private LotacaoFuncionalFacade lotacaoFuncionalFacade;
     @EJB
     private ParametroCalcIndenizacaoFacade parametroCalcIndenizacaoFacade;
     private ConverterAutoComplete converterParametroCalcIndenizacao;
@@ -75,9 +75,6 @@ public class BeneficiarioControlador extends PrettyControlador<Beneficiario> imp
     private ValorReferenciaFPFacade valorReferenciaFPFacade;
     @EJB
     private ContaCorrenteBancPessoaFacade contaCorrenteBancPessoaFacade;
-    private LotacaoFuncional lotacaoFuncional;
-    private Map<UnidadeOrganizacional, HierarquiaOrganizacional> mapDescricaoUnidades;
-    private HierarquiaOrganizacional hierarquiaOrganizacional;
 
     public BeneficiarioControlador() {
         metadata = new EntidadeMetaData(Beneficiario.class);
@@ -270,7 +267,6 @@ public class BeneficiarioControlador extends PrettyControlador<Beneficiario> imp
             Beneficiario b = (Beneficiario) selecionado;
             b.setItensBeneficiarios(new ArrayList<ItemBeneficiario>());
         }
-        mapDescricaoUnidades = new HashMap<>();
 
     }
 
@@ -349,7 +345,6 @@ public class BeneficiarioControlador extends PrettyControlador<Beneficiario> imp
             this.itemBeneficiario = new ItemBeneficiario();
         }
 
-        mapDescricaoUnidades = new HashMap<>();
     }
 
     @URLAction(mappingId = "verBeneficiario", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -369,11 +364,10 @@ public class BeneficiarioControlador extends PrettyControlador<Beneficiario> imp
             hierarquiaOrganizacionalSelecionada.setTipoHierarquiaOrganizacional(TipoHierarquiaOrganizacional.ADMINISTRATIVA);
             hierarquiaOrganizacionalSelecionada.setExercicio(sistemaControlador.getExercicioCorrente());
 
-            HierarquiaOrganizacional h = hierarquiaOrganizacionalFacade.getHierarquiaOrganizacionalPorUnidade(UtilRH.getDataOperacao(), b.getUnidadeOrganizacional(), TipoHierarquiaOrganizacional.ADMINISTRATIVA);
+            HierarquiaOrganizacional h = hierarquiaOrganizacionalFacade.getHierarquiaOrganizacionalPorUnidade(b.getUnidadeOrganizacional(), hierarquiaOrganizacionalSelecionada, hierarquiaOrganizacionalSelecionada.getExercicio());
             hierarquiaOrganizacionalSelecionada = h;
-            mapDescricaoUnidades = new HashMap<>();
         } catch (Exception ex) {
-            logger.error("Erro ao ver o beneficiario {}", ex);
+            ex.printStackTrace();
         }
     }
 
@@ -570,129 +564,5 @@ public class BeneficiarioControlador extends PrettyControlador<Beneficiario> imp
             Web.poeNaSessao(selecionado.getMatriculaFP().getPessoa());
             Web.navegacao(getUrlAtual(), "/conta-corrente-bancaria/novo/", selecionado);
         }
-    }
-
-    public HierarquiaOrganizacional getDescricaoDaHierarquia(UnidadeOrganizacional u) {
-
-        if(mapDescricaoUnidades.containsKey(u)){
-            return mapDescricaoUnidades.get(u);
-        }
-        HierarquiaOrganizacional ho = hierarquiaOrganizacionalFacade.getHierarquiaOrganizacionalPorUnidade(UtilRH.getDataOperacao(), u, TipoHierarquiaOrganizacional.ADMINISTRATIVA);
-        mapDescricaoUnidades.put(u,  ho);
-        return mapDescricaoUnidades.get(u);
-
-    }
-
-    public List<HierarquiaOrganizacional> completaHierarquiaOrganizacionalAdministrativa(String parte) {
-        return hierarquiaOrganizacionalFacade.buscarHierarquiaFiltrandoTipoAdministrativaAndHierarquiaSemRaiz(parte.trim());
-    }
-
-    public void criarNovaLotacao() {
-        lotacaoFuncional = new LotacaoFuncional();
-        lotacaoFuncional.setInicioVigencia(selecionado.getInicioVigencia());
-    }
-
-    public void cancelarLotacao() {
-        lotacaoFuncional = null;
-    }
-
-    public void addLotacao() {
-        try {
-            validaDadosLotacao(selecionado.getLotacaoFuncionals(), lotacaoFuncional);
-            criarLotacaoFuncional();
-            cancelarLotacao();
-            hierarquiaOrganizacional = null;
-        } catch (ValidacaoException ve) {
-            FacesUtil.printAllFacesMessages(ve.getMensagens());
-        }
-    }
-
-    private void criarLotacaoFuncional() {
-        LotacaoFuncional lot = lotacaoFuncional;
-        lot.setUnidadeOrganizacional(hierarquiaOrganizacional.getSubordinada());
-
-        try {
-            atualizarUnidadeContratoFP();
-        } catch (ExcecaoNegocioGenerica e) {
-            logger.info("Não foi possível encontrar o orgão para a unidade informada");
-        }
-        lot.setVinculoFP(selecionado);
-        lot.setDataRegistro(UtilRH.getDataOperacao());
-        Util.adicionarObjetoEmLista(selecionado.getLotacaoFuncionals(), lot);
-    }
-
-    private void atualizarUnidadeContratoFP() {
-
-        if (lotacaoFuncional.getFinalVigencia() == null || (lotacaoFuncional.getInicioVigencia().before(UtilRH.getDataOperacao()) && lotacaoFuncional.getFinalVigencia().after(UtilRH.getDataOperacao()))) {
-            HierarquiaOrganizacional orgao = hierarquiaOrganizacionalFacade.buscarOrgaoAdministrativoPorUnidadeAndVigencia(lotacaoFuncional.getUnidadeOrganizacional(),
-                    UtilRH.getDataOperacao());
-            if (orgao != null) {
-                selecionado.setUnidadeOrganizacional(orgao.getSubordinada());
-                hierarquiaOrganizacionalSelecionada = orgao;
-            }
-        }
-    }
-
-    public void editarLotacaoFuncional(LotacaoFuncional lotacao) {
-        lotacaoFuncional = (LotacaoFuncional) Util.clonarObjeto(lotacao);
-        assert lotacaoFuncional != null;
-        hierarquiaOrganizacional = hierarquiaOrganizacionalFacade.getHierarquiaDaUnidade(TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(), lotacao.getUnidadeOrganizacional(), UtilRH.getDataOperacao());
-    }
-
-    public void removeLotacaoFuncional(LotacaoFuncional lot) {
-        selecionado.getLotacaoFuncionals().remove(lot);
-    }
-
-    private void validaDadosLotacao(List<LotacaoFuncional> lotacaoFuncionalList, LotacaoFuncional lotacaoFuncional) {
-        ValidacaoException ve = new ValidacaoException();
-        if (hierarquiaOrganizacional == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("O campo lotação funcional é obrigatório.");
-        }
-        if (lotacaoFuncional.getInicioVigencia() == null) {
-            ve.adicionarMensagemDeCampoObrigatorio("O campo início de vigência é obrigatório.");
-        }
-        if (lotacaoFuncional.getFinalVigencia() != null) {
-            if (lotacaoFuncional.getInicioVigencia().after(lotacaoFuncional.getFinalVigencia())) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("Início de vigência inferior ao final de vigência.");
-            }
-        }
-        for (LotacaoFuncional lot : lotacaoFuncionalList) {
-            if (lot.getFinalVigencia() == null && !lotacaoFuncional.getInicioVigencia().after(lot.getInicioVigencia())
-                && !lotacaoFuncionalList.contains(lotacaoFuncional)) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("Existe registro vigente na lista.");
-            }
-            if (lot.getFinalVigencia() != null && lotacaoFuncional.getInicioVigencia().before(lot.getFinalVigencia())
-                && !lotacaoFuncionalList.contains(lotacaoFuncional)) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("O início de vigência não pode conflitar com as vigências existentes.");
-            }
-
-            if (lot.getFinalVigencia() != null && lotacaoFuncional.getFinalVigencia() == null && lotacaoFuncional.getInicioVigencia().before(lot.getFinalVigencia())) {
-                ve.adicionarMensagemDeOperacaoNaoPermitida("O início de vigência não pode conflitar com as vigências existentes.");
-                break;
-            }
-        }
-        ve.lancarException();
-        if (!DataUtil.isVigenciaValida(lotacaoFuncional, selecionado.getLotacaoFuncionals())) {
-            throw new ValidacaoException();
-        }
-    }
-
-
-
-    public HierarquiaOrganizacional getHierarquiaOrganizacional() {
-        return hierarquiaOrganizacional;
-    }
-
-    public void setHierarquiaOrganizacional(HierarquiaOrganizacional hierarquiaOrganizacional) {
-        this.hierarquiaOrganizacional = hierarquiaOrganizacional;
-    }
-
-
-    public LotacaoFuncional getLotacaoFuncional() {
-        return lotacaoFuncional;
-    }
-
-    public void setLotacaoFuncional(LotacaoFuncional lotacaoFuncional) {
-        this.lotacaoFuncional = lotacaoFuncional;
     }
 }

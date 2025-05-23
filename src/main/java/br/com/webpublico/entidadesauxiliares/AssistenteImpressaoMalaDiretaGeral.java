@@ -1,53 +1,37 @@
 package br.com.webpublico.entidadesauxiliares;
 
 
-import br.com.webpublico.entidades.UsuarioSistema;
-import br.com.webpublico.negocios.ImprimeDAM;
-import br.com.webpublico.util.AssistenteBarraProgresso;
-import br.com.webpublico.util.DetailProcessAsync;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AssistenteImpressaoMalaDiretaGeral extends AssistenteBarraProgresso {
+public class AssistenteImpressaoMalaDiretaGeral {
 
-    private ImprimeDAM imprimeDAM;
-    private Long idMala;
+    private Integer total;
+    private Integer gerados;
     private List<ImpressaoMalaDiretaGeral> itens;
-    private String pastaMalaDireta;
-    private int numFuture;
+    private List jaspers;
 
-    public AssistenteImpressaoMalaDiretaGeral(ImprimeDAM imprimeDAM,
-                                              Long idMala,
-                                              List<ImpressaoMalaDiretaGeral> itens,
-                                              UsuarioSistema usuario,
-                                              String pastaMalaDireta,
-                                              int numFuture) {
-        this.imprimeDAM = imprimeDAM;
-        this.idMala = idMala;
+    public AssistenteImpressaoMalaDiretaGeral(List<ImpressaoMalaDiretaGeral> itens) {
         this.itens = itens;
-        this.pastaMalaDireta = pastaMalaDireta;
-        this.numFuture = numFuture;
-        this.setTotal(itens.size());
-        this.setUsuarioSistema(usuario);
+        total = itens.size();
+        gerados = 0;
+        jaspers = new ArrayList();
     }
 
-    public ImprimeDAM getImprimeDAM() {
-        return imprimeDAM;
+    public AssistenteImpressaoMalaDiretaGeral() {
+        total = 0;
+        gerados = 0;
+        jaspers = new ArrayList();
     }
 
-    public void setImprimeDAM(ImprimeDAM imprimeDAM) {
-        this.imprimeDAM = imprimeDAM;
+    public Integer getTotal() {
+        return total;
     }
 
-    public Long getIdMala() {
-        return idMala;
-    }
-
-    public void setIdMala(Long idMala) {
-        this.idMala = idMala;
+    public void setTotal(Integer total) {
+        this.total = total;
     }
 
     public List<ImpressaoMalaDiretaGeral> getItens() {
@@ -56,26 +40,33 @@ public class AssistenteImpressaoMalaDiretaGeral extends AssistenteBarraProgresso
 
     public void setItens(List<ImpressaoMalaDiretaGeral> itens) {
         this.itens = itens;
+        this.total = itens.size();
     }
 
-    @Override
-    public String getDescricao() {
-        return "Impressão de Mala Direta Geral ID [" + idMala + "] Numero Future [" + numFuture + "]";
+    public void setGerados(Integer gerados) {
+        this.gerados = gerados;
     }
 
-    public String getPastaMalaDireta() {
-        return pastaMalaDireta;
+    public List getJaspers() {
+        return jaspers;
     }
 
-    public void setPastaMalaDireta(String pastaMalaDireta) {
-        this.pastaMalaDireta = pastaMalaDireta;
+    public void setJaspers(List jaspers) {
+        this.jaspers = jaspers;
     }
 
-    public int getNumFuture() {
-        return numFuture;
+    public void contar() {
+        gerados++;
     }
 
-    public void setNumFuture(int numFuture) {
-        this.numFuture = numFuture;
+    public void contar(int quantidade) {
+        gerados = gerados + quantidade;
+    }
+
+    public int getPorcentagemGerados() {
+        if (gerados == null || total == null) {
+            return 0;
+        }
+        return new BigDecimal(((gerados.doubleValue() / total.doubleValue()) * 100)).setScale(0, RoundingMode.UP).intValue();
     }
 }

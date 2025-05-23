@@ -1,8 +1,6 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.DocumentoCondutorOtt;
-import br.com.webpublico.entidades.DocumentoVeiculoOtt;
 import br.com.webpublico.entidades.comum.UsuarioWeb;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;

@@ -1,6 +1,5 @@
 package br.com.webpublico.controle.contabil;
 
-import br.com.webpublico.controle.SistemaControlador;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.contabil.ExtratoMovimentoDespesaORC;
 import br.com.webpublico.entidadesauxiliares.contabil.MovimentoDespesaORCVO;
@@ -11,6 +10,7 @@ import br.com.webpublico.exception.WebReportRelatorioExistenteException;
 import br.com.webpublico.negocios.ProjetoAtividadeFacade;
 import br.com.webpublico.negocios.contabil.execucao.ExtratoMovimentoDespesaOrcFacade;
 import br.com.webpublico.report.ReportService;
+import br.com.webpublico.seguranca.service.SistemaService;
 import br.com.webpublico.util.ConverterAutoComplete;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.FacesUtil;
@@ -24,9 +24,9 @@ import com.ocpsoft.pretty.faces.annotation.URLMappings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
 import javax.faces.model.SelectItem;
 import java.io.Serializable;
@@ -42,13 +42,17 @@ public class ExtratoMovimentoDespesaOrcControlador implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(ExtratoMovimentoDespesaOrcControlador.class);
     @EJB
     private ExtratoMovimentoDespesaOrcFacade facade;
-    @ManagedProperty(name = "sistemaControlador", value = "#{sistemaControlador}")
-    private SistemaControlador sistemaControlador;
     @EJB
     private ProjetoAtividadeFacade projetoAtividadeFacade;
     private ConverterAutoComplete converterFonteDespesaORC;
     private ConverterAutoComplete converterDespesaORC;
     private ExtratoMovimentoDespesaORC selecionado;
+    private SistemaService sistemaService;
+
+    @PostConstruct
+    public void init() {
+        sistemaService = (SistemaService) Util.getSpringBeanPeloNome("sistemaService");
+    }
 
     public ExtratoMovimentoDespesaOrcControlador() {
     }
@@ -56,9 +60,10 @@ public class ExtratoMovimentoDespesaOrcControlador implements Serializable {
     @URLAction(mappingId = "novo-extrato-movimento-despesaorc", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novo() {
         selecionado = new ExtratoMovimentoDespesaORC();
-        selecionado.setExercicio(sistemaControlador.getExercicioCorrente());
+        selecionado.setExercicio(sistemaService.getExercicioCorrente());
         selecionado.setDataInicial(DataUtil.getPrimeiroDiaAno(selecionado.getExercicio().getAno()));
-        selecionado.setDataFinal(sistemaControlador.getDataOperacao());
+        selecionado.setDataFinal(sistemaService.getDataOperacao());
+        selecionado.setHierarquiaOrganizacional(sistemaService.getHierarquiOrcamentariaCorrente());
     }
 
     public void atribuirNullAcaoDespesaEFonte() {
@@ -131,7 +136,7 @@ public class ExtratoMovimentoDespesaOrcControlador implements Serializable {
     }
 
     public List<HierarquiaOrganizacional> completarUnidadeOrganizacional(String parte) {
-        return facade.getUnidadeOrganizacionalFacade().listaHierarquiasVigentes(sistemaControlador.getDataOperacao(), parte.trim());
+        return facade.getUnidadeOrganizacionalFacade().listaHierarquiasVigentes(sistemaService.getDataOperacao(), parte.trim());
     }
 
     public List<AcaoPPA> buscarProjetoAtividade(String parte) {
@@ -170,14 +175,6 @@ public class ExtratoMovimentoDespesaOrcControlador implements Serializable {
             converterDespesaORC = new ConverterAutoComplete(DespesaORC.class, facade.getDespesaORCFacade());
         }
         return converterDespesaORC;
-    }
-
-    public SistemaControlador getSistemaControlador() {
-        return sistemaControlador;
-    }
-
-    public void setSistemaControlador(SistemaControlador sistemaControlador) {
-        this.sistemaControlador = sistemaControlador;
     }
 
     public ExtratoMovimentoDespesaORC getSelecionado() {
@@ -252,7 +249,7 @@ public class ExtratoMovimentoDespesaOrcControlador implements Serializable {
             validarGerarRelatorio();
             RelatorioDTO dto = new RelatorioDTO();
             dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
-            dto.adicionarParametro("USER", sistemaControlador.getUsuarioCorrente().getNome(), false);
+            dto.adicionarParametro("USER", sistemaService.getUsuarioCorrente().getNome(), false);
             dto.setNomeParametroBrasao("BRASAO");
             dto.adicionarParametro("SECRETARIA", "MUNICÍPIO DE RIO BRANCO");
             dto.adicionarParametro("NOMERELATORIO", "Extrato de Movimentação de Despesa Orçamentária");
@@ -270,7 +267,7 @@ public class ExtratoMovimentoDespesaOrcControlador implements Serializable {
             dto.adicionarParametro("SALDO", Util.formataValorSemCifrao(selecionado.getSaldoAtual()));
             dto.setNomeRelatorio("EXTRATO-MOVIMENTACAO-DESPESA-ORCAMENTARIA");
             dto.setApi("contabil/extrato-movimento-despesaorc/");
-            ReportService.getInstance().gerarRelatorio(sistemaControlador.getUsuarioCorrente(), dto);
+            ReportService.getInstance().gerarRelatorio(sistemaService.getUsuarioCorrente(), dto);
             FacesUtil.addMensagemRelatorioSegundoPlano();
         } catch (WebReportRelatorioExistenteException e) {
             ReportService.getInstance().abrirDialogConfirmar(e);

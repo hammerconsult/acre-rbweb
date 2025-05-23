@@ -217,9 +217,9 @@ public class TransferenciaBensEstoqueFacade extends SuperFacadeContabil<Transfer
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getGrupoMaterial(), item));
-            objetos.add(new ObjetoParametro(entity.getTipoEstoqueOrigem(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), TransferenciaBensEstoque.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getGrupoMaterial().getId().toString(), GrupoMaterial.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getTipoEstoqueOrigem().toString(), TipoEstoque.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetos);
 
@@ -260,9 +260,9 @@ public class TransferenciaBensEstoqueFacade extends SuperFacadeContabil<Transfer
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity, item));
-            objetos.add(new ObjetoParametro(entity.getGrupoMaterialDestino(), item));
-            objetos.add(new ObjetoParametro(entity.getTipoEstoqueDestino(), item));
+            objetos.add(new ObjetoParametro(entity.getId().toString(), TransferenciaBensEstoque.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getGrupoMaterialDestino().getId().toString(), GrupoMaterial.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity.getTipoEstoqueDestino().toString(), TipoEstoque.class.getSimpleName(), item));
 
             item.setObjetoParametros(objetos);
 

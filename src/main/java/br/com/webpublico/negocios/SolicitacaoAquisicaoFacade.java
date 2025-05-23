@@ -280,13 +280,11 @@ public class SolicitacaoAquisicaoFacade extends AbstractFacade<SolicitacaoAquisi
         String sql = " " +
             " select sol.* from solicitacaoaquisicao sol   " +
             "   inner join requisicaodecompra req on req.id = sol.requisicaodecompra_id  " +
-            "   left join requisicaocompraexecucao reqex on req.id = reqex.requisicaocompra_id " +
-            "   left join execucaocontrato excont on excont.id = reqex.execucaocontrato_id " +
-            "   left join contrato cont on excont.contrato_id = cont.id " +
+            "   left join contrato cont on req.contrato_id = cont.id " +
             "   left join unidadecontrato uc on uc.contrato_id = cont.id " +
             "     and to_date(:dataOperacao, 'dd/mm/yyyy') between trunc(uc.iniciovigencia) and coalesce(trunc(uc.fimvigencia), to_date(:dataOperacao, 'dd/mm/yyyy')) " +
-            "   left join solicitacaoempenhorecdiv solrd on solrd.id = reqex.execucaoreconhecimentodiv_id " +
-            "   left join reconhecimentodivida rd on rd.id = solrd.reconhecimentodivida_id " +
+            "   left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " +
+            "   left join requisicaocompraexecucao reqex on req.id = reqex.requisicaocompra_id " +
             "   left join execucaoprocesso exproc on exproc.id = reqex.execucaoprocesso_id " +
             "   left join execucaoprocessoata exata on exata.execucaoprocesso_id = exproc.id " +
             "   left join ataregistropreco ata on ata.id = exata.ataregistropreco_id " +

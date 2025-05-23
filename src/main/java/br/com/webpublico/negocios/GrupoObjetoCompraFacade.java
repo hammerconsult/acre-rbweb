@@ -194,10 +194,7 @@ public class GrupoObjetoCompraFacade extends AbstractFacade<GrupoObjetoCompra> {
             "               left join itempropostafornedisp ipfd on icpd.itempropfornecdispensa_id = ipfd.id " +
             "               left join itemprocessodecompra ipc on coalesce(ipf.itemprocessodecompra_id, ipfd.itemprocessodecompra_id) = ipc.id " +
             "               left join itemsolicitacao its on ipc.itemsolicitacaomaterial_id = its.id " +
-            "               left join itemsolicitacaoservico itss on itss.itemsolicitacao_id = its.id " +
-            "               left join servicocompravel sc on itss.servicocompravel_id = sc.id " +
-            "               left join itemsolicitacaomaterial itsm on itsm.itemsolicitacao_id = its.id " +
-            "               left join objetocompra obj on obj.id = itsm.objetocompra_id " +
+            "               left join objetocompra obj on obj.id = its.objetocompra_id " +
             "               left join grupoobjetocompra goc on goc.id = obj.grupoobjetocompra_id " +
             "               where not exists(select 1 from agrupadorgocgrupo gp where goc.id = gp.grupoobjetocompra_id) " +
             "              union all " +

@@ -9,6 +9,7 @@ import br.com.webpublico.enums.TipoAtributo;
 import br.com.webpublico.enums.TipoComponenteVisual;
 import br.com.webpublico.geradores.CorEntidade;
 import br.com.webpublico.geradores.GrupoDiagrama;
+import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Obrigatorio;
 import br.com.webpublico.util.anotacoes.Pesquisavel;
@@ -34,8 +35,6 @@ public class Atributo implements Serializable {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Etiqueta("Código")
     private Long id;
-    @ManyToOne
-    private GrupoAtributo grupoAtributo;
     @Tabelavel
     @Etiqueta("Sequência de Apresentação")
     private Integer sequenciaapresentacao;
@@ -92,14 +91,6 @@ public class Atributo implements Serializable {
 
     public void setObrigatorio(Boolean obrigatorio) {
         this.obrigatorio = obrigatorio;
-    }
-
-    public GrupoAtributo getGrupoAtributo() {
-        return grupoAtributo;
-    }
-
-    public void setGrupoAtributo(GrupoAtributo grupoAtributo) {
-        this.grupoAtributo = grupoAtributo;
     }
 
     public Integer getSequenciaapresentacao() {

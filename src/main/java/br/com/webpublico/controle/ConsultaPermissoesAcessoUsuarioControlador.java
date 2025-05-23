@@ -24,9 +24,9 @@ import java.util.List;
 @ManagedBean(name = "consultaPermissoesAcessoUsuarioControlador")
 @ViewScoped
 @URLMappings(
-    mappings = {
-        @URLMapping(id = "consultaPermissoesUsuario", pattern = "/usuario/consulta-permissoes/", viewId = "/faces/admin/controleusuario/usuariosistema/consultapermissoes.xhtml")
-    }
+        mappings = {
+                @URLMapping(id = "consultaPermissoesUsuario", pattern = "/usuario/consulta-permissoes/", viewId = "/faces/admin/controleusuario/usuariosistema/consultapermissoes.xhtml")
+        }
 )
 public class ConsultaPermissoesAcessoUsuarioControlador implements Serializable {
     @EJB

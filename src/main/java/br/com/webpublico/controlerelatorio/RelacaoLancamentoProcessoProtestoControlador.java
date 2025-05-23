@@ -142,7 +142,7 @@ public class RelacaoLancamentoProcessoProtestoControlador implements Serializabl
         dto.adicionarParametro("USUARIO", SistemaFacade.obtemLogin());
         dto.adicionarParametro("SECRETARIA", "Secretaria Municipal de Finanças");
         dto.setNomeParametroBrasao("BRASAO");
-        dto.setNomeRelatorio("Relação de Lançamento de Processo de Protesto " + filtro.getTipoRelatorio().toString());
+        dto.setNomeRelatorio("Relação de Lançamento de Processo de Protesto" + filtro.getTipoRelatorio().toString());
         dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorio));
         dto.adicionarParametro("filtroDto", preencherFiltrosDto());
         dto.setApi("tributario/lancamento-processo-protesto/" +

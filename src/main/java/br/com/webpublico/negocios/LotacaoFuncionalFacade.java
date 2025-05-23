@@ -8,7 +8,6 @@ import br.com.webpublico.entidades.*;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
-import com.google.common.collect.Lists;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -156,21 +155,6 @@ public class LotacaoFuncionalFacade extends AbstractFacade<LotacaoFuncional> {
             return buscarUltimaLotacaoVigentePorVinculoFP(vinculo);
         }
         return lista.get(0);
-    }
-
-    public List<LotacaoFuncional> buscarLotacaoFuncionalPorExercicio(VinculoFP vinculo, Exercicio exercicio) {
-        Query q = em.createQuery(" select lotacao from LotacaoFuncional lotacao "
-            + " where lotacao.vinculoFP = :contratoFP and "
-            + " :exercicio between extract(year from lotacao.inicioVigencia) and extract(year from (coalesce(lotacao.finalVigencia, sysdate))) " +
-            " order by lotacao.inicioVigencia");
-
-        q.setParameter("exercicio", exercicio.getAno());
-        q.setParameter("contratoFP", vinculo);
-        List<LotacaoFuncional> lista = q.getResultList();
-        if (lista == null || lista.isEmpty()) {
-            return Lists.newArrayList(buscarUltimaLotacaoVigentePorVinculoFP(vinculo));
-        }
-        return lista;
     }
 
 

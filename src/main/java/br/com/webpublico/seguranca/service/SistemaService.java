@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -205,9 +204,7 @@ public class SistemaService implements Serializable {
     public UsuarioSistema getUsuarioCorrente() {
         try {
             if (usuarioCorrente == null) {
-                if (SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UsuarioSistema) {
-                    usuarioCorrente = ((UsuarioSistema) SecurityContextHolder.getContext().getAuthentication().getPrincipal());
-                }
+                usuarioCorrente = Util.recuperarUsuarioCorrente();
             }
             return usuarioCorrente;
         } catch (Exception e) {

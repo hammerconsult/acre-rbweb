@@ -1,7 +1,15 @@
 package br.com.webpublico.entidadesauxiliares.contabil;
 
-import br.com.webpublico.entidades.EventosReprocessar;
+import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.RelatorioPesquisaGenerico;
+import br.com.webpublico.enums.*;
+import br.com.webpublico.negocios.contabil.reprocessamento.consulta.ConsultaMovimentoContabil;
+import br.com.webpublico.util.UtilRH;
+import com.google.common.collect.Lists;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Created by romanini on 03/11/17.

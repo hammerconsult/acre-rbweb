@@ -441,7 +441,7 @@ public class SolicitacaoEstornoTransferenciaFacade extends AbstractFacade<Solici
             " ORDER BY orcamentaria,grupobem.codigo,atual ";
 
         Query q = em.createNativeQuery(sql);
-        q.setParameter("solicitacaoEstorno_id",solicitacaoEstorno.getId());
+        q.setParameter("solicitacaoEstorno_id", solicitacaoEstorno.getId());
         List<RelatorioSolicitacaoEstorno> retorno = Lists.newArrayList();
         if (!q.getResultList().isEmpty()) {
             for (Object[] obj : (List<Object[]>) q.getResultList()) {
@@ -449,12 +449,12 @@ public class SolicitacaoEstornoTransferenciaFacade extends AbstractFacade<Solici
                 solicitacao.setCodigo((BigDecimal) obj[0]);
                 solicitacao.setDataHoraCriacao((Date) obj[1]);
                 solicitacao.setDescricao((String) obj[2]);
-                solicitacao.setSituacaoTransferenciaBem(Util.traduzirEnum(SituacaoEventoBem.class,(String) obj[3]).getDescricao());
+                solicitacao.setSituacaoTransferenciaBem(Util.traduzirEnum(SituacaoEventoBem.class, (String) obj[3]).getDescricao());
                 solicitacao.setOrigem((String) obj[4]);
                 solicitacao.setResponsavelOrigem((String) obj[5]);
                 solicitacao.setDestino((String) obj[6]);
                 solicitacao.setResponsavelDestino((String) obj[7]);
-                solicitacao.setEstadoConservacaoBem(Util.traduzirEnum(EstadoConservacaoBem.class,(String) obj[8]).getDescricao());
+                solicitacao.setEstadoConservacaoBem(Util.traduzirEnum(EstadoConservacaoBem.class, (String) obj[8]).getDescricao());
                 solicitacao.setCodigoPatrimonio((String) obj[9]);
                 solicitacao.setAtual((BigDecimal) obj[10]);
                 solicitacao.setDescricaoBem((String) obj[11]);

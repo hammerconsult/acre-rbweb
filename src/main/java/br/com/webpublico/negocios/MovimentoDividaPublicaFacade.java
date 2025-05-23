@@ -177,8 +177,8 @@ public class MovimentoDividaPublicaFacade extends SuperFacadeContabil<MovimentoD
         item.setOperacaoClasseCredor(classeCredorFacade.recuperaOperacaoAndVigenciaClasseCredor(entity.getDividaPublica().getPessoa(), entity.getDividaPublica().getClasseCredor(), entity.getData()));
 
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity, item));
-        objetos.add(new ObjetoParametro(entity.getDividaPublica().getCategoriaDividaPublica(), item));
+        objetos.add(new ObjetoParametro(entity.getId().toString(), MovimentoDividaPublica.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity.getDividaPublica().getCategoriaDividaPublica().getId().toString(), CategoriaDividaPublica.class.getSimpleName(), item));
         item.setObjetoParametros(objetos);
 
         parametroEvento.getItensParametrosEvento().add(item);

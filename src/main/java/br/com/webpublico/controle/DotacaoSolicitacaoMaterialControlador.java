@@ -5,12 +5,6 @@
 package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidadesauxiliares.FiltroHistoricoProcessoLicitatorio;
-import br.com.webpublico.entidadesauxiliares.contabil.MovimentoDespesaORCVO;
-import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoFonteDespesaORCVO;
-import br.com.webpublico.enums.TipoMovimentoProcessoLicitatorio;
-import br.com.webpublico.enums.TipoObjetoCompra;
-import br.com.webpublico.enums.TipoOperacaoORC;
 import br.com.webpublico.entidadesauxiliares.*;
 import br.com.webpublico.entidadesauxiliares.contabil.MovimentoDespesaORCVO;
 import br.com.webpublico.enums.*;

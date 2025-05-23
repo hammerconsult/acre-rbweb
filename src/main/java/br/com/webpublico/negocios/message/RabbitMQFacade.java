@@ -1,9 +1,6 @@
 package br.com.webpublico.negocios.message;
 
 import com.google.common.base.Strings;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.*;
 
 import javax.annotation.PostConstruct;
@@ -50,7 +47,7 @@ public class RabbitMQFacade implements Serializable {
         return factory.newConnection();
     }
 
-    public Channel createChanel(Connection connection) throws IOException {
+    public Channel createChanel(Connection connection) throws IOException, TimeoutException {
         return connection.createChannel();
     }
 

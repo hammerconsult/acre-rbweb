@@ -1580,11 +1580,11 @@ public class PermissaoTransportePrettyControlador extends PrettyControlador<Perm
             throw ve;
         }
         if (selecionado.getId() == null) {
-            if (buscarVagasDisponiveisDoPontoDeTaxi().compareTo(0) <= 0) {
+            if (buscarVagasDisponiveisDoPontoDeTaxi() <= 0) {
                 ve.adicionarMensagemDeOperacaoNaoPermitida("Não há vagas disponíveis para o ponto de taxi " + pontoTaxi + "!");
                 throw ve;
             }
-        } else if (buscarVagasDisponiveisDoPontoDeTaxiExcetoSelecionado().compareTo(0) <= 0) {
+        } else if (buscarVagasDisponiveisDoPontoDeTaxiExcetoSelecionado() <= 0) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("Não há vagas disponíveis para o ponto de taxi " + pontoTaxi + "!");
             throw ve;
         }

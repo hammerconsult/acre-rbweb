@@ -1402,6 +1402,11 @@ public class PagamentoControlador extends PrettyControlador<Pagamento> implement
             componenteTreeDespesaORC.setCodigo(selecionado.getLiquidacao().getEmpenho().getDespesaORC().getCodigoReduzido());
             componenteTreeDespesaORC.setDespesaORCSelecionada(selecionado.getLiquidacao().getEmpenho().getDespesaORC());
             componenteTreeDespesaORC.setDespesaSTR(pagamentoFacade.getEmpenhoFacade().getDespesaORCFacade().recuperaStrDespesaPorId(selecionado.getLiquidacao().getEmpenho().getDespesaORC().getId()).getConta());
+
+            ContaDeDestinacao contaDeDestinacaoEmpenho = getContaDeDestinacaoEmpenho();
+            if (contaDeDestinacaoEmpenho != null) {
+                retencaoPgto.setFonteDeRecursos(contaDeDestinacaoEmpenho.getFonteDeRecursos());
+            }
             recuperarContaDoFornecedor();
             recuperarValores();
             recuperaEventoContabil();

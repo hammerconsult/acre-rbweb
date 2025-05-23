@@ -210,7 +210,7 @@ public class UnidadeGestoraFacade extends AbstractFacade<UnidadeGestora> {
             " inner join unidadegestora ges on uo_ges.unidadegestora_id = ges.id " +
             " where (ges.codigo like :parte or lower(ges.descricao) like :parte)" +
             " and ges.exercicio_id = :exe";
-        sql += tipoUG != null ? " and ges.tipounidadegestora = :tipoUG " : "";
+            sql += tipoUG != null ? " and ges.tipounidadegestora = :tipoUG " : "";
         sql += " order by ges.codigo, ges.descricao";
         Query consulta = em.createNativeQuery(sql, UnidadeGestora.class);
         consulta.setParameter("usuario", usuarioSistema.getId());

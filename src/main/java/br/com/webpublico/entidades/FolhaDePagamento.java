@@ -117,15 +117,6 @@ public class FolhaDePagamento implements Serializable, FolhaCalculavel {
     }
 
     @Override
-    public boolean isGravarMemoriaCalculo() {
-        return gravarMemoriaCalculo;
-    }
-
-    public void setGravarMemoriaCalculo(boolean gravarMemoriaCalculo) {
-        this.gravarMemoriaCalculo = gravarMemoriaCalculo;
-    }
-
-    @Override
     public boolean isImprimeLogEmArquivo() {
         return imprimeLogEmArquivo;
     }
@@ -137,6 +128,16 @@ public class FolhaDePagamento implements Serializable, FolhaCalculavel {
     public void setProcessarCalculoTransient(boolean processarCalculoTransient) {
         this.processarCalculoTransient = processarCalculoTransient;
     }
+
+    @Override
+    public boolean isGravarMemoriaCalculo() {
+        return gravarMemoriaCalculo;
+    }
+
+    public void setGravarMemoriaCalculo(boolean gravarMemoriaCalculo) {
+        this.gravarMemoriaCalculo = gravarMemoriaCalculo;
+    }
+
 
     @Override
     public void setImprimeLogEmArquivo(boolean imprimeLogEmArquivo) {

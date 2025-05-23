@@ -32,10 +32,7 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -45,6 +42,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static br.com.webpublico.util.Util.getValorSemPontoEVirgulas;
+import static br.com.webpublico.util.Util.isStringNulaOuVazia;
 
 @Stateful
 public class SigFacade extends AbstractFacade<Sig> {
@@ -146,37 +144,333 @@ public class SigFacade extends AbstractFacade<Sig> {
         file = File.createTempFile("sig", "xml");
         Document doc = docBuilder.newDocument();
         doc.setXmlStandalone(true);
-        vinculos = vinculoFPFacade.recuperarTodosVinculosVigentesComFicha(new Date(), selecionado.getMes(), selecionado.getExercicio().getAno());
+        DateTime dateTime = DataUtil.criarDataComMesEAno(selecionado.getMes().getNumeroMes(), selecionado.getExercicio().getAno());
+        vinculos = vinculoFPFacade.recuperarTodosVinculosVigentesComFicha(dateTime.toDate(), selecionado.getMes(), selecionado.getExercicio().getAno());
         Element arquivo = doc.createElement("arquivo");
         doc.appendChild(arquivo);
-        assistenteBarraProgresso.setTotal(12);
-
-        DateTime dateTime = DataUtil.criarDataComMesEAno(selecionado.getMes().getNumeroMes(), selecionado.getExercicio().getAno());
+//        assistenteBarraProgresso.setTotal(12);
+        assistenteBarraProgresso.setTotal(14);
 
         Element cabecalho = criarTag(doc, "cabecalho", arquivo);
         preencherTagCabecario(doc, cabecalho, selecionado);
+        assistenteBarraProgresso.conta();
 
-        String tipoLogradouro = "";
+//        String tipoLogradouro = "";
+//        if (selecionado.getEnteFederativo().getEnderecoPrincipal() != null && selecionado.getEnteFederativo().getEnderecoPrincipal().getTipoLogradouro() != null) {
+//            tipoLogradouro = getTipoLogradouro(selecionado);
+//        }
+//
+//        Cidade cidade = null;
+//        if (selecionado.getEnteFederativo().getEnderecoPrincipal() != null) {
+//            cidade = cidadeFacade.recuperaCidadePorNomeEEstado(selecionado.getEnteFederativo().getEnderecoPrincipal().getLocalidade(), selecionado.getEnteFederativo().getEnderecoPrincipal().getUf());
+//        }
+//        Element endereco = criarTag(doc, "endereco", arquivo);
+//        preencherEndereco(doc, endereco, selecionado, tipoLogradouro, cidade);
+//        assistenteBarraProgresso.conta();
+//
+//        Pessoa enteFederativo = pessoaFacade.recuperarPJ(selecionado.getEnteFederativo().getId());
+//        if (!enteFederativo.getRepresentantesLegal().isEmpty()) {
+//            RepresentanteLegalPessoa rep = enteFederativo.getRepresentantesLegal().get(0);
+//            Element chefe = criarTag(doc, "chefe", arquivo);
+//            preencherTagChefe(doc, chefe, rep);
+//        }
+//
+//        List<HierarquiaOrganizacional> hos = hierarquiaOrganizacionalFacade.recuperaHierarquiaOrgaoVigentes(dateTime.toDate());
+//        Integer resumoqtOrgao = 0;
+//        for (HierarquiaOrganizacional ho : hos) {
+//            try {
+//                if (ho.getSubordinada() == null || ho.getSubordinada().getEntidade() == null) {
+//                    logger.error("Não existe entidade para a unidade {}", ho.getDescricao());
+//                }
+//                PessoaJuridica pj = pessoaJuridicaFacade.recuperar(ho.getSubordinada().getEntidade().getPessoaJuridica().getId());
+//                String uniGestora = "";
+//                UnidadeOrganizacional uo = unidadeOrganizacionalFacade.recuperar(ho.getSubordinada().getId());
+//                if (uo.getUnidadeGestoraUnidadesOrganizacionais().isEmpty()) {
+//                    uniGestora = "N";
+//                } else {
+//                    uniGestora = "S";
+//                }
+//                resumoqtOrgao += 1;
+//                Element orgao = criarTag(doc, "orgao", arquivo);
+//                preencherTagOrgao(doc, orgao, ho, uniGestora, pj);
+//
+//            } catch (Exception e) {
+//                logger.error("Não existe entidade para a unidade {}", ho.getDescricao());
+//            }
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        Integer resumoqtServidor = 0;
+//        for (VinculoFP vinculo : vinculos) {
+//            PessoaFisica pf = pessoaFisicaFacade.recuperar(vinculo.getMatriculaFP().getPessoa().getId());
+//            RegistroDeObito registroDeObito = registroDeObitoFacade.buscarRegistroDeObitoPorPessoaFisica(pf);
+//            resumoqtServidor += 1;
+//            Element servidor = criarTag(doc, "servidor", arquivo);
+//            preencherTagServidor(doc, servidor, vinculo, pf, registroDeObito);
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        Integer resumoqtVinculoFuncional = 0;
+//        Map<Long, BigDecimal> mapaCacheSitprev = recuperarMapCampoSitPrevid(selecionado.getMes().getNumeroMes(), selecionado.getExercicio().getAno());
+//        for (VinculoFP vinculo : vinculos) {
+//            if (vinculo instanceof ContratoFP) {
+//                ContratoFP contrato = (ContratoFP) vinculo;
+//                String tipoVinculo = "";
+//                if (contrato.getSituacaoContratoFPVigente().getInicioVigencia().before(dateTime.toDate())) {
+//
+//                    if (ModalidadeContratoFP.CONCURSADOS.equals(contrato.getModalidadeContratoFP().getCodigo()) && TipoRegime.ESTATUTARIO.equals(contrato.getTipoRegime().getCodigo())) {
+//                        tipoVinculo = "1";
+//                    } else if (ModalidadeContratoFP.CONTRATO_TEMPORARIO.equals(contrato.getModalidadeContratoFP().getCodigo())) {
+//                        tipoVinculo = "3";
+//                    } else if (ModalidadeContratoFP.CARGO_COMISSAO.equals(contrato.getModalidadeContratoFP().getCodigo())) {
+//                        tipoVinculo = "4";
+//                    } else if (ModalidadeContratoFP.CARGO_ELETIVO.equals(contrato.getModalidadeContratoFP().getCodigo())) {
+//                        tipoVinculo = "5";
+//                    } else if (TipoRegime.CELETISTA.equals(contrato.getTipoRegime().getCodigo())) {
+//                        tipoVinculo = "6";
+//                    } else {
+//                        tipoVinculo = "99";
+//                    }
+//                }
+//                resumoqtVinculoFuncional += 1;
+//                BigDecimal sitPrevid = null;
+//                sitPrevid = mapaCacheSitprev.get(vinculo.getId());
+//                Element vinculoFuncional = criarTag(doc, "vinculoFuncional", arquivo);
+//                preencherTagVinculoFuncional(doc, vinculoFuncional, contrato, tipoVinculo, sitPrevid);
+//
+//            }
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        Integer resumoqtMovimentacaoFuncional = 0;
+//        for (VinculoFP vinculo : vinculos) {
+//            if (vinculo instanceof ContratoFP) {
+//                ExoneracaoRescisao exoneracao = exoneracaoRescisaoFacade.recuperaExoneracaoRecisao2(vinculo.getContratoFP());
+//                if (exoneracao != null) {
+//                    resumoqtMovimentacaoFuncional += 1;
+//                    Element movimentacaoFuncional = criarTag(doc, "movimentacaoFuncional", arquivo);
+//                    preencherTagMovimentacaoFuncional(doc, movimentacaoFuncional, exoneracao);
+//                }
+//            }
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        Integer resumoqtHistoricoFinanceiro = 0;
+//        List<FichaFinanceiraFP> fichas = fichaFinanceiraFPFacade.recuperarFichaFinanceiraFPPorAnoMes(selecionado.getExercicio().getAno(), selecionado.getMes().getNumeroMes());
+//
+//        ModuloExportacao moduloExportacao = moduloExportacaoFacade.recuperaModuloExportacaoPorCodigo(MODULO);
+//        GrupoExportacao grupo = grupoExportacaoFacade.recuperaGrupoExportacaoPorCodigoEModuloExportacao(GRUPO, moduloExportacao);
+//        if (!fichas.isEmpty()) {
+//
+//            for (FichaFinanceiraFP ficha : fichas) {
+//                if (ficha.getVinculoFP() instanceof ContratoFP) {
+//                    ContratoFP contrato = (ContratoFP) ficha.getVinculoFP();
+//                    EnquadramentoFuncional enquadramentoFuncional = enquadramentoFuncionalFacade.recuperaEnquadramentoFuncionalVigente(contrato, dateTime.toDate());
+//                    String vlRemCargoEfetivo = "0";
+//                    if (enquadramentoFuncional.getVencimentoBase() != null && contrato.getModalidadeContratoFP().getDescricao().equals("CONCURSADO")) {
+//                        vlRemCargoEfetivo = getValorSemPontoEVirgulas(enquadramentoFuncional.getVencimentoBase());
+//                    }
+//                    resumoqtHistoricoFinanceiro += 1;
+//                    Element historicoFinanceiro = criarTag(doc, "historicoFinanceiro", arquivo);
+//
+//                    ValorFinanceiroRH valorFinanceiroRH = fichaFinanceiraFPFacade.recuperarValorPorMesAndAnoPorVinculoFpEModuloExportacao(ficha.getVinculoFP().getId(), selecionado.getMes(), selecionado.getExercicio().getAno(), grupo, moduloExportacao, TipoFolhaDePagamento.values());
+//                    preencherTagHistoricoFinanceiro(doc, historicoFinanceiro, ficha, contrato, valorFinanceiroRH, vlRemCargoEfetivo);
+//                }
+//            }
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        Integer resumoqtBeneficioServidor = 0;
+//        for (VinculoFP vinculo : vinculos) {
+//            if (vinculo instanceof Aposentadoria) {
+//                Aposentadoria aposentadoria = (Aposentadoria) vinculo;
+//                if (aposentadoria != null) {
+//                    String paridade = null;
+//                    if (TipoReajusteAposentadoria.PARIDADE.equals(aposentadoria.getTipoReajusteAposentadoria())) {
+//                        paridade = "S";
+//                    } else {
+//                        paridade = "N";
+//                    }
+//                    String tipoBeneficio = "";
+//                    if (TipoAposentadoria.TEMPO_DE_CONTRIBUICAO.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
+//                        tipoBeneficio = "1";
+//                    } else if (TipoAposentadoria.COMPULSORIA.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
+//                        tipoBeneficio = "4";
+//                    } else if (TipoAposentadoria.INVALIDEZ.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
+//                        tipoBeneficio = "3";
+//                    } else if (TipoAposentadoria.IDADE.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
+//                        tipoBeneficio = "2";
+//                    }
+//                    BigDecimal salarioInicial = aposentadoriaFacade.buscarValorAposentadoriaPorAposentado(vinculo, vinculo.getInicioVigencia());
+//                    BigDecimal salarioAtual = aposentadoriaFacade.buscarValorAposentadoriaPorAposentado(vinculo, dateTime.toDate());
+//                    resumoqtBeneficioServidor += 1;
+//                    Element beneficioServidor = criarTag(doc, "beneficioServidor", arquivo);
+//                    preencherTagBeneficioServidor(doc, beneficioServidor, vinculo, aposentadoria, paridade, salarioInicial, salarioAtual, tipoBeneficio);
+//                }
+//            }
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        Integer resumoqtDependente = 0;
+//        for (VinculoFP vinculo : vinculos) {
+//            List<Dependente> dependentes = dependenteFacade.dependentesPorResponsavelNative(vinculo.getMatriculaFP().getPessoa());
+//            for (Dependente dependenciSig : dependentes) {
+//                resumoqtDependente += 1;
+//                Element dependente = criarTag(doc, "dependente", arquivo);
+//                preencherTagDependente(doc, dependente, dependenciSig);
+//            }
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        Integer resumoqtPensionista = 0;
+//
+//        List<Pensionista> listaPensionista = pensionistaFacade.recuperaPensionistasVigente(dateTime.toDate());
+//        for (Pensionista pensi : listaPensionista) {
+//            resumoqtPensionista += 1;
+//            Element pensionista = criarTag(doc, "pensionista", arquivo);
+//            preencherTagPensionista(doc, pensionista, pensi);
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//        for (VinculoFP vinculo : vinculos) {
+//            List<Dependente> dependentes = dependenteFacade.dependentesPorResponsavelNative(vinculo.getMatriculaFP().getPessoa());
+//            for (Dependente dependenciSig : dependentes) {
+//                DependenteVinculoFP dependenciaVigente = dependenciSig.getDependentesVinculosFPsVigente(dateTime.toDate());
+//                List<BeneficioPensaoAlimenticia> beneficioPensaoAlimenticias = pensaoAlimenticiaFacade.buscarBeneficioPensaoAlimenticiaVigentePorPessoa(dependenciSig.getDependente(), dateTime.toDate());
+//
+//                String tipoDependencia = "";
+//                if(dependenciSig.getGrauDeParentesco() != null && dependenciSig.getGrauDeParentesco().getTipoParentesco() != null) {
+//                    tipoDependencia = getTipoDependencia(dependenciSig);
+//                }
+//                Element dependencia = criarTag(doc, "dependencia", arquivo);
+//                preencherTagDependencia(doc, dependencia, dependenciSig, vinculo, dependenciaVigente, tipoDependencia, !beneficioPensaoAlimenticias.isEmpty());
+//            }
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//
+//        Integer resumoqtBeneficioPensionista = 0;
+//        for (Pensionista pensi : listaPensionista) {
+//            resumoqtBeneficioPensionista += 1;
+//            BigDecimal salarioInicial = pensionistaFacade.buscarValorPensionistaPerPensionista(pensi, pensi.getInicioVigencia());
+//            BigDecimal salarioFinal = pensionistaFacade.buscarValorPensionistaPerPensionista(pensi, dateTime.toDate());
+//
+//            String tipoPensaoMorte = "";
+//            if (TipoFundamentacao.ART_40_CF_I.equals(pensi.getTipoFundamentacao())) {
+//                tipoPensaoMorte = "1";
+//            } else if (TipoFundamentacao.ART_40_CF_II.equals(pensi.getTipoFundamentacao())) {
+//                tipoPensaoMorte = "2";
+//            }
+//            Element beneficioPensionista = criarTag(doc, "beneficioPensionista", arquivo);
+//            preencherTagBeneficioPensionista(doc, beneficioPensionista, pensi, tipoPensaoMorte, salarioInicial, salarioFinal);
+//        }
+//        assistenteBarraProgresso.conta();
+//
+//
+//        Element resumo = criarTag(doc, "resumo", arquivo);
+//        preencherTagResumo(doc, resumo, resumoqtOrgao, resumoqtServidor, resumoqtVinculoFuncional, resumoqtMovimentacaoFuncional, resumoqtHistoricoFinanceiro,
+//            resumoqtBeneficioServidor, resumoqtDependente, resumoqtPensionista, resumoqtBeneficioPensionista);
+//        assistenteBarraProgresso.conta();
+
+// alterado ------------------------------------------------------------------
+        // esdereço
+
+        String tipoLogradouros = "";
         if (selecionado.getEnteFederativo().getEnderecoPrincipal() != null && selecionado.getEnteFederativo().getEnderecoPrincipal().getTipoLogradouro() != null) {
-            tipoLogradouro = getTipoLogradouro(selecionado);
+            tipoLogradouros = getTipoLogradouro(selecionado);
         }
 
         Cidade cidade = null;
         if (selecionado.getEnteFederativo().getEnderecoPrincipal() != null) {
             cidade = cidadeFacade.recuperaCidadePorNomeEEstado(selecionado.getEnteFederativo().getEnderecoPrincipal().getLocalidade(), selecionado.getEnteFederativo().getEnderecoPrincipal().getUf());
+
+            Element endereco = criarTag(doc, "endereco", arquivo);
+
+            if (selecionado.getEnteFederativo().getEmail() != null) {
+                Element emailEnte = doc.createElement("emailEnte");
+                emailEnte.appendChild(doc.createTextNode(selecionado.getEnteFederativo().getEmail()));
+                endereco.appendChild(emailEnte);
+            }
+
+            if (!isStringNulaOuVazia(tipoLogradouros)) {
+                Element tipoLogradouro = doc.createElement("tipoLogradouro");
+                tipoLogradouro.appendChild(doc.createTextNode(tipoLogradouros));
+                endereco.appendChild(tipoLogradouro);
+            }
+
+            if (selecionado.getEnteFederativo().getEnderecoPrincipal() != null) {
+                Element logradouro = doc.createElement("logradouro");
+                logradouro.appendChild(doc.createTextNode(selecionado.getEnteFederativo().getEnderecoPrincipal().getLogradouro()));
+                endereco.appendChild(logradouro);
+
+                Element numLogradouro = doc.createElement("numLogradouro");
+                numLogradouro.appendChild(doc.createTextNode(selecionado.getEnteFederativo().getEnderecoPrincipal().getNumero()));
+                endereco.appendChild(numLogradouro);
+
+                Element complemento = doc.createElement("complemento");
+                complemento.appendChild(doc.createTextNode(selecionado.getEnteFederativo().getEnderecoPrincipal().getComplemento()));
+                endereco.appendChild(complemento);
+
+                Element bairro = doc.createElement("bairro");
+                bairro.appendChild((doc.createTextNode(selecionado.getEnteFederativo().getEnderecoPrincipal().getBairro())));
+                endereco.appendChild(bairro);
+
+                if (cidade != null) {
+                    Element municipio = doc.createElement("municipio");
+                    municipio.appendChild(doc.createTextNode(cidade.getCodigoIBGE().toString()));
+                    endereco.appendChild(municipio);
+                }
+
+                Element uf = doc.createElement("uf");
+                uf.appendChild(doc.createTextNode(selecionado.getEnteFederativo().getEnderecoPrincipal().getUf()));
+                endereco.appendChild(uf);
+
+                Element cep = doc.createElement("cep");
+                cep.appendChild(doc.createTextNode(selecionado.getEnteFederativo().getEnderecoPrincipal().getCep()));
+                endereco.appendChild(cep);
+            }
         }
-        Element endereco = criarTag(doc, "endereco", arquivo);
-        preencherEndereco(doc, endereco, selecionado, tipoLogradouro, cidade);
         assistenteBarraProgresso.conta();
 
+        // Chefe
         Pessoa enteFederativo = pessoaFacade.recuperarPJ(selecionado.getEnteFederativo().getId());
         if (!enteFederativo.getRepresentantesLegal().isEmpty()) {
             RepresentanteLegalPessoa rep = enteFederativo.getRepresentantesLegal().get(0);
-            Element chefe = criarTag(doc, "chefe", arquivo);
-            preencherTagChefe(doc, chefe, rep);
-        }
 
-        List<HierarquiaOrganizacional> hos = hierarquiaOrganizacionalFacade.recuperaHierarquiaOrgaoVigentes(assistenteBarraProgresso.getDataAtual());
+            Element chefe = criarTag(doc, "chefe", arquivo);
+
+            Element idChefe = doc.createElement("idChefe");
+            idChefe.appendChild(doc.createTextNode(rep.getId().toString()));
+            chefe.appendChild(idChefe);
+
+            Element nome = doc.createElement("nome");
+            nome.appendChild(doc.createTextNode(rep.getRepresentante().getNome()));
+            chefe.appendChild(nome);
+
+            Element cpf = doc.createElement("cpf");
+            cpf.appendChild(doc.createTextNode(StringUtil.removeCaracteresEspeciaisSemEspaco(rep.getRepresentante().getCpf_Cnpj())));
+            chefe.appendChild(cpf);
+
+            Element dtInicioMand = doc.createElement("dtInicioMand");
+            dtInicioMand.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", rep.getDataInicio())));
+            chefe.appendChild(dtInicioMand);
+
+            if(rep.getDataFim() != null) {
+                Element dtFimMand = doc.createElement("dtFimMand");
+                dtFimMand.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", rep.getDataFim())));
+                chefe.appendChild(dtFimMand);
+            }
+
+            if(rep.getRepresentante().getEmail() != null) {
+                Element email = doc.createElement("email");
+                email.appendChild(doc.createTextNode(rep.getRepresentante().getEmail()));
+                chefe.appendChild(email);
+            }
+        }
+        assistenteBarraProgresso.conta();
+
+        //orgão
+        List<HierarquiaOrganizacional> hos = hierarquiaOrganizacionalFacade.recuperaHierarquiaOrgaoVigentes(dateTime.toDate());
         Integer resumoqtOrgao = 0;
         for (HierarquiaOrganizacional ho : hos) {
             try {
@@ -192,8 +486,30 @@ public class SigFacade extends AbstractFacade<Sig> {
                     uniGestora = "S";
                 }
                 resumoqtOrgao += 1;
+
                 Element orgao = criarTag(doc, "orgao", arquivo);
-                preencherTagOrgao(doc, orgao, ho, uniGestora, pj);
+
+                Element idOrgao = doc.createElement("idOrgao");
+                idOrgao.appendChild(doc.createTextNode(ho.getSubordinada().getId().toString()));
+                orgao.appendChild(idOrgao);
+
+                Element nomeOrgao = doc.createElement("nomeOrgao");
+                nomeOrgao.appendChild(doc.createTextNode(ho.getDescricao()));
+                orgao.appendChild(nomeOrgao);
+
+                Element cnpjOrgao = doc.createElement("cnpjOrgao");
+                cnpjOrgao.appendChild(doc.createTextNode(StringUtil.removeCaracteresEspeciaisSemEspaco(pj.getCnpj())));
+                orgao.appendChild(cnpjOrgao);
+
+                if(ho.getSubordinada().getEntidade() != null) {
+                    Element poder = doc.createElement("poder");
+                    poder.appendChild(doc.createTextNode(ho.getSubordinada().getEntidade().getEsferaDoPoder().getCodigoSiprev()));
+                    orgao.appendChild(poder);
+                }
+
+                Element unidadeGestora = doc.createElement("unidadeGestora");
+                unidadeGestora.appendChild(doc.createTextNode(uniGestora));
+                orgao.appendChild(unidadeGestora);
 
             } catch (Exception e) {
                 logger.error("Não existe entidade para a unidade {}", ho.getDescricao());
@@ -201,47 +517,164 @@ public class SigFacade extends AbstractFacade<Sig> {
         }
         assistenteBarraProgresso.conta();
 
+        //servidor----------------------------------------------------------------------------------------------------------------------
+
         Integer resumoqtServidor = 0;
         for (VinculoFP vinculo : vinculos) {
             PessoaFisica pf = pessoaFisicaFacade.recuperar(vinculo.getMatriculaFP().getPessoa().getId());
             RegistroDeObito registroDeObito = registroDeObitoFacade.buscarRegistroDeObitoPorPessoaFisica(pf);
             resumoqtServidor += 1;
+
             Element servidor = criarTag(doc, "servidor", arquivo);
-            preencherTagServidor(doc, servidor, vinculo, pf, registroDeObito);
+
+            Element idServidor = doc.createElement("idServidor");
+            idServidor.appendChild(doc.createTextNode(vinculo.getId().toString()));
+            servidor.appendChild(idServidor);
+
+            if (pf.getCarteiraDeTrabalho() != null) {
+                Element pasep = doc.createElement("pasep");
+                pasep.appendChild(doc.createTextNode(pf.getCarteiraDeTrabalho().getPisPasep()));
+                servidor.appendChild(pasep);
+            }
+
+            Element nome = doc.createElement("nome");
+            nome.appendChild(doc.createTextNode(pf.getNome()));
+            servidor.appendChild(nome);
+
+            Element cpf = doc.createElement("cpf");
+            cpf.appendChild(doc.createTextNode(StringUtil.removeCaracteresEspeciaisSemEspaco(pf.getCpf())));
+            servidor.appendChild(cpf);
+
+            Element dtNascto = doc.createElement("dtNascto");
+            dtNascto.appendChild(doc.createTextNode(DataUtil.getDataFormatada(pf.getDataNascimento(), "yyyy-MM-dd")));
+            servidor.appendChild(dtNascto);
+
+            Element sexo = doc.createElement("sexo");
+            sexo.appendChild(doc.createTextNode(pf.getSexo().getSigla()));
+            servidor.appendChild(sexo);
+
+            if(registroDeObito != null) {
+                Element dtObito = doc.createElement("dtObito");
+                dtObito.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", registroDeObito.getDataFalecimento())));
+                servidor.appendChild(dtObito);
+            }
+
+            Element nomeMae = doc.createElement("nomeMae");
+            nomeMae.appendChild(doc.createTextNode(pf.getMae()));
+            servidor.appendChild(nomeMae);
+
+            if(pf.getEstadoCivil() != null) {
+                Element estadoCivil = doc.createElement("estadoCivil");
+                estadoCivil.appendChild(doc.createTextNode(pf.getEstadoCivil().getCodigoSiprev()));
+                servidor.appendChild(estadoCivil);
+            }
+
+            Element dtIngressoServPublico = doc.createElement("dtIngressoServPublico");
+            dtIngressoServPublico.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", vinculo.getInicioVigencia())));
+            servidor.appendChild(dtIngressoServPublico);
         }
         assistenteBarraProgresso.conta();
 
+        // vinculoFuncional
         Integer resumoqtVinculoFuncional = 0;
         Map<Long, BigDecimal> mapaCacheSitprev = recuperarMapCampoSitPrevid(selecionado.getMes().getNumeroMes(), selecionado.getExercicio().getAno());
         for (VinculoFP vinculo : vinculos) {
-            Date data = new Date();
             if (vinculo instanceof ContratoFP) {
                 ContratoFP contrato = (ContratoFP) vinculo;
-                String tipoVinculo = "";
-                if (contrato.getSituacaoContratoFPVigente().getInicioVigencia().before(data)) {
+                String tipoVinculos = "";
+                if (contrato.getSituacaoContratoFPVigente().getInicioVigencia().before(dateTime.toDate())) {
 
                     if (ModalidadeContratoFP.CONCURSADOS.equals(contrato.getModalidadeContratoFP().getCodigo()) && TipoRegime.ESTATUTARIO.equals(contrato.getTipoRegime().getCodigo())) {
-                        tipoVinculo = "1";
+                        tipoVinculos = "1";
                     } else if (ModalidadeContratoFP.CONTRATO_TEMPORARIO.equals(contrato.getModalidadeContratoFP().getCodigo())) {
-                        tipoVinculo = "3";
+                        tipoVinculos = "3";
                     } else if (ModalidadeContratoFP.CARGO_COMISSAO.equals(contrato.getModalidadeContratoFP().getCodigo())) {
-                        tipoVinculo = "4";
+                        tipoVinculos = "4";
                     } else if (ModalidadeContratoFP.CARGO_ELETIVO.equals(contrato.getModalidadeContratoFP().getCodigo())) {
-                        tipoVinculo = "5";
+                        tipoVinculos = "5";
                     } else if (TipoRegime.CELETISTA.equals(contrato.getTipoRegime().getCodigo())) {
-                        tipoVinculo = "6";
+                        tipoVinculos = "6";
                     } else {
-                        tipoVinculo = "99";
+                        tipoVinculos = "99";
                     }
                 }
-                BigDecimal sitPrevid = null;
-                sitPrevid = mapaCacheSitprev.get(vinculo.getId());
+                BigDecimal sitPrevi = null;
+                sitPrevi = mapaCacheSitprev.get(vinculo.getId());
+                resumoqtVinculoFuncional += 1;
                 Element vinculoFuncional = criarTag(doc, "vinculoFuncional", arquivo);
-                preencherTagVinculoFuncional(doc, vinculoFuncional, contrato, tipoVinculo, sitPrevid);
+
+                Element idVinculoFuncional = doc.createElement("idVinculoFuncional");
+                idVinculoFuncional.appendChild(doc.createTextNode(contrato.getModalidadeContratoFP().getId().toString()));
+                vinculoFuncional.appendChild(idVinculoFuncional);
+
+                Element idServidor = doc.createElement("idServidor");
+                idServidor.appendChild(doc.createTextNode(contrato.getId().toString()));
+                vinculoFuncional.appendChild(idServidor);
+
+                if(!isStringNulaOuVazia(tipoVinculos)) {
+                    Element tipoVinculo = doc.createElement("tipoVinculo");
+                    tipoVinculo.appendChild(doc.createTextNode(tipoVinculos));
+                    vinculoFuncional.appendChild(tipoVinculo);
+                }
+
+                Element idOrgao = doc.createElement("idOrgao");
+                idOrgao.appendChild(doc.createTextNode(contrato.getUnidadeOrganizacional().getId().toString()));
+                vinculoFuncional.appendChild(idOrgao);
+
+                Element cargo = doc.createElement("cargo");
+                cargo.appendChild(doc.createTextNode(StringUtil.removeEspacos(contrato.getCargo().getDescricao())));
+                vinculoFuncional.appendChild(cargo);
+
+                if(contrato.getCargo().getInicioVigencia() != null) {
+                    Element dtIniCargo = doc.createElement("dtIniCargo");
+                    dtIniCargo.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", contrato.getCargo().getInicioVigencia())));
+                    vinculoFuncional.appendChild(dtIniCargo);
+                }
+
+                Element matricula = doc.createElement("matricula");
+                matricula.appendChild(doc.createTextNode(StringUtil.removeCaracteresEspeciaisSemEspaco(contrato.getMatriculaFP().getMatricula())));
+                vinculoFuncional.appendChild(matricula);
+
+                if(!isStringNulaOuVazia(contrato.getCargo().getDescricaoCarreira())) {
+                    Element carreira = doc.createElement("carreira");
+                    carreira.appendChild(doc.createTextNode(contrato.getCargo().getDescricaoCarreira()));
+                    vinculoFuncional.appendChild(carreira);
+                }
+
+                Element regime = doc.createElement("regime");
+                regime.appendChild(doc.createTextNode(contrato.getPrevidenciaVinculoFPVigente().getTipoPrevidenciaFP().getCodigo() == 1 ? "5" : "1"));
+                vinculoFuncional.appendChild(regime);
+
+                Element sitFuncional = doc.createElement("sitFuncional");
+                sitFuncional.appendChild(doc.createTextNode("1"));
+                vinculoFuncional.appendChild(sitFuncional);
+
+                if(sitPrevi != null) {
+                    Element sitPrevid = doc.createElement("sitPrevid");
+                    sitPrevid.appendChild(doc.createTextNode(sitPrevi.toString()));
+                    vinculoFuncional.appendChild(sitPrevid);
+                }
+                Element dedicacaoExclusiva = doc.createElement("dedicacaoExclusiva");
+                dedicacaoExclusiva.appendChild(doc.createTextNode( contrato.getCargo().getDedicacaoExclusivaSIPREV() ? "S" : "N"));
+                vinculoFuncional.appendChild(dedicacaoExclusiva);
+
+                Element tecnicoCientifico = doc.createElement("tecnicoCientifico");
+                tecnicoCientifico.appendChild(doc.createTextNode(contrato.getCargo().getTecnicoCientificoSIPREV() ? "S" : "N"));
+                vinculoFuncional.appendChild(tecnicoCientifico);
+
+                Element acumulavel = doc.createElement("acumulavel");
+                acumulavel.appendChild(doc.createTextNode(contrato.getCargo().getTipoAcumulavelSIG().getCodigo().toString()));
+                vinculoFuncional.appendChild(acumulavel);
+
+                Element tipoServidor = doc.createElement("tipoServidor");
+                tipoServidor.appendChild(doc.createTextNode("1"));
+                vinculoFuncional.appendChild(tipoServidor);
 
             }
         }
         assistenteBarraProgresso.conta();
+
+        // movimentação funcional -------------------------------------------------------------
 
         Integer resumoqtMovimentacaoFuncional = 0;
         for (VinculoFP vinculo : vinculos) {
@@ -250,11 +683,28 @@ public class SigFacade extends AbstractFacade<Sig> {
                 if (exoneracao != null) {
                     resumoqtMovimentacaoFuncional += 1;
                     Element movimentacaoFuncional = criarTag(doc, "movimentacaoFuncional", arquivo);
-                    preencherTagMovimentacaoFuncional(doc, movimentacaoFuncional, exoneracao);
+
+                    Element idMovimentacaoFuncional = doc.createElement("idMovimentacaoFuncional");
+                    idMovimentacaoFuncional.appendChild(doc.createTextNode(exoneracao.getId().toString()));
+                    movimentacaoFuncional.appendChild(idMovimentacaoFuncional);
+
+                    Element idVinculoFuncional = doc.createElement("idVinculoFuncional");
+                    idVinculoFuncional.appendChild(doc.createTextNode(exoneracao.getVinculoFP().getContratoFP().getModalidadeContratoFP().getId().toString()));
+                    movimentacaoFuncional.appendChild(idVinculoFuncional);
+
+                    Element sitFuncional = doc.createElement("sitFuncional");
+                    sitFuncional.appendChild(doc.createTextNode("2"));
+                    movimentacaoFuncional.appendChild(sitFuncional);
+
+                    Element dtDesligamentoOrgao = doc.createElement("dtDesligamentoOrgao");
+                    dtDesligamentoOrgao.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", exoneracao.getDataRescisao())));
+                    movimentacaoFuncional.appendChild(dtDesligamentoOrgao);
                 }
             }
         }
         assistenteBarraProgresso.conta();
+
+        //historicoFinanceiro ----------------------------------------------------------------------
 
         Integer resumoqtHistoricoFinanceiro = 0;
         List<FichaFinanceiraFP> fichas = fichaFinanceiraFPFacade.recuperarFichaFinanceiraFPPorAnoMes(selecionado.getExercicio().getAno(), selecionado.getMes().getNumeroMes());
@@ -267,50 +717,163 @@ public class SigFacade extends AbstractFacade<Sig> {
                 if (ficha.getVinculoFP() instanceof ContratoFP) {
                     ContratoFP contrato = (ContratoFP) ficha.getVinculoFP();
                     EnquadramentoFuncional enquadramentoFuncional = enquadramentoFuncionalFacade.recuperaEnquadramentoFuncionalVigente(contrato, dateTime.toDate());
-                    String vlRemCargoEfetivo = "0";
+                    String vlRemCargoEfetivos = "0";
                     if (enquadramentoFuncional.getVencimentoBase() != null && contrato.getModalidadeContratoFP().getDescricao().equals("CONCURSADO")) {
-                        vlRemCargoEfetivo = getValorSemPontoEVirgulas(enquadramentoFuncional.getVencimentoBase());
+                        vlRemCargoEfetivos = getValorSemPontoEVirgulas(enquadramentoFuncional.getVencimentoBase());
                     }
                     resumoqtHistoricoFinanceiro += 1;
+                    ValorFinanceiroRH valorFinanceiroRH = fichaFinanceiraFPFacade.recuperarValorPorMesAndAnoPorVinculoFpEModuloExportacao(ficha.getVinculoFP().getId(), selecionado.getMes(), selecionado.getExercicio().getAno(), grupo, moduloExportacao, TipoFolhaDePagamento.values());
+
                     Element historicoFinanceiro = criarTag(doc, "historicoFinanceiro", arquivo);
 
-                    ValorFinanceiroRH valorFinanceiroRH = fichaFinanceiraFPFacade.recuperarValorPorMesAndAnoPorVinculoFpEModuloExportacao(ficha.getVinculoFP().getId(), selecionado.getMes(), selecionado.getExercicio().getAno(), grupo, moduloExportacao, TipoFolhaDePagamento.values());
-                    preencherTagHistoricoFinanceiro(doc, historicoFinanceiro, ficha, contrato, valorFinanceiroRH, vlRemCargoEfetivo);
+                    BigDecimal remuneracaoBruta = BigDecimal.ZERO;
+                    for (ItemFichaFinanceiraFP itemFichaFinanceiraFP : ficha.getItemFichaFinanceiraFP()) {
+                        if (TipoEventoFP.VANTAGEM.equals(itemFichaFinanceiraFP.getTipoEventoFP())) {
+                            remuneracaoBruta = remuneracaoBruta.add(itemFichaFinanceiraFP.getValor());
+                        }
+                    }
+
+                    Element idHistoricoFinanceiro = doc.createElement("idHistoricoFinanceiro");
+                    idHistoricoFinanceiro.appendChild(doc.createTextNode(ficha.getId().toString()));
+                    historicoFinanceiro.appendChild(idHistoricoFinanceiro);
+
+                    Element idServidor = doc.createElement("idServidor");
+                    idServidor.appendChild(doc.createTextNode(ficha.getVinculoFP().getId().toString()));
+                    historicoFinanceiro.appendChild(idServidor);
+
+                    Element idVinculoFuncional = doc.createElement("idVinculoFuncional");
+                    idVinculoFuncional.appendChild(doc.createTextNode(contrato.getModalidadeContratoFP().getId().toString()));
+                    historicoFinanceiro.appendChild(idVinculoFuncional);
+
+                    Element ano = doc.createElement("ano");
+                    ano.appendChild(doc.createTextNode(ficha.getFolhaDePagamento().getAno().toString()));
+                    historicoFinanceiro.appendChild(ano);
+
+                    Element mes = doc.createElement("mes");
+                    mes.appendChild(doc.createTextNode(ficha.getFolhaDePagamento().getMes().getNumeroMes().toString()));
+                    historicoFinanceiro.appendChild(mes);
+
+                    Element numeroFolha = doc.createElement("numeroFolha");
+                    numeroFolha.appendChild(doc.createTextNode(ficha.getFolhaDePagamento().getVersao().toString()));
+                    historicoFinanceiro.appendChild(numeroFolha);
+
+                    Element vlRemBruta = doc.createElement("vlRemBruta");
+                    vlRemBruta.appendChild(doc.createTextNode(getValorSemPontoEVirgulas(remuneracaoBruta)));
+                    historicoFinanceiro.appendChild(vlRemBruta);
+
+                    if(valorFinanceiroRH != null) {
+                        Element vlRemContributiva = doc.createElement("vlRemContributiva");
+                        vlRemContributiva.appendChild(doc.createTextNode(getValorSemPontoEVirgulas(valorFinanceiroRH.getTotalBase())));
+                        historicoFinanceiro.appendChild(vlRemContributiva);
+                    }
+
+                    Element vlRemCargoEfetivo = doc.createElement("vlRemCargoEfetivo");
+                    vlRemCargoEfetivo.appendChild(doc.createTextNode(vlRemCargoEfetivos));
+                    historicoFinanceiro.appendChild(vlRemCargoEfetivo);
+
                 }
             }
         }
         assistenteBarraProgresso.conta();
+
+        // beneficio servidor
 
         Integer resumoqtBeneficioServidor = 0;
         for (VinculoFP vinculo : vinculos) {
             if (vinculo instanceof Aposentadoria) {
                 Aposentadoria aposentadoria = (Aposentadoria) vinculo;
                 if (aposentadoria != null) {
-                    String paridade = null;
+                    String paridades = null;
                     if (TipoReajusteAposentadoria.PARIDADE.equals(aposentadoria.getTipoReajusteAposentadoria())) {
-                        paridade = "S";
+                        paridades = "S";
                     } else {
-                        paridade = "N";
+                        paridades = "N";
                     }
-                    String tipoBeneficio = "";
+                    String tipoBeneficios = "";
                     if (TipoAposentadoria.TEMPO_DE_CONTRIBUICAO.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
-                        tipoBeneficio = "1";
+                        tipoBeneficios = "1";
                     } else if (TipoAposentadoria.COMPULSORIA.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
-                        tipoBeneficio = "4";
+                        tipoBeneficios = "4";
                     } else if (TipoAposentadoria.INVALIDEZ.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
-                        tipoBeneficio = "3";
+                        tipoBeneficios = "3";
                     } else if (TipoAposentadoria.IDADE.equals(aposentadoria.getTipoAposentadoria().getCodigo())) {
-                        tipoBeneficio = "2";
+                        tipoBeneficios = "2";
                     }
                     BigDecimal salarioInicial = aposentadoriaFacade.buscarValorAposentadoriaPorAposentado(vinculo, vinculo.getInicioVigencia());
                     BigDecimal salarioAtual = aposentadoriaFacade.buscarValorAposentadoriaPorAposentado(vinculo, dateTime.toDate());
                     resumoqtBeneficioServidor += 1;
+
                     Element beneficioServidor = criarTag(doc, "beneficioServidor", arquivo);
-                    preencherTagBeneficioServidor(doc, beneficioServidor, vinculo, aposentadoria, paridade, salarioInicial, salarioAtual, tipoBeneficio);
+
+                    Element idBeneficio = doc.createElement("idBeneficio");
+                    idBeneficio.appendChild(doc.createTextNode(aposentadoria.getId().toString()));
+                    beneficioServidor.appendChild(idBeneficio);
+
+                    Element idServidor = doc.createElement("idServidor");
+                    idServidor.appendChild(doc.createTextNode(vinculo.getId().toString()));
+                    beneficioServidor.appendChild(idServidor);
+
+                    Element idOrgao = doc.createElement("idOrgao");
+                    idOrgao.appendChild(doc.createTextNode(vinculo.getUnidadeOrganizacional().getId().toString()));
+                    beneficioServidor.appendChild(idOrgao);
+
+                    if(aposentadoria.getDataRegistro() != null) {
+                        Element dtInicioBeneficio = doc.createElement("dtInicioBeneficio");
+                        dtInicioBeneficio.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", aposentadoria.getDataRegistro())));
+                        beneficioServidor.appendChild(dtInicioBeneficio);
+                    }
+
+                    Element tipoBeneficio = doc.createElement("tipoBeneficio");
+                    tipoBeneficio.appendChild(doc.createTextNode(tipoBeneficios));
+                    beneficioServidor.appendChild(tipoBeneficio);
+
+                    if(aposentadoria.getFinalVigencia() != null) {
+                        Element dtFimBeneficio = doc.createElement("dtFimBeneficio");
+                        dtFimBeneficio.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", aposentadoria.getFinalVigencia())));
+                        beneficioServidor.appendChild(dtFimBeneficio);
+                    }
+
+                    Element vlAtualBeneficio = doc.createElement("vlAtualBeneficio");
+                    vlAtualBeneficio.appendChild(doc.createTextNode(getValorSemPontoEVirgulas(salarioAtual)));
+                    beneficioServidor.appendChild(vlAtualBeneficio);
+
+                    if(salarioInicial != null) {
+                        Element vlInicialBeneficio = doc.createElement("vlInicialBeneficio");
+                        vlInicialBeneficio.appendChild(doc.createTextNode(getValorSemPontoEVirgulas(salarioInicial)));
+                        beneficioServidor.appendChild(vlInicialBeneficio);
+                    }
+
+                    if(aposentadoria.getDataAlteracao() != null) {
+                        Element dtUltimaAtualizacao = doc.createElement("dtUltimaAtualizacao");
+                        dtUltimaAtualizacao.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", aposentadoria.getDataAlteracao())));
+                        beneficioServidor.appendChild(dtUltimaAtualizacao);
+                    }
+
+                    if(aposentadoria.getDataPublicacao() != null) {
+                        Element dtPublicacao = doc.createElement("dtPublicacao");
+                        dtPublicacao.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", aposentadoria.getDataPublicacao())));
+                        beneficioServidor.appendChild(dtPublicacao);
+                    }
+
+                    Element paridade = doc.createElement("paridade");
+                    paridade.appendChild(doc.createTextNode(paridades));
+                    beneficioServidor.appendChild(paridade);
+
+                    Element regime = doc.createElement("regime");
+                    regime.appendChild(doc.createTextNode(vinculo.getContratoFP().getPrevidenciaVinculoFPVigente().getTipoPrevidenciaFP().getCodigo() == 1 ? "5" : "1"));
+                    beneficioServidor.appendChild(regime);
+
+                    if(aposentadoria.getTipoAposentadoriaEspecialSIG() != null) {
+                        Element tipoAposentadoriaEspecial = doc.createElement("tipoAposentadoriaEspecial");
+                        tipoAposentadoriaEspecial.appendChild(doc.createTextNode(aposentadoria.getTipoAposentadoriaEspecialSIG().getCodigo().toString()));
+                        beneficioServidor.appendChild(tipoAposentadoriaEspecial);
+                    }
                 }
             }
         }
         assistenteBarraProgresso.conta();
+
+        //dependente ---------------------------------------------------------------------------
 
         Integer resumoqtDependente = 0;
         for (VinculoFP vinculo : vinculos) {
@@ -318,10 +881,57 @@ public class SigFacade extends AbstractFacade<Sig> {
             for (Dependente dependenciSig : dependentes) {
                 resumoqtDependente += 1;
                 Element dependente = criarTag(doc, "dependente", arquivo);
-                preencherTagDependente(doc, dependente, dependenciSig);
+
+                Element idDependente = doc.createElement("idDependente");
+                idDependente.appendChild(doc.createTextNode(dependenciSig.getId().toString()));
+                dependente.appendChild(idDependente);
+
+                Element nome = doc.createElement("nome");
+                nome.appendChild(doc.createTextNode(dependenciSig.getDependente().getNome()));
+                dependente.appendChild(nome);
+
+                if(dependenciSig.getDependente().getDataNascimento() != null) {
+                    Element dtNascto = doc.createElement("dtNascto");
+                    dtNascto.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", dependenciSig.getDependente().getDataNascimento())));
+                    dependente.appendChild(dtNascto);
+                }
+
+                if(dependenciSig.getDependente().getCpf() != null) {
+                    Element cpf = doc.createElement("cpf");
+                    cpf.appendChild(doc.createTextNode(StringUtil.removeCaracteresEspeciaisSemEspaco(dependenciSig.getDependente().getCpf())));
+                    dependente.appendChild(cpf);
+                }
+
+                if(dependenciSig.getDependente().getMae() != null) {
+                    Element nomeMae = doc.createElement("nomeMae");
+                    nomeMae.appendChild(doc.createTextNode(dependenciSig.getDependente().getMae()));
+                    dependente.appendChild(nomeMae);
+                }
+
+                if(dependenciSig.getDependente().getSexo() != null) {
+                    Element sexo = doc.createElement("sexo");
+                    sexo.appendChild(doc.createTextNode(dependenciSig.getDependente().getSexo().getSigla()));
+                    dependente.appendChild(sexo);
+                }
+
+                if(dependenciSig.getDependente().getCarteiraDeTrabalho() != null) {
+                    Element pasep = doc.createElement("pasep");
+                    pasep.appendChild(doc.createTextNode(dependenciSig.getDependente().getCarteiraDeTrabalho().getPisPasep()));
+                    dependente.appendChild(pasep);
+                }
+
+                if(dependenciSig.getDependente().getEstadoCivil() != null) {
+                    Element estadoCivil = doc.createElement("estadoCivil");
+                    estadoCivil.appendChild(doc.createTextNode(dependenciSig.getDependente().getEstadoCivil().getCodigoSiprev()));
+                    dependente.appendChild(estadoCivil);
+                }
+
             }
         }
         assistenteBarraProgresso.conta();
+
+
+        //pensionista --------------------------------------------------------------------------
 
         Integer resumoqtPensionista = 0;
 
@@ -329,26 +939,126 @@ public class SigFacade extends AbstractFacade<Sig> {
         for (Pensionista pensi : listaPensionista) {
             resumoqtPensionista += 1;
             Element pensionista = criarTag(doc, "pensionista", arquivo);
-            preencherTagPensionista(doc, pensionista, pensi);
+
+            Element idPensionista = doc.createElement("idPensionista");
+            idPensionista.appendChild(doc.createTextNode(pensi.getId().toString()));
+            pensionista.appendChild(idPensionista);
+
+            Element nome = doc.createElement("nome");
+            nome.appendChild(doc.createTextNode(pensi.getMatriculaFP().getPessoa().getNome()));
+            pensionista.appendChild(nome);
+
+            Element matricula = doc.createElement("matricula");
+            matricula.appendChild(doc.createTextNode(pensi.getMatriculaFP().getMatricula()));
+            pensionista.appendChild(matricula);
+
+            if(pensi.getMatriculaFP().getPessoa().getDataNascimento() != null) {
+                Element dtNascto = doc.createElement("dtNascto");
+                dtNascto.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", (pensi.getMatriculaFP().getPessoa().getDataNascimento()))));
+                pensionista.appendChild(dtNascto);
+            }
+
+            Element cpf = doc.createElement("cpf");
+            cpf.appendChild(doc.createTextNode(StringUtil.removeCaracteresEspeciaisSemEspaco(pensi.getMatriculaFP().getPessoa().getCpf())));
+            pensionista.appendChild(cpf);
+
+            Element nomeMae = doc.createElement("nomeMae");
+            nomeMae.appendChild(doc.createTextNode(pensi.getMatriculaFP().getPessoa().getMae()));
+            pensionista.appendChild(nomeMae);
+
+            Element sexo = doc.createElement("sexo");
+            sexo.appendChild(doc.createTextNode(pensi.getMatriculaFP().getPessoa().getSexo().getSigla()));
+            pensionista.appendChild(sexo);
+
+            if( pensi.getMatriculaFP().getPessoa().getCarteiraDeTrabalho() != null) {
+                Element pasep = doc.createElement("pasep");
+                pasep.appendChild(doc.createTextNode(pensi.getMatriculaFP().getPessoa().getCarteiraDeTrabalho().getPisPasep()));
+                pensionista.appendChild(pasep);
+            }
+
+            if(pensi.getMatriculaFP().getPessoa().getEstadoCivil() != null) {
+                Element estadoCivil = doc.createElement("estadoCivil");
+                estadoCivil.appendChild(doc.createTextNode(pensi.getMatriculaFP().getPessoa().getEstadoCivil().getCodigoSiprev()));
+                pensionista.appendChild(estadoCivil);
+            }
         }
         assistenteBarraProgresso.conta();
+
+        //dependencia ---------------------------------------------------------------------------
 
         for (VinculoFP vinculo : vinculos) {
             List<Dependente> dependentes = dependenteFacade.dependentesPorResponsavelNative(vinculo.getMatriculaFP().getPessoa());
             for (Dependente dependenciSig : dependentes) {
                 DependenteVinculoFP dependenciaVigente = dependenciSig.getDependentesVinculosFPsVigente(dateTime.toDate());
-                List<BeneficioPensaoAlimenticia> beneficioPensaoAlimenticias = pensaoAlimenticiaFacade.buscarBeneficioPensaoAlimenticiaVigentePorPessoa(dependenciSig.getDependente(), new Date());
+                List<BeneficioPensaoAlimenticia> beneficioPensaoAlimenticias = pensaoAlimenticiaFacade.buscarBeneficioPensaoAlimenticiaVigentePorPessoa(dependenciSig.getDependente(), dateTime.toDate());
 
-                String tipoDependencia = "";
+                String campoTipoDependencia = "";
                 if(dependenciSig.getGrauDeParentesco() != null && dependenciSig.getGrauDeParentesco().getTipoParentesco() != null) {
-                    tipoDependencia = getTipoDependencia(dependenciSig);
+                    campoTipoDependencia = getTipoDependencia(dependenciSig);
                 }
+
+                boolean dependentePA= !beneficioPensaoAlimenticias.isEmpty() ? true : false;
+
                 Element dependencia = criarTag(doc, "dependencia", arquivo);
-                preencherTagDependencia(doc, dependencia, dependenciSig, vinculo, dependenciaVigente, tipoDependencia, !beneficioPensaoAlimenticias.isEmpty());
+
+                if(dependenciaVigente != null) {
+                    Element idDependencia = doc.createElement("idDependencia");
+                    idDependencia.appendChild(doc.createTextNode(dependenciaVigente.getId().toString()));
+                    dependencia.appendChild(idDependencia);
+                }
+
+                Element idDependente = doc.createElement("idDependente");
+                idDependente.appendChild(doc.createTextNode(dependenciSig.getId().toString()));
+                dependencia.appendChild(idDependente);
+
+                Element idServidor = doc.createElement("idServidor");
+                idServidor.appendChild(doc.createTextNode(vinculo.getId().toString()));
+                dependencia.appendChild(idServidor);
+
+                if(dependenciaVigente != null) {
+                    Element dtIniPensao = doc.createElement("dtIniPensao");
+                    dtIniPensao.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", dependenciaVigente.getInicioVigencia())));
+                    dependencia.appendChild(dtIniPensao);
+                }
+
+                if(dependenciaVigente != null && dependenciaVigente.getFinalVigencia() != null) {
+                    Element dtFimPrevisto = doc.createElement("dtFimPrevisto");
+                    dtFimPrevisto.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", dependenciaVigente.getFinalVigencia())));
+                    dependencia.appendChild(dtFimPrevisto);
+                }
+
+                if(!isStringNulaOuVazia(campoTipoDependencia)) {
+                    Element tipoDependencia = doc.createElement("tipoDependencia");
+                    tipoDependencia.appendChild(doc.createTextNode(campoTipoDependencia));
+                    dependencia.appendChild(tipoDependencia);
+                }
+
+                if( campoTipoDependencia == "99") {
+                    Element outroTipoDependencia = doc.createElement("outroTipoDependencia");
+                    outroTipoDependencia.appendChild(doc.createTextNode(dependenciSig.getGrauDeParentesco().getDescricao()));
+                    dependencia.appendChild(outroTipoDependencia);
+                }
+
+                if(!dependentePA) {
+                    Element dtInicioDependencia = doc.createElement("dtInicioDependencia");
+                    dtInicioDependencia.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", vinculo.getInicioVigencia())));
+                    dependencia.appendChild(dtInicioDependencia);
+                }
+
+                if(vinculo.getFinalVigencia() != null && !dependentePA) {
+                    Element dtFimDependencia = doc.createElement("dtFimDependencia");
+                    dtFimDependencia.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", vinculo.getFinalVigencia())));
+                    dependencia.appendChild(dtFimDependencia);
+                }
+
+                Element pensionista = doc.createElement("pensionista");
+                pensionista.appendChild(doc.createTextNode(dependentePA ? "S" : "N"));
+                dependencia.appendChild(pensionista);
             }
         }
         assistenteBarraProgresso.conta();
 
+        //beneficioPensionista
 
         Integer resumoqtBeneficioPensionista = 0;
         for (Pensionista pensi : listaPensionista) {
@@ -356,27 +1066,174 @@ public class SigFacade extends AbstractFacade<Sig> {
             BigDecimal salarioInicial = pensionistaFacade.buscarValorPensionistaPerPensionista(pensi, pensi.getInicioVigencia());
             BigDecimal salarioFinal = pensionistaFacade.buscarValorPensionistaPerPensionista(pensi, dateTime.toDate());
 
-            String tipoPensaoMorte = "";
+            String campoTipoPensaoMorte = "";
             if (TipoFundamentacao.ART_40_CF_I.equals(pensi.getTipoFundamentacao())) {
-                tipoPensaoMorte = "1";
+                campoTipoPensaoMorte = "1";
             } else if (TipoFundamentacao.ART_40_CF_II.equals(pensi.getTipoFundamentacao())) {
-                tipoPensaoMorte = "2";
+                campoTipoPensaoMorte = "2";
             }
             Element beneficioPensionista = criarTag(doc, "beneficioPensionista", arquivo);
-            preencherTagBeneficioPensionista(doc, beneficioPensionista, pensi, tipoPensaoMorte, salarioInicial, salarioFinal);
+
+            Element idBeneficio = doc.createElement("idBeneficio");
+            idBeneficio.appendChild(doc.createTextNode(pensi.getPensao().getId().toString()));
+            beneficioPensionista.appendChild(idBeneficio);
+
+            Element idOrgao = doc.createElement("idOrgao");
+            idOrgao.appendChild(doc.createTextNode(pensi.getPensao().getContratoFP().getUnidadeOrganizacional().getId().toString()));
+            beneficioPensionista.appendChild(idOrgao);
+
+            Element tipoBeneficio = doc.createElement("tipoBeneficio");
+            tipoBeneficio.appendChild(doc.createTextNode("12"));
+            beneficioPensionista.appendChild(tipoBeneficio);
+
+            Element dtInicioBeneficio = doc.createElement("dtInicioBeneficio");
+            dtInicioBeneficio.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", pensi.getInicioVigencia())));
+            beneficioPensionista.appendChild(dtInicioBeneficio);
+
+            if(pensi.getFinalVigencia() != null) {
+                Element dtFimBeneficio = doc.createElement("dtFimBeneficio");
+                dtFimBeneficio.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", pensi.getFinalVigencia())));
+                beneficioPensionista.appendChild(dtFimBeneficio);
+            }
+
+            Element vlAtualBeneficio = doc.createElement("vlAtualBeneficio");
+            vlAtualBeneficio.appendChild(doc.createTextNode(getValorSemPontoEVirgulas(salarioFinal)));
+            beneficioPensionista.appendChild(vlAtualBeneficio);
+
+            Element vlInicialBeneficio = doc.createElement("vlInicialBeneficio");
+            vlInicialBeneficio.appendChild(doc.createTextNode(getValorSemPontoEVirgulas(salarioInicial)));
+            beneficioPensionista.appendChild(vlInicialBeneficio);
+
+            if(pensi.getDataAlteracao() != null) {
+                Element dtUltimaAtualizacao = doc.createElement("dtUltimaAtualizacao");
+                dtUltimaAtualizacao.appendChild(doc.createTextNode(converterDataString("yyyy-MM-dd", pensi.getDataAlteracao())));
+                beneficioPensionista.appendChild(dtUltimaAtualizacao);
+            }
+
+            if(pensi.getProvimentoFP() != null && pensi.getProvimentoFP().getVinculoFP() != null) {
+                Element idServidorInstituidor = doc.createElement("idServidorInstituidor");
+                idServidorInstituidor.appendChild(doc.createTextNode(pensi.getProvimentoFP().getVinculoFP().getId().toString()));
+                beneficioPensionista.appendChild(idServidorInstituidor);
+            }
+
+            Element regimeServidorInstituidor = doc.createElement("regimeServidorInstituidor");
+            regimeServidorInstituidor.appendChild(doc.createTextNode(pensi.getPensao().getContratoFP().getPrevidenciaVinculoFPVigente().getTipoPrevidenciaFP().getCodigo() == 1 ? "5" : "1"));
+            beneficioPensionista.appendChild(regimeServidorInstituidor);
+
+            if(!isStringNulaOuVazia(pensi.getPensao().getContratoFP().getCargo().getDescricaoCarreira())) {
+                Element carreira = doc.createElement("carreira");
+                carreira.appendChild(doc.createTextNode(pensi.getPensao().getContratoFP().getCargo().getDescricaoCarreira()));
+                beneficioPensionista.appendChild(carreira);
+            }
+
+            Element cargo = doc.createElement("cargo");
+            cargo.appendChild(doc.createTextNode(StringUtil.removeEspacos(pensi.getPensao().getContratoFP().getCargo().getDescricao())));
+            beneficioPensionista.appendChild(cargo);
+
+            if(!isStringNulaOuVazia(campoTipoPensaoMorte)) {
+                Element tipoPensaoMorte = doc.createElement("tipoPensaoMorte");
+                tipoPensaoMorte.appendChild(doc.createTextNode(StringUtil.removeEspacos(pensi.getPensao().getContratoFP().getCargo().getDescricao())));
+                beneficioPensionista.appendChild(tipoPensaoMorte);
+            }
         }
         assistenteBarraProgresso.conta();
 
 
+        //resumo
+
         Element resumo = criarTag(doc, "resumo", arquivo);
-        preencherTagResumo(doc, resumo, resumoqtOrgao, resumoqtServidor, resumoqtVinculoFuncional, resumoqtMovimentacaoFuncional, resumoqtHistoricoFinanceiro,
-            resumoqtBeneficioServidor, resumoqtDependente, resumoqtPensionista, resumoqtBeneficioPensionista);
+
+        Element qtEndereco = doc.createElement("qtEndereco");
+        qtEndereco.appendChild(doc.createTextNode("1"));
+        resumo.appendChild(qtEndereco);
+
+        Element qtMaioridade = doc.createElement("qtMaioridade");
+        qtMaioridade.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtMaioridade);
+
+        Element qtChefe = doc.createElement("qtChefe");
+        qtChefe.appendChild(doc.createTextNode("1"));
+        resumo.appendChild(qtChefe);
+
+        Element qtAliquota = doc.createElement("qtAliquota");
+        qtAliquota.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtAliquota);
+
+        Element qtContribuicaoEnte = doc.createElement("qtContribuicaoEnte");
+        qtContribuicaoEnte.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtContribuicaoEnte);
+
+        Element qtLimiteRemuneratorio = doc.createElement("qtLimiteRemuneratorio");
+        qtLimiteRemuneratorio.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtLimiteRemuneratorio);
+
+        Element qtOrgao = doc.createElement("qtOrgao");
+        qtOrgao.appendChild(doc.createTextNode(resumoqtOrgao.toString()));
+        resumo.appendChild(qtOrgao);
+
+        Element qtServidor = doc.createElement("qtServidor");
+        qtServidor.appendChild(doc.createTextNode(resumoqtServidor.toString()));
+        resumo.appendChild(qtServidor);
+
+        Element qtVinculoFuncional = doc.createElement("qtVinculoFuncional");
+        qtVinculoFuncional.appendChild(doc.createTextNode(resumoqtVinculoFuncional.toString()));
+        resumo.appendChild(qtVinculoFuncional);
+
+        Element qtMovimentacaoFuncional = doc.createElement("qtMovimentacaoFuncional");
+        qtMovimentacaoFuncional.appendChild(doc.createTextNode(resumoqtMovimentacaoFuncional.toString()));
+        resumo.appendChild(qtMovimentacaoFuncional);
+
+        Element qtTempoContribuicaoRGPS = doc.createElement("qtTempoContribuicaoRGPS");
+        qtTempoContribuicaoRGPS.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtTempoContribuicaoRGPS);
+
+        Element qtTempoContribuicaoRPPS = doc.createElement("qtTempoContribuicaoRPPS");
+        qtTempoContribuicaoRPPS.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtTempoContribuicaoRPPS);
+
+        Element qtTempoSemContribuicao = doc.createElement("qtTempoSemContribuicao");
+        qtTempoSemContribuicao.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtTempoSemContribuicao);
+
+        Element qtTempoFicticio = doc.createElement("qtTempoFicticio");
+        qtTempoFicticio.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtTempoFicticio);
+
+        Element qtHistoricoFinanceiro = doc.createElement("qtHistoricoFinanceiro");
+        qtHistoricoFinanceiro.appendChild(doc.createTextNode(resumoqtHistoricoFinanceiro.toString()));
+        resumo.appendChild(qtHistoricoFinanceiro);
+
+        Element qtBeneficioServidor = doc.createElement("qtBeneficioServidor");
+        qtBeneficioServidor.appendChild(doc.createTextNode(resumoqtBeneficioServidor.toString()));
+        resumo.appendChild(qtBeneficioServidor);
+
+        Element qtDependente = doc.createElement("qtDependente");
+        qtDependente.appendChild(doc.createTextNode(resumoqtDependente.toString()));
+        resumo.appendChild(qtDependente);
+
+        Element qtPensionista = doc.createElement("qtPensionista");
+        qtPensionista.appendChild(doc.createTextNode(resumoqtPensionista.toString()));
+        resumo.appendChild(qtPensionista);
+
+        Element qtBeneficioPensionista = doc.createElement("qtBeneficioPensionista");
+        qtBeneficioPensionista.appendChild(doc.createTextNode(resumoqtBeneficioPensionista.toString()));
+        resumo.appendChild(qtBeneficioPensionista);
+
+        Element qtQuotaPensionista = doc.createElement("qtQuotaPensionista");
+        qtQuotaPensionista.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtQuotaPensionista);
+
+        Element qtfuncaoGratificada = doc.createElement("qtfuncaoGratificada");
+        qtfuncaoGratificada.appendChild(doc.createTextNode("0"));
+        resumo.appendChild(qtfuncaoGratificada);
+
         assistenteBarraProgresso.conta();
 
+
+        // fim alteração -----------------------------------------------------------------------
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
-        transformer.setOutputProperty(OutputKeys.ENCODING, "ISO-8859-1");
-        transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
+        transformer.setOutputProperty(OutputKeys.ENCODING, "iso-8859-1");
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         DOMSource source = new DOMSource(doc);
         StreamResult result = new StreamResult(file);
@@ -538,62 +1395,87 @@ public class SigFacade extends AbstractFacade<Sig> {
     }
 
     private void preencherEndereco(Document doc, Element endereco, Sig selecionado, String tipoLogradouro, Cidade cidade) {
-        endereco.setAttributeNode(criarAtributo(doc, "emailEnte", selecionado.getEnteFederativo().getEmail() == null ? "" : selecionado.getEnteFederativo().getEmail()));
-        endereco.setAttributeNode(criarAtributo(doc, "tipoLogradouro", tipoLogradouro));
-        endereco.setAttributeNode(criarAtributo(doc, "logradouro", selecionado.getEnteFederativo().getEnderecoPrincipal() == null ? "" : selecionado.getEnteFederativo().getEnderecoPrincipal().getLogradouro()));
-        endereco.setAttributeNode(criarAtributo(doc, "numLogradouro", selecionado.getEnteFederativo().getEnderecoPrincipal() == null ? "" : selecionado.getEnteFederativo().getEnderecoPrincipal().getNumero()));
-        endereco.setAttributeNode(criarAtributo(doc, "complemento", selecionado.getEnteFederativo().getEnderecoPrincipal() == null ? "" : selecionado.getEnteFederativo().getEnderecoPrincipal().getComplemento()));
-        endereco.setAttributeNode(criarAtributo(doc, "bairro", selecionado.getEnteFederativo().getEnderecoPrincipal() == null ? "" : selecionado.getEnteFederativo().getEnderecoPrincipal().getBairro()));
-        endereco.setAttributeNode(criarAtributo(doc, "municipio", cidade == null ? "" : cidade.getCodigoIBGE().toString()));
-        endereco.setAttributeNode(criarAtributo(doc, "uf", selecionado.getEnteFederativo().getEnderecoPrincipal() == null ? "" : selecionado.getEnteFederativo().getEnderecoPrincipal().getUf()));
-        endereco.setAttributeNode(criarAtributo(doc, "cep", selecionado.getEnteFederativo().getEnderecoPrincipal() == null ? "" : selecionado.getEnteFederativo().getEnderecoPrincipal().getCep()));
+        if(selecionado.getEnteFederativo().getEmail() != null) {
+            endereco.setAttributeNode(criarAtributo(doc, "emailEnte", selecionado.getEnteFederativo().getEmail()));
+        }
+        if(!isStringNulaOuVazia(tipoLogradouro)) {
+            endereco.setAttributeNode(criarAtributo(doc, "tipoLogradouro", tipoLogradouro));
+        }
+        if(selecionado.getEnteFederativo().getEnderecoPrincipal() != null) {
+            endereco.setAttributeNode(criarAtributo(doc, "logradouro", selecionado.getEnteFederativo().getEnderecoPrincipal().getLogradouro()));
+            endereco.setAttributeNode(criarAtributo(doc, "numLogradouro", selecionado.getEnteFederativo().getEnderecoPrincipal().getNumero()));
+            endereco.setAttributeNode(criarAtributo(doc, "complemento",  selecionado.getEnteFederativo().getEnderecoPrincipal().getComplemento()));
+            endereco.setAttributeNode(criarAtributo(doc, "bairro",  selecionado.getEnteFederativo().getEnderecoPrincipal().getBairro()));
+            if (cidade!= null) {
+                endereco.setAttributeNode(criarAtributo(doc, "municipio", cidade.getCodigoIBGE().toString()));
+            }
+            endereco.setAttributeNode(criarAtributo(doc, "uf", selecionado.getEnteFederativo().getEnderecoPrincipal().getUf()));
+            endereco.setAttributeNode(criarAtributo(doc, "cep",  selecionado.getEnteFederativo().getEnderecoPrincipal().getCep()));
+        }
     }
 
     private void preencherTagChefe(Document doc, Element chefe, RepresentanteLegalPessoa rep) {
         chefe.setAttributeNode(criarAtributo(doc, "idChefe", rep.getId().toString()));
-        chefe.setAttributeNode(criarAtributo(doc, "nome", rep.getPessoa().getNome()));
-        chefe.setAttributeNode(criarAtributo(doc, "cpf", StringUtil.removeCaracteresEspeciaisSemEspaco(rep.getPessoa().getCpf_Cnpj())));
+        chefe.setAttributeNode(criarAtributo(doc, "nome", rep.getRepresentante().getNome()));
+        chefe.setAttributeNode(criarAtributo(doc, "cpf", StringUtil.removeCaracteresEspeciaisSemEspaco(rep.getRepresentante().getCpf_Cnpj())));
         chefe.setAttributeNode(criarAtributo(doc, "dtInicioMand", converterDataString("yyyy-MM-dd", rep.getDataInicio())));
-        chefe.setAttributeNode(criarAtributo(doc, "dtFimMand", rep.getDataFim() == null ? "" : converterDataString("yyyy-MM-dd", rep.getDataFim())));
-        chefe.setAttributeNode(criarAtributo(doc, "email", rep.getPessoa().getEmail()));
+        if(rep.getDataFim() != null) {
+            chefe.setAttributeNode(criarAtributo(doc, "dtFimMand", converterDataString("yyyy-MM-dd", rep.getDataFim())));
+        }
+        chefe.setAttributeNode(criarAtributo(doc, "email", rep.getRepresentante().getEmail()));
     }
 
     private void preencherTagOrgao(Document doc, Element orgao, HierarquiaOrganizacional ho, String uniGestora, PessoaJuridica pj) {
-        orgao.setAttributeNode(criarAtributo(doc, "idOrgao", ho.getId().toString()));
+        orgao.setAttributeNode(criarAtributo(doc, "idOrgao", ho.getSubordinada().getId().toString()));
         orgao.setAttributeNode(criarAtributo(doc, "nomeOrgao", ho.getDescricao()));
         orgao.setAttributeNode(criarAtributo(doc, "cnpjOrgao", StringUtil.removeCaracteresEspeciaisSemEspaco(pj.getCnpj())));
-        orgao.setAttributeNode(criarAtributo(doc, "poder", ho.getSubordinada().getEntidade() == null ? "" : ho.getSubordinada().getEntidade().getEsferaDoPoder().getCodigoSiprev()));
+        if(ho.getSubordinada().getEntidade() != null) {
+            orgao.setAttributeNode(criarAtributo(doc, "poder",ho.getSubordinada().getEntidade().getEsferaDoPoder().getCodigoSiprev()));
+        }
         orgao.setAttributeNode(criarAtributo(doc, "unidadeGestora", uniGestora));
 
     }
 
     private void preencherTagServidor(Document doc, Element servidor, VinculoFP vinculo, PessoaFisica pf, RegistroDeObito registroDeObito) {
         servidor.setAttributeNode(criarAtributo(doc, "idServidor", vinculo.getId().toString()));
-        servidor.setAttributeNode(criarAtributo(doc, "pasep", pf.getCarteiraDeTrabalho() == null ? "" : StringUtil.removeCaracteresEspeciaisSemEspaco(pf.getCarteiraDeTrabalho().getPisPasep())));
+        if (pf.getCarteiraDeTrabalho() != null) {
+            servidor.setAttributeNode(criarAtributo(doc, "pasep", StringUtil.removeCaracteresEspeciaisSemEspaco(pf.getCarteiraDeTrabalho().getPisPasep())));
+        }
         servidor.setAttributeNode(criarAtributo(doc, "nome", pf.getNome()));
         servidor.setAttributeNode(criarAtributo(doc, "cpf", StringUtil.removeCaracteresEspeciaisSemEspaco(pf.getCpf())));
         servidor.setAttributeNode(criarAtributo(doc, "dtNascto", DataUtil.getDataFormatada(pf.getDataNascimento(), "yyyy-MM-dd")));
         servidor.setAttributeNode(criarAtributo(doc, "sexo", pf.getSexo().getSigla()));
-        servidor.setAttributeNode(criarAtributo(doc, "dtObito", registroDeObito == null ? "" : converterDataString("yyyy-MM-dd", registroDeObito.getDataFalecimento())));
+        if(registroDeObito != null) {
+            servidor.setAttributeNode(criarAtributo(doc, "dtObito", converterDataString("yyyy-MM-dd", registroDeObito.getDataFalecimento())));
+        }
         servidor.setAttributeNode(criarAtributo(doc, "nomeMae", pf.getMae()));
-        servidor.setAttributeNode(criarAtributo(doc, "estadoCivil", pf.getEstadoCivil() == null ? "" : pf.getEstadoCivil().getCodigoSiprev()));
-        servidor.setAttributeNode(criarAtributo(doc, "dtRecenseamento", ""));
+        if(pf.getEstadoCivil() != null) {
+            servidor.setAttributeNode(criarAtributo(doc, "estadoCivil", pf.getEstadoCivil().getCodigoSiprev()));
+        }
+//        servidor.setAttributeNode(criarAtributo(doc, "dtRecenseamento", ""));
         servidor.setAttributeNode(criarAtributo(doc, "dtIngressoServPublico", converterDataString("yyyy-MM-dd", vinculo.getInicioVigencia())));
     }
 
     private void preencherTagVinculoFuncional(Document doc, Element vinculoFuncional, ContratoFP contrato, String tipoVinculo, BigDecimal sitPrevid) {
         vinculoFuncional.setAttributeNode(criarAtributo(doc, "idVinculoFuncional", contrato.getModalidadeContratoFP().getId().toString()));
         vinculoFuncional.setAttributeNode(criarAtributo(doc, "idServidor", contrato.getId().toString()));
-        vinculoFuncional.setAttributeNode(criarAtributo(doc, "tipoVinculo", tipoVinculo));
+        if(!isStringNulaOuVazia(tipoVinculo)) {
+            vinculoFuncional.setAttributeNode(criarAtributo(doc, "tipoVinculo", tipoVinculo));
+        }
         vinculoFuncional.setAttributeNode(criarAtributo(doc, "idOrgao", contrato.getUnidadeOrganizacional().getId().toString()));
         vinculoFuncional.setAttributeNode(criarAtributo(doc, "cargo", StringUtil.removeEspacos(contrato.getCargo().getDescricao())));
-        vinculoFuncional.setAttributeNode(criarAtributo(doc, "dtIniCargo", contrato.getCargo().getInicioVigencia() == null ? "" : converterDataString("yyyy-MM-dd", contrato.getCargo().getInicioVigencia())));
+        if(contrato.getCargo().getInicioVigencia() != null) {
+            vinculoFuncional.setAttributeNode(criarAtributo(doc, "dtIniCargo", converterDataString("yyyy-MM-dd", contrato.getCargo().getInicioVigencia())));
+        }
         vinculoFuncional.setAttributeNode(criarAtributo(doc, "matricula", StringUtil.removeCaracteresEspeciaisSemEspaco(contrato.getMatriculaFP().getMatricula())));
-        vinculoFuncional.setAttributeNode(criarAtributo(doc, "carreira", contrato.getCargo().getDescricaoCarreira()));
+        if(!isStringNulaOuVazia(contrato.getCargo().getDescricaoCarreira())) {
+            vinculoFuncional.setAttributeNode(criarAtributo(doc, "carreira", contrato.getCargo().getDescricaoCarreira()));
+        }
         vinculoFuncional.setAttributeNode(criarAtributo(doc, "regime", contrato.getPrevidenciaVinculoFPVigente().getTipoPrevidenciaFP().getCodigo() == 1 ? "5" : "1"));
         vinculoFuncional.setAttributeNode(criarAtributo(doc, "sitFuncional", "1"));
-        vinculoFuncional.setAttributeNode(criarAtributo(doc, "sitPrevid", sitPrevid == null ? "" : sitPrevid.toString()));
-
+        if(sitPrevid != null) {
+            vinculoFuncional.setAttributeNode(criarAtributo(doc, "sitPrevid", sitPrevid.toString()));
+        }
         if (contrato.getCargo().getDedicacaoExclusivaSIPREV()) {
             vinculoFuncional.setAttributeNode(criarAtributo(doc, "dedicacaoExclusiva", "S"));
         } else {
@@ -610,7 +1492,7 @@ public class SigFacade extends AbstractFacade<Sig> {
 
     private void preencherTagMovimentacaoFuncional(Document doc, Element movimentacaoFuncional, ExoneracaoRescisao exoneracao) {
         movimentacaoFuncional.setAttributeNode(criarAtributo(doc, "idMovimentacaoFuncional", exoneracao.getId().toString()));
-        movimentacaoFuncional.setAttributeNode(criarAtributo(doc, "idVinculoFuncional", exoneracao.getVinculoFP().getId().toString()));
+        movimentacaoFuncional.setAttributeNode(criarAtributo(doc, "idVinculoFuncional",  exoneracao.getVinculoFP().getContratoFP().getModalidadeContratoFP().getId().toString()));
         movimentacaoFuncional.setAttributeNode(criarAtributo(doc, "sitFuncional", "2"));
         movimentacaoFuncional.setAttributeNode(criarAtributo(doc, "dtDesligamentoOrgao", converterDataString("yyyy-MM-dd", exoneracao.getDataRescisao())));
     }
@@ -630,7 +1512,9 @@ public class SigFacade extends AbstractFacade<Sig> {
         historicoFinanceiro.setAttributeNode(criarAtributo(doc, "mes", ficha.getFolhaDePagamento().getMes().getNumeroMes().toString()));
         historicoFinanceiro.setAttributeNode(criarAtributo(doc, "numeroFolha", ficha.getFolhaDePagamento().getVersao().toString()));
         historicoFinanceiro.setAttributeNode(criarAtributo(doc, "vlRemBruta", getValorSemPontoEVirgulas(remuneracaoBruta)));
-        historicoFinanceiro.setAttributeNode(criarAtributo(doc, "vlRemContributiva", valorFinanceiroRH != null ? getValorSemPontoEVirgulas(valorFinanceiroRH.getTotalBase()) : ""));
+        if(valorFinanceiroRH != null) {
+            historicoFinanceiro.setAttributeNode(criarAtributo(doc, "vlRemContributiva", getValorSemPontoEVirgulas(valorFinanceiroRH.getTotalBase())));
+        }
         historicoFinanceiro.setAttributeNode(criarAtributo(doc, "vlRemCargoEfetivo", vlRemCargoEfetivo));
     }
 
@@ -639,83 +1523,138 @@ public class SigFacade extends AbstractFacade<Sig> {
         beneficioServidor.setAttributeNode(criarAtributo(doc, "idBeneficio", aposentadoria.getId().toString()));
         beneficioServidor.setAttributeNode(criarAtributo(doc, "idServidor", vinculo.getId().toString()));
         beneficioServidor.setAttributeNode(criarAtributo(doc, "idOrgao", vinculo.getUnidadeOrganizacional().getId().toString()));
-        beneficioServidor.setAttributeNode(criarAtributo(doc, "dtInicioBeneficio", aposentadoria.getDataRegistro() == null ? "" : converterDataString("yyyy-MM-dd", aposentadoria.getDataRegistro())));
+        if(aposentadoria.getDataRegistro() != null) {
+            beneficioServidor.setAttributeNode(criarAtributo(doc, "dtInicioBeneficio", converterDataString("yyyy-MM-dd", aposentadoria.getDataRegistro())));
+        }
         beneficioServidor.setAttributeNode(criarAtributo(doc, "tipoBeneficio", tipoBeneficio));
-        beneficioServidor.setAttributeNode(criarAtributo(doc, "dtFimBeneficio", aposentadoria.getFinalVigencia() == null ? "" : converterDataString("yyyy-MM-dd", aposentadoria.getFinalVigencia())));
-        beneficioServidor.setAttributeNode(criarAtributo(doc, "vlAtualBeneficio", salarioAtual == null ? "" : getValorSemPontoEVirgulas(salarioAtual)));
-        beneficioServidor.setAttributeNode(criarAtributo(doc, "vlInicialBeneficio", salarioInicial == null ? "" : getValorSemPontoEVirgulas(salarioInicial)));
-        beneficioServidor.setAttributeNode(criarAtributo(doc, "dtUltimaAtualizacao", aposentadoria.getDataAlteracao() == null ? "" : converterDataString("yyyy-MM-dd", aposentadoria.getDataAlteracao())));
-        beneficioServidor.setAttributeNode(criarAtributo(doc, "dtPublicacao", aposentadoria.getDataPublicacao() == null ? "" : converterDataString("yyyy-MM-dd", aposentadoria.getDataPublicacao())));
+        if(aposentadoria.getFinalVigencia() != null) {
+            beneficioServidor.setAttributeNode(criarAtributo(doc, "dtFimBeneficio", converterDataString("yyyy-MM-dd", aposentadoria.getFinalVigencia())));
+        }
+        beneficioServidor.setAttributeNode(criarAtributo(doc, "vlAtualBeneficio", getValorSemPontoEVirgulas(salarioAtual)));
+        if(salarioInicial != null) {
+            beneficioServidor.setAttributeNode(criarAtributo(doc, "vlInicialBeneficio", getValorSemPontoEVirgulas(salarioInicial)));
+        }
+        if(aposentadoria.getDataAlteracao() != null) {
+            beneficioServidor.setAttributeNode(criarAtributo(doc, "dtUltimaAtualizacao", converterDataString("yyyy-MM-dd", aposentadoria.getDataAlteracao())));
+        }
+        if(aposentadoria.getDataPublicacao() != null) {
+            beneficioServidor.setAttributeNode(criarAtributo(doc, "dtPublicacao", converterDataString("yyyy-MM-dd", aposentadoria.getDataPublicacao())));
+        }
         beneficioServidor.setAttributeNode(criarAtributo(doc, "paridade", paridade));
         beneficioServidor.setAttributeNode(criarAtributo(doc, "regime", vinculo.getContratoFP().getPrevidenciaVinculoFPVigente().getTipoPrevidenciaFP().getCodigo() == 1 ? "5" : "1"));
-        beneficioServidor.setAttributeNode(criarAtributo(doc, "tipoAposentadoriaEspecial", aposentadoria.getTipoAposentadoriaEspecialSIG() == null ? "" : aposentadoria.getTipoAposentadoriaEspecialSIG().getCodigo().toString()));
+        if(aposentadoria.getTipoAposentadoriaEspecialSIG() != null) {
+            beneficioServidor.setAttributeNode(criarAtributo(doc, "tipoAposentadoriaEspecial", aposentadoria.getTipoAposentadoriaEspecialSIG().getCodigo().toString()));
+        }
     }
 
     private void preencherTagDependente(Document doc, Element dependente, Dependente dependenciSig) {
         dependente.setAttributeNode(criarAtributo(doc, "idDependente", dependenciSig.getId().toString()));
         dependente.setAttributeNode(criarAtributo(doc, "nome", dependenciSig.getDependente().getNome()));
-        dependente.setAttributeNode(criarAtributo(doc, "dtNascto", dependenciSig.getDependente().getDataNascimento() == null ? "" : converterDataString("yyyy-MM-dd", dependenciSig.getDependente().getDataNascimento())));
-        dependente.setAttributeNode(criarAtributo(doc, "cpf", dependenciSig.getDependente().getCpf() == null ? "" : StringUtil.removeCaracteresEspeciaisSemEspaco(dependenciSig.getDependente().getCpf())));
-        dependente.setAttributeNode(criarAtributo(doc, "nomeMae", dependenciSig.getDependente().getMae() == null ? "" : dependenciSig.getDependente().getMae()));
-        dependente.setAttributeNode(criarAtributo(doc, "sexo", dependenciSig.getDependente().getSexo() == null ? "" : dependenciSig.getDependente().getSexo().getSigla()));
-        dependente.setAttributeNode(criarAtributo(doc, "pasep", dependenciSig.getDependente().getCarteiraDeTrabalho() == null ? "" : dependenciSig.getDependente().getCarteiraDeTrabalho().getPisPasep()));
-        dependente.setAttributeNode(criarAtributo(doc, "estadoCivil", dependenciSig.getDependente().getEstadoCivil() == null ? "" : dependenciSig.getDependente().getEstadoCivil().getCodigoSiprev()));
+        if(dependenciSig.getDependente().getDataNascimento() != null) {
+            dependente.setAttributeNode(criarAtributo(doc, "dtNascto", converterDataString("yyyy-MM-dd", dependenciSig.getDependente().getDataNascimento())));
+        }
+        if(dependenciSig.getDependente().getCpf() != null) {
+            dependente.setAttributeNode(criarAtributo(doc, "cpf", StringUtil.removeCaracteresEspeciaisSemEspaco(dependenciSig.getDependente().getCpf())));
+        }
+        if(dependenciSig.getDependente().getMae() != null) {
+            dependente.setAttributeNode(criarAtributo(doc, "nomeMae", dependenciSig.getDependente().getMae()));
+        }
+        if(dependenciSig.getDependente().getSexo() != null) {
+            dependente.setAttributeNode(criarAtributo(doc, "sexo", dependenciSig.getDependente().getSexo().getSigla()));
+        }
+        if(dependenciSig.getDependente().getCarteiraDeTrabalho() != null) {
+            dependente.setAttributeNode(criarAtributo(doc, "pasep", dependenciSig.getDependente().getCarteiraDeTrabalho().getPisPasep()));
+        }
+        if(dependenciSig.getDependente().getEstadoCivil() != null) {
+            dependente.setAttributeNode(criarAtributo(doc, "estadoCivil", dependenciSig.getDependente().getEstadoCivil().getCodigoSiprev()));
+        }
     }
 
     private void preencherTagPensionista(Document doc, Element pensionista, Pensionista pensi) {
         pensionista.setAttributeNode(criarAtributo(doc, "idPensionista", pensi.getId().toString()));
         pensionista.setAttributeNode(criarAtributo(doc, "nome", pensi.getMatriculaFP().getPessoa().getNome()));
         pensionista.setAttributeNode(criarAtributo(doc, "matricula", pensi.getMatriculaFP().getMatricula()));
-        pensionista.setAttributeNode(criarAtributo(doc, "dtNascto", pensi.getMatriculaFP().getPessoa().getDataNascimento() == null ? "" : converterDataString("yyyy-MM-dd", (pensi.getMatriculaFP().getPessoa().getDataNascimento()))));
+        if(pensi.getMatriculaFP().getPessoa().getDataNascimento() != null) {
+            pensionista.setAttributeNode(criarAtributo(doc, "dtNascto", converterDataString("yyyy-MM-dd", (pensi.getMatriculaFP().getPessoa().getDataNascimento()))));
+        }
         pensionista.setAttributeNode(criarAtributo(doc, "cpf", StringUtil.removeCaracteresEspeciaisSemEspaco(pensi.getMatriculaFP().getPessoa().getCpf())));
         pensionista.setAttributeNode(criarAtributo(doc, "nomeMae", pensi.getMatriculaFP().getPessoa().getMae()));
         pensionista.setAttributeNode(criarAtributo(doc, "sexo", pensi.getMatriculaFP().getPessoa().getSexo().getSigla()));
-        pensionista.setAttributeNode(criarAtributo(doc, "pasep", pensi.getMatriculaFP().getPessoa().getCarteiraDeTrabalho() == null ? "" : pensi.getMatriculaFP().getPessoa().getCarteiraDeTrabalho().getPisPasep()));
-        pensionista.setAttributeNode(criarAtributo(doc, "estadoCivil", pensi.getMatriculaFP().getPessoa().getEstadoCivil() == null ? "" : pensi.getMatriculaFP().getPessoa().getEstadoCivil().getCodigoSiprev()));
-        pensionista.setAttributeNode(criarAtributo(doc, "dtRecenseamento", ""));
+        if( pensi.getMatriculaFP().getPessoa().getCarteiraDeTrabalho() != null) {
+            pensionista.setAttributeNode(criarAtributo(doc, "pasep", pensi.getMatriculaFP().getPessoa().getCarteiraDeTrabalho().getPisPasep()));
+        }
+        if(pensi.getMatriculaFP().getPessoa().getEstadoCivil() != null) {
+            pensionista.setAttributeNode(criarAtributo(doc, "estadoCivil", pensi.getMatriculaFP().getPessoa().getEstadoCivil().getCodigoSiprev()));
+        }
     }
 
     private void preencherTagDependencia(Document doc, Element dependencia, Dependente dependenciSig, VinculoFP vinculo, DependenteVinculoFP dependenciaVigente,
                                         String tipoDependencia, boolean dependentePA) {
-
-        dependencia.setAttributeNode(criarAtributo(doc, "idDependencia", dependenciaVigente == null ? "" : dependenciaVigente.getId().toString()));
+        if(dependenciaVigente != null) {
+            dependencia.setAttributeNode(criarAtributo(doc, "idDependencia", dependenciaVigente.getId().toString()));
+        }
         dependencia.setAttributeNode(criarAtributo(doc, "idDependente", dependenciSig.getId().toString()));
-        dependencia.setAttributeNode(criarAtributo(doc, "idServidor", dependenciSig.getResponsavel() == null ? "" : dependenciSig.getResponsavel().getId().toString()));
-        dependencia.setAttributeNode(criarAtributo(doc, "dtIniPensao", dependenciaVigente == null || dependenciaVigente.getInicioVigencia() == null ? "" : converterDataString("yyyy-MM-dd", dependenciaVigente.getInicioVigencia())));
-        dependencia.setAttributeNode(criarAtributo(doc, "dtFimPrevisto", dependenciaVigente == null || dependenciaVigente.getFinalVigencia() == null ? "" : converterDataString("yyyy-MM-dd", dependenciaVigente.getFinalVigencia())));
-        dependencia.setAttributeNode(criarAtributo(doc, "tipoDependencia", tipoDependencia));
-        dependencia.setAttributeNode(criarAtributo(doc, "outroTipoDependencia", tipoDependencia == "99" ? dependenciSig.getGrauDeParentesco().getDescricao() : ""));
-        dependencia.setAttributeNode(criarAtributo(doc, "motInicioDep", ""));
-        dependencia.setAttributeNode(criarAtributo(doc, "outroMotInicioDep", ""));
-        dependencia.setAttributeNode(criarAtributo(doc, "motFimDep", ""));
-        dependencia.setAttributeNode(criarAtributo(doc, "outroMotFimDep", ""));
+        dependencia.setAttributeNode(criarAtributo(doc, "idServidor", vinculo.getId().toString()));
+        if(dependenciaVigente != null) {
+            dependencia.setAttributeNode(criarAtributo(doc, "dtIniPensao", converterDataString("yyyy-MM-dd", dependenciaVigente.getInicioVigencia())));
+        }
+        if(dependenciaVigente != null && dependenciaVigente.getFinalVigencia() != null) {
+            dependencia.setAttributeNode(criarAtributo(doc, "dtFimPrevisto", converterDataString("yyyy-MM-dd", dependenciaVigente.getFinalVigencia())));
+        }
+        if(!isStringNulaOuVazia(tipoDependencia)) {
+            dependencia.setAttributeNode(criarAtributo(doc, "tipoDependencia", tipoDependencia));
+        }
+        if( tipoDependencia == "99") {
+            dependencia.setAttributeNode(criarAtributo(doc, "outroTipoDependencia", dependenciSig.getGrauDeParentesco().getDescricao()));
+        }
+//        dependencia.setAttributeNode(criarAtributo(doc, "motInicioDep", ""));
+//        dependencia.setAttributeNode(criarAtributo(doc, "outroMotInicioDep", ""));
+//        dependencia.setAttributeNode(criarAtributo(doc, "motFimDep", ""));
+//        dependencia.setAttributeNode(criarAtributo(doc, "outroMotFimDep", ""));
 
-        dependencia.setAttributeNode(criarAtributo(doc, "dtInicioDependencia", dependentePA ? "" : converterDataString("yyyy-MM-dd", vinculo.getInicioVigencia())));
-        dependencia.setAttributeNode(criarAtributo(doc, "dtFimDependencia", vinculo.getFinalVigencia() == null || dependentePA ? "" : converterDataString("yyyy-MM-dd", vinculo.getFinalVigencia())));
-
-        dependencia.setAttributeNode(criarAtributo(doc, "motInicioPensao", ""));
-        dependencia.setAttributeNode(criarAtributo(doc, "motFimPensao", ""));
-        dependencia.setAttributeNode(criarAtributo(doc, "justificativaMotivoInicioPensao", ""));
-        dependencia.setAttributeNode(criarAtributo(doc, "justificativaMotivoFimPensao", ""));
+        if(!dependentePA) {
+            dependencia.setAttributeNode(criarAtributo(doc, "dtInicioDependencia", converterDataString("yyyy-MM-dd", vinculo.getInicioVigencia())));
+        }
+        if(vinculo.getFinalVigencia() != null && !dependentePA) {
+            dependencia.setAttributeNode(criarAtributo(doc, "dtFimDependencia", converterDataString("yyyy-MM-dd", vinculo.getFinalVigencia())));
+        }
+//        dependencia.setAttributeNode(criarAtributo(doc, "motInicioPensao", ""));
+//        dependencia.setAttributeNode(criarAtributo(doc, "motFimPensao", ""));
+//        dependencia.setAttributeNode(criarAtributo(doc, "justificativaMotivoInicioPensao", ""));
+//        dependencia.setAttributeNode(criarAtributo(doc, "justificativaMotivoFimPensao", ""));
         dependencia.setAttributeNode(criarAtributo(doc, "pensionista", dependentePA ? "S" : "N"));
     }
 
     private void preencherTagBeneficioPensionista(Document doc, Element beneficioPensionista, Pensionista pensi, String tipoPensaoMorte, BigDecimal salarioInicial, BigDecimal salarioFinal) {
         beneficioPensionista.setAttributeNode(criarAtributo(doc, "idBeneficio", pensi.getPensao().getId().toString()));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "idOrgao", pensi.getFolha() == null || pensi.getFolha().getUnidadeOrganizacional() == null ? "" : pensi.getFolha().getUnidadeOrganizacional().getId().toString()));
+        if(pensi.getFolha() != null) {
+            beneficioPensionista.setAttributeNode(criarAtributo(doc, "idOrgao", pensi.getFolha().getUnidadeOrganizacional().getId().toString()));
+        }
         beneficioPensionista.setAttributeNode(criarAtributo(doc, "tipoBeneficio", "12"));
         beneficioPensionista.setAttributeNode(criarAtributo(doc, "dtInicioBeneficio", converterDataString("yyyy-MM-dd", pensi.getInicioVigencia())));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "dtFimBeneficio", pensi.getFinalVigencia() == null ? "" : converterDataString("yyyy-MM-dd", pensi.getFinalVigencia())));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "vlAtualBeneficio", salarioInicial == null ? "" : getValorSemPontoEVirgulas(salarioFinal)));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "vlInicialBeneficio", salarioFinal == null ? "" : getValorSemPontoEVirgulas(salarioInicial)));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "dtUltimaAtualizacao", pensi.getDataAlteracao() == null ? "" : converterDataString("yyyy-MM-dd", pensi.getDataAlteracao())));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "idServidorInstituidor", pensi.getPensao().getContratoFP().getId().toString()));
+        if(pensi.getFinalVigencia() != null) {
+            beneficioPensionista.setAttributeNode(criarAtributo(doc, "dtFimBeneficio", converterDataString("yyyy-MM-dd", pensi.getFinalVigencia())));
+        }
+        beneficioPensionista.setAttributeNode(criarAtributo(doc, "vlAtualBeneficio", getValorSemPontoEVirgulas(salarioFinal)));
+        if(salarioFinal != null) {
+            beneficioPensionista.setAttributeNode(criarAtributo(doc, "vlInicialBeneficio", getValorSemPontoEVirgulas(salarioInicial)));
+        }
+        if(pensi.getDataAlteracao() != null) {
+            beneficioPensionista.setAttributeNode(criarAtributo(doc, "dtUltimaAtualizacao", converterDataString("yyyy-MM-dd", pensi.getDataAlteracao())));
+        }
+        if(pensi.getProvimentoFP() != null && pensi.getProvimentoFP().getVinculoFP() != null) {
+            beneficioPensionista.setAttributeNode(criarAtributo(doc, "idServidorInstituidor", pensi.getProvimentoFP().getVinculoFP().getId().toString()));
+        }
         beneficioPensionista.setAttributeNode(criarAtributo(doc, "regimeServidorInstituidor", pensi.getPensao().getContratoFP().getPrevidenciaVinculoFPVigente().getTipoPrevidenciaFP().getCodigo() == 1 ? "5" : "1"));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "carreira", pensi.getPensao().getContratoFP().getCargo().getDescricaoCarreira()));
+        if(!isStringNulaOuVazia(pensi.getPensao().getContratoFP().getCargo().getDescricaoCarreira())) {
+            beneficioPensionista.setAttributeNode(criarAtributo(doc, "carreira", pensi.getPensao().getContratoFP().getCargo().getDescricaoCarreira()));
+        }
         beneficioPensionista.setAttributeNode(criarAtributo(doc, "cargo", StringUtil.removeEspacos(pensi.getPensao().getContratoFP().getCargo().getDescricao())));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "motivoInicioPensao", ""));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "motivoFimPensao", ""));
-        beneficioPensionista.setAttributeNode(criarAtributo(doc, "tipoPensaoMorte", tipoPensaoMorte));
+//        beneficioPensionista.setAttributeNode(criarAtributo(doc, "motivoInicioPensao", ""));
+//        beneficioPensionista.setAttributeNode(criarAtributo(doc, "motivoFimPensao", ""));
+        if(!isStringNulaOuVazia(tipoPensaoMorte)) {
+            beneficioPensionista.setAttributeNode(criarAtributo(doc, "tipoPensaoMorte", tipoPensaoMorte));
+        }
     }
 
     private void preencherTagResumo(Document doc, Element resumo, Integer resumoqtOrgao, Integer resumoqtServidor, Integer resumoqtVinculoFuncional,
@@ -886,8 +1825,7 @@ public class SigFacade extends AbstractFacade<Sig> {
             "and apo.id = v.id) as aposentadoCompulsoria, " +
             "(select 10 " +
             "from APOSENTADORIA apo " +
-            "inner join regraaposentadoria r on r.id = apo.regraaposentadoria_id " +
-            "where r.decisaojudicial = :decisaojudicial  " +
+            "where apo.REGRAAPOSENTADORIA = :regraaposentadoria " +
             "and apo.id = v.id) as aposentadoriaPorDecisaoJudicial, " +
             "(select 11 " +
             "from Pensao pensao " +
@@ -916,7 +1854,7 @@ public class SigFacade extends AbstractFacade<Sig> {
         q.setParameter("mes", mes);
         q.setParameter("ano", ano);
         q.setParameter("carcere", TipoAfastamentoESocial.CARCERE.name());
-        q.setParameter("decisaojudicial", true);
+        q.setParameter("regraaposentadoria", RegraAposentadoria.VOLUNTARIA_INTEGRAL_COMNUM_ART_2005.name());
 
 
         List resultList = q.getResultList();
@@ -978,8 +1916,7 @@ public class SigFacade extends AbstractFacade<Sig> {
             "                   and apo.id = v.id) as aposentadoCompulsoria, " +
             "                (select 10 " +
             "                 from APOSENTADORIA apo " +
-            "                       inner join regraaposentadoria r on r.id = apo.regraaposentadoria_id " +
-            "                 where r.decisaojudicial = :decisaojudicial " +
+            "                 where apo.REGRAAPOSENTADORIA = :regraaposentadoria " +
             "                   and apo.id = v.id) as aposentadoriaPorDecisaoJudicial, " +
             "                (select 11 " +
             "                 from Pensao pensao " +
@@ -1005,7 +1942,7 @@ public class SigFacade extends AbstractFacade<Sig> {
         q.setParameter("mes", mes);
         q.setParameter("ano", ano);
         q.setParameter("carcere", TipoAfastamentoESocial.CARCERE.name());
-        q.setParameter("decisaojudicial", true);
+        q.setParameter("regraaposentadoria", RegraAposentadoria.VOLUNTARIA_INTEGRAL_COMNUM_ART_2005.name());
         Map<Long, BigDecimal> mapa = Maps.newHashMap();
         List resultList = q.getResultList();
 

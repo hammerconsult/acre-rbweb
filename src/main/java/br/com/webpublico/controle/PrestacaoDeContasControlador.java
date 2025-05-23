@@ -296,14 +296,7 @@ public class PrestacaoDeContasControlador extends AbstractReport implements Seri
             dto.adicionarParametro("DATAINICIAL", prestacaoDeContasFacade.dataInicialAsString(selecionado.getMes(), selecionado.getExercicio()));
             dto.adicionarParametro("DATAFINAL", prestacaoDeContasFacade.dataFimAsString(selecionado.getMes(), selecionado.getExercicio()));
             dto.adicionarParametro("APRESENTACAO", ApresentacaoRelatorio.CONSOLIDADO.name());
-            String nomeArquivo = prestacaoDeContasFacade.getRelatorioBalanceteContabilPorTipoFacade()
-                .getNomeArquivo(selecionado.getExercicio(), selecionado.getUnidadeGestora(),
-                    prestacaoDeContasFacade.dataInicialAsDate(selecionado.getMes(), selecionado.getExercicio()),
-                    prestacaoDeContasFacade.dataFimAsDate(selecionado.getMes(), selecionado.getExercicio()),
-                    ApresentacaoRelatorio.UNIDADE_GESTORA,
-                    Mes.JANEIRO.equals(selecionado.getMes()) ? TipoBalancete.ABERTURA : TipoBalancete.MENSAL,
-                    Mes.DEZEMBRO.equals(selecionado.getMes()) ? TipoBalancete.ENCERRAMENTO : TipoBalancete.MENSAL);
-            dto.setNomeRelatorio(nomeArquivo);
+            dto.setNomeRelatorio(getNomeArquivo() + "-BLC");
             dto.setApi("contabil/balancete-contabil-tipo/");
             ReportService.getInstance().gerarRelatorio(getSistemaFacade().getUsuarioCorrente(), dto);
             FacesUtil.addMensagemRelatorioSegundoPlano();
@@ -314,38 +307,6 @@ public class PrestacaoDeContasControlador extends AbstractReport implements Seri
         } catch (Exception e) {
             FacesUtil.addOperacaoNaoRealizada(e.getMessage());
         }
-    }
-
-    private List<String> getTipoBalancete() {
-        List<String> tipoBalanceteFinal = new ArrayList<>();
-        if (Mes.DEZEMBRO.equals(selecionado.getMes())) {
-            tipoBalanceteFinal.add(TipoBalancete.TRANSPORTE.name());
-            tipoBalanceteFinal.add(TipoBalancete.ABERTURA.name());
-            tipoBalanceteFinal.add(TipoBalancete.MENSAL.name());
-            tipoBalanceteFinal.add(TipoBalancete.APURACAO.name());
-            tipoBalanceteFinal.add(TipoBalancete.ENCERRAMENTO.name());
-        } else {
-            tipoBalanceteFinal.add(TipoBalancete.TRANSPORTE.name());
-            tipoBalanceteFinal.add(TipoBalancete.ABERTURA.name());
-            tipoBalanceteFinal.add(TipoBalancete.MENSAL.name());
-        }
-        return tipoBalanceteFinal;
-    }
-
-    private String getTipoBalanceteString() {
-        StringBuilder retorno = new StringBuilder();
-        if (Mes.DEZEMBRO.equals(selecionado.getMes())) {
-            retorno.append(TipoBalancete.MENSAL.getDescricao());
-            retorno.append(", ");
-            retorno.append(TipoBalancete.ENCERRAMENTO.getDescricao());
-        } else if (Mes.JANEIRO.equals(selecionado.getMes())) {
-            retorno.append(TipoBalancete.TRANSPORTE.getDescricao());
-            retorno.append(", ");
-            retorno.append(TipoBalancete.MENSAL.getDescricao());
-        } else {
-            retorno.append(TipoBalancete.MENSAL.getDescricao());
-        }
-        return retorno.toString();
     }
 
     public void gerarDemonstrativoCreditosReceber() {
@@ -379,7 +340,6 @@ public class PrestacaoDeContasControlador extends AbstractReport implements Seri
         RelatorioDemonstrativoDisponibilidadeRecursoControlador controlador = (RelatorioDemonstrativoDisponibilidadeRecursoControlador) Util.getControladorPeloNome("relatorioDemonstrativoDisponibilidadeRecursoControlador");
         controlador.setFiltro("");
         controlador.setMes(selecionado.getMes());
-        controlador.setExercicio(selecionado.getExercicio());
         controlador.setMesFinal(selecionado.getMes().getNumeroMesString());
         controlador.setHierarquias(new ArrayList<HierarquiaOrganizacional>());
         controlador.setUnidadeGestora(selecionado.getUnidadeGestora() != null ? selecionado.getUnidadeGestora() : null);

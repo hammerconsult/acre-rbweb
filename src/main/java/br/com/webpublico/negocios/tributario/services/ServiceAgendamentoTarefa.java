@@ -2,7 +2,6 @@ package br.com.webpublico.negocios.tributario.services;
 
 import br.com.webpublico.agendamentotarefas.job.GarbageCollectorJob;
 import br.com.webpublico.agendamentotarefas.job.MetricasJob;
-import br.com.webpublico.agendamentotarefas.job.ReprocessamentoContabilJob;
 import br.com.webpublico.agendamentotarefas.job.WPJobListener;
 import br.com.webpublico.agendamentotarefas.job.ReprocessamentoContabilJob;
 import br.com.webpublico.entidades.ConfiguracaoAgendamentoTarefa;
@@ -134,7 +133,7 @@ public class ServiceAgendamentoTarefa {
             ).build();
     }
 
-    private void addJobs(Scheduler scheduler) {
+    private void addJobs(Scheduler scheduler) throws SchedulerException {
         String perfilExecutarRotinaAgendada = System.getenv(APP_PERFIL_DESATIVAR_ROTINA_AGENDADA);
         if (perfilExecutarRotinaAgendada == null) {
             List<ConfiguracaoAgendamentoTarefa> agendamentos = findAll();

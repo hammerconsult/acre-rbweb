@@ -20,6 +20,7 @@ import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
 import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;

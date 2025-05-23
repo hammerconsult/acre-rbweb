@@ -5,14 +5,15 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
 import br.com.webpublico.entidadesauxiliares.contabil.ContaAuxiliarDetalhada;
-import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.ClassificacaoContaAuxiliar;
 import br.com.webpublico.interfaces.IGeraContaAuxiliar;
+import br.com.webpublico.negocios.contabil.reprocessamento.daos.JdbcContaAuxiliarDetalhadaDAO;
 import br.com.webpublico.negocios.contabil.singleton.SingletonContaAuxiliar;
-import br.com.webpublico.util.UtilGeradorContaAuxiliar;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.ContextLoader;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.*;
@@ -92,13 +93,9 @@ public class TipoContaAuxiliarFacade extends AbstractFacade<TipoContaAuxiliar> {
             q.setParameter("param", Long.parseLong(idObjeto));
             return q.getSingleResult();
         } catch (NonUniqueResultException ex) {
-            //throw new ExcecaoNegocioGenerica("A pesquisa pela classe " + classeObjeto + " com o ID " + idObjeto + " Retornou mais de um elemento!");
-            return null;
+            throw new ExcecaoNegocioGenerica("A pesquisa pela classe " + classeObjeto + " com o ID " + idObjeto + " Retornou mais de um elemento!");
         } catch (NoResultException ex) {
-            //throw new ExcecaoNegocioGenerica("A pesquisa pela classe " + classeObjeto + " com o ID " + idObjeto + " não retornou nenhum um elemento!");
-            return null;
-        } catch (Exception e) {
-            return null;
+            throw new ExcecaoNegocioGenerica("A pesquisa pela classe " + classeObjeto + " com o ID " + idObjeto + " não retornou nenhum um elemento!");
         }
     }
 
@@ -302,14 +299,14 @@ public class TipoContaAuxiliarFacade extends AbstractFacade<TipoContaAuxiliar> {
         return exercicioFacade;
     }
 
-    public ContaAuxiliar buscarContaAuxiliar(TipoContaAuxiliar tipoContaAuxiliar, List<ObjetoParametro> objetoParametros, ContaContabil contaContabil, boolean isContaAuxiliarSistema, ParametroEvento parametroEvento, ObjetoParametro.TipoObjetoParametro tipoObjetoParametro) throws ExcecaoNegocioGenerica {
+    public ContaAuxiliar buscarContaAuxiliar(TipoContaAuxiliar tipoContaAuxiliar, List<ObjetoParametro> objetoParametros, ContaContabil contaContabil, boolean isContaAuxiliarSistema, ParametroEvento parametroEvento,  ObjetoParametro.TipoObjetoParametro tipoObjetoParametro) throws ExcecaoNegocioGenerica {
         Object entidade = null;
         try {
             ObjetoParametro objPar = null;
             for (ObjetoParametro objetoParametro : objetoParametros) {
                 if (ParametroEvento.isTipoObjetoParametro(tipoObjetoParametro, objetoParametro)) {
                     entidade = localizarEntidade(objetoParametro.getIdObjeto(), objetoParametro.getClasseObjeto());
-                    if (entidade instanceof IGeraContaAuxiliar || entidade instanceof SuperEntidadeContabilGerarContaAuxiliar) {
+                    if (entidade instanceof IGeraContaAuxiliar) {
                         objPar = objetoParametro;
                         break;
                     }
@@ -320,64 +317,31 @@ public class TipoContaAuxiliarFacade extends AbstractFacade<TipoContaAuxiliar> {
             }
 
             Exercicio exercicio = objPar.getItemParametroEvento().getParametroEvento().getExercicio();
-            SuperEntidadeContabilGerarContaAuxiliar gca = (SuperEntidadeContabilGerarContaAuxiliar) entidade;
-            GeradorContaAuxiliarDTO geradorContaAuxiliarDTO = gca.gerarContaAuxiliarDTO(parametroEvento.getComplementoId());
-
-            return gerarMapContaAuxiliar(tipoContaAuxiliar, contaContabil,
-                gerarContaAuxiliar(geradorContaAuxiliarDTO, tipoContaAuxiliar, contaContabil),
-                exercicio);
+            IGeraContaAuxiliar gca = (IGeraContaAuxiliar) entidade;
+            if (entidade instanceof TransferenciaContaFinanceira ||
+                entidade instanceof EstornoTransferencia ||
+                entidade instanceof LiberacaoCotaFinanceira ||
+                entidade instanceof EstornoLibCotaFinanceira ||
+                entidade instanceof TransferenciaMesmaUnidade ||
+                entidade instanceof EstornoTransfMesmaUnidade ||
+                entidade instanceof TransfBensMoveis ||
+                entidade instanceof TransfBensImoveis ||
+                entidade instanceof TransferenciaBensEstoque ||
+                entidade instanceof TransfBensIntangiveis) {
+                return gerarMapContaAuxiliar(tipoContaAuxiliar, contaContabil,
+                    (ParametroEvento.ComplementoId.RECEBIDO.equals(parametroEvento.getComplementoId()) ?
+                        gca.getMapContaAuxiliarSiconfiRecebido(tipoContaAuxiliar, contaContabil) :
+                        gca.getMapContaAuxiliarSiconfiConcedido(tipoContaAuxiliar, contaContabil)),
+                    exercicio);
+            } else {
+                return gerarMapContaAuxiliar(tipoContaAuxiliar, contaContabil,
+                    gca.getMapContaAuxiliarSiconfi(tipoContaAuxiliar, contaContabil),
+                    exercicio);
+            }
         } catch (Exception e) {
             logger.error("Erro: ", e);
             logger.error("entidade:  " + entidade.getClass().toString() + " - tipoContaAuxiliar:  " + tipoContaAuxiliar);
             throw new ExcecaoNegocioGenerica(e.getMessage());
-        }
-    }
-
-    public TreeMap gerarContaAuxiliar(GeradorContaAuxiliarDTO geradorContaAuxiliar, TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-
-
-        UnidadeOrganizacional unidadeOrganizacional = geradorContaAuxiliar.getUnidadeOrganizacional();
-        Conta contaDeDestinacao = geradorContaAuxiliar.getContaDeDestinacao();
-        Conta conta = geradorContaAuxiliar.getConta();
-        Exercicio exercicioAtual = geradorContaAuxiliar.getExercicioAtual();
-
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(unidadeOrganizacional);
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(unidadeOrganizacional, contaContabil.getSubSistema());
-            case "93":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar3(unidadeOrganizacional, contaContabil.getSubSistema(), geradorContaAuxiliar.getDividaConsolidada());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(unidadeOrganizacional,
-                    contaContabil.getSubSistema(),
-                    contaDeDestinacao);
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(unidadeOrganizacional,
-                    contaDeDestinacao);
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar6(unidadeOrganizacional, contaDeDestinacao, geradorContaAuxiliar.getNaturezaReceita());
-            case "97":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar7(unidadeOrganizacional,
-                    geradorContaAuxiliar.getClassificacaoFuncional(),
-                    contaDeDestinacao,
-                    geradorContaAuxiliar.getNaturezaDespesa(),
-                    geradorContaAuxiliar.getEs());
-            case "98":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar8(unidadeOrganizacional,
-                    geradorContaAuxiliar.getFinanceiroPermanente(),
-                    geradorContaAuxiliar.getDividaConsolidada(),
-                    contaDeDestinacao);
-            case "99":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar9(unidadeOrganizacional,
-                    geradorContaAuxiliar.getClassificacaoFuncional(),
-                    contaDeDestinacao,
-                    conta,
-                    geradorContaAuxiliar.getEs(),
-                    geradorContaAuxiliar.getAnoInscricaoResto(),
-                    exercicioAtual);
-            default:
-                return null;
         }
     }
 
@@ -388,7 +352,7 @@ public class TipoContaAuxiliarFacade extends AbstractFacade<TipoContaAuxiliar> {
             for (ObjetoParametro objetoParametro : objetoParametros) {
                 if (ParametroEvento.isTipoObjetoParametro(tipoObjetoParametro, objetoParametro)) {
                     entidade = localizarEntidade(objetoParametro.getIdObjeto(), objetoParametro.getClasseObjeto());
-                    if (entidade instanceof IGeraContaAuxiliar || entidade instanceof SuperEntidadeContabilGerarContaAuxiliar) {
+                    if (entidade instanceof IGeraContaAuxiliar) {
                         objPar = objetoParametro;
                         break;
                     }
@@ -397,70 +361,33 @@ public class TipoContaAuxiliarFacade extends AbstractFacade<TipoContaAuxiliar> {
             if (objPar == null) {
                 throw new ExcecaoNegocioGenerica(" O tipo de Conta Auxiliar Detalhada " + tipoContaAuxiliar.getCodigo() + " - " + tipoContaAuxiliar.getDescricao() + " contem uma chave(\"" + tipoContaAuxiliar.getChave() + "\") que o sistema não reconhece.");
             }
-            Exercicio exercicio = objPar.getItemParametroEvento().getParametroEvento().getExercicio();
-            SuperEntidadeContabilGerarContaAuxiliar gca = (SuperEntidadeContabilGerarContaAuxiliar) entidade;
-            GeradorContaAuxiliarDTO geradorContaAuxiliarDTO = gca.gerarContaAuxiliarDTO(parametroEvento.getComplementoId());
 
-            return gerarMapContaAuxiliarDetalhada(tipoContaAuxiliar, contaContabil,
-                gerarContaAuxiliarDetalhada(tipoContaAuxiliar, geradorContaAuxiliarDTO, contaContabil),
-                exercicio);
+            Exercicio exercicio = objPar.getItemParametroEvento().getParametroEvento().getExercicio();
+            IGeraContaAuxiliar gca = (IGeraContaAuxiliar) entidade;
+            if (entidade instanceof TransferenciaContaFinanceira ||
+                entidade instanceof EstornoTransferencia ||
+                entidade instanceof LiberacaoCotaFinanceira ||
+                entidade instanceof EstornoLibCotaFinanceira ||
+                entidade instanceof TransferenciaMesmaUnidade ||
+                entidade instanceof EstornoTransfMesmaUnidade ||
+                entidade instanceof TransfBensMoveis ||
+                entidade instanceof TransfBensImoveis ||
+                entidade instanceof TransferenciaBensEstoque ||
+                entidade instanceof TransfBensIntangiveis) {
+                return gerarMapContaAuxiliarDetalhada(tipoContaAuxiliar, contaContabil,
+                    (ParametroEvento.ComplementoId.RECEBIDO.equals(parametroEvento.getComplementoId()) ?
+                        gca.getMapContaAuxiliarDetalhadaSiconfiRecebido(tipoContaAuxiliar, contaContabil) :
+                        gca.getMapContaAuxiliarDetalhadaSiconfiConcedido(tipoContaAuxiliar, contaContabil)),
+                    exercicio);
+            } else {
+                return gerarMapContaAuxiliarDetalhada(tipoContaAuxiliar, contaContabil,
+                    gca.getMapContaAuxiliarDetalhadaSiconfi(tipoContaAuxiliar, contaContabil),
+                    exercicio);
+            }
         } catch (Exception e) {
             logger.error("detalhada-> entidade:  " + entidade.getClass().toString() + " - tipoContaAuxiliar:  " + tipoContaAuxiliar);
             logger.error("Erro: ", e);
             throw new ExcecaoNegocioGenerica(e.getMessage());
-        }
-    }
-
-    public TreeMap gerarContaAuxiliarDetalhada(TipoContaAuxiliar tipoContaAuxiliar, GeradorContaAuxiliarDTO geradorContaAuxiliar, ContaContabil contaContabil) {
-        UnidadeOrganizacional unidadeOrganizacional = geradorContaAuxiliar.getUnidadeOrganizacional();
-        Conta contaDeDestinacao = geradorContaAuxiliar.getContaDeDestinacao();
-        Conta conta = geradorContaAuxiliar.getConta();
-        Exercicio exercicioAtual = geradorContaAuxiliar.getExercicioAtual();
-        Conta contaInscricao = geradorContaAuxiliar.getContaInscricao();
-        Exercicio exercicioOrigem = geradorContaAuxiliar.getExercicioOriginal();
-
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(unidadeOrganizacional);
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(unidadeOrganizacional, contaContabil.getSubSistema());
-            case "93":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada3(unidadeOrganizacional, contaContabil.getSubSistema(), geradorContaAuxiliar.getDividaConsolidada());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(unidadeOrganizacional,
-                    contaContabil.getSubSistema(),
-                    contaDeDestinacao,
-                    exercicioAtual);
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(unidadeOrganizacional,
-                    contaDeDestinacao, exercicioAtual);
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada6(unidadeOrganizacional,
-                    contaDeDestinacao,
-                    conta,
-                    exercicioAtual);
-            case "97":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada7(unidadeOrganizacional,
-                    geradorContaAuxiliar.getClassificacaoFuncional(),
-                    contaDeDestinacao,
-                    conta,
-                    geradorContaAuxiliar.getEs());
-            case "98":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada8(unidadeOrganizacional,
-                    geradorContaAuxiliar.getFinanceiroPermanente(),
-                    geradorContaAuxiliar.getDividaConsolidada(),
-                    contaDeDestinacao);
-            case "99":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada9(unidadeOrganizacional,
-                    geradorContaAuxiliar.getClassificacaoFuncional(),
-                    contaDeDestinacao,
-                    contaInscricao,
-                    geradorContaAuxiliar.getEs(),
-                    geradorContaAuxiliar.getAnoInscricaoResto(),
-                    exercicioAtual,
-                    exercicioOrigem);
-            default:
-                return null;
         }
     }
 

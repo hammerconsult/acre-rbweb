@@ -1490,35 +1490,6 @@ public class ContaFacade extends AbstractFacade<Conta> {
         return new ArrayList<>();
     }
 
-    public ExercicioFacade getExercicioFacade() {
-        return exercicioFacade;
-    }
-
-    public List<Conta> buscarContasDespesaAteNivel(List<Long> idContas, Integer nivel) {
-        try {
-            String sql = " SELECT C.*, CD.TIPOCONTADESPESA, CD.CODIGOREDUZIDO, CD.MIGRACAO "
-                + " FROM CONTA C " +
-                "   inner join conta superior on c.superior_id = superior.id"
-                + " INNER JOIN CONTADESPESA CD ON CD.ID = C.ID "
-                + " INNER JOIN PLANODECONTAS PLANO ON C.PLANODECONTAS_ID = PLANO.ID "
-                + " INNER JOIN PLANODECONTASEXERCICIO PE ON PLANO.ID = PE.PLANODEDESPESAS_ID "
-                + " WHERE nivelestrutura(C.CODIGO, '.') = :nivel "
-                + " AND C.DTYPE = 'ContaDespesa' "
-                + " AND superior.SUPERIOR_ID in :superior "
-                + " order by c.codigo ";
-            Query consulta = em.createNativeQuery(sql, ContaDespesa.class);
-            consulta.setParameter("superior", idContas);
-            consulta.setParameter("nivel", nivel);
-            List resultList = consulta.getResultList();
-            if (!resultList.isEmpty()) {
-                return resultList;
-            }
-            return Lists.newArrayList();
-        } catch (Exception e) {
-            return Lists.newArrayList();
-        }
-    }
-
     public List<ContaDeDestinacao> buscarContasDeDestinacaoPorCodigoOrDescricaoESubConta(String filtro, Exercicio exercicio, Long idSubConta) {
         String sql = " SELECT c.*, cd.fonteDeRecursos_id,cd.dataCriacao, cd.codigoCO "
             + "  FROM  contaDeDestinacao cd "
@@ -1636,6 +1607,35 @@ public class ContaFacade extends AbstractFacade<Conta> {
         return q.getResultList();
     }
 
+    public ExercicioFacade getExercicioFacade() {
+        return exercicioFacade;
+    }
+
+    public List<Conta> buscarContasDespesaAteNivel(List<Long> idContas, Integer nivel) {
+        try {
+            String sql = " SELECT C.*, CD.TIPOCONTADESPESA, CD.CODIGOREDUZIDO, CD.MIGRACAO "
+                + " FROM CONTA C " +
+                "   inner join conta superior on c.superior_id = superior.id"
+                + " INNER JOIN CONTADESPESA CD ON CD.ID = C.ID "
+                + " INNER JOIN PLANODECONTAS PLANO ON C.PLANODECONTAS_ID = PLANO.ID "
+                + " INNER JOIN PLANODECONTASEXERCICIO PE ON PLANO.ID = PE.PLANODEDESPESAS_ID "
+                + " WHERE nivelestrutura(C.CODIGO, '.') = :nivel "
+                + " AND C.DTYPE = 'ContaDespesa' "
+                + " AND superior.SUPERIOR_ID in :superior "
+                + " order by c.codigo ";
+            Query consulta = em.createNativeQuery(sql, ContaDespesa.class);
+            consulta.setParameter("superior", idContas);
+            consulta.setParameter("nivel", nivel);
+            List resultList = consulta.getResultList();
+            if (!resultList.isEmpty()) {
+                return resultList;
+            }
+            return Lists.newArrayList();
+        } catch (Exception e) {
+            return Lists.newArrayList();
+        }
+    }
+
     public List<ContaDeDestinacao> buscarContasDeDestinacaoPorReceitaLOA(ReceitaLOA receitaLOA) {
         String sql = "SELECT c.*, cd.fonteDeRecursos_id, cd.dataCriacao, cd.codigoCO FROM receitaloa re "
             + " INNER JOIN receitaloafonte fonte ON re.id = fonte.receitaloa_id "
@@ -1651,7 +1651,7 @@ public class ContaFacade extends AbstractFacade<Conta> {
         return q.getResultList();
     }
 
-    public List<Conta> buscarContasDeDespesaPorAcaoSubacaoAndUnidade(String parte, SubAcaoPPA subAcaoPPA, AcaoPPA acaoPPA, UnidadeOrganizacional unidadeOrganizacional, Exercicio exercicio) {
+    public List<Conta> buscarContasDeDespesaPorAcaoSubacaoAndUnidade(String parte, SubAcaoPPA subAcaoPPA, AcaoPPA acaoPPA, UnidadeOrganizacional unidadeOrganizacional, Exercicio exercicio, String filtroContasPai) {
         String sql = " select c.*, cd.* " +
             "  from conta c " +
             " inner join contadespesa cd on c.id = cd.id " +
@@ -1662,6 +1662,7 @@ public class ContaFacade extends AbstractFacade<Conta> {
             " and sb.id = :subacao and ac.id = :acaoId " +
             " and pd.unidadeOrganizacional_id = :unidade " +
             " and c.exercicio_id = :exercicio " +
+            filtroContasPai +
             " order by c.codigo ";
         Query q = em.createNativeQuery(sql, ContaDespesa.class);
         q.setParameter("filtro", "%" + parte.trim().toLowerCase() + "%");
@@ -1670,6 +1671,89 @@ public class ContaFacade extends AbstractFacade<Conta> {
         q.setParameter("unidade", unidadeOrganizacional.getId());
         q.setParameter("exercicio", exercicio.getId());
         return q.getResultList();
+    }
+
+    public List<Conta> buscarContasDeDespesaFilhasDe(String filtro, String filtroContasPai, Exercicio exercicio) {
+        String sql = " SELECT c.*, cd.* FROM conta c " +
+            " INNER JOIN planodecontas pl ON C.planodecontas_id=pl.id " +
+            " INNER JOIN planodecontasexercicio ple ON pl.id=ple.planodedespesas_id  " +
+            " INNER JOIN contadespesa cd ON cd.id = C.id " +
+            " WHERE ((replace(C.codigo,'.','') LIKE :parteCod) OR (lower(C.descricao) LIKE :parteDesc))" +
+            " and nivelestrutura(C.CODIGO, '.') = :nivel " +
+            filtroContasPai +
+            " AND ple.exercicio_id = :exerc " +
+            " ORDER BY c.codigo ";
+        Query q = em.createNativeQuery(sql, ContaDespesa.class);
+        q.setParameter("exerc", exercicio.getId());
+        q.setParameter("nivel", 4);
+        q.setParameter("parteCod", "%" + filtro.toLowerCase().replace(".", "") + "%");
+        q.setParameter("parteDesc", "%" + filtro.toLowerCase() + "%");
+        return q.getResultList();
+    }
+
+    public List<Conta> buscarContasDeDestinacaoPorContaAcaoSubacaoAndUnidade(String parte, Conta contaDespesa, SubAcaoPPA subAcaoPPA, AcaoPPA acaoPPA, UnidadeOrganizacional unidadeOrganizacional, Exercicio exercicio) {
+        String sql = " select c.*, cd.datacriacao, cd.fontederecursos_id, cd.codigoCO " +
+            "  from conta c " +
+            " inner join contadedestinacao cd on c.id = cd.id " +
+            " inner join provisaoppafonte pf on c.id = pf.destinacaoDeRecursos_id  " +
+            " inner join provisaoppadespesa pd on pd.id = pf.PROVISAOPPADESPESA_ID " +
+            " inner join subacaoppa sb on pd.subacaoppa_id = sb.id " +
+            " inner join acaoppa ac on ac.id = sb.acaoppa_id  " +
+            " where (replace(C.codigo,'.','') LIKE :filtro OR lower(C.descricao) LIKE :filtro)" +
+            " and sb.id = :subacao and ac.id = :acaoId " +
+            " and pd.contadedespesa_id = :contaDespesa " +
+            " and pd.unidadeOrganizacional_id = :unidade " +
+            " and c.exercicio_id = :exercicio " +
+            " order by c.codigo ";
+        Query q = em.createNativeQuery(sql, ContaDeDestinacao.class);
+        q.setParameter("filtro", "%" + parte.replace(".", "").trim().toLowerCase() + "%");
+        q.setParameter("contaDespesa", contaDespesa.getId());
+        q.setParameter("subacao", subAcaoPPA.getId());
+        q.setParameter("acaoId", acaoPPA.getId());
+        q.setParameter("unidade", unidadeOrganizacional.getId());
+        q.setParameter("exercicio", exercicio.getId());
+        return q.getResultList();
+    }
+
+
+    public List<Conta> buscarContasDespesaPorNivelNivel(String filtro, Integer nivel, Exercicio exercicio) {
+        String sql = " SELECT C.*, CD.TIPOCONTADESPESA, CD.CODIGOREDUZIDO, CD.MIGRACAO "
+            + "  FROM CONTA C "
+            + " INNER JOIN CONTADESPESA CD ON CD.ID = C.ID "
+            + " INNER JOIN PLANODECONTAS PLANO ON C.PLANODECONTAS_ID = PLANO.ID "
+            + " INNER JOIN PLANODECONTASEXERCICIO PE ON PLANO.ID = PE.PLANODEDESPESAS_ID "
+            + " WHERE nivelestrutura(C.CODIGO, '.') = :nivel "
+            + "   AND PE.exercicio_id = :exercicio "
+            + "   AND C.DTYPE = 'ContaDespesa' "
+            + "   AND ((replace(C.codigo, '.', '') LIKE :filtro) OR (lower(C.descricao) LIKE :filtro)) "
+            + " order by c.codigo ";
+        Query consulta = em.createNativeQuery(sql, ContaDespesa.class);
+        consulta.setParameter("exercicio", exercicio.getId());
+        consulta.setParameter("filtro", "%" + filtro.toLowerCase().replace(".", "") + "%");
+        consulta.setParameter("nivel", nivel);
+        List resultList = consulta.getResultList();
+        if (!resultList.isEmpty()) {
+            return resultList;
+        }
+        return Lists.newArrayList();
+    }
+
+    public List<Conta> buscarPorPlanoDeContas(PlanoDeContas pdc, String parte) {
+        String sql = "select cc " +
+            " from Conta cc " +
+            " where cc.planoDeContas = :pdc " +
+            " and (replace(cc.codigo,'.','') LIKE :codigo " +
+            " or lower(cc.descricao) like :parte)";
+        Query q = em.createQuery(sql);
+        q.setParameter("pdc", pdc);
+        q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
+        q.setParameter("codigo", "" + parte.trim().replace(".", "") + "%");
+        q.setMaxResults(10);
+        List resultList = q.getResultList();
+        if (resultList.isEmpty()) {
+            return Lists.newArrayList();
+        }
+        return resultList;
     }
 
     public List<Conta> buscarContaDespesaFilhasDespesaOrcPorTipoAndExercicio(String parte, Conta conta, Exercicio exercicio, TipoContaDespesa tipoContaDespesa, Integer maxResult) {
@@ -1761,108 +1845,4 @@ public class ContaFacade extends AbstractFacade<Conta> {
         return resultList;
     }
 
-    public List<Conta> buscarPorPlanoDeContas(PlanoDeContas pdc, String parte) {
-        String sql = "select cc " +
-            " from Conta cc " +
-            " where cc.planoDeContas = :pdc " +
-            " and (replace(cc.codigo,'.','') LIKE :codigo " +
-            " or lower(cc.descricao) like :parte)";
-        Query q = em.createQuery(sql);
-        q.setParameter("pdc", pdc);
-        q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
-        q.setParameter("codigo", "" + parte.trim().replace(".", "") + "%");
-        q.setMaxResults(10);
-        List resultList = q.getResultList();
-        if (resultList.isEmpty()) {
-            return Lists.newArrayList();
-        }
-        return resultList;
-    }
-
-    public List<Conta> buscarContasDeDespesaPorAcaoSubacaoAndUnidade(String parte, SubAcaoPPA subAcaoPPA, AcaoPPA acaoPPA, UnidadeOrganizacional unidadeOrganizacional, Exercicio exercicio, String filtroContasPai) {
-        String sql = " select c.*, cd.* " +
-            "  from conta c " +
-            " inner join contadespesa cd on c.id = cd.id " +
-            " inner join provisaoppadespesa pd on c.id = pd.contadedespesa_id " +
-            " inner join subacaoppa sb on pd.subacaoppa_id = sb.id " +
-            " inner join acaoppa ac on ac.id = sb.acaoppa_id  " +
-            " where (replace(C.codigo,'.','') LIKE :filtro OR lower(C.descricao) LIKE :filtro)" +
-            " and sb.id = :subacao and ac.id = :acaoId " +
-            " and pd.unidadeOrganizacional_id = :unidade " +
-            " and c.exercicio_id = :exercicio " +
-            filtroContasPai +
-            " order by c.codigo ";
-        Query q = em.createNativeQuery(sql, ContaDespesa.class);
-        q.setParameter("filtro", "%" + parte.trim().toLowerCase() + "%");
-        q.setParameter("subacao", subAcaoPPA.getId());
-        q.setParameter("acaoId", acaoPPA.getId());
-        q.setParameter("unidade", unidadeOrganizacional.getId());
-        q.setParameter("exercicio", exercicio.getId());
-        return q.getResultList();
-    }
-
-    public List<Conta> buscarContasDeDespesaFilhasDe(String filtro, String filtroContasPai, Exercicio exercicio) {
-        String sql = " SELECT c.*, cd.* FROM conta c " +
-            " INNER JOIN planodecontas pl ON C.planodecontas_id=pl.id " +
-            " INNER JOIN planodecontasexercicio ple ON pl.id=ple.planodedespesas_id  " +
-            " INNER JOIN contadespesa cd ON cd.id = C.id " +
-            " WHERE ((replace(C.codigo,'.','') LIKE :parteCod) OR (lower(C.descricao) LIKE :parteDesc))" +
-            " and nivelestrutura(C.CODIGO, '.') = :nivel " +
-            filtroContasPai +
-            " AND ple.exercicio_id = :exerc " +
-            " ORDER BY c.codigo ";
-        Query q = em.createNativeQuery(sql, ContaDespesa.class);
-        q.setParameter("exerc", exercicio.getId());
-        q.setParameter("nivel", 4);
-        q.setParameter("parteCod", "%" + filtro.toLowerCase().replace(".", "") + "%");
-        q.setParameter("parteDesc", "%" + filtro.toLowerCase() + "%");
-        return q.getResultList();
-    }
-
-    public List<Conta> buscarContasDeDestinacaoPorContaAcaoSubacaoAndUnidade(String parte, Conta contaDespesa, SubAcaoPPA subAcaoPPA, AcaoPPA acaoPPA, UnidadeOrganizacional unidadeOrganizacional, Exercicio exercicio) {
-        String sql = " select c.*, cd.datacriacao, cd.fontederecursos_id, cd.codigoCO " +
-            "  from conta c " +
-            " inner join contadedestinacao cd on c.id = cd.id " +
-            " inner join provisaoppafonte pf on c.id = pf.destinacaoDeRecursos_id  " +
-            " inner join provisaoppadespesa pd on pd.id = pf.PROVISAOPPADESPESA_ID " +
-            " inner join subacaoppa sb on pd.subacaoppa_id = sb.id " +
-            " inner join acaoppa ac on ac.id = sb.acaoppa_id  " +
-            " where (replace(C.codigo,'.','') LIKE :filtro OR lower(C.descricao) LIKE :filtro)" +
-            " and sb.id = :subacao and ac.id = :acaoId " +
-            " and pd.contadedespesa_id = :contaDespesa " +
-            " and pd.unidadeOrganizacional_id = :unidade " +
-            " and c.exercicio_id = :exercicio " +
-            " order by c.codigo ";
-        Query q = em.createNativeQuery(sql, ContaDeDestinacao.class);
-        q.setParameter("filtro", "%" + parte.replace(".", "").trim().toLowerCase() + "%");
-        q.setParameter("contaDespesa", contaDespesa.getId());
-        q.setParameter("subacao", subAcaoPPA.getId());
-        q.setParameter("acaoId", acaoPPA.getId());
-        q.setParameter("unidade", unidadeOrganizacional.getId());
-        q.setParameter("exercicio", exercicio.getId());
-        return q.getResultList();
-    }
-
-
-    public List<Conta> buscarContasDespesaPorNivelNivel(String filtro, Integer nivel, Exercicio exercicio) {
-        String sql = " SELECT C.*, CD.TIPOCONTADESPESA, CD.CODIGOREDUZIDO, CD.MIGRACAO "
-            + "  FROM CONTA C "
-            + " INNER JOIN CONTADESPESA CD ON CD.ID = C.ID "
-            + " INNER JOIN PLANODECONTAS PLANO ON C.PLANODECONTAS_ID = PLANO.ID "
-            + " INNER JOIN PLANODECONTASEXERCICIO PE ON PLANO.ID = PE.PLANODEDESPESAS_ID "
-            + " WHERE nivelestrutura(C.CODIGO, '.') = :nivel "
-            + "   AND PE.exercicio_id = :exercicio "
-            + "   AND C.DTYPE = 'ContaDespesa' "
-            + "   AND ((replace(C.codigo, '.', '') LIKE :filtro) OR (lower(C.descricao) LIKE :filtro)) "
-            + " order by c.codigo ";
-        Query consulta = em.createNativeQuery(sql, ContaDespesa.class);
-        consulta.setParameter("exercicio", exercicio.getId());
-        consulta.setParameter("filtro", "%" + filtro.toLowerCase().replace(".", "") + "%");
-        consulta.setParameter("nivel", nivel);
-        List resultList = consulta.getResultList();
-        if (!resultList.isEmpty()) {
-            return resultList;
-        }
-        return Lists.newArrayList();
-    }
 }

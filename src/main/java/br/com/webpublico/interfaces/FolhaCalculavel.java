@@ -36,11 +36,11 @@ public interface FolhaCalculavel {
 
     List<FiltroFolhaDePagamento> getFiltros();
 
+    boolean isImprimeLogEmArquivo();
+
     boolean isGravarMemoriaCalculo();
 
     void setGravarMemoriaCalculo(boolean gravarMemoriaCalculo);
-
-    boolean isImprimeLogEmArquivo();
 
     boolean isProcessarCalculoTransient();
 

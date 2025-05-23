@@ -33,7 +33,6 @@ import java.util.List;
  */
 public class ConfiguracaoContabil extends ConfiguracaoModulo implements Serializable {
 
-    private static Integer TAMANHO_LOTE_REPROCESSAMENTO_CONTABIL = 100;
     /**
      * Atributo utilizado para definir o formato do código das Unidades Organiacionais
      * <p/>
@@ -108,10 +107,6 @@ public class ConfiguracaoContabil extends ConfiguracaoModulo implements Serializ
 
     private Boolean gerarContaAuxiliarSiconfi;
 
-    @Etiqueta("Tamanho do lote do reprocessamento contábil")
-    @Obrigatorio
-    private Integer tamanhoLoteReprocessamentoContabil;
-
     @Obrigatorio
     @Etiqueta("Código do Cabeçalho do arquivo da MSC")
     private String codigoCabecalhoArquivoMSC;
@@ -153,34 +148,6 @@ public class ConfiguracaoContabil extends ConfiguracaoModulo implements Serializ
     private Boolean bloquearSaldoNegativoBemEstoque;
     @Etiqueta("Porcentagem mínima calculo base documento comprobatorio liquidação.")
     private BigDecimal porcentagemMinimaCalculoBase;
-    @Etiqueta("Contabilizar utilizando micro-service?")
-    private Boolean contabilizarMicroService;
-    @Column(name = "SALDOCREDITORECEBERMICROSERVIC")
-    @Etiqueta("Gerar saldo crédito a receber utilizando micro-service?")
-    private Boolean saldoCreditoReceberMicroService;
-    @Column(name = "SALDODIVIDAATIVACONTABILMICROS")
-    @Etiqueta("Gerar saldo dívida ativa utilizando micro-service?")
-    private Boolean saldoDividaAtivaContabilMicroService;
-    @Etiqueta("Gerar saldo dívida pública utilizando micro-service?")
-    private Boolean saldoDividaPublicaMicroService;
-    @Column(name = "SALDOEXTRAORCMICROSERVICE")
-    @Etiqueta("Gerar saldo extraorçamentário utilizando micro-service?")
-    private Boolean saldoExtraorcamentarioMicroService;
-    @Column(name = "SALDOFONTEDESPESAORCMICROS")
-    @Etiqueta("Gerar saldo fonte despesa orçamentária utilizando micro-service?")
-    private Boolean saldoFonteDespesaOrcMicroService;
-    @Column(name = "SALDOGRUPOBEMIMOVEISMICROS")
-    @Etiqueta("Gerar saldo bens imóveis utilizando micro-service?")
-    private Boolean saldoGrupoBemImoveisMicroService;
-    @Column(name = "SALDOGRUPOBEMINTANGIVEISMICROS")
-    @Etiqueta("Gerar saldo bens intangíveis utilizando micro-service?")
-    private Boolean saldoGrupoBemIntangiveisMicroService;
-    @Etiqueta("Gerar saldo bens móveis utilizando micro-service?")
-    private Boolean saldoGrupoBemMicroService;
-    @Etiqueta("Gerar saldo grupo material utilizando micro-service?")
-    private Boolean saldoGrupoMaterialMicroService;
-    @Etiqueta("Gerar saldo conta financeira utilizando micro-service?")
-    private Boolean saldoSubContaMicroService;
     @ManyToOne
     private Conta contaExtraInssPadraoDocLiq;
     @ManyToOne
@@ -557,17 +524,6 @@ public class ConfiguracaoContabil extends ConfiguracaoModulo implements Serializ
         this.bloquearSaldoNegativoBemEstoque = bloquearSaldoNegativoBemEstoque;
     }
 
-    public Integer getTamanhoLoteReprocessamentoContabil() {
-        if (tamanhoLoteReprocessamentoContabil == null) {
-            tamanhoLoteReprocessamentoContabil = TAMANHO_LOTE_REPROCESSAMENTO_CONTABIL;
-        }
-        return tamanhoLoteReprocessamentoContabil;
-    }
-
-    public void setTamanhoLoteReprocessamentoContabil(Integer tamanhoLoteReprocessamentoContabil) {
-        this.tamanhoLoteReprocessamentoContabil = tamanhoLoteReprocessamentoContabil;
-    }
-
     public BigDecimal getPorcentagemMinimaCalculoBase() {
         return porcentagemMinimaCalculoBase;
     }
@@ -582,94 +538,6 @@ public class ConfiguracaoContabil extends ConfiguracaoModulo implements Serializ
 
     public void setFontesTesouro(List<ConfiguracaoContabilFonte> fontesTesouro) {
         this.fontesTesouro = fontesTesouro;
-    }
-
-    public Boolean getContabilizarMicroService() {
-        return contabilizarMicroService == null ? Boolean.FALSE : contabilizarMicroService;
-    }
-
-    public void setContabilizarMicroService(Boolean contabilizarMicroService) {
-        this.contabilizarMicroService = contabilizarMicroService;
-    }
-
-    public Boolean getSaldoCreditoReceberMicroService() {
-        return saldoCreditoReceberMicroService == null ? Boolean.FALSE : saldoCreditoReceberMicroService;
-    }
-
-    public void setSaldoCreditoReceberMicroService(Boolean saldoCreditoReceberMicroService) {
-        this.saldoCreditoReceberMicroService = saldoCreditoReceberMicroService;
-    }
-
-    public Boolean getSaldoDividaAtivaContabilMicroService() {
-        return saldoDividaAtivaContabilMicroService == null ? Boolean.FALSE : saldoDividaAtivaContabilMicroService;
-    }
-
-    public void setSaldoDividaAtivaContabilMicroService(Boolean saldoDividaAtivaContabilMicroService) {
-        this.saldoDividaAtivaContabilMicroService = saldoDividaAtivaContabilMicroService;
-    }
-
-    public Boolean getSaldoDividaPublicaMicroService() {
-        return saldoDividaPublicaMicroService == null ? Boolean.FALSE : saldoDividaPublicaMicroService;
-    }
-
-    public void setSaldoDividaPublicaMicroService(Boolean saldoDividaPublicaMicroService) {
-        this.saldoDividaPublicaMicroService = saldoDividaPublicaMicroService;
-    }
-
-    public Boolean getSaldoExtraorcamentarioMicroService() {
-        return saldoExtraorcamentarioMicroService == null ? Boolean.FALSE : saldoExtraorcamentarioMicroService;
-    }
-
-    public void setSaldoExtraorcamentarioMicroService(Boolean saldoExtraorcamentarioMicroService) {
-        this.saldoExtraorcamentarioMicroService = saldoExtraorcamentarioMicroService;
-    }
-
-    public Boolean getSaldoFonteDespesaOrcMicroService() {
-        return saldoFonteDespesaOrcMicroService == null ? Boolean.FALSE : saldoFonteDespesaOrcMicroService;
-    }
-
-    public void setSaldoFonteDespesaOrcMicroService(Boolean saldoFonteDespesaOrcMicroService) {
-        this.saldoFonteDespesaOrcMicroService = saldoFonteDespesaOrcMicroService;
-    }
-
-    public Boolean getSaldoGrupoBemImoveisMicroService() {
-        return saldoGrupoBemImoveisMicroService == null ? Boolean.FALSE : saldoGrupoBemImoveisMicroService;
-    }
-
-    public void setSaldoGrupoBemImoveisMicroService(Boolean saldoGrupoBemImoveisMicroService) {
-        this.saldoGrupoBemImoveisMicroService = saldoGrupoBemImoveisMicroService;
-    }
-
-    public Boolean getSaldoGrupoBemIntangiveisMicroService() {
-        return saldoGrupoBemIntangiveisMicroService == null ? Boolean.FALSE : saldoGrupoBemIntangiveisMicroService;
-    }
-
-    public void setSaldoGrupoBemIntangiveisMicroService(Boolean saldoGrupoBemIntangiveisMicroService) {
-        this.saldoGrupoBemIntangiveisMicroService = saldoGrupoBemIntangiveisMicroService;
-    }
-
-    public Boolean getSaldoGrupoBemMicroService() {
-        return saldoGrupoBemMicroService == null ? Boolean.FALSE : saldoGrupoBemMicroService;
-    }
-
-    public void setSaldoGrupoBemMicroService(Boolean saldoGrupoBemMicroService) {
-        this.saldoGrupoBemMicroService = saldoGrupoBemMicroService;
-    }
-
-    public Boolean getSaldoGrupoMaterialMicroService() {
-        return saldoGrupoMaterialMicroService == null ? Boolean.FALSE : saldoGrupoMaterialMicroService;
-    }
-
-    public void setSaldoGrupoMaterialMicroService(Boolean saldoGrupoMaterialMicroService) {
-        this.saldoGrupoMaterialMicroService = saldoGrupoMaterialMicroService;
-    }
-
-    public Boolean getSaldoSubContaMicroService() {
-        return saldoSubContaMicroService == null ? Boolean.FALSE : saldoSubContaMicroService;
-    }
-
-    public void setSaldoSubContaMicroService(Boolean saldoSubContaMicroService) {
-        this.saldoSubContaMicroService = saldoSubContaMicroService;
     }
 
     public Conta getContaExtraInssPadraoDocLiq() {

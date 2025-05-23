@@ -101,9 +101,9 @@ public class S2200Service {
         }
         boolean s3000MaiorData = true;
         List<RegistroESocial> s3000 = registroESocialFacade.buscarRegistroEsocialPorTipoAndIdentificador(TipoArquivoESocial.S3000, contratoFP.getId().toString(), 1);
-        if (s3000 != null && SituacaoESocial.PROCESSADO_COM_SUCESSO.equals(s3000.get(0).getSituacao())) {
+        if (s3000 != null) {
             for (RegistroESocial s2200 : registroESocials2200) {
-                if ((s3000.get(0).getDataIntegracao().compareTo(s2200.getDataIntegracao()) <= 0) && SituacaoESocial.PROCESSADO_COM_SUCESSO.equals(s2200.getSituacao())) {
+                if ((s3000.get(0).getDataIntegracao().compareTo(s2200.getDataIntegracao()) <= 0)) {
                     s3000MaiorData = false;
                     break;
                 }
@@ -466,16 +466,6 @@ public class S2200Service {
         eventoS2200.setTpInscLocalTrabGeral(1); //cnpj 165
         eventoS2200.setNrInscLocalTrabGeral((StringUtil.retornaApenasNumeros(config.getEntidade().getPessoaJuridica().getCnpj().trim()))); //cnpj 165
     }
-
-    private RegistroESocial recuperarEventoS1000(ConfiguracaoEmpregadorESocial config) {
-        List<RegistroESocial> s1000 =
-            buscarRegistrosPorEmpregadorAndSituacao(config.getId(), TipoArquivoESocial.S1000, SituacaoESocial.PROCESSADO_COM_SUCESSO);
-        if (s1000 != null) {
-            return s1000.get(0);
-        }
-        return null;
-    }
-
 
     private void adicionarInformacoesIdentificacaoEstabalecimentoTemporario(EventosESocialDTO.S2200 eventoS2200, ContratoFP
         contratoFP) {

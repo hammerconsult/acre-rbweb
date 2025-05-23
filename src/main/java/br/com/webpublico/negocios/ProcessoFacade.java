@@ -10,18 +10,14 @@ import br.com.webpublico.negocios.tributario.LeitorWsConfig;
 import br.com.webpublico.negocios.tributario.singletons.SingletonProcesso;
 import br.com.webpublico.negocios.tributario.singletons.SingletonProtocolo;
 import br.com.webpublico.seguranca.NotificacaoService;
-import br.com.webpublico.util.AssistenteBarraProgresso;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import org.jboss.ejb3.annotation.TransactionTimeout;
 import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ejb.AsyncResult;
-import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -30,8 +26,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 @Stateless
 public class ProcessoFacade extends AbstractFacade<Processo> {
@@ -185,7 +179,7 @@ public class ProcessoFacade extends AbstractFacade<Processo> {
     public List<Processo> getListaProtocoloFiltrando(String parametro) {
         List<Processo> retorno = null;
         if (parametro == null || parametro.equals("")) {
-            String sql = "select p.* from Processo p where p.protocolo = :protocolo order by p.numero desc";
+            String sql = "select p.* from processo p where p.protocolo = :protocolo order by p.numero desc";
             Query q = em.createNativeQuery(sql, Processo.class);
             q.setParameter("protocolo", Boolean.TRUE);
             retorno = q.getResultList();
@@ -208,7 +202,7 @@ public class ProcessoFacade extends AbstractFacade<Processo> {
     public List<Processo> getListaProcessoFiltrando(String parametro) {
         List<Processo> retorno = null;
         if (parametro == null || parametro.equals("")) {
-            String sql = "select p.* from Processo p where p.protocolo = :protocolo order by p.numero desc";
+            String sql = "select p.* from processo p where p.protocolo = :protocolo order by p.numero desc";
             Query q = em.createNativeQuery(sql, Processo.class);
             q.setParameter("protocolo", Boolean.FALSE);
             retorno = q.getResultList();
@@ -245,7 +239,7 @@ public class ProcessoFacade extends AbstractFacade<Processo> {
     }
 
     public List<DocumentoProcesso> listaDocumentosProcesso(Processo pro) {
-        Query q = em.createNativeQuery("select dp.* from DocumentoProcesso dp where dp.processo_id = :pro", DocumentoProcesso.class);
+        Query q = em.createNativeQuery("select dp.* from documentoprocesso dp where dp.processo_id = :pro", DocumentoProcesso.class);
         q.setParameter("pro", pro.getId());
         return q.getResultList();
     }
@@ -1135,7 +1129,7 @@ public class ProcessoFacade extends AbstractFacade<Processo> {
     }
 
     public List<Tramite> buscarTramitesDoProcesso(Long idProcesso) {
-        String sql = "select tr.* from Tramite tr where tr.processo_id = :idProcesso" +
+        String sql = "select tr.* from tramite tr where tr.processo_id = :idProcesso" +
             " order by tr.indice";
         return em.createNativeQuery(sql, Tramite.class).setParameter("idProcesso", idProcesso).getResultList();
     }
@@ -1152,7 +1146,7 @@ public class ProcessoFacade extends AbstractFacade<Processo> {
 
     public boolean hasTramiteMaisNovo(Processo processo, int indice) {
         try {
-            String sql = "select t.id from Tramite t where t.processo_id = :idProcesso and t.indice > :indice";
+            String sql = "select t.id from tramite t where t.processo_id = :idProcesso and t.indice > :indice";
             Query q = em.createNativeQuery(sql);
             q.setParameter("idProcesso", processo.getId());
             q.setParameter("indice", indice);
@@ -1178,53 +1172,6 @@ public class ProcessoFacade extends AbstractFacade<Processo> {
         } catch (Exception ex) {
             return null;
         }
-    }
-
-
-
-
-    public List<Processo> buscarProcessosComTramiteUnidadeOrigemNula() {
-        String sql = " select p.* from processo p " +
-            " inner join tramite t on t.processo_id = p.id " +
-            " where t.origem_id is null and rownum <= 500 ";
-        Query q = em.createNativeQuery(sql, Processo.class);
-        List<Processo> processos = (List<Processo>) q.getResultList();
-        for (Processo processo : processos) {
-            processo.getTramites().size();
-        }
-        return q.getResultList();
-    }
-
-    @Asynchronous
-    @TransactionTimeout(unit = TimeUnit.HOURS, value = 3)
-    public Future<AssistenteBarraProgresso> corrigirUnidadeOrigemTramites(List<Processo> processos, AssistenteBarraProgresso assistente) {
-
-        assistente.zerarContadoresProcesso();
-        assistente.setTotal(processos.size());
-        assistente.setDescricaoProcesso("Inserindo Unidade Origem ao Trâmite...");
-        for (Processo processo : processos) {
-            Collections.sort(processo.getTramites());
-            for (Tramite tramite : processo.getTramites()) {
-                if (tramite.getProcesso().equals(processo)) {
-                    if (tramite.getIndice() == 0) {
-                        if (tramite.getOrigem() == null) {
-                            tramite.setOrigem(processo.getUoCadastro());
-                            em.merge(tramite);
-                        }
-                    } else {
-                        if (tramite.getOrigem() == null) {
-                            Tramite tramiteAnterior = processo.getTramites().get(tramite.getIndice() - 1);
-                            tramite.setOrigem(tramiteAnterior.getUnidadeOrganizacional());
-                            em.merge(tramite);
-                        }
-                    }
-                }
-            }
-            assistente.conta();
-        }
-        assistente.zerarContadoresProcesso();
-        assistente.setDescricaoProcesso("");
-        return new AsyncResult<>(assistente);
     }
 
     public PessoaFisicaFacade getPessoaFisicaFacade() {

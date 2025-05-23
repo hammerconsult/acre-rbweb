@@ -160,7 +160,7 @@ public class CalculoIPTU extends Calculo implements Serializable {
     public BigDecimal getValorTotal() {
         BigDecimal total = new BigDecimal(0);
         for (ItemCalculoIPTU c : this.itensCalculo) {
-                total = total.add(c.getValorReal());
+            total = total.add(c.getValorReal());
         }
         return total;
     }

@@ -263,6 +263,8 @@ public class Licitacao extends SuperEntidade implements EntidadeDetendorDocument
     private String fundamentacaoLegal;
 
     @Etiqueta("Link do Sistema Origem")
+    @Tabelavel(campoSelecionado = false)
+    @Pesquisavel
     @Length(maximo = 512)
     private String linkSistemaOrigem;
 
