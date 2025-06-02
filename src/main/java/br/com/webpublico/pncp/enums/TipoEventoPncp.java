@@ -13,7 +13,8 @@ public enum TipoEventoPncp {
     ATUALIZACAO_ID_SEQUENCIAO_PNCP("Atualização Id/Sequencial PNCP"),
     CARGA_INICIAL_CONTRATO_EMPENHO("Carga Inicial Contrato/Empenho"),
     CONTRATO_EMPENHO("Contrato/Empenho"),
-    PLANO_CONTRATACAO_ANUAL("Plano Contratacao Anual - PCA");
+    PLANO_CONTRATACAO_ANUAL("Plano Contratacao Anual - PCA"),
+    ITEM_PLANO_CONTRATACAO_ANUAL("Item PCA");
     private String descricao;
 
     TipoEventoPncp(String descricao) {

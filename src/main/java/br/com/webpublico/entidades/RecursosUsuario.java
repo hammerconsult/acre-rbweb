@@ -1,12 +1,10 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.io.Serializable;
 
 /**
  * @author Fabio
@@ -16,7 +14,7 @@ import java.io.Serializable;
 @Audited
 @Etiqueta("Recursos do Usuário do Sistema")
 
-public class RecursosUsuario implements Serializable {
+public class RecursosUsuario extends SuperEntidade {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -29,19 +27,8 @@ public class RecursosUsuario implements Serializable {
     private Boolean leitura;
     private Boolean escrita;
     private Boolean exclusao;
-    @Transient
-    private Long criadoEm;
 
     public RecursosUsuario() {
-        criadoEm = System.nanoTime();
-    }
-
-    public Long getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
     }
 
     public RecursoSistema getRecursoSistema() {
@@ -66,16 +53,6 @@ public class RecursosUsuario implements Serializable {
 
     public void setUsuarioSistema(UsuarioSistema usuarioSistema) {
         this.usuarioSistema = usuarioSistema;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return IdentidadeDaEntidade.calcularEquals(this, obj);
-    }
-
-    @Override
-    public int hashCode() {
-        return IdentidadeDaEntidade.calcularHashCode(this);
     }
 
     public Boolean getEscrita() {
@@ -109,7 +86,6 @@ public class RecursosUsuario implements Serializable {
             ", leitura=" + leitura +
             ", escrita=" + escrita +
             ", exclusao=" + exclusao +
-            ", criadoEm=" + criadoEm +
             '}';
     }
 }

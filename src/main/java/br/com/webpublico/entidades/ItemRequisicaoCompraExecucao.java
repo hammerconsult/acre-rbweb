@@ -6,8 +6,6 @@ package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.anotacoes.Etiqueta;
-import br.com.webpublico.util.anotacoes.Pesquisavel;
-import br.com.webpublico.util.anotacoes.Tabelavel;
 import com.google.common.collect.ComparisonChain;
 import org.hibernate.envers.Audited;
 
@@ -27,33 +25,37 @@ public class ItemRequisicaoCompraExecucao extends SuperEntidade implements Compa
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @Etiqueta("Item Requisição de Compra")
     @ManyToOne
+    @Etiqueta("Item Requisição de Compra")
     private ItemRequisicaoDeCompra itemRequisicaoCompra;
 
     @ManyToOne
     @Etiqueta("Item Execução Contrato")
     private ExecucaoContratoItem execucaoContratoItem;
 
+    @ManyToOne
+    @Etiqueta("Item Execução Processo")
+    private ExecucaoProcessoItem execucaoProcessoItem;
+
+    @ManyToOne
+    @Etiqueta("Item Reconhecimento Dívida")
+    private ItemReconhecimentoDivida itemReconhecimentoDivida;
+
+    @ManyToOne
+    @Etiqueta("Empenho")
+    private Empenho empenho;
+
     @Etiqueta("Quantidade")
     private BigDecimal quantidade;
 
-    @Pesquisavel
-    @Tabelavel
     @Etiqueta("Valor Unitário")
     private BigDecimal valorUnitario;
 
     @Etiqueta("Valor Total")
     private BigDecimal valorTotal;
 
-    @Transient
-    private BigDecimal quantidadeDisponivel;
-    @Transient
-    private Boolean ajusteValor;
-
     public ItemRequisicaoCompraExecucao() {
         super();
-        ajusteValor = false;
     }
 
     public ItemRequisicaoDeCompra getItemRequisicaoCompra() {
@@ -72,10 +74,35 @@ public class ItemRequisicaoCompraExecucao extends SuperEntidade implements Compa
         this.execucaoContratoItem = execucaoContratoItem;
     }
 
+    public ItemContrato getItemContrato() {
+        return execucaoContratoItem.getItemContrato();
+    }
+
+    public ExecucaoProcessoItem getExecucaoProcessoItem() {
+        return execucaoProcessoItem;
+    }
+
+    public void setExecucaoProcessoItem(ExecucaoProcessoItem execucaoProcessoItem) {
+        this.execucaoProcessoItem = execucaoProcessoItem;
+    }
+
+    public ItemReconhecimentoDivida getItemReconhecimentoDivida() {
+        return itemReconhecimentoDivida;
+    }
+
+    public void setItemReconhecimentoDivida(ItemReconhecimentoDivida itemReconhecimentoDivida) {
+        this.itemReconhecimentoDivida = itemReconhecimentoDivida;
+    }
+
+    public Empenho getEmpenho() {
+        return empenho;
+    }
+
+    public void setEmpenho(Empenho empenho) {
+        this.empenho = empenho;
+    }
+
     public BigDecimal getValorUnitario() {
-        if (this.valorUnitario == null) {
-            return this.getExecucaoContratoItem().getItemContrato().getValorUnitario();
-        }
         return valorUnitario;
     }
 
@@ -91,14 +118,6 @@ public class ItemRequisicaoCompraExecucao extends SuperEntidade implements Compa
         this.id = id;
     }
 
-    public BigDecimal getQuantidadeDisponivel() {
-        return quantidadeDisponivel;
-    }
-
-    public void setQuantidadeDisponivel(BigDecimal quantidadeDisponivel) {
-        this.quantidadeDisponivel = quantidadeDisponivel;
-    }
-
     public BigDecimal getQuantidade() {
         return quantidade;
     }
@@ -109,7 +128,7 @@ public class ItemRequisicaoCompraExecucao extends SuperEntidade implements Compa
 
     public BigDecimal getValorTotal() {
         if (valorTotal == null) {
-            this.valorTotal = BigDecimal.ZERO;
+            valorTotal = BigDecimal.ZERO;
         }
         return valorTotal;
     }
@@ -118,21 +137,9 @@ public class ItemRequisicaoCompraExecucao extends SuperEntidade implements Compa
         this.valorTotal = valorTotal;
     }
 
-    public Boolean getAjusteValor() {
-        return ajusteValor;
-    }
-
-    public void setAjusteValor(Boolean ajusteValor) {
-        this.ajusteValor = ajusteValor;
-    }
-
     @Override
     public String toString() {
         return itemRequisicaoCompra.toString();
-    }
-
-    public boolean quantidadeDisponivelEhRequisitavel() {
-        return !BigDecimal.ZERO.equals(execucaoContratoItem.getQuantidadeDisponivel());
     }
 
     public void calcularValorTotal() {
@@ -147,6 +154,34 @@ public class ItemRequisicaoCompraExecucao extends SuperEntidade implements Compa
 
     public boolean hasValorUnitario() {
         return valorUnitario != null;
+    }
+
+
+    public String getDescricaoExecucao() {
+        try {
+            String emp = "Empenho: " + empenho.getNumeroAno();
+            if (execucaoContratoItem != null) {
+                return "Nº " + execucaoContratoItem.getExecucaoContrato().getNumero() + " - " + emp;
+            } else if (execucaoProcessoItem != null) {
+                return "Nº " + execucaoProcessoItem.getExecucaoProcesso().getNumero() + " - " + emp;
+            }
+            return "Nº " + itemReconhecimentoDivida.getReconhecimentoDivida().getNumero() + " - " + emp;
+        } catch (NullPointerException e) {
+            return "Sem Execução";
+        }
+    }
+
+    public static ItemRequisicaoCompraExecucao toVO(br.com.webpublico.entidadesauxiliares.ItemRequisicaoCompraExecucaoVO itemReqProcVO, ItemRequisicaoDeCompra itemReq) {
+        ItemRequisicaoCompraExecucao novoItemReqProc = new ItemRequisicaoCompraExecucao();
+        novoItemReqProc.setItemRequisicaoCompra(itemReq);
+        novoItemReqProc.setEmpenho(itemReqProcVO.getRequisicaoEmpenhoVO().getEmpenho());
+        novoItemReqProc.setExecucaoContratoItem(itemReqProcVO.getExecucaoContratoItem());
+        novoItemReqProc.setExecucaoProcessoItem(itemReqProcVO.getExecucaoProcessoItem());
+        novoItemReqProc.setItemReconhecimentoDivida(itemReqProcVO.getItemReconhecimentoDivida());
+        novoItemReqProc.setQuantidade(itemReqProcVO.getQuantidade());
+        novoItemReqProc.setValorUnitario(itemReqProcVO.getValorUnitario());
+        novoItemReqProc.setValorTotal(itemReqProcVO.getValorTotal());
+        return novoItemReqProc;
     }
 
     @Override

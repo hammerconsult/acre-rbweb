@@ -220,7 +220,6 @@ public class ProcessoRevisaoCalculoIPTUFacade extends AbstractFacade<ProcessoRev
         List<CadastroImobiliario> cadastros = Lists.newArrayList(cadastroImobiliario);
         CalculadorIPTU calculadorIPTU = new CalculadorIPTU();
         calculadorIPTU.calcularIPTU(cadastros, assistente, null);
-
         exercicioRevisaoIPTU.setProcessoCalculoIPTU(processoCalculo);
 
         AssistenteEfetivacaoIPTU assistenteEfetivacaoIPTU = new AssistenteEfetivacaoIPTU();
@@ -327,7 +326,7 @@ public class ProcessoRevisaoCalculoIPTUFacade extends AbstractFacade<ProcessoRev
     }
 
     private void registrarDebitoIPTU(ProcessoCalculoIPTU processoCalculoIPTU, ValorDivida valorDivida) throws Exception {
-        calculoDAO.geraProcessoCalculo(processoCalculoIPTU);
+        calculoDAO.gerarProcessoCalculo(processoCalculoIPTU);
         calculoDAO.persisteTudo(processoCalculoIPTU.getCalculosIPTU());
         CalculoIPTU calculo = processoCalculoIPTU.getCalculosIPTU().get(0);
         valorDivida.setCalculo(calculo);

@@ -159,7 +159,13 @@ public class CNAEFacade extends AbstractFacade<CNAE> {
             q.setParameter("grau", grauDeRisco);
         }
         List<CNAE> cnaes = q.getResultList();
-        return (cnaes != null && !cnaes.isEmpty()) ? cnaes.get(0) : null;
+        CNAE cnae = ((cnaes != null) && !cnaes.isEmpty()) ? cnaes.get(0) : null;
+        if (cnae != null) {
+            if (cnae.getServicos() != null) {
+                Hibernate.initialize(cnae.getServicos());
+            }
+        }
+        return cnae;
     }
 
     public List<CNAE> buscarCnaesAtivosPorCodigo(String codigo) {

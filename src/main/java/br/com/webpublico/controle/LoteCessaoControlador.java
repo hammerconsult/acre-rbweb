@@ -318,6 +318,7 @@ public class LoteCessaoControlador extends PrettyControlador<LoteCessao> impleme
         assistente.setConfigMovimentacaoBem(configMovimentacaoBem);
         assistente.setBensSelecionados(bensSelecionados);
         assistente.setUnidadeOrganizacional(selecionado.getUnidadeOrigem());
+        assistente.setUsuarioSistema(facade.getSistemaFacade().getUsuarioCorrente());
     }
 
     public void consultarFutureSalvar() {
@@ -430,7 +431,7 @@ public class LoteCessaoControlador extends PrettyControlador<LoteCessao> impleme
         ve.lancarException();
         prazoCessao.validarNegocio(DataUtil.dataSemHorario(getDataOperacao()));
 
-        ParametroPatrimonio parametroPatrimonio = facade.getParametroPatrimonioFacade().recuperarParametroPatrimonio();
+        ParametroPatrimonio parametroPatrimonio = facade.getParametroPatrimonioFacade().recuperarParametroComDependenciasEntidadeGeradoCodigo();
         facade.verificarSeUnidadePossuiSequenciaPropria(selecionado.getUnidadeOrigem(), parametroPatrimonio, selecionado);
         facade.verificarSeUnidadePossuiSequenciaPropria(selecionado.getUnidadeDestino(), parametroPatrimonio, selecionado);
 

@@ -42,13 +42,15 @@ public class RegistroObn350TipoQuatro implements Serializable {
     private String codigoRetornoOperacao;
     private String numeroSequencialArquivo;
     private BigDecimal valorFinalGuia;
+    private HeaderObn350 headerObn350;
 
     public RegistroObn350TipoQuatro() {
         throw new ExcecaoNegocioGenerica("Construtor não suportado, utilize o construtor informando uma linha \"Texto\" como paramentro!");
     }
 
-    public RegistroObn350TipoQuatro(String linhas) {
+    public RegistroObn350TipoQuatro(String linhas, HeaderObn350 headerObn350) {
         this.linhas = linhas;
+        this.headerObn350 = headerObn350;
         validaLinha(this.linhas);
     }
 
@@ -265,7 +267,11 @@ public class RegistroObn350TipoQuatro implements Serializable {
     }
 
     public String getNumeroContaDoConvenioParaOBConvenios() {
-        numeroContaDoConvenioParaOBConvenios = linhas.substring(324, 334);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            numeroContaDoConvenioParaOBConvenios = linhas.substring(324, 337);
+        } else {
+            numeroContaDoConvenioParaOBConvenios = linhas.substring(324, 334);
+        }
         return numeroContaDoConvenioParaOBConvenios;
     }
 

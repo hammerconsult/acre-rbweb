@@ -4,12 +4,13 @@
  */
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.OperacaoDiariaContabilizacao;
 import br.com.webpublico.enums.TipoLancamento;
 import br.com.webpublico.enums.TipoProposta;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
@@ -34,7 +35,7 @@ import java.util.TreeMap;
 @Entity
 
 @Etiqueta("Diária Contabilização")
-public class DiariaContabilizacao implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
+public class DiariaContabilizacao extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -364,58 +365,8 @@ public class DiariaContabilizacao implements Serializable, EntidadeContabil, IGe
         return toString();
     }
 
-
     @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return UtilGeradorContaAuxiliar.gerarContaAuxiliarPropostaConcessaoDiaria(getPropostaConcessaoDiaria());
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+        return new GeradorContaAuxiliarDTO(getUnidadeOrganizacional(), null, propostaConcessaoDiaria.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursos(), null, 0, null, null, propostaConcessaoDiaria.getExercicio(), null, null, 0, null, null);
     }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeOrganizacional());
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(getUnidadeOrganizacional(), contaContabil.getSubSistema());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(getUnidadeOrganizacional(), contaContabil.getSubSistema(),
-                    propostaConcessaoDiaria.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursos(),
-                    propostaConcessaoDiaria.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursos().getExercicio());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeOrganizacional());
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(getUnidadeOrganizacional(), contaContabil.getSubSistema());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(getUnidadeOrganizacional(), contaContabil.getSubSistema(), propostaConcessaoDiaria.getFonteDespesaORC().getProvisaoPPAFonte().getDestinacaoDeRecursos());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
 }

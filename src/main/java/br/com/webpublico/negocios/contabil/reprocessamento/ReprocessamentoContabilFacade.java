@@ -56,6 +56,8 @@ public class ReprocessamentoContabilFacade implements Serializable {
     private TransferenciaSaldoContaAuxiliarFacade transferenciaSaldoContaAuxiliarFacade;
     @EJB
     private FechamentoMensalFacade fechamentoMensalFacade;
+    @EJB
+    private ConfiguracaoContabilFacade configuracaoContabilFacade;
 
     public EventoContabilFacade getEventoContabilFacade() {
         return eventoContabilFacade;
@@ -128,6 +130,7 @@ public class ReprocessamentoContabilFacade implements Serializable {
     }
 
     @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+    @TransactionTimeout(value = 6, unit = TimeUnit.HOURS)
     private void reprocessarEventos(ReprocessamentoContabil reprocessamentoContabil) {
         for (EventosReprocessar evento : reprocessamentoContabil.getEventosReprocessar()) {
             reprocessamentoContabil.getBarraProgressoAssistente().setMensagem("<b> Reprocessando " + evento.getObjetosParaReprocessar().size()
@@ -211,6 +214,8 @@ public class ReprocessamentoContabilFacade implements Serializable {
                     + " e do tipo " + er.getEventoContabil().getTipoLancamento().getDescricao().toUpperCase() + " ...</b>");
                 barraProgressoAssistente.setTotal(barraProgressoAssistente.getTotal() + lista.size());
                 reprocessamentoLancamentoContabilSingleton.getReprocessamentoContabilHistorico().setTotal(lista.size());
+                reprocessamentoLancamentoContabilSingleton.setQuantidadeTotalObjetos(reprocessamentoLancamentoContabilSingleton.getQuantidadeTotalObjetos()
+                    + reprocessamentoLancamentoContabilSingleton.getReprocessamentoContabilHistorico().getTotal());
                 er.setObjetosParaReprocessar(Lists.newArrayList());
                 er.getObjetosParaReprocessar().addAll(lista);
             } catch (Exception ex) {
@@ -257,5 +262,9 @@ public class ReprocessamentoContabilFacade implements Serializable {
 
     public FechamentoMensalFacade getFechamentoMensalFacade() {
         return fechamentoMensalFacade;
+    }
+
+    public ConfiguracaoContabil buscarConfiguracaoContabilVigente() {
+        return configuracaoContabilFacade.configuracaoContabilVigente();
     }
 }

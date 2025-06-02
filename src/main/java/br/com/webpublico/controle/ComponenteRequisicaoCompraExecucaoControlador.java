@@ -3,17 +3,14 @@ package br.com.webpublico.controle;
 import br.com.webpublico.entidades.Empenho;
 import br.com.webpublico.entidades.ExecucaoContrato;
 import br.com.webpublico.entidades.ExecucaoProcesso;
-import br.com.webpublico.entidades.RequisicaoCompraExecucao;
-import br.com.webpublico.entidadesauxiliares.EmpenhoVO;
 import br.com.webpublico.entidadesauxiliares.FiltroResumoExecucaoVO;
-import br.com.webpublico.entidadesauxiliares.RequisicaoExecucaoExecucaoVO;
-import br.com.webpublico.enums.TipoRequisicaoCompra;
+import br.com.webpublico.entidadesauxiliares.RequisicaoCompraExecucaoVO;
 import br.com.webpublico.enums.TipoResumoExecucao;
-import br.com.webpublico.negocios.EmpenhoFacade;
 import br.com.webpublico.negocios.ExecucaoContratoFacade;
 import br.com.webpublico.negocios.ExecucaoProcessoFacade;
 import br.com.webpublico.negocios.RequisicaoDeCompraFacade;
 import br.com.webpublico.util.FacesUtil;
+import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 
 import javax.ejb.EJB;
@@ -33,36 +30,31 @@ public class ComponenteRequisicaoCompraExecucaoControlador implements Serializab
     private ExecucaoProcessoFacade execucaoProcessoFacade;
     @EJB
     private ExecucaoContratoFacade execucaoContratoFacade;
-    @EJB
-    private EmpenhoFacade empenhoFacade;
-    private RequisicaoExecucaoExecucaoVO requisicaoExecucaoExecucaoVO;
-    private List<RequisicaoCompraExecucao> execucoes;
+    private RequisicaoCompraExecucaoVO requisicaoCompraExecucaoVO;
     private FiltroResumoExecucaoVO filtroResumoExecucaoVO;
+    private List<RequisicaoCompraExecucaoVO> execucoes;
 
     public void novo(Long idRequisicao) {
         if (idRequisicao == null) {
             execucoes = Lists.newArrayList();
             return;
         }
-        execucoes = requisicaoDeCompraFacade.buscarRequisicaoExecucao(idRequisicao);
+        execucoes = requisicaoDeCompraFacade.buscarRequisicaoExecucaoComponente(idRequisicao);
         Collections.sort(execucoes);
     }
 
-    public void selecionarRequisicaoExecucaoVo(RequisicaoExecucaoExecucaoVO reqExec) {
-        if (reqExec.getTipoExecucao().isContrato()) {
-            ExecucaoContrato execucaoContrato = reqExec.getExecucaoContrato();
-            requisicaoExecucaoExecucaoVO = new RequisicaoExecucaoExecucaoVO(execucaoContrato);
-            requisicaoExecucaoExecucaoVO.setTipoExecucao(TipoRequisicaoCompra.CONTRATO);
-            adicionarEmpenhoExecucaoContrato(execucaoContrato);
+    public void selecionarRequisicaoExecucaoVo(RequisicaoCompraExecucaoVO reqExecVO) {
+        requisicaoCompraExecucaoVO =  (RequisicaoCompraExecucaoVO) Util.clonarObjeto(reqExecVO);
+        requisicaoCompraExecucaoVO.setEmpenhosVO(Lists.newArrayList());
+        if (reqExecVO.getTipoProcesso().isContrato()) {
+            ExecucaoContrato execucaoContrato = execucaoContratoFacade.recuperarSemDependencias(reqExecVO.getId());
             novoFiltroResumoExecucaoContrato(execucaoContrato);
-        } else {
-            ExecucaoProcesso execucaoProcesso = reqExec.getExecucaoProcesso();
-            requisicaoExecucaoExecucaoVO = new RequisicaoExecucaoExecucaoVO(execucaoProcesso);
-            requisicaoExecucaoExecucaoVO.setTipoExecucao(execucaoProcesso.isExecucaoAta() ? TipoRequisicaoCompra.ATA_REGISTRO_PRECO : TipoRequisicaoCompra.DISPENSA_LICITACAO_INEXIGIBILIDADE);
-            adicionarEmpenhoExecucaoProcesso(execucaoProcesso);
-            novoFiltroResumoExecucaoProcesso(requisicaoExecucaoExecucaoVO.getExecucaoProcesso());
+        } else if (reqExecVO.getTipoProcesso().isExecucaoProcesso()) {
+            ExecucaoProcesso execucaoProcesso = execucaoProcessoFacade.recuperarSemDependencias(reqExecVO.getId());
+            novoFiltroResumoExecucaoProcesso(execucaoProcesso);
         }
-        FacesUtil.executaJavaScript("$('#modalDetalhesExecucao').modal('show');");
+        requisicaoDeCompraFacade.buscarEmpenhoExecucao(requisicaoCompraExecucaoVO, requisicaoCompraExecucaoVO.getTipoObjetoCompra());
+        FacesUtil.executaJavaScript("$('#modalDetalhesRequicaoExec').modal('show')");
     }
 
     private void novoFiltroResumoExecucaoContrato(ExecucaoContrato execucaoContrato) {
@@ -78,50 +70,16 @@ public class ComponenteRequisicaoCompraExecucaoControlador implements Serializab
         filtroResumoExecucaoVO.setIdProcesso(execucaoProcesso.getIdProcesso());
     }
 
-    public void selecionarRequisicaoExecucaoComponente(RequisicaoCompraExecucao reqExec) {
-        if (reqExec.getRequisicaoCompra().isTipoContrato()) {
-            ExecucaoContrato execucaoContrato = reqExec.getExecucaoContrato();
-            requisicaoExecucaoExecucaoVO = new RequisicaoExecucaoExecucaoVO(execucaoContrato);
-            requisicaoExecucaoExecucaoVO.setTipoExecucao(TipoRequisicaoCompra.CONTRATO);
-            adicionarEmpenhoExecucaoContrato(execucaoContrato);
-            novoFiltroResumoExecucaoContrato(execucaoContrato);
-        } else {
-            requisicaoExecucaoExecucaoVO = new RequisicaoExecucaoExecucaoVO(reqExec.getExecucaoProcesso());
-            ExecucaoProcesso execucaoProcesso = requisicaoExecucaoExecucaoVO.getExecucaoProcesso();
-            requisicaoExecucaoExecucaoVO.setTipoExecucao(execucaoProcesso.isExecucaoAta() ? TipoRequisicaoCompra.ATA_REGISTRO_PRECO : TipoRequisicaoCompra.DISPENSA_LICITACAO_INEXIGIBILIDADE);
-            adicionarEmpenhoExecucaoProcesso(execucaoProcesso);
-            novoFiltroResumoExecucaoProcesso(execucaoProcesso);
-        }
-        FacesUtil.executaJavaScript("$('#modalDetalhesExecucao').modal('show');");
-    }
-
-    private void adicionarEmpenhoExecucaoProcesso(ExecucaoProcesso execucaoProc) {
-        List<Empenho> empenhos = execucaoProcessoFacade.buscarEmpenhosExecucao(execucaoProc);
-        criarEmpenhoVO(empenhos);
-    }
-
-    private void adicionarEmpenhoExecucaoContrato(ExecucaoContrato execucaoContrato) {
-        List<Empenho> empenhos = execucaoContratoFacade.buscarEmpenhosExecucao(execucaoContrato);
-        criarEmpenhoVO(empenhos);
-    }
-
-    private void criarEmpenhoVO(List<Empenho> empenhos) {
-        for (Empenho emp : empenhos) {
-            EmpenhoVO novoEmp = new EmpenhoVO();
-            novoEmp.setEmpenho(emp);
-            novoEmp.setDesdobramentoEmpenho(empenhoFacade.buscarDesdobramento(emp));
-            requisicaoExecucaoExecucaoVO.getEmpenhos().add(novoEmp);
-        }
-    }
-
     public String getCaminhoExecucao() {
-        if (requisicaoExecucaoExecucaoVO == null) {
+        if (requisicaoCompraExecucaoVO == null) {
             return "";
         }
-        if (requisicaoExecucaoExecucaoVO.getTipoExecucao().isContrato()) {
-            return "/execucao-contrato-adm/ver/" + requisicaoExecucaoExecucaoVO.getExecucaoContrato().getId() + "/";
+        if (requisicaoCompraExecucaoVO.getTipoProcesso().isContrato()) {
+            return "/execucao-contrato-adm/ver/" + requisicaoCompraExecucaoVO.getId() + "/";
+        } else if (requisicaoCompraExecucaoVO.getTipoProcesso().isReconhecimentoDivida()) {
+            return "/reconhecimento-divida/ver/" + requisicaoCompraExecucaoVO.getId() + "/";
         }
-        return "/execucao-sem-contrato/ver/" + requisicaoExecucaoExecucaoVO.getExecucaoProcesso().getId() + "/";
+        return "/execucao-sem-contrato/ver/" + requisicaoCompraExecucaoVO.getId() + "/";
     }
 
     public String getCaminhoEmpenho(Empenho empenho) {
@@ -131,19 +89,19 @@ public class ComponenteRequisicaoCompraExecucaoControlador implements Serializab
         return "/empenho/resto-a-pagar/ver/" + empenho.getId() + "/";
     }
 
-    public RequisicaoExecucaoExecucaoVO getRequisicaoExecucao() {
-        return requisicaoExecucaoExecucaoVO;
+    public RequisicaoCompraExecucaoVO getRequisicaoCompraExecucaoVO() {
+        return requisicaoCompraExecucaoVO;
     }
 
-    public void setRequisicaoExecucao(RequisicaoExecucaoExecucaoVO requisicaoExecucaoExecucaoVO) {
-        this.requisicaoExecucaoExecucaoVO = requisicaoExecucaoExecucaoVO;
+    public void setRequisicaoCompraExecucaoVO(RequisicaoCompraExecucaoVO requisicaoCompraExecucaoVO) {
+        this.requisicaoCompraExecucaoVO = requisicaoCompraExecucaoVO;
     }
 
-    public List<RequisicaoCompraExecucao> getExecucoes() {
+    public List<RequisicaoCompraExecucaoVO> getExecucoes() {
         return execucoes;
     }
 
-    public void setExecucoes(List<RequisicaoCompraExecucao> execucoes) {
+    public void setExecucoes(List<RequisicaoCompraExecucaoVO> execucoes) {
         this.execucoes = execucoes;
     }
 

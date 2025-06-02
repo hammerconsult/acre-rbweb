@@ -1,37 +1,36 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.entidades.usertype.DireitosUserType;
-import br.com.webpublico.util.IdentidadeDaEntidade;
 import org.hibernate.annotations.TypeDef;
 import org.hibernate.envers.Audited;
 
-import javax.persistence.*;
-import java.io.Serializable;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.ManyToOne;
 
 @Entity
 
 @Audited
 @TypeDef(name = "direitos", typeClass = DireitosUserType.class)
-public class ItemGrupoUsuario implements Serializable {
+public class ItemGrupoUsuario extends SuperEntidade {
 
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue
     private Long id;
+
     @ManyToOne
     private GrupoUsuario grupoUsuario;
+
     @ManyToOne
     private GrupoRecurso grupoRecurso;
-    //@Type(type = "direitos")
-    //private Set<Direito> direitos = Sets.newHashSet();
+
     private Boolean leitura;
     private Boolean escrita;
     private Boolean exclusao;
-    @Transient
-    private Long criadoEm;
 
     public ItemGrupoUsuario() {
-        criadoEm = System.nanoTime();
     }
 
     public Long getId() {
@@ -58,32 +57,6 @@ public class ItemGrupoUsuario implements Serializable {
         this.grupoRecurso = grupoRecursoSistema;
     }
 
-    //public Set<Direito> getDireitos() {
-    //    return direitos;
-    //}
-
-    //public void setDireitos(Set<Direito> direitos) {
-    //    this.direitos = direitos;
-    //}
-
-    public Long getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return IdentidadeDaEntidade.calcularEquals(this, obj);
-    }
-
-    @Override
-    public int hashCode() {
-        return IdentidadeDaEntidade.calcularHashCode(this);
-    }
-
     public Boolean getEscrita() {
         return escrita;
     }
@@ -107,5 +80,4 @@ public class ItemGrupoUsuario implements Serializable {
     public void setLeitura(Boolean leitura) {
         this.leitura = leitura;
     }
-
 }

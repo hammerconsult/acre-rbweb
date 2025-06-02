@@ -5,8 +5,10 @@ import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
+import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.LancamentoContabilManualFacade;
 import br.com.webpublico.util.FacesUtil;
+import br.com.webpublico.util.LogUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
@@ -115,8 +117,10 @@ public class LancamentoContabilManualControlador extends PrettyControlador<Lanca
             }
         } catch (ValidacaoException ex) {
             FacesUtil.printAllFacesMessages(ex.getMensagens());
-        } catch (Exception e) {
-            descobrirETratarException(e);
+        } catch (ExcecaoNegocioGenerica e) {
+            FacesUtil.addOperacaoNaoPermitida(e.getMessage());
+        } catch (Exception ex) {
+            LogUtil.registrarExcecao(logger, "Erro ao salvar lançamento contabil manuel. ", ex);
         }
     }
 
@@ -287,19 +291,6 @@ public class LancamentoContabilManualControlador extends PrettyControlador<Lanca
         this.conta = conta;
     }
 
-
-    public void redirecionarParaEventoContabil() {
-        Web.poeNaSessao("IS_LANCAMENTO_MANUAL", Boolean.TRUE);
-        Web.poeNaSessao(selecionado);
-        Web.setCaminhoOrigem(getCaminhoPadrao() + "novo/");
-        FacesUtil.redirecionamentoInterno("/eventocontabil/novo/");
-        Web.getSessionMap().put(Web.ESPERARETORNO, true);
-    }
-
-    public ParametroEvento getParametroEvento() {
-        return facade.getParametroEvento(selecionado);
-    }
-
     public List<String> getCamposAdicionaisPCM() {
         return camposAdicionaisPCM;
     }
@@ -410,5 +401,17 @@ public class LancamentoContabilManualControlador extends PrettyControlador<Lanca
         }
         ve.lancarException();
         return true;
+    }
+
+    public void redirecionarParaEventoContabil() {
+        Web.poeNaSessao("IS_LANCAMENTO_MANUAL", Boolean.TRUE);
+        Web.poeNaSessao(selecionado);
+        Web.setCaminhoOrigem(getCaminhoPadrao() + "novo/");
+        FacesUtil.redirecionamentoInterno("/eventocontabil/novo/");
+        Web.getSessionMap().put(Web.ESPERARETORNO, true);
+    }
+
+    public ParametroEvento getParametroEvento() {
+        return facade.getParametroEvento(selecionado);
     }
 }

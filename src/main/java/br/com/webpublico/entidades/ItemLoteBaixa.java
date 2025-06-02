@@ -222,14 +222,6 @@ public class ItemLoteBaixa implements Serializable, Comparable<ItemLoteBaixa> {
         this.dataCredito = dataCredito;
     }
 
-    public String getAutenticacao() {
-        return autenticacao;
-    }
-
-    public void setAutenticacao(String autenticacao) {
-        this.autenticacao = autenticacao;
-    }
-
     @Override
     public int hashCode() {
         return IdentidadeDaEntidade.calcularHashCode(this);

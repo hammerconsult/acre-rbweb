@@ -346,7 +346,7 @@ public class GerarProgressoesExecutor implements Callable<AssistenteBarraProgres
                 fim = dataEnquadramento;
             }
             int diasAfastado = DataUtil.diasEntre(inicio, fim);
-            int diasCarencia = tratarAtributoNuloWithZero(afastamento.getTipoAfastamento().getCarenciaAlongamento());
+            int diasCarencia = afastamento.getCarencia() != null ? afastamento.getCarencia() : 0;
             int total = diasAfastado - diasCarencia;
             if (total > 0) {
                 dataEnquadramento = dataEnquadramento.plusDays(total);

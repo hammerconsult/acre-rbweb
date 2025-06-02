@@ -11,6 +11,7 @@ public class AtualizarDescricoesEsocialJob extends WPJob {
     @Override
     public void execute() {
         service.atualizarDescricoesEventosEsocial();
+        service.atualizarDescricoesEventosEsocialVinculoFP();
         service.atualizarDescricoesEventosEsocialS1010();
     }
 }

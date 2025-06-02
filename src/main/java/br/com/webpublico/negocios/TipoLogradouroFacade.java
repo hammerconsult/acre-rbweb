@@ -10,7 +10,6 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.util.List;
 
 @Stateless
 public class TipoLogradouroFacade extends AbstractFacade<TipoLogradouro> {
@@ -26,7 +25,6 @@ public class TipoLogradouroFacade extends AbstractFacade<TipoLogradouro> {
     public TipoLogradouroFacade() {
         super(TipoLogradouro.class);
     }
-
 
     public TipoLogradouro tipoLogradouroPorSigla(String sigla) {
         String sql = "SELECT tipo FROM TipoLogradouro tipo WHERE lower(tipo.sigla) = :valor";

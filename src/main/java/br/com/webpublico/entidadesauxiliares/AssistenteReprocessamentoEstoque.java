@@ -26,7 +26,6 @@ public class AssistenteReprocessamentoEstoque {
     private List<ItemReprocessamentoEstoque> itens;
 
     public AssistenteReprocessamentoEstoque() {
-        super();
         itens = Lists.newArrayList();
         reprocessamento = false;
         reprocessamentoSessao = false;
@@ -129,7 +128,7 @@ public class AssistenteReprocessamentoEstoque {
     }
 
     public String getCondicaoSql() {
-        String condicao = " ";
+        String condicao = "";
         if (hierarquiaAdm != null) {
             condicao += " and vwadm.subordinada_id = " + hierarquiaAdm.getSubordinada().getId();
         }

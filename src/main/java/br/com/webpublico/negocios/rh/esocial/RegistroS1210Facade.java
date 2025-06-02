@@ -252,7 +252,7 @@ public class RegistroS1210Facade extends AbstractFacade<RegistroEventoEsocial> {
                 }
                 return Lists.newArrayList(mapVinculosEsocial.values());
             }
-            FacesUtil.addOperacaoRealizada("Nenhum Servidor encontrado para os filtros informados.");
+            FacesUtil.addOperacaoNaoRealizada("Nenhum Servidor encontrado para os filtros informados.");
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }

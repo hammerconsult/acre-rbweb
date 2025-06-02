@@ -6,7 +6,6 @@ package br.com.webpublico.enums;
 
 import br.com.webpublico.interfaces.EnumComDescricao;
 import br.com.webpublico.webreportdto.dto.tributario.SituacaoAcaoFiscalDTO;
-
 /**
  * @author Claudio
  */

@@ -333,7 +333,7 @@ public class BemControlador extends PrettyControlador<Bem> implements Serializab
             FacesUtil.addOperacaoNaoPermitida("Selecione o bem para buscar as informações.");
             return;
         }
-        selecionado = facade.recuperar(bem.getId());
+        selecionado = facade.recuperarBemComDependenciasNotasFicaisAndOrigemRecurso(bem.getId());
         preencherInformacoesTransient();
         FacesUtil.executaJavaScript("$('#modalDetalhesDoBem').modal('show');");
     }

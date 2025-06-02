@@ -109,6 +109,10 @@ public class AcaoFiscalFacade extends AbstractFacade<AcaoFiscal> {
         return sistemaFacade;
     }
 
+    public UsuarioSistemaFacade getUsuarioSistemaFacade() {
+        return usuarioSistemaFacade;
+    }
+
     @Override
     protected EntityManager getEntityManager() {
         return em;
@@ -128,6 +132,7 @@ public class AcaoFiscalFacade extends AbstractFacade<AcaoFiscal> {
         Hibernate.initialize(af.getCadastroEconomico());
         Hibernate.initialize(af.getLancamentosContabeis());
         Hibernate.initialize(af.getArquivos());
+        Hibernate.initialize(af.getAlteracoesDataArbitramento());
         if (af.getProgramacaoFiscal().getDetentorArquivoComposicao() != null) {
             Hibernate.initialize(af.getProgramacaoFiscal().getDetentorArquivoComposicao().getArquivosComposicao());
         }

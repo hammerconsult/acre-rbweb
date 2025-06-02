@@ -57,7 +57,6 @@ public class CalculaIssFixoGeralControlador extends PrettyControlador<ProcessoCa
     private SistemaFacade sistemaFacade;
     private ConverterGenerico converterExercicio;
     private ConverterAutoComplete converterTipoAutonomo;
-    private ConverterAutoComplete converterProcessoCalculoGeralIssFixo;
     private String[] processoParaExibir;
     private List<String[]> listaMotivosDeLancamentosFalhos;
     private List<String[]> listaInfoLancamentosRealizados;

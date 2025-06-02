@@ -42,6 +42,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Created by William on 07/06/2016.
@@ -524,7 +525,7 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
             "  ce.abertura, " +
             "  COALESCE(pfce.nome, pjce.razaosocial), " +
             "  COALESCE(pfce.nome, pj.nomefantasia)," +
-            "  dam.qrcodepix, dam.id as idDam, coalesce(dam.desconto) as descontoDam " +
+            "  dam.qrcodepix, dam.id as idDam, coalesce(dam.desconto, 0) as descontoDam " +
             "FROM ItemMalaDiretaGeral itemMala " +
             "INNER JOIN MalaDiretaGeral mala ON mala.id = itemMala.malaDiretaGeral_id " +
             "LEFT JOIN ParametroMalaDireta parametro ON parametro.id = mala.parametroMalaDireta_id " +
@@ -622,14 +623,6 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
         return conteudo;
     }
 
-    public List<Long> buscarIdsDosDamDaMalaDireta(MalaDiretaGeral malaDiretaGeral) {
-        String sql = "SELECT dam_id FROM ItemMalaDiretaGeral " +
-            " WHERE malaDiretaGeral_id = :idMalaDireta";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idMalaDireta", malaDiretaGeral.getId());
-        return q.getResultList();
-    }
-
     public InputStream getImagemInputStream(String caminhoImagem) {
         try {
             String pathImagem = caminhoImagem + "MalaDireta_Geral.png";
@@ -642,44 +635,30 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
         return null;
     }
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 4)
-    public Future<AssistenteImpressaoMalaDiretaGeral> imprimirDamsMalaDireta(AssistenteImpressaoMalaDiretaGeral assistente, List<ImpressaoMalaDiretaGeral> lista, int numFuture, UsuarioSistema usuarioSistema, String caminhoReport, String caminhoImagem, Long idMalaDireta, String pastaMalaDireta, Exercicio exercicio) throws JRException, IOException {
-        String arquivoJasper = "DAM_MALA_DIRETA_GERAL";
-        AbstractReport report = AbstractReport.getAbstractReport();
-
-        List<List<ImpressaoMalaDiretaGeral>> particoes = Lists.partition(lista, 500);
-        int qtdePartes = 0;
-        for (List<ImpressaoMalaDiretaGeral> parte : particoes) {
-            List<DAM> dans = buscarDansDaMalaDireta(parte);
-            pixFacade.gerarQrCodePIX(dans);
-
-            qtdePartes++;
-            String nomeDoArquivo = pastaMalaDireta + arquivoJasper +
-                "_" + idMalaDireta + "_" +
-                StringUtil.preencheString(numFuture + "", 2, '0') +
-                StringUtil.preencheString(qtdePartes + "", 5, '0') + ".pdf";
-
-            InputStream imagem = getImagemInputStream(caminhoImagem);
+    public AssistenteImpressaoMalaDiretaGeral imprimirDamsMalaDireta(AssistenteImpressaoMalaDiretaGeral assistente) {
+        List<List<ImpressaoMalaDiretaGeral>> impressoesParticionadas = Lists.partition(assistente.getItens(), 500);
+        int parteInterna = 0;
+        for (List<ImpressaoMalaDiretaGeral> parteImpressoes : impressoesParticionadas) {
+            parteInterna++;
+            String nomeDoArquivo = assistente.getPastaMalaDireta() + "DAM_MALA_DIRETA_GERAL" +
+                "_" + assistente.getIdMala() + "_" +
+                StringUtil.preencheString(assistente.getNumFuture() + "", 2, '0') +
+                StringUtil.preencheString(parteInterna + "", 5, '0') + ".pdf";
             try {
-                HashMap parameters = new HashMap<>();
-                parameters.put("USUARIO", usuarioSistema.getLogin());
-                parameters.put("BRASAO", caminhoImagem);
-                parameters.put("IMAGEM_FUNDO", imagem);
-                parameters.put("HOMOLOGACAO", getServiceDAM().isAmbienteHomologacao());
-                parameters.put("MSG_PIX", "Pagamento Via QrCode PIX");
-                JasperPrint print = report.gerarBytesDeRelatorioComDadosEmCollectionView(caminhoReport,
-                    arquivoJasper + ".jasper", parameters, new JRBeanCollectionDataSource(parte));
-                OutputStream output = new FileOutputStream(new File(nomeDoArquivo));
-                JasperExportManager.exportReportToPdfStream(print, output);
-                output.close();
+                byte[] dados = assistente.getImprimeDAM().gerarBytesImpressaoMalaDiretaGeral(assistente.getUsuario(),
+                    assistente.getIdMala(), parteImpressoes.stream().map(ImpressaoMalaDiretaGeral::getId).collect(Collectors.toList()));
+                try (FileOutputStream outputStream = new FileOutputStream(nomeDoArquivo)) {
+                    outputStream.write(dados);
+                }
             } catch (Exception e) {
-                logger.error("Erro ao gerar o arquivo " + nomeDoArquivo + ": {}", e);
+                logger.error("Erro ao gerar o arquivo " + nomeDoArquivo + ". {}", e.getMessage());
+                logger.debug("Stacktrace.", e);
+            } finally {
+                assistente.conta();
             }
-            assistente.contar(parte.size());
-            imagem.close();
         }
-        return new AsyncResult<>(new AssistenteImpressaoMalaDiretaGeral());
+        return assistente;
     }
 
     public List<DAM> buscarDansDaMalaDireta(List<ImpressaoMalaDiretaGeral> impressoes) {
@@ -713,24 +692,15 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
         return daoMalaDiretaGeral;
     }
 
-    public JdbcDamDAO getDaoDAM() {
-        if (daoDAM == null) {
-            ApplicationContext ap = ContextLoader.getCurrentWebApplicationContext();
-            daoDAM = (JdbcDamDAO) ap.getBean("damDAO");
-        }
-        return daoDAM;
-    }
-
     public ServiceDAM getServiceDAM() {
-        if(serviceDAM == null) {
+        if (serviceDAM == null) {
             serviceDAM = (ServiceDAM) Util.getSpringBeanPeloNome("serviceDAM");
         }
         return serviceDAM;
     }
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 10)
-    public Future<Map<ContribuinteTributario, List<ResultadoParcela>>> buscarDebitosDaMalaDiretaDe(
+    public Map<ContribuinteTributario, List<ResultadoParcela>> buscarDebitosDaMalaDiretaDe(
         FiltroMalaDiretaGeral filtroMalaDiretaGeral,
         List<ImpressaoMalaDiretaGeral> idsCadastro) {
         Map<ContribuinteTributario, List<ResultadoParcela>> toReturn = Maps.newHashMap();
@@ -765,7 +735,7 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
             List<ResultadoParcela> parcelas = consultaParcela.executaConsulta().getResultados();
             toReturn.put(new ContribuinteTributario(idCadastro.getId(), idCadastro.getIdPessoa(), filtroMalaDiretaGeral.getTipoCadastroTributario()), parcelas);
         }
-        return new AsyncResult<>(toReturn);
+        return toReturn;
     }
 
 
@@ -846,25 +816,7 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
 
     public DAM criarDamCadastroMalaDireta(List<ResultadoParcela> parcelas, Exercicio exercicio, ConfiguracaoDAM configuracaoDAM, Date vencimento, UsuarioSistema usuario, DAM.Tipo tipoDam, boolean gerarHistorico) {
         return DAM.Tipo.UNICO.equals(tipoDam) ? damFacade.gerarDAMUnicoViaApi(usuario, parcelas.get(0)) :
-                damFacade.gerarDAMCompostoViaApi(usuario, parcelas, vencimento);
-    }
-
-    private List<TributoParcela> buscarItensParcela(Long idParcela) {
-
-        String sql = "select tr.id, item.valor " +
-            " from ItemParcelaValorDivida item " +
-            " inner join itemvalordivida ivd on ivd.id = item.itemvalordivida_id " +
-            " inner join tributo tr on tr.id = ivd.tributo_id " +
-            " where item.parcelaValorDivida_id = :idParcela";
-
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("idParcela", idParcela);
-        List<Object[]> result = q.getResultList();
-        List<TributoParcela> toReturn = Lists.newArrayList();
-        for (Object[] obj : result) {
-            toReturn.add(new TributoParcela((BigDecimal) obj[0], (BigDecimal) obj[1]));
-        }
-        return toReturn;
+            damFacade.gerarDAMCompostoViaApi(usuario, parcelas, vencimento);
     }
 
     public ItemMalaDiretaGeral gerarItemMalaDireta(MalaDiretaGeral malaDireta,
@@ -938,12 +890,10 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
         }
     }
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 10)
-    public Future<List<ItemMalaDiretaGeral>> criarItemMalaDireta(
-        MalaDiretaGeral malaDiretaGeral,
-        Map<ContribuinteTributario, List<ResultadoParcela>> mapaParcelasPorCadastro,
-        AssistenteBarraProgresso assistenteBarraProgresso, UsuarioSistema usuario) {
+    public List<ItemMalaDiretaGeral> criarItemMalaDireta(MalaDiretaGeral malaDiretaGeral,
+                                                         Map<ContribuinteTributario, List<ResultadoParcela>> mapaParcelasPorCadastro,
+                                                         AssistenteBarraProgresso assistenteBarraProgresso) {
 
         Calendar c = Calendar.getInstance();
         c.set(Calendar.DAY_OF_MONTH, Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH));
@@ -952,12 +902,13 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
         List<ItemMalaDiretaGeral> toReturn = Lists.newArrayList();
         for (ContribuinteTributario contribuinteTributario : mapaParcelasPorCadastro.keySet()) {
             List<ResultadoParcela> debitos = mapaParcelasPorCadastro.get(contribuinteTributario);
-            ItemMalaDiretaGeral item = gerarItemMalaDireta(malaDiretaGeral, contribuinteTributario, debitos, vencimento, usuario);
+            ItemMalaDiretaGeral item = gerarItemMalaDireta(malaDiretaGeral, contribuinteTributario, debitos,
+                vencimento, assistenteBarraProgresso.getUsuarioSistema());
             toReturn.add(item);
             assistenteBarraProgresso.conta();
         }
 
-        return new AsyncResult<>(toReturn);
+        return toReturn;
     }
 
     public Template createTemplate(String texto) {
@@ -1061,40 +1012,25 @@ public class MalaDiretaGeralFacade extends AbstractFacade<MalaDiretaGeral> {
     }
 
 
-    @Asynchronous
     @TransactionTimeout(unit = TimeUnit.HOURS, value = 4)
-    public Future<AssistenteImpressaoMalaDiretaGeral> envarEmail(List<ImpressaoMalaDiretaGeral> lista,
-                                                                 UsuarioSistema usuarioSistema,
-                                                                 String caminhoReport,
-                                                                 String caminhoImagem,
-                                                                 String assunto) {
-        String arquivoJasper = "DAM_MALA_DIRETA_GERAL";
-        AbstractReport report = AbstractReport.getAbstractReport();
-        List<DAM> dans = buscarDansDaMalaDireta(lista);
-        pixFacade.gerarQrCodePIX(dans);
-
-        for (ImpressaoMalaDiretaGeral impressao : lista) {
+    public void enviarEmail(ImprimeDAM imprimeDAM,
+                            Long idMala,
+                            List<ImpressaoMalaDiretaGeral> impressoes,
+                            String usuario,
+                            String assunto) {
+        for (ImpressaoMalaDiretaGeral impressao : impressoes) {
             try {
-                InputStream imagem = getImagemInputStream(caminhoImagem);
-
-                HashMap parameters = new HashMap<>();
-                parameters.put("USUARIO", usuarioSistema.getLogin());
-                parameters.put("BRASAO", caminhoImagem);
-                parameters.put("IMAGEM_FUNDO", imagem);
-                parameters.put("HOMOLOGACAO", getServiceDAM().isAmbienteHomologacao());
-                parameters.put("MSG_PIX", "Pagamento Via QrCode PIX");
-                JasperPrint print = report.gerarBytesDeRelatorioComDadosEmCollectionView(caminhoReport,
-                    arquivoJasper + ".jasper", parameters, new JRBeanCollectionDataSource(Lists.newArrayList(impressao)));
-                ByteArrayOutputStream out = report.exportarJasperParaPDF(print);
+                byte[] dados = imprimeDAM.gerarBytesImpressaoMalaDiretaGeral(usuario, idMala, Lists.newArrayList(impressao.getId()));
+                ByteArrayOutputStream out = new ByteArrayOutputStream(dados.length);
+                out.write(dados);
                 EmailService.getInstance().enviarEmail(impressao.getEmailContribuinte(),
                     assunto, impressao.getTexto(), out);
                 out.close();
-                imagem.close();
             } catch (Exception e) {
-                logger.error("Erro ao gerar o arquivo: {}", e);
+                logger.error("Erro ao enviar e-mail da mala direta geral id item [{" + impressao.getId() + "}]: {}", e.getMessage());
+                logger.debug("Stacktrace.", e);
             }
         }
-        return new AsyncResult<>(new AssistenteImpressaoMalaDiretaGeral());
     }
 
     public void lancarNotificacoes() {

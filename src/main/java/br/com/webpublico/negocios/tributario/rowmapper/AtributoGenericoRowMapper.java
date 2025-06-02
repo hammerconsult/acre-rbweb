@@ -28,6 +28,7 @@ public class AtributoGenericoRowMapper implements RowMapper {
         }
         if (rs.getString("VALORPOSSIVEL") != null) {
             atr.setValor(rs.getString("VALORPOSSIVEL"));
+            atr.setFator(rs.getDouble("FATOR"));
         }
         return atr;
     }

@@ -5,10 +5,14 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoCreditoReceberDTO;
+import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoDividaAtivaContabilDTO;
 import br.com.webpublico.enums.Intervalo;
 import br.com.webpublico.enums.NaturezaDividaAtivaCreditoReceber;
 import br.com.webpublico.enums.OperacaoCreditoReceber;
+import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
+import org.joda.time.LocalDate;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -27,6 +31,8 @@ public class SaldoDividaAtivaContabilFacade extends AbstractFacade<SaldoDividaAt
     private EntityManager em;
     @EJB
     private SaldoCreditoReceberFacade saldoCreditoReceberFacade;
+    @EJB
+    private ConfiguracaoContabilFacade configuracaoContabilFacade;
 
     public SaldoDividaAtivaContabilFacade() {
         super(SaldoDividaAtivaContabil.class);
@@ -63,24 +69,38 @@ public class SaldoDividaAtivaContabilFacade extends AbstractFacade<SaldoDividaAt
 
     public void gerarSaldoDividaAtiva(DividaAtivaContabil divida, ContaReceita contaReceitaEquivalente) throws ExcecaoNegocioGenerica {
         ContaReceita contaReceita = definirContaReceita(divida, contaReceitaEquivalente);
-        divida.setContaReceita(contaReceita);
-        SaldoDividaAtivaContabil ultimoSaldo = getUltimoSaldoPorDataUnidadeConta(divida);
-        if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
-            ultimoSaldo = criarNovoSaldo(divida);
-            ultimoSaldo = atribuirValorParaColunaCorrespondente(ultimoSaldo, divida);
-            salvar(ultimoSaldo);
+        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDODIVIDAATIVACONTABILMICROS")) {
+            SaldoDividaAtivaContabilDTO dto = new SaldoDividaAtivaContabilDTO();
+            dto.setIdUnidadeOrganizacional(divida.getUnidadeOrganizacional().getId());
+            dto.setIdContaDeDestinacao(divida.getContaDeDestinacao().getId());
+            dto.setIdContaReceita(contaReceita.getId());
+            dto.setValor(divida.getValor());
+            dto.setTipoLancamento(divida.getTipoLancamento());
+            dto.setOperacaoDividaAtiva(divida.getOperacaoDividaAtiva());
+            dto.setNatureza(divida.getNaturezaDividaAtiva());
+            dto.setDataSaldo(DataUtil.dateToLocalDate(divida.getDataDivida()));
+            dto.setIntervalo(divida.getIntervalo());
+            ApiServiceContabil.getService().gerarSaldoDividaAtiva(dto);
         } else {
-            if (DataUtil.getDataFormatada(ultimoSaldo.getDataSaldo()).compareTo(DataUtil.getDataFormatada(divida.getDataDivida())) == 0) {
+            divida.setContaReceita(contaReceita);
+            SaldoDividaAtivaContabil ultimoSaldo = getUltimoSaldoPorDataUnidadeConta(divida);
+            if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
+                ultimoSaldo = criarNovoSaldo(divida);
                 ultimoSaldo = atribuirValorParaColunaCorrespondente(ultimoSaldo, divida);
                 salvar(ultimoSaldo);
             } else {
-                SaldoDividaAtivaContabil novoSaldo = criarNovoSaldo(divida);
-                novoSaldo = definirValoresParaNovo(ultimoSaldo, novoSaldo);
-                novoSaldo = atribuirValorParaColunaCorrespondente(novoSaldo, divida);
-                salvarNovo(novoSaldo);
+                if (DataUtil.getDataFormatada(ultimoSaldo.getDataSaldo()).compareTo(DataUtil.getDataFormatada(divida.getDataDivida())) == 0) {
+                    ultimoSaldo = atribuirValorParaColunaCorrespondente(ultimoSaldo, divida);
+                    salvar(ultimoSaldo);
+                } else {
+                    SaldoDividaAtivaContabil novoSaldo = criarNovoSaldo(divida);
+                    novoSaldo = definirValoresParaNovo(ultimoSaldo, novoSaldo);
+                    novoSaldo = atribuirValorParaColunaCorrespondente(novoSaldo, divida);
+                    salvarNovo(novoSaldo);
+                }
             }
+            gerarSaldoPosteriores(divida);
         }
-        gerarSaldoPosteriores(divida);
     }
 
     private void gerarSaldoPosteriores(DividaAtivaContabil divida) {
@@ -120,7 +140,7 @@ public class SaldoDividaAtivaContabilFacade extends AbstractFacade<SaldoDividaAt
 
         String hql = buscarHqlSaldoAtual();
         Query q = em.createQuery(hql);
-        q.setParameter("dataSaldo", DataUtil.getDataFormatada(dividaAtivaContabil.getDataDivida()));
+        q.setParameter("dataSaldo", dividaAtivaContabil.getDataDivida());
         q.setParameter("unidadeOrganizacional", dividaAtivaContabil.getUnidadeOrganizacional());
         q.setParameter("contaReceita", dividaAtivaContabil.getContaReceita());
         q.setParameter("natureza", dividaAtivaContabil.getNaturezaDividaAtiva());
@@ -153,7 +173,7 @@ public class SaldoDividaAtivaContabilFacade extends AbstractFacade<SaldoDividaAt
 
     private String buscarHqlSaldoAtual() {
         return "select saldo from SaldoDividaAtivaContabil saldo "
-            + " where trunc(saldo.dataSaldo) <= to_date(:dataSaldo, 'dd/mm/yyyy') "
+            + " where saldo.dataSaldo <= :dataSaldo "
             + " and saldo.unidadeOrganizacional = :unidadeOrganizacional "
             + " and saldo.contaReceita = :contaReceita "
             + " and saldo.naturezaDividaAtiva = :natureza "

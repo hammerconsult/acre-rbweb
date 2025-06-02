@@ -125,7 +125,7 @@ public class ConfigGrupoMaterialFacade extends AbstractFacade<ConfigGrupoMateria
         } catch (NonUniqueResultException e) {
             throw new ExcecaoNegocioGenerica("A conta de despesa: <b> " + conta + "</b> recuperou mais de um grupo material.");
         } catch (NoResultException | IndexOutOfBoundsException ex) {
-            throw new ExcecaoNegocioGenerica("Nenhum grupo material encontrado.");
+            throw new ExcecaoNegocioGenerica("Grupo material não encontrado para o desdobramento " + conta.getCodigo() + "/" + conta.getExercicio().getAno()+ "." );
         }
     }
 

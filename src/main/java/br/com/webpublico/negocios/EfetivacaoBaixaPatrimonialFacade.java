@@ -2,7 +2,6 @@ package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AssistenteContabilizacaoBaixa;
-import br.com.webpublico.entidadesauxiliares.FiltroTermoBaixaPatrimonial;
 import br.com.webpublico.entidadesauxiliares.VOItemBaixaPatrimonial;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.negocios.tributario.singletons.SingletonConcorrenciaPatrimonio;
@@ -16,7 +15,6 @@ import javax.ejb.AsyncResult;
 import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
-import javax.faces.application.FacesMessage;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
@@ -214,7 +212,7 @@ public class EfetivacaoBaixaPatrimonialFacade extends AbstractFacade<EfetivacaoB
             assistente.setDescricaoProcesso(" ");
         } catch (Exception ex) {
             String erro = "Ocorreu um erro durante a Conclusão da efetivação de baixa: " + ex.getMessage();
-            assistente.getMensagensValidacaoFacesUtil().add(new FacesMessage(erro));
+            assistente.getMensagens().add(erro);
             logger.error("Erro ao concluir efetivação de baixa de bens. {}", ex);
             throw ex;
         }
@@ -1216,7 +1214,6 @@ public class EfetivacaoBaixaPatrimonialFacade extends AbstractFacade<EfetivacaoB
         }
         return bensPesquisados;
     }
-
 
     public BemFacade getBemFacade() {
         return bemFacade;

@@ -249,7 +249,12 @@ public class PagamentoExtraEstornoFacade extends SuperFacadeContabil<PagamentoEx
     }
 
     public void gerarSaldoExtraOrcamentario(PagamentoExtraEstorno entity) throws ExcecaoNegocioGenerica {
-        saldoExtraorcamentarioFacade.gerarSaldoExtraorcamentario(entity.getDataEstorno(), TipoOperacao.CREDITO, entity.getValor(), entity.getPagamentoExtra().getContaExtraorcamentaria(), entity.getPagamentoExtra().getContaDeDestinacao(), entity.getPagamentoExtra().getUnidadeOrganizacional());
+        saldoExtraorcamentarioFacade.gerarSaldoExtraorcamentario(entity.getDataEstorno(),
+            TipoOperacao.CREDITO, entity.getValor(),
+            entity.getPagamentoExtra().getContaExtraorcamentaria(),
+            entity.getPagamentoExtra().getContaDeDestinacao(),
+            entity.getPagamentoExtra().getUnidadeOrganizacional(),
+            entity.getId().toString(), entity.getClass().getSimpleName());
     }
 
     private PagamentoExtraEstorno recuperarObjetosParaHistorico(PagamentoExtraEstorno entity) {
@@ -300,10 +305,10 @@ public class PagamentoExtraEstornoFacade extends SuperFacadeContabil<PagamentoEx
             item.setTagValor(TagValor.LANCAMENTO);
 
             List<ObjetoParametro> objetos = Lists.newArrayList();
-            objetos.add(new ObjetoParametro(entity.getId().toString(), PagamentoExtraEstorno.class.getSimpleName(), item));
-            objetos.add(new ObjetoParametro(entity.getPagamentoExtra().getContaExtraorcamentaria().getId().toString(), ContaExtraorcamentaria.class.getSimpleName(), item));
-            objetos.add(new ObjetoParametro(entity.getPagamentoExtra().getSubConta().getId().toString(), SubConta.class.getSimpleName(), item));
-            objetos.add(new ObjetoParametro(entity.getPagamentoExtra().getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+            objetos.add(new ObjetoParametro(entity, item));
+            objetos.add(new ObjetoParametro(entity.getPagamentoExtra().getContaExtraorcamentaria(), item));
+            objetos.add(new ObjetoParametro(entity.getPagamentoExtra().getSubConta(), item));
+            objetos.add(new ObjetoParametro(entity.getPagamentoExtra().getClasseCredor(), item));
             item.setObjetoParametros(objetos);
 
             parametroEvento.getItensParametrosEvento().add(item);

@@ -1,6 +1,8 @@
 package br.com.webpublico.controle;
 
-import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidades.CalculoDividaDiversa;
+import br.com.webpublico.entidades.CalculoPessoa;
+import br.com.webpublico.entidades.Pessoa;
 import br.com.webpublico.entidadesauxiliares.DataTablePesquisaGenerico;
 import br.com.webpublico.entidadesauxiliares.ItemPesquisaGenerica;
 import br.com.webpublico.enums.SituacaoCalculoDividaDiversa;

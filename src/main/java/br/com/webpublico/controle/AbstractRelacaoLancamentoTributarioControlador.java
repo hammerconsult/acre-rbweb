@@ -78,6 +78,9 @@ public abstract class AbstractRelacaoLancamentoTributarioControlador<T extends A
     private AssistenteRelacaoLancamentoTributario assistenteRelacaoLancamentoTributario;
     private AbstractFiltroRelacaoLancamentoDebito filtros;
 
+    public SistemaControlador getSistemaControlador() {
+        return (SistemaControlador) Util.getControladorPeloNome("sistemaControlador");
+    }
 
     protected abstract Logger getLogger();
 
@@ -177,7 +180,6 @@ public abstract class AbstractRelacaoLancamentoTributarioControlador<T extends A
             if (dados.size() >= 4) {
                 sublistSize = dados.size() / 4;
             }
-            tempoInicioCalculo = System.currentTimeMillis();
             for (List<T> parte : Lists.partition(dados, sublistSize)) {
                 futuresDadosRelatorioCalculados.add((Future<List<T>>) getFacade().calcularAcrescimo(parte, getFiltroLancamento().getDataPagamentoInicial(),
                     getFiltroLancamento().getDataPagamentoFinal()));
@@ -254,10 +256,6 @@ public abstract class AbstractRelacaoLancamentoTributarioControlador<T extends A
     public void iniciaGeracaoPdfFalhado(AssistenteRelacaoLancamentoTributario assistenteRelacaoLancamentoTributario, AbstractFiltroRelacaoLancamentoDebito filtros, Long relatorioCriadoEm) {
         this.relatorioCriadoEm = relatorioCriadoEm;
         iniciaGeracaoPdf(assistenteRelacaoLancamentoTributario, filtros);
-    }
-
-    public SistemaControlador getSistemaControlador() {
-        return (SistemaControlador) Util.getControladorPeloNome("sistemaControlador");
     }
 
     public void iniciaGeracaoPdf(AssistenteRelacaoLancamentoTributario assistenteRelacaoLancamentoTributario, AbstractFiltroRelacaoLancamentoDebito filtros) {

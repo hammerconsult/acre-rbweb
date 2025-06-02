@@ -5,7 +5,6 @@ import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.math.BigDecimal;
 
 /**
  * Created by mga on 17/11/2017.

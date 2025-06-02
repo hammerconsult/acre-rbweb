@@ -4,6 +4,7 @@
  */
 package br.com.webpublico.controle;
 
+import br.com.webpublico.controlerelatorio.AbstractReport;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.ValidacaoException;
@@ -1812,7 +1813,11 @@ public class DividaPublicaSuperControlador extends PrettyControlador<DividaPubli
     }
 
     public void redirecionarVerArquivo(ArquivoDividaPublica arquivoDividaPublica) {
-        FacesUtil.redirecionamentoInterno("/arquivos/" + arquivoDividaPublica.getArquivo().getNome() + "?id=" + arquivoDividaPublica.getArquivo().getId());
+        Arquivo arquivo = arquivoDividaPublica.getArquivo();
+        if (arquivoDividaPublica.getId() != null) {
+            arquivo = dividaPublicaFacade.getArquivoFacade().recuperaDependencias(arquivo.getId());
+        }
+        AbstractReport.poeRelatorioNaSessao(arquivo.getByteArrayDosDados());
     }
 
     public DividaPublicaValorIndicadorEconomico getDividaPublicaValorIndicadorEconomico() {

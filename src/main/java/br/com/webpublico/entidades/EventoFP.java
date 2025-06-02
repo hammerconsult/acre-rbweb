@@ -36,7 +36,7 @@ import java.util.List;
 
 @Audited
 @Etiqueta("Evento Folha de Pagamento")
-public class EventoFP implements Serializable, IHistoricoEsocial {
+public class EventoFP implements Serializable, Comparable<EventoFP>, IHistoricoEsocial {
 
     public static final String FORMULA_VALOR_PADRAO = "return 0;";
     public static final String REGRA_VALOR_PADRAO = "return false;";
@@ -250,6 +250,8 @@ public class EventoFP implements Serializable, IHistoricoEsocial {
     @Etiqueta("Tipo de Contribuição BBPrev")
     private TipoContribuicaoBBPrev tipoContribuicaoBBPrev;
     private String codigoContribuicaoBBPrev;
+    @Transient
+    private String debitoCreditoDecimo;
 
     public EventoFP() {
         ativo = true;
@@ -506,6 +508,14 @@ public class EventoFP implements Serializable, IHistoricoEsocial {
 
     public void setControleCargoLotacao(Boolean controleCargoLotacao) {
         this.controleCargoLotacao = controleCargoLotacao;
+    }
+
+    public String getDebitoCreditoDecimo() {
+        return debitoCreditoDecimo;
+    }
+
+    public void setDebitoCreditoDecimo(String debitoCreditoDecimo) {
+        this.debitoCreditoDecimo = debitoCreditoDecimo;
     }
 
     public String getFormulaCalculo() {
@@ -892,6 +902,17 @@ public class EventoFP implements Serializable, IHistoricoEsocial {
 
     public void setRemuneracaoPrincipal(Boolean remuneracaoPrincipal) {
         this.remuneracaoPrincipal = remuneracaoPrincipal;
+    }
+    @Override
+    public int compareTo(EventoFP o) {
+        try {
+            int resultado = new Integer(this.codigo).compareTo(new Integer(o.getCodigo()));
+            if (resultado == 0)
+                return this.descricao.compareTo(o.getDescricao());
+            return resultado;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     public Boolean getNaoEnviarVerbaSicap() {

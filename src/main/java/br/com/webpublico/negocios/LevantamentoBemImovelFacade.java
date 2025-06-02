@@ -3,23 +3,15 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.DocumentoComprobatorioLevantamentoBemImovel;
 import br.com.webpublico.entidades.LevantamentoBemImovel;
 import br.com.webpublico.entidades.UnidadeOrganizacional;
-import br.com.webpublico.enums.EstadoConservacaoBem;
-import br.com.webpublico.enums.TipoAquisicaoBem;
-import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.exception.ValidacaoException;
-import com.google.common.collect.Lists;
-import org.jboss.ejb3.annotation.TransactionTimeout;
+import org.hibernate.Hibernate;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.math.BigDecimal;
-import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created with IntelliJ IDEA.
@@ -44,6 +36,24 @@ public class LevantamentoBemImovelFacade extends AbstractFacade<LevantamentoBemI
     private SistemaFacade sistemaFacade;
     @EJB
     private BemFacade bemFacade;
+    @EJB
+    private CadastroImobiliarioFacade cadastroImobiliarioFacade;
+    @EJB
+    private SingletonHierarquiaOrganizacional singletonHO;
+    @EJB
+    private ParametroPatrimonioFacade parametroPatrimonioFacade;
+    @EJB
+    private FaseFacade faseFacade;
+    @EJB
+    private ExercicioFacade exercicioFacade;
+    @EJB
+    private LogradouroFacade logradouroFacade;
+    @EJB
+    private BairroFacade bairroFacade;
+    @EJB
+    private LoteFacade loteFacade;
+    @EJB
+    private PropriedadeFacade propriedadeFacade;
 
     public LevantamentoBemImovelFacade() {
         super(LevantamentoBemImovel.class);
@@ -57,27 +67,21 @@ public class LevantamentoBemImovelFacade extends AbstractFacade<LevantamentoBemI
     @Override
     public LevantamentoBemImovel recuperar(Object id) {
         LevantamentoBemImovel lbi = super.recuperar(id);
-        lbi.setHierarquiaOrganizacionalAdministrativa(hierarquiaOrganizacionalFacade.getHierarquiaOrganizacionalPorUnidade(lbi.getDataLevantamento(), lbi.getUnidadeAdministrativa(), TipoHierarquiaOrganizacional.ADMINISTRATIVA));
-        lbi.setHierarquiaOrganizacionalOrcamentaria(hierarquiaOrganizacionalFacade.getHierarquiaOrganizacionalPorUnidade(lbi.getDataLevantamento(), lbi.getUnidadeOrcamentaria(), TipoHierarquiaOrganizacional.ORCAMENTARIA));
-
-        lbi.getDocumentosComprobatorios().size();
+        Hibernate.initialize(lbi.getDocumentosComprobatorios());
         if (lbi.getDetentorArquivoComposicao() != null) {
-            lbi.getDetentorArquivoComposicao().getArquivosComposicao().size();
+            Hibernate.initialize(lbi.getDetentorArquivoComposicao().getArquivosComposicao());
         }
-
         for (DocumentoComprobatorioLevantamentoBemImovel dc : lbi.getDocumentosComprobatorios()) {
-            dc.getEmpenhos().size();
+            Hibernate.initialize(dc.getEmpenhos());
         }
-
-        lbi.getDetentorOrigemRecurso().getListaDeOriemRecursoBem().size();
-
+        Hibernate.initialize(lbi.getDetentorOrigemRecurso().getListaDeOriemRecursoBem());
         return lbi;
     }
 
     @Override
-    public void salvar(LevantamentoBemImovel levantamento) {
+    public LevantamentoBemImovel salvarRetornando(LevantamentoBemImovel levantamento) {
         validarRegrasDeNegocio(levantamento);
-        super.salvar(levantamento);
+        return super.salvarRetornando(levantamento);
     }
 
     private void validarRegrasDeNegocio(LevantamentoBemImovel levantamento) {
@@ -86,17 +90,6 @@ public class LevantamentoBemImovelFacade extends AbstractFacade<LevantamentoBemI
             ve.adicionarMensagemDeOperacaoNaoPermitida("O código " + levantamento.getCodigoPatrimonio() + " já está sendo utilizado.");
         }
         ve.lancarException();
-    }
-
-    @Override
-    public void salvarNovo(LevantamentoBemImovel levantamento) {
-        validarRegrasDeNegocio(levantamento);
-        super.salvarNovo(levantamento);
-    }
-
-    public LevantamentoBemImovel salvarLevantamento(LevantamentoBemImovel levantamento) {
-        validarRegrasDeNegocio(levantamento);
-        return salvarRetornando(levantamento);
     }
 
     public List<LevantamentoBemImovel> buscarLevantamentoImovelPorUnidadeOrcamentaria(UnidadeOrganizacional orcamentaria) {
@@ -125,11 +118,53 @@ public class LevantamentoBemImovelFacade extends AbstractFacade<LevantamentoBemI
         Query q = em.createNativeQuery(sql.toString());
         q.setParameter("id", id);
         return !q.getResultList().isEmpty();
+    }
 
+    public HierarquiaOrganizacionalFacade getHierarquiaOrganizacionalFacade() {
+        return hierarquiaOrganizacionalFacade;
+    }
 
+    public GrupoBemFacade getGrupoBemFacade() {
+        return grupoBemFacade;
+    }
+
+    public CondicaoDeOcupacaoFacade getCondicaoDeOcupacaoFacade() {
+        return condicaoDeOcupacaoFacade;
+    }
+
+    public BemFacade getBemFacade() {
+        return bemFacade;
+    }
+
+    public FaseFacade getFaseFacade() {
+        return faseFacade;
+    }
+
+    public ExercicioFacade getExercicioFacade() {
+        return exercicioFacade;
     }
 
     public SistemaFacade getSistemaFacade() {
         return sistemaFacade;
+    }
+
+    public CadastroImobiliarioFacade getCadastroImobiliarioFacade() {
+        return cadastroImobiliarioFacade;
+    }
+
+    public LogradouroFacade getLogradouroFacade() {
+        return logradouroFacade;
+    }
+
+    public BairroFacade getBairroFacade() {
+        return bairroFacade;
+    }
+
+    public LoteFacade getLoteFacade() {
+        return loteFacade;
+    }
+
+    public PropriedadeFacade getPropriedadeFacade() {
+        return propriedadeFacade;
     }
 }

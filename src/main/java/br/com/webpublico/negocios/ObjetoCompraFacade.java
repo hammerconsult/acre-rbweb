@@ -142,19 +142,19 @@ public class ObjetoCompraFacade extends AbstractFacade<ObjetoCompra> {
         return q.getResultList();
     }
 
-    public List<ObjetoCompra> buscarObjetoCompraNaoReferenciaPorTipoObjetoCompra(String codigoOrDescricao, TipoObjetoCompra tipoObjetoCompra) {
+    public List<ObjetoCompra> buscarObjetoCompraNaoReferenciaPorTipoObjetoCompra(String parte, TipoObjetoCompra tipoObjetoCompra) {
         if (tipoObjetoCompra == null) {
             return Lists.newArrayList();
         }
-        String sql = " select * from objetocompra"
-            + "         where (lower(descricao) like :codigoOrDescricao"
-            + "                or to_char(codigo) like :codigoOrDescricao)" +
+        String sql = " select * from objetocompra " +
+            "          where (lower(" + Util.getTranslate("descricao") + ") like " + Util.getTranslate(":parte") +
+            "            or to_char(codigo) like :parte) " +
             "           and tipoobjetocompra = :tipoObjetoCompra " +
             "           and situacaoObjetoCompra = :deferido " +
             "           and ativo = :ativo " +
             "           and referencial = :referencial ";
         Query q = em.createNativeQuery(sql, ObjetoCompra.class);
-        q.setParameter("codigoOrDescricao", "%" + codigoOrDescricao.trim().toLowerCase() + "%");
+        q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
         q.setParameter("tipoObjetoCompra", tipoObjetoCompra.name());
         q.setParameter("ativo", Boolean.TRUE);
         q.setParameter("referencial", Boolean.FALSE);
@@ -312,19 +312,20 @@ public class ObjetoCompraFacade extends AbstractFacade<ObjetoCompra> {
         return new ArrayList<>();
     }
 
-    public List<ObjetoCompra> buscarObjetoCompraConsumoPorGrupoMaterial(String codigoOrDescricao, Long idGrupo, Date dataOperacao) {
+    public List<ObjetoCompra> buscarObjetoCompraConsumoPorGrupoMaterial(String parte, Long idGrupo, Date dataOperacao) {
         String sql = " select obc.*  from objetocompra obc " +
-            "    inner join grupoobjetocompra grupo on grupo.id = obc.grupoobjetocompra_id " +
-            "inner join associacaogruobjcomgrumat associacao on grupo.id = associacao.grupoobjetocompra_id " +
-            "where to_date(:dataOperacao, 'dd/MM/yyyy') BETWEEN trunc(associacao.iniciovigencia) and coalesce(trunc(associacao.finalvigencia), to_date(:dataOperacao, 'dd/MM/yyyy')) " +
-            "  and  (lower(obc.descricao) like :codigoOrDescricao or to_char(obc.codigo) like :codigoOrDescricao) " +
-            "  and obc.tipoobjetocompra = :tipoObjetoCompra " +
-            "  and associacao.grupomaterial_id = :idGrupo " +
-            "  and obc.situacaoObjetoCompra = :situacao " +
-            "  and obc.ativo = :ativo " +
-            "  and obc.referencial = :referencial";
+                "           inner join grupoobjetocompra grupo on grupo.id = obc.grupoobjetocompra_id " +
+                "           inner join associacaogruobjcomgrumat associacao on grupo.id = associacao.grupoobjetocompra_id " +
+                "      where to_date(:dataOperacao, 'dd/MM/yyyy') BETWEEN trunc(associacao.iniciovigencia) and coalesce(trunc(associacao.finalvigencia), to_date(:dataOperacao, 'dd/MM/yyyy')) " +
+                "       and (lower(" + Util.getTranslate("obc.descricao") + ") like " + Util.getTranslate(":parte") +
+                "            or to_char(obc.codigo) like :parte) " +
+                "       and obc.tipoobjetocompra = :tipoObjetoCompra " +
+                "       and associacao.grupomaterial_id = :idGrupo " +
+                "       and obc.situacaoObjetoCompra = :situacao " +
+                "       and obc.ativo = :ativo " +
+                "       and obc.referencial = :referencial";
         Query q = em.createNativeQuery(sql, ObjetoCompra.class);
-        q.setParameter("codigoOrDescricao", "%" + codigoOrDescricao.trim().toLowerCase() + "%");
+        q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
         q.setParameter("tipoObjetoCompra", TipoObjetoCompra.CONSUMO.name());
         q.setParameter("situacao", SituacaoObjetoCompra.DEFERIDO.name());
         q.setParameter("dataOperacao", DataUtil.getDataFormatada(dataOperacao));
@@ -335,20 +336,21 @@ public class ObjetoCompraFacade extends AbstractFacade<ObjetoCompra> {
         return q.getResultList();
     }
 
-    public List<ObjetoCompra> buscarObjetoCompraPermanentePorGrupoPatrimonial(String codigoOrDescricao, Long idGrupo, Date dataOperacao) {
+    public List<ObjetoCompra> buscarObjetoCompraPermanentePorGrupoPatrimonial(String parte, Long idGrupo, Date dataOperacao) {
         String sql = " " +
             " select obc.*  from objetocompra obc " +
             "   inner join grupoobjetocompra grupo on grupo.id = obc.grupoobjetocompra_id " +
             "   inner join grupoobjcompragrupobem associacao on grupo.id = associacao.grupoobjetocompra_id " +
             " where to_date(:dataOperacao, 'dd/MM/yyyy') BETWEEN trunc(associacao.iniciovigencia) and coalesce(trunc(associacao.fimvigencia), to_date(:dataOperacao, 'dd/MM/yyyy')) " +
-            "   and  (lower(obc.descricao) like :codigoOrDescricao or to_char(obc.codigo) like :codigoOrDescricao) " +
+            "   and (lower(" + Util.getTranslate("obc.descricao") + ") like " + Util.getTranslate(":parte") +
+            "        or to_char(obc.codigo) like :parte) " +
             "   and obc.tipoobjetocompra = :tipoObjetoCompra " +
             "   and associacao.grupobem_id = :idGrupo " +
             "   and obc.situacaoObjetoCompra = :situacao " +
             "   and obc.ativo = :ativo " +
             "   and obc.referencial = :referencial";
         Query q = em.createNativeQuery(sql, ObjetoCompra.class);
-        q.setParameter("codigoOrDescricao", "%" + codigoOrDescricao.trim().toLowerCase() + "%");
+        q.setParameter("parte", "%" + parte.trim().toLowerCase() + "%");
         q.setParameter("tipoObjetoCompra", TipoObjetoCompra.PERMANENTE_MOVEL.name());
         q.setParameter("situacao", SituacaoObjetoCompra.DEFERIDO.name());
         q.setParameter("dataOperacao", DataUtil.getDataFormatada(dataOperacao));
@@ -415,6 +417,8 @@ public class ObjetoCompraFacade extends AbstractFacade<ObjetoCompra> {
                     return grupoContaDespesa;
                 }
                 GrupoMaterial grupoMaterial = associacaoGrupoMat.getGrupoMaterial();
+                grupoContaDespesa.setCodigoGrupo(grupoMaterial.getCodigo());
+                grupoContaDespesa.setDescricaoGrupo(grupoMaterial.getDescricao());
                 grupoContaDespesa.setGrupo(grupoMaterial.toString());
                 grupoContaDespesa.setIdGrupo(grupoMaterial.getId());
 
@@ -432,6 +436,8 @@ public class ObjetoCompraFacade extends AbstractFacade<ObjetoCompra> {
                     return grupoContaDespesa;
                 }
                 GrupoBem grupoBem = associacaoGrupoBem.getGrupoBem();
+                grupoContaDespesa.setCodigoGrupo(grupoBem.getCodigo());
+                grupoContaDespesa.setDescricaoGrupo(grupoBem.getDescricao());
                 grupoContaDespesa.setGrupo(grupoBem.toString());
                 grupoContaDespesa.setIdGrupo(grupoBem.getId());
 

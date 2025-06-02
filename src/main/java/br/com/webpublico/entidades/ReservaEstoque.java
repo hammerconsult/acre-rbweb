@@ -107,10 +107,6 @@ public class ReservaEstoque extends SuperEntidade {
         this.statusReservaEstoque = statusReservaEstoque;
     }
 
-    public boolean estaAguardando() {
-        return statusReservaEstoque.equals(StatusReservaEstoque.AGUARDANDO);
-    }
-
     public BigDecimal getQuantidadeReservada() {
         try {
             if (isReservaEstornoEntradaPorCompra()) {
@@ -181,7 +177,7 @@ public class ReservaEstoque extends SuperEntidade {
 
         private String descricao;
 
-        private StatusReservaEstoque(String descricao) {
+        StatusReservaEstoque(String descricao) {
             this.descricao = descricao;
         }
 

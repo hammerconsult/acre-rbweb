@@ -141,6 +141,13 @@ public class ItemParametroEvento implements Serializable {
 
     @Override
     public String toString() {
-        return "br.com.webpublico.entidades.ItemParametroEvento[ id=" + id + " ]";
+        return "ItemParametroEvento{" +
+            "id=" + id +
+            ", valor=" + valor +
+            ", parametroEvento=" + parametroEvento +
+            ", tagValor=" + tagValor +
+            ", operacaoClasseCredor=" + operacaoClasseCredor +
+            ", criadoEm=" + criadoEm +
+            '}';
     }
 }

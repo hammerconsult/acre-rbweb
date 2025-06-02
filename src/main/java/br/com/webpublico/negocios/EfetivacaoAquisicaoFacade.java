@@ -124,7 +124,7 @@ public class EfetivacaoAquisicaoFacade extends AbstractFacade<Aquisicao> {
             RequisicaoDeCompra requisicaoCompra = aquisicao.getSolicitacaoAquisicao().getRequisicaoDeCompra();
             UnidadeOrganizacional unidade = requisicaoDeCompraFacade.getUnidadeAdministrativa(requisicaoCompra, assistente.getDataLancamento());
             entidade = entidadeFacade.recuperarEntidadePorUnidadeOrganizacional(unidade);
-            ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroPatrimonio();
+            ParametroPatrimonio parametroPatrimonio = parametroPatrimonioFacade.recuperarParametroComDependenciasEntidadeGeradoCodigo();
             singletonGeradorCodigoPatrimonio.inicializarReset();
 
             for (ItemAquisicao itemAquisicao : aquisicao.getItensAquisicao()) {

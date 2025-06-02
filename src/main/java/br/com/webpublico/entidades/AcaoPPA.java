@@ -431,4 +431,8 @@ public class AcaoPPA implements Serializable, Comparable {
             }
         });
     }
+
+    public String getCodigoFuncaoSubFuncao(){
+        return getFuncao().getCodigo() + getSubFuncao().getCodigo();
+    }
 }

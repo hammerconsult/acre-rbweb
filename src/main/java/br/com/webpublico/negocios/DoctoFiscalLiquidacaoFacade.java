@@ -152,19 +152,17 @@ public class DoctoFiscalLiquidacaoFacade extends AbstractFacade<DoctoFiscalLiqui
     public List<DoctoFiscalLiquidacao> buscarDocumentoFiscalPorGrupoMaterial(String parte, Empenho empenho) {
         String sql = " select distinct documento.* from entradacompramaterial entrada " +
             "           inner join entradamaterial ent on ent.id = entrada.id " +
-            "           inner join requisicaodecompra compra on compra.id = entrada.requisicaodecompra_id " +
             "           inner join itementradamaterial item on item.entradamaterial_id = entrada.id " +
             "           inner join itemdoctoitementrada associacao on associacao.itementradamaterial_id = item.id " +
             "           inner join doctofiscalentradacompra itemdoc on itemdoc.id = associacao.doctofiscalentradacompra_id " +
             "           inner join doctofiscalliquidacao documento on documento.id = itemdoc.doctofiscalliquidacao_id " +
             "           inner join tipodocumentofiscal tipo on tipo.id = documento.tipodocumentofiscal_id " +
-            "           left join requisicaocompraexecucao rce on rce.requisicaocompra_id = compra.id " +
-            "           left join execucaocontrato ex on ex.id = rce.execucaocontrato_id " +
-            "           left join execucaocontratoempenho exemp on exemp.execucaocontrato_id = ex.id " +
-            "           left join execucaoprocesso exProc on exProc.id = rce.execucaoprocesso_id " +
-            "           left join execucaoprocessoempenho exEmpProc on exProc.id = exEmpProc.execucaoprocesso_id " +
-            "           left join reconhecimentodivida rd on rd.id = compra.reconhecimentodivida_id " +
-            "           left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
+            "           inner join requisicaodecompra req on req.id = entrada.requisicaodecompra_id " +
+            "           inner join requisicaocompraexecucao rce on rce.requisicaocompra_id = req.id " +
+            "           left join execucaocontratoempenho exemp on exemp.id = rce.execucaocontratoempenho_id " +
+            "           left join execucaoprocessoempenho exEmpProc on exEmpProc.id = rce.execucaoprocessoempenho_id " +
+            "           left join solicitacaoempenhorecdiv solrd on solrd.id = rce.execucaoreconhecimentodiv_id " +
+            "           left join solicitacaoempenho sol on sol.id = solrd.solicitacaoempenho_id " +
             "           inner join empenho emp on emp.id = coalesce(exemp.empenho_id, exEmpProc.empenho_id, sol.empenho_id)" +
             "          where emp.id = :idEmpenho " +
             "           and (tipo.codigo like :parte or lower(tipo.descricao) like :parte or documento.numero like :parte )" +
@@ -191,14 +189,12 @@ public class DoctoFiscalLiquidacaoFacade extends AbstractFacade<DoctoFiscalLiqui
             "     inner join doctofiscalliquidacao dfl ON dfl.id = idfl.doctofiscalliquidacao_id " +
             "     inner join tipodocumentofiscal tdf on dfl.tipodocumentofiscal_id = tdf.id " +
             "     inner join requisicaodecompra req on req.id = solAq.requisicaodecompra_id " +
-            "     left join requisicaocompraexecucao reqExec on reqExec.requisicaocompra_id = req.id " +
-            "     left join execucaocontrato ex on ex.id = reqExec.execucaocontrato_id " +
-            "     left join execucaocontratoempenho execemp on ex.id = execemp.execucaocontrato_id " +
-            "     left join execucaoprocesso exProc on exProc.id = reqExec.execucaoprocesso_id " +
-            "     left join execucaoprocessoempenho exEmpProc on exProc.id = exEmpProc.execucaoprocesso_id " +
-            "     left join reconhecimentodivida rd on rd.id = req.reconhecimentodivida_id " +
-            "     left join solicitacaoempenho sol on sol.reconhecimentodivida_id = rd.id " +
-            "     inner join empenho emp on emp.id = coalesce(execemp.empenho_id, exEmpProc.empenho_id, sol.empenho_id)" +
+            "     inner join requisicaocompraexecucao reqExec on reqExec.requisicaocompra_id = req.id " +
+            "     left join execucaocontratoempenho exemp on exemp.id = reqExec.execucaocontratoempenho_id " +
+            "     left join execucaoprocessoempenho exempproc on exempproc.id = reqExec.execucaoprocessoempenho_id " +
+            "     left join solicitacaoempenhorecdiv solrd on solrd.id = reqExec.execucaoreconhecimentodiv_id " +
+            "     left join solicitacaoempenho sol on solrd.solicitacaoempenho_id = sol.id " +
+            "     inner join empenho emp on emp.id = coalesce(exemp.empenho_id, exempproc.empenho_id, sol.empenho_id)" +
             "     left join liquidacao liq on liq.empenho_id = emp.id " +
             "   where dfl.total > (COALESCE((select SUM(lqd.valorliquidado) " +
             "                      from liquidacaodoctofiscal lqd " +

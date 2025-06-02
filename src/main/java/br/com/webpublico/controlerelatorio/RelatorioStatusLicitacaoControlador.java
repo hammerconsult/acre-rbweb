@@ -32,9 +32,9 @@ import java.util.Date;
 @ManagedBean
 @ViewScoped
 @URLMappings(mappings = {
-    @URLMapping(id = "relatorio-licitacao-em-andamento", pattern = "/licitacao/relatorio-licitacao-em-andamento/", viewId = "/faces/administrativo/relatorios/relatoriolicitacaoemandamento.xhtml"),
-    @URLMapping(id = "relatorio-licitacao-finalizada", pattern = "/licitacao/relatorio-licitacao-finalizada/", viewId = "/faces/administrativo/relatorios/relatoriolicitacaofinalizada.xhtml"),
-    @URLMapping(id = "relatorio-licitacao-homologada", pattern = "/licitacao/relatorio-licitacao-homologada/", viewId = "/faces/administrativo/relatorios/relatoriolicitacaohomogada.xhtml")
+        @URLMapping(id = "relatorio-licitacao-em-andamento", pattern = "/licitacao/relatorio-licitacao-em-andamento/", viewId = "/faces/administrativo/relatorios/relatoriolicitacaoemandamento.xhtml"),
+        @URLMapping(id = "relatorio-licitacao-finalizada", pattern = "/licitacao/relatorio-licitacao-finalizada/", viewId = "/faces/administrativo/relatorios/relatoriolicitacaofinalizada.xhtml"),
+        @URLMapping(id = "relatorio-licitacao-homologada", pattern = "/licitacao/relatorio-licitacao-homologada/", viewId = "/faces/administrativo/relatorios/relatoriolicitacaohomogada.xhtml")
 })
 public class RelatorioStatusLicitacaoControlador implements Serializable {
 
@@ -48,6 +48,7 @@ public class RelatorioStatusLicitacaoControlador implements Serializable {
     private UnidadeOrganizacional unidadeOrganizacionalSelecionada;
     private String resumoDoObjeto;
     private String filtros;
+    private StatusDaLicitacao statusDaLicitacao;
     private String arquivoJrxml;
     private String condicao;
     private String nomeRelatorio;
@@ -55,25 +56,19 @@ public class RelatorioStatusLicitacaoControlador implements Serializable {
     @URLAction(mappingId = "relatorio-licitacao-em-andamento", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novoRelatorioLicitacaoEmAndamento() {
         limparCampos();
-        arquivoJrxml = "Relatorio_Licitacao_Em_Andamento.jrxml";
-        condicao = " where sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.ANDAMENTO.name() + "'" + montarCondicaoEFiltros();
-        nomeRelatorio = "Relatório de Licitação em Andamento";
+        statusDaLicitacao = StatusDaLicitacao.ANDAMENTO;
     }
 
     @URLAction(mappingId = "relatorio-licitacao-finalizada", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novoRelatorioLicitacaoFinalizada() {
         limparCampos();
-        arquivoJrxml = "Relatorio_Licitacao_Finalizada.jrxml";
-        condicao = " where (sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.CANCELADA.name() + "' or sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.HOMOLOGADA.name() + "') " + montarCondicaoEFiltros();
-        nomeRelatorio = "Relatório de Licitação Finalizada";
+        statusDaLicitacao = StatusDaLicitacao.FINALIZADA;
     }
 
     @URLAction(mappingId = "relatorio-licitacao-homologada", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
     public void novoRelatorioLicitacaoHomologada() {
         limparCampos();
-        arquivoJrxml = "Relatorio_Licitacao_Homologada.jrxml";
-        condicao = " where sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.HOMOLOGADA.name() + "'" + montarCondicaoEFiltros();
-        nomeRelatorio = "Relatório de Licitação Homologada";
+        statusDaLicitacao = StatusDaLicitacao.HOMOLOGADA;
     }
 
     private void limparCampos() {
@@ -88,6 +83,7 @@ public class RelatorioStatusLicitacaoControlador implements Serializable {
 
     public void gerarRelatorio(String tipoRelatorioExtensao) {
         try {
+            atualizarArquivoJrxmlCondicaoENomeRelatorioPorStatusDaLicitacao();
             RelatorioDTO dto = new RelatorioDTO();
             dto.setTipoRelatorio(TipoRelatorioDTO.valueOf(tipoRelatorioExtensao));
             dto.adicionarParametro("USUARIO", sistemaFacade.getUsuarioCorrente().getNome(), false);
@@ -108,6 +104,28 @@ public class RelatorioStatusLicitacaoControlador implements Serializable {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
         } catch (Exception ex) {
             FacesUtil.addErroAoGerarRelatorio(ex.getMessage());
+        }
+    }
+
+    private void atualizarArquivoJrxmlCondicaoENomeRelatorioPorStatusDaLicitacao() {
+        switch (statusDaLicitacao) {
+            case ANDAMENTO:
+                arquivoJrxml = "Relatorio_Licitacao_Em_Andamento.jrxml";
+                condicao = " where sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.ANDAMENTO.name() + "'" + montarCondicaoEFiltros();
+                nomeRelatorio = "Relatório de Licitação em Andamento";
+                break;
+
+            case HOMOLOGADA:
+                arquivoJrxml = "Relatorio_Licitacao_Homologada.jrxml";
+                condicao = " where sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.HOMOLOGADA.name() + "'" + montarCondicaoEFiltros();
+                nomeRelatorio = "Relatório de Licitação Homologada";
+                break;
+
+            default:
+                arquivoJrxml = "Relatorio_Licitacao_Finalizada.jrxml";
+                condicao = " where (sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.CANCELADA.name() + "' or sl.tiposituacaolicitacao = '" + TipoSituacaoLicitacao.HOMOLOGADA.name() + "') " + montarCondicaoEFiltros();
+                nomeRelatorio = "Relatório de Licitação Finalizada";
+                break;
         }
     }
 
@@ -207,5 +225,9 @@ public class RelatorioStatusLicitacaoControlador implements Serializable {
 
     public void setDataDeAbertura(Date dataDeAbertura) {
         this.dataDeAbertura = dataDeAbertura;
+    }
+
+    public enum StatusDaLicitacao {
+        ANDAMENTO, HOMOLOGADA, FINALIZADA;
     }
 }

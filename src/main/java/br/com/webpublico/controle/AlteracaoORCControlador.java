@@ -1385,6 +1385,8 @@ public class AlteracaoORCControlador extends PrettyControlador<AlteracaoORC> imp
             }
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
+        }catch (ExcecaoNegocioGenerica ex){
+            FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
         } catch (OptimisticLockException ole) {
             FacesUtil.addOperacaoOptimisticLock();
         } catch (Exception e) {

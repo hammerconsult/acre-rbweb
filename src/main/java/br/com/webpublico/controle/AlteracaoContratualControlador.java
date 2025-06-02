@@ -196,7 +196,6 @@ public class AlteracaoContratualControlador extends PrettyControlador<AlteracaoC
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
         } catch (ExcecaoNegocioGenerica ex) {
-            ex.printStackTrace();
             FacesUtil.addOperacaoNaoPermitida(ex.getMessage());
         }
     }
@@ -277,8 +276,8 @@ public class AlteracaoContratualControlador extends PrettyControlador<AlteracaoC
                     + " antes de empenhar a(s) execução(ções) existente(s) da ata registro de preço.");
                 ataRegistroPreco = null;
             }
+            ve.lancarException();
         }
-        ve.lancarException();
     }
 
     public void definirAlteracaoContratualComoNull() {
@@ -625,6 +624,7 @@ public class AlteracaoContratualControlador extends PrettyControlador<AlteracaoC
         }
     }
 
+
     public void listenerFornecedorProcesso() {
         List<Pessoa> fornecedoresProcesso = facade.getContratoFacade().buscarFornecedoresProcesso(contrato);
         if (fornecedoresProcesso.contains(movimentoAlteracaoContratual.getFornecedor())) {
@@ -839,7 +839,6 @@ public class AlteracaoContratualControlador extends PrettyControlador<AlteracaoC
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception ex) {
-            ex.printStackTrace();
             FacesUtil.addOperacaoNaoRealizada(ex.getMessage());
         }
     }

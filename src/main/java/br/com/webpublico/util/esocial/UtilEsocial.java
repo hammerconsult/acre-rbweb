@@ -54,4 +54,11 @@ public class UtilEsocial {
         eventos.add(TipoClasseESocial.S1210);
         return eventos;
     }
+
+    public static List<TipoClasseESocial> getTipoEventoVinculoFP() {
+        List<TipoClasseESocial> eventos = Lists.newArrayList();
+        eventos.add(TipoClasseESocial.S2200);
+        eventos.add(TipoClasseESocial.S2299);
+        return eventos;
+    }
 }

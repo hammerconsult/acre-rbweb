@@ -67,13 +67,15 @@ public class RegistroObn350TipoCinco implements Serializable {
     private String numeroContaDoConvenioParaOBConvenios;
     private String codigoRetornoOperacao;
     private String numeroSequencialArquivo;
+    private HeaderObn350 headerObn350;
 
     public RegistroObn350TipoCinco() {
         throw new ExcecaoNegocioGenerica("Construtor não suportado, utilize o construtor informando uma linha \"Texto\" como paramentro!");
     }
 
-    public RegistroObn350TipoCinco(String linhas) {
+    public RegistroObn350TipoCinco(String linhas, HeaderObn350 headerObn350) {
         this.linhas = linhas;
+        this.headerObn350 = headerObn350;
         validaLinha(this.linhas);
     }
 
@@ -352,12 +354,20 @@ public class RegistroObn350TipoCinco implements Serializable {
     }
 
     public String getNumeroContaDoConvenioParaOBConvenios() {
-        numeroContaDoConvenioParaOBConvenios = linhas.substring(324, 334);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            numeroContaDoConvenioParaOBConvenios = linhas.substring(324, 337);
+        } else {
+            numeroContaDoConvenioParaOBConvenios = linhas.substring(324, 334);
+        }
         return numeroContaDoConvenioParaOBConvenios;
     }
 
     public String getBrancosIntervalo334A341() {
-        brancos = linhas.substring(334, 341);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            brancos = linhas.substring(337, 341);
+        } else {
+            brancos = linhas.substring(334, 341);
+        }
         return brancos;
     }
 

@@ -23,7 +23,7 @@ public class OrdemCompraServicoVo {
     private String descricaoPrazoEntrega;
     private String criadoPor;
     private List<OrdemCompraServicoItemVo> itens;
-
+    private List<RequisicaoCompraExecucaoVO> execucoes;
     private List<DocumentoFiscalOrdemCompra> documentosFiscais;
     private List<OrdemCompraResultadoVo> estornosOrdemCompraServico;
     private List<OrdemCompraResultadoVo> atestos;
@@ -31,6 +31,7 @@ public class OrdemCompraServicoVo {
 
     public OrdemCompraServicoVo() {
         itens = Lists.newArrayList();
+        execucoes = Lists.newArrayList();
         estornosOrdemCompraServico = Lists.newArrayList();
         documentosFiscais = Lists.newArrayList();
         atestos = Lists.newArrayList();
@@ -233,5 +234,13 @@ public class OrdemCompraServicoVo {
 
     public void setEstornosAtestos(List<OrdemCompraResultadoVo> estornosAtestos) {
         this.estornosAtestos = estornosAtestos;
+    }
+
+    public List<RequisicaoCompraExecucaoVO> getExecucoes() {
+        return execucoes;
+    }
+
+    public void setExecucoes(List<RequisicaoCompraExecucaoVO> execucoes) {
+        this.execucoes = execucoes;
     }
 }

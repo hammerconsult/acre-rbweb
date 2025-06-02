@@ -30,6 +30,8 @@ public class SolicitacaoItbiOnline extends SuperEntidade {
     private TipoITBI tipoITBI;
     @Enumerated(EnumType.STRING)
     private SituacaoSolicitacaoITBI situacao;
+    @Temporal(TemporalType.DATE)
+    private Date dataDesignacao;
     @ManyToOne
     private UsuarioSistema auditorFiscal;
     @ManyToOne
@@ -104,6 +106,14 @@ public class SolicitacaoItbiOnline extends SuperEntidade {
 
     public void setSituacao(SituacaoSolicitacaoITBI situacao) {
         this.situacao = situacao;
+    }
+
+    public Date getDataDesignacao() {
+        return dataDesignacao;
+    }
+
+    public void setDataDesignacao(Date dataDesignacao) {
+        this.dataDesignacao = dataDesignacao;
     }
 
     public UsuarioSistema getAuditorFiscal() {
@@ -188,6 +198,7 @@ public class SolicitacaoItbiOnline extends SuperEntidade {
     }
 
     public List<SolicitacaoItbiOnlineDocumento> getDocumentos() {
+        if (documentos != null) documentos.sort((o1, o2) -> o1.getDataRegistro().compareTo(o2.getDataRegistro()));
         return documentos;
     }
 
@@ -278,6 +289,10 @@ public class SolicitacaoItbiOnline extends SuperEntidade {
 
     public boolean isDesignada() {
         return SituacaoSolicitacaoITBI.DESIGNADA.equals(situacao);
+    }
+
+    public boolean isDeferida() {
+        return SituacaoSolicitacaoITBI.DEFERIDA.equals(situacao);
     }
 
     public boolean isHomologada() {

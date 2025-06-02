@@ -143,37 +143,42 @@ public class CalculoReajusteMediaFacade extends AbstractFacade<ReajusteAplicado>
 
     private void processarReajusteAposentado(List<ItemValorPrevidencia> itens, ReajusteMediaAposentadoria reajuste, Date inicioVigenciaReajustes) {
         for (ItemValorPrevidencia itemPrevidencia : itens) {
-            if (podeProcessarItem(itemPrevidencia, inicioVigenciaReajustes) && !itemPrevidenciaJaLancado(itemPrevidencia, reajuste)) {
+            Boolean processoTransiente = Boolean.FALSE;
+            if (podeProcessarItem(itemPrevidencia, inicioVigenciaReajustes)) {
+                if (itemPrevidenciaJaLancado(itemPrevidencia, reajuste) || reajuste.getReajusteTransiente() || inicioVigenciaReajustes.compareTo(itemPrevidencia.getInicioVigencia()) <= 0) {
+                    processoTransiente = Boolean.TRUE;
+                }
                 logger.debug("processando..." + itemPrevidencia.getVinculoFP());
                 ItemValorPrevidencia item = null;
-                if (!reajuste.getReajusteTransiente()) {
-                    item = criarNovoItemPrevidencia(itemPrevidencia, reajuste, inicioVigenciaReajustes);
+                item = criarNovoItemPrevidencia(itemPrevidencia, reajuste, inicioVigenciaReajustes, processoTransiente);
+                if (!processoTransiente) {
                     itemPrevidencia.setFinalVigencia(DateUtils.adicionarDias(inicioVigenciaReajustes, -1));
                 }
-                finalizarProcesso(item, reajuste, itemPrevidencia);
+                finalizarProcesso(item, reajuste, itemPrevidencia, processoTransiente);
             }
         }
     }
 
     private boolean itemPrevidenciaJaLancado(ItemValorPrevidencia itemPrevidencia, ReajusteMediaAposentadoria reajuste) {
         ReajusteMediaAposentadoria reajusteRecebido = itemPrevidencia.getReajusteRecebido();
-        return reajusteRecebido != null && reajusteRecebido.getMes().equals(reajuste.getMes()) && reajusteRecebido.getExercicio().equals(reajuste.getExercicio()) && reajusteRecebido.getExercicioReferencia().equals(reajuste.getExercicioReferencia());
+        return reajusteRecebido != null && reajusteRecebido.getMes().equals(reajuste.getMes()) && reajusteRecebido.getExercicio().equals(reajuste.getExercicio()) && reajusteRecebido.getExercicioReferencia().equals(reajuste.getExercicioReferencia()) && reajuste.getId().equals(reajusteRecebido.getId());
     }
 
-    private void finalizarProcesso(ItemValorPrevidencia novo, ReajusteMediaAposentadoria reajuste, ItemValorPrevidencia antigo) {
+    private void finalizarProcesso(ItemValorPrevidencia novo, ReajusteMediaAposentadoria reajuste, ItemValorPrevidencia antigo, Boolean processoTransiente) {
         ProcessoCalculoReajuste processoCalculoReajuste = new ProcessoCalculoReajuste();
         processoCalculoReajuste.setItemValorPrevidenciaAntigo(antigo);
         processoCalculoReajuste.setItemValorPrevidenciaNovo(novo);
         processoCalculoReajuste.setVinculoFP(antigo.getVinculoFP());
         processoCalculoReajuste.setReajusteMediaAposentadoria(reajuste);
+        processoCalculoReajuste.setProcessoTransiente(processoTransiente);
         reajuste.getProcessosCalculo().add(processoCalculoReajuste);
     }
 
-    private ItemValorPrevidencia criarNovoItemPrevidencia(ItemValorPrevidencia itemValor, ReajusteMediaAposentadoria reajuste, Date referenciaFinal) {
+    private ItemValorPrevidencia criarNovoItemPrevidencia(ItemValorPrevidencia itemValor, ReajusteMediaAposentadoria reajuste, Date referenciaFinal, Boolean processoTransiente) {
         ItemValorPrevidencia item = getInstanciaCorreta(itemValor.getVinculoFP());
         item.setVinculoFP(itemValor.getVinculoFP());
         item.setEventoFP(itemValor.getEventoFP());
-        item.setInicioVigencia(referenciaFinal);
+        item.setInicioVigencia(processoTransiente ? null : referenciaFinal);
         item.setFinalVigencia(itemValor.getFinalVigencia());
         item.setDataRegistro(new Date());
         item.setReajusteRecebido(reajuste);
@@ -218,8 +223,13 @@ public class CalculoReajusteMediaFacade extends AbstractFacade<ReajusteAplicado>
         return processoCalculoReajuste.getItemValorPrevidenciaAntigo() != null && processoCalculoReajuste.getItemValorPrevidenciaNovo() != null && processoCalculoReajuste.getItemValorPrevidenciaNovo().getValor() != null && processoCalculoReajuste.getItemValorPrevidenciaNovo().getValor().compareTo(BigDecimal.ZERO) != 0;
     }
 
-    public List<ReajusteMediaAposentadoria> buscarReajustesPorExercicio(Exercicio exercicioAplicacao, Exercicio exercicioReferencia) {
-        List<ReajusteMediaAposentadoria> reajustes = reajusteMediaAposentadoriaFacade.buscarPorExercicios(exercicioAplicacao, exercicioReferencia);
+    public List<ReajusteMediaAposentadoria> buscarReajustesPorExercicio(Exercicio exercicioAplicacao, Exercicio exercicioReferencia, Date dataReferencia) {
+        List<ReajusteMediaAposentadoria> reajustes = Lists.newArrayList();
+        if (dataReferencia != null) {
+            reajustes = reajusteMediaAposentadoriaFacade.buscarReajustesVigentesPorExercicios(dataReferencia, exercicioAplicacao, exercicioReferencia);
+        } else {
+            reajustes = reajusteMediaAposentadoriaFacade.buscarPorExercicios(exercicioAplicacao, exercicioReferencia);
+        }
         for (ReajusteMediaAposentadoria reajuste : reajustes) {
             List<ItemValorPrevidencia> itens = buscarTodosItens(reajuste);
             for (ItemValorPrevidencia item : itens) {

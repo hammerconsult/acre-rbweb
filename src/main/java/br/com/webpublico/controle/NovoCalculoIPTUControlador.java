@@ -95,10 +95,6 @@ public class NovoCalculoIPTUControlador extends PrettyControlador<ProcessoCalcul
         this.idIsencao = idIsencao;
     }
 
-    public void setSelecionado(ProcessoCalculoIPTU selecionado) {
-        this.selecionado = selecionado;
-    }
-
     public Converter getConverterConfiguracao() {
 
         if (converterConfiguracao == null) {
@@ -124,15 +120,15 @@ public class NovoCalculoIPTUControlador extends PrettyControlador<ProcessoCalcul
         itensCalculoIptu = calculoSelecionado.getItensCalculo();
     }
 
-    @Override
-    public AbstractFacade getFacede() {
-        return novoCalculoFacade;
-    }
-
     private void carregarParcelasOriginadas() {
         ConsultaParcela consultaParcela = new ConsultaParcela();
         consultaParcela.addParameter(ConsultaParcela.Campo.CALCULO_ID, ConsultaParcela.Operador.IGUAL, calculoSelecionado.getId());
         parcelasCalculoSelecionado = consultaParcela.executaConsulta().getResultados();
+    }
+
+    @Override
+    public AbstractFacade getFacede() {
+        return novoCalculoFacade;
     }
 
     @URLAction(mappingId = "calcularNovoIPTU", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -145,7 +141,6 @@ public class NovoCalculoIPTUControlador extends PrettyControlador<ProcessoCalcul
             selecionado.setCadastroInical("1");
             selecionado.setCadastroFinal("999999999999999");
         }
-        ;
         futures = Lists.newArrayList();
     }
 
@@ -236,7 +231,7 @@ public class NovoCalculoIPTUControlador extends PrettyControlador<ProcessoCalcul
             } else {
                 quebrado.add(cadastros);
             }
-            selecionado = calculoDAO.geraProcessoCalculo(selecionado);
+            selecionado = calculoDAO.gerarProcessoCalculo(selecionado);
             assistente = new AssistenteCalculadorIPTU(selecionado, cadastros.size());
             for (List<CadastroImobiliario> quebra : quebrado) {
                 futures.add(novoCalculoFacade.calcularIPTU(quebra, assistente));

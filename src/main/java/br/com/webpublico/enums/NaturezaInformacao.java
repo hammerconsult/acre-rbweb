@@ -10,7 +10,6 @@ import br.com.webpublico.interfaces.EnumComDescricao;
  * @author Renato Romanini
  */
 public enum NaturezaInformacao implements EnumComDescricao {
-
     PATRIMONIAL("Patrimonial", "P"),
     ORCAMENTARIO("Orçamentário", "O"),
     CONTROLE("Controle", "C");

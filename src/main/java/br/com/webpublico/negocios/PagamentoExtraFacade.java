@@ -185,7 +185,8 @@ public class PagamentoExtraFacade extends SuperFacadeContabil<PagamentoExtra> {
             entity.getValor(),
             entity.getContaExtraorcamentaria(),
             entity.getContaDeDestinacao(),
-            entity.getUnidadeOrganizacional());
+            entity.getUnidadeOrganizacional(),
+            entity.getId().toString(), entity.getClass().getSimpleName());
     }
 
     private void gerarSaldoContaFinanceira(PagamentoExtra entity) {
@@ -232,10 +233,6 @@ public class PagamentoExtraFacade extends SuperFacadeContabil<PagamentoExtra> {
         return singletonConcorrenciaContabil.isDisponivel(pag);
     }
 
-    public boolean isDisponivelUnidadeDespesaExtra(PagamentoExtra pag) {
-        return singletonConcorrenciaContabil.isDisponivelUnidadePagamento(pag.getUnidadeOrganizacional());
-    }
-
     public boolean bloquearReceitaExtra(PagamentoExtra pagamentoExtra) {
         for (PagamentoReceitaExtra pagamentoReceitaExtra : pagamentoExtra.getPagamentoReceitaExtras()) {
             singletonConcorrenciaContabil.bloquear(pagamentoReceitaExtra.getReceitaExtra());
@@ -267,7 +264,6 @@ public class PagamentoExtraFacade extends SuperFacadeContabil<PagamentoExtra> {
         } else {
             validarConcorrencia(pag);
             bloquearDespesaExtra(pag);
-            bloquearUnidade(pag);
             bloquearReceitaExtra(pag);
             hierarquiaOrganizacionalFacade.validaVigenciaHIerarquiaAdministrativaOrcamentaria(pag.getUnidadeOrganizacionalAdm(), pag.getUnidadeOrganizacional(), pag.getDataPagto());
             pag.setStatus(StatusPagamento.DEFERIDO);
@@ -298,27 +294,15 @@ public class PagamentoExtraFacade extends SuperFacadeContabil<PagamentoExtra> {
         singletonConcorrenciaContabil.bloquear(pag);
     }
 
-    private void bloquearUnidade(PagamentoExtra pag) {
-        singletonConcorrenciaContabil.bloquearUnidadeDespesaExtra(pag.getUnidadeOrganizacional());
-    }
-
-    private void desbloquearUnidade(PagamentoExtra pag) {
-        singletonConcorrenciaContabil.desbloquearUnidadeDespesaExtra(pag.getUnidadeOrganizacional());
-    }
-
     public void desbloquearDeferir(PagamentoExtra entity) {
         desbloquearReceitaExtra(entity);
         desbloquearDespesaExtra(entity);
-        desbloquearUnidade(entity);
     }
 
     public void validarConcorrencia(PagamentoExtra pagamento) {
         ValidacaoException ve = new ValidacaoException();
         if (!isDisponivelDespesaExtra(pagamento)) {
             ve.adicionarMensagemDeOperacaoNaoPermitida("A despesa extra " + pagamento + " está sendo utilizado por outro usuário. Caso o problema persistir, selecione novamente a despesa.");
-        }
-        if (!isDisponivelUnidadeDespesaExtra(pagamento)) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("A unidade  " + pagamento.getUnidadeOrganizacional() + " está realizando movimentos para outro pagamento. Por favor, aguarde alguns instantes e clique em deferir novamente.");
         }
         if (ve.temMensagens()) {
             throw ve;
@@ -523,10 +507,10 @@ public class PagamentoExtraFacade extends SuperFacadeContabil<PagamentoExtra> {
 
     private void adicionarObjetosParametros(PagamentoExtra entity, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity.getId().toString(), PagamentoExtra.class.getSimpleName(), item));
-        objetos.add(new ObjetoParametro(entity.getContaExtraorcamentaria().getId().toString(), ContaExtraorcamentaria.class.getSimpleName(), item));
-        objetos.add(new ObjetoParametro(entity.getSubConta().getId().toString(), SubConta.class.getSimpleName(), item));
-        objetos.add(new ObjetoParametro(entity.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity, item));
+        objetos.add(new ObjetoParametro(entity.getContaExtraorcamentaria(), item));
+        objetos.add(new ObjetoParametro(entity.getSubConta(), item));
+        objetos.add(new ObjetoParametro(entity.getClasseCredor(), item));
         item.setObjetoParametros(objetos);
     }
 

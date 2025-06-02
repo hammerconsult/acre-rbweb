@@ -347,8 +347,6 @@ public class EnquadramentoFuncionalControlador extends PrettyControlador<Enquadr
             provimentoFP.setVinculoFP(selecionado.getContratoServidor());
             provimentoFP.setDataProvimento(new Date());
         }
-        dataInicioVigencia = selecionado.getInicioVigencia();
-        dataFimVigencia = selecionado.getFimVigencia();
         carregarEnquadramentosPcs();
     }
 

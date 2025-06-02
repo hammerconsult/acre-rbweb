@@ -300,3 +300,4 @@ public class NovoCalculoIPTUFacade extends AbstractFacade<ProcessoCalculoIPTU> {
     }
 }
 
+

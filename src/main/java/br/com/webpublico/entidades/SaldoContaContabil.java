@@ -20,7 +20,7 @@ import java.util.Date;
  * Utilizado para melhorar o desempenho das consultas que apresentam os dados
  * contábeis a partir do saldo.
  */
-public class SaldoContaContabil implements Serializable {
+public class SaldoContaContabil extends SuperEntidade implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

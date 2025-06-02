@@ -5,11 +5,13 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
+import br.com.webpublico.entidades.rh.ParametroFerias;
 import br.com.webpublico.entidades.rh.cadastrofuncional.PeriodoAquisitivoExcluido;
 import br.com.webpublico.entidades.rh.configuracao.ConfiguracaoRH;
 import br.com.webpublico.entidades.rh.portal.ProgramacaoFeriasPortal;
 import br.com.webpublico.entidades.rh.portal.RHProgramacaoFeriasPortal;
 import br.com.webpublico.entidadesauxiliares.ReferenciaFPFuncao;
+import br.com.webpublico.entidadesauxiliares.rh.VwFalta;
 import br.com.webpublico.enums.StatusPeriodoAquisitivo;
 import br.com.webpublico.enums.TipoFolhaDePagamento;
 import br.com.webpublico.enums.TipoPeriodoAquisitivo;
@@ -39,6 +41,8 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -85,6 +89,10 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
     private ProgramacaoFeriasPortalFacade programacaoFeriasPortalFacade;
     @EJB
     private ParametroLicencaPremioFacade parametroLicencaPremioFacade;
+    @EJB
+    private ParametroFeriasFacade parametroFeriasFacade;
+    @EJB
+    private ProgramacaoLicencaPremioFacade programacaoLicencaPremioFacade;
     @EJB
     private ReintegracaoFacade reintegracaoFacade;
 
@@ -285,7 +293,7 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
             diferencaDiasContrato = configuracaoRH.getDiferencaDiasContratoPA();
         }
         if (diferencaDiasContrato != null) {
-            todosContratos = contratoFPFacade.recuperaTodosContratosPorMatriculaFP(contratoFP.getMatriculaFP());
+            todosContratos = contratoFPFacade.recuperarTodosContratosEncerradosPorMatriculaFP(contratoFP.getMatriculaFP());
         }
         deletarPeriodosInconsistentes(contratoFP);
         contratoFP.setPeriodosAquisitivosFLs(contratoFP.getPeriodosAquisitivosFLs() == null ? new ArrayList<PeriodoAquisitivoFL>() : contratoFP.getPeriodosAquisitivosFLs());
@@ -336,13 +344,22 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
                     continue;
                 }
 
+                if (TipoPeriodoAquisitivo.LICENCA.equals(calculo.tipo)) {
+                    calculo = checarFaltasNoPeriodoAquisitivo(calculo, contratoFP);
+                }
+
+                Integer diasDireito = basePeriodoAquisitivo.getDiasDeDireito();
+                if (TipoPeriodoAquisitivo.FERIAS.equals(calculo.tipo)) {
+                    diasDireito = checarFaltasNoPeriodoAquisitivoFerias(calculo, contratoFP, diasDireito);
+                }
+
                 if (calculo.alterarDataFimDoPeriodoAquisitivo) {
                     fimDoPeriodo = calculo.getFinalVigencia();
                 }
 
                 Integer duracao = DataUtil.diferencaDiasInteira(dataInicial, fimDoPeriodo);
                 logger.debug("fim do periodo reajustado {}", fimDoPeriodo);
-                PeriodoAquisitivoFL periodo = new PeriodoAquisitivoFL(duracao, baseCargo, dataInicial, fimDoPeriodo, contratoFP, basePeriodoAquisitivo.getDiasDeDireito());
+                PeriodoAquisitivoFL periodo = new PeriodoAquisitivoFL(duracao, baseCargo, dataInicial, fimDoPeriodo, contratoFP, diasDireito);
 
                 if (calculo.isPeriodoAquisitivoCancelado()) {
                     periodo.setStatus(StatusPeriodoAquisitivo.SEM_DIREITO);
@@ -416,8 +433,14 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
                     if (contratoRecuperado.getFinalVigencia() != null) {
                         diferencaDias = DataUtil.diferencaDiasInteira(contratoRecuperado.getFinalVigencia(), contratoFP.getInicioVigencia());
                     }
+
                     if (diferencaDias != null && diferencaDias <= diferencaDiasContrato) {
-                        Date dataUltimoPeriodoAquisitivoContratoAnterior = buscarFinalVigenciaUltimoPeriodoAquisitivoByTipo(contratoRecuperado, tipo);
+                        Date dataUltimoPeriodoAquisitivoContratoAnterior = buscarInicioVigenciaUltimoPeriodoAquisitivoNaoConcedidoByTipo(contratoRecuperado, tipo);
+                        if (dataUltimoPeriodoAquisitivoContratoAnterior != null) {
+                            return dataUltimoPeriodoAquisitivoContratoAnterior;
+                        } else {
+                            dataUltimoPeriodoAquisitivoContratoAnterior = buscarFinalVigenciaUltimoPeriodoAquisitivoByTipo(contratoRecuperado, tipo);
+                        }
                         dataInicial = dataUltimoPeriodoAquisitivoContratoAnterior != null ? dataUltimoPeriodoAquisitivoContratoAnterior : contratoRecuperado.getInicioVigencia();
                         break;
                     }
@@ -430,7 +453,7 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
                 if (contratoFP.getAlteracaoVinculo() != null) {
                     dataInicial = contratoFP.getAlteracaoVinculo();
                 } else {
-                    dataInicial = TipoPeriodoAquisitivo.FERIAS.name().equals(tipo) ? contratoFP.getInicioVigencia() :contratoFP.getDataExercicio();
+                    dataInicial = TipoPeriodoAquisitivo.FERIAS.name().equals(tipo) ? contratoFP.getInicioVigencia() : contratoFP.getDataExercicio();
                 }
             }
         }
@@ -509,6 +532,25 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
         q.setParameter("contratoID", contrato.getId());
         q.setParameter("tipoPeriodo", tipo.name());
         q.setMaxResults(1);
+        List resultList = q.getResultList();
+        return resultList == null || resultList.isEmpty() ? null : (Date) resultList.get(0);
+    }
+
+    public Date buscarInicioVigenciaUltimoPeriodoAquisitivoNaoConcedidoByTipo(ContratoFP contrato, TipoPeriodoAquisitivo tipo) {
+        String sql = " SELECT DISTINCT  max(periodo.iniciovigencia) " +
+            " FROM CONTRATOFP contrato   " +
+            "   INNER JOIN VINCULOFP vinculo ON contrato.ID = vinculo.ID  " +
+            "   INNER JOIN matriculafp matricula ON vinculo.MATRICULAFP_ID = matricula.ID  " +
+            "   INNER JOIN PESSOAFISICA pf ON matricula.PESSOA_ID = pf.ID  " +
+            "   INNER JOIN PERIODOAQUISITIVOFL periodo ON contrato.ID = periodo.CONTRATOFP_ID " +
+            "   INNER JOIN BASECARGO bcargo on periodo.BASECARGO_ID = bcargo.ID " +
+            "   INNER JOIN BASEPERIODOAQUISITIVO baseperiodo on bcargo.BASEPERIODOAQUISITIVO_ID = baseperiodo.ID " +
+            "   WHERE contrato.id = :contratoID AND baseperiodo.TIPOPERIODOAQUISITIVO = :tipoPeriodo and periodo.status = :statusPA ";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("contratoID", contrato.getId());
+        q.setParameter("tipoPeriodo", tipo.name());
+        q.setParameter("statusPA", StatusPeriodoAquisitivo.NAO_CONCEDIDO.name());
+        q.setMaxResults(1);
         return q.getResultList().isEmpty() ? null : (Date) q.getSingleResult();
     }
 
@@ -537,12 +579,12 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
         return false;
     }
 
-    private CalculoPeriodoAquisitivo checarFaltasNoPeriodoAquisitivo(CalculoPeriodoAquisitivo calculo, ContratoFP contratoFP, Date dataOperacao) {
+    private CalculoPeriodoAquisitivo checarFaltasNoPeriodoAquisitivo(CalculoPeriodoAquisitivo calculo, ContratoFP contratoFP) {
         double totalFaltas = faltasFacade.recuperaDiasDeFaltasPorPeriodo(contratoFP.getIdCalculo(), calculo.inicioVigencia, calculo.finalVigencia);
         if (totalFaltas == 0) {
             return calculo;
         }
-        ParametroLicencaPremio parametro = parametroLicencaPremioFacade.recuperarVigente(dataOperacao);
+        ParametroLicencaPremio parametro = parametroLicencaPremioFacade.recuperarVigente(calculo.inicioVigencia);
         if (parametro != null && parametro.getReferenciaFP() != null) {
             FolhaDePagamento fp = new FolhaDePagamento();
             fp.setTipoFolhaDePagamento(TipoFolhaDePagamento.NORMAL);
@@ -552,7 +594,7 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
 
             ReferenciaFPFuncao faixa = funcoesFolhaFacade.obterReferenciaFaixaFP(contratoFP, parametro.getReferenciaFP().getCodigo(), totalFaltas, 0, 0);
             if (faixa != null) {
-                if (faixa.getReferenciaAte().compareTo(new BigDecimal("16")) >= 0) {
+                if (parametro.getQuantidadeDiasPerdaPeriodo() != null && parametro.getQuantidadeDiasPerdaPeriodo() > 0 && faixa.getReferenciaAte().compareTo(new BigDecimal(parametro.getQuantidadeDiasPerdaPeriodo())) >= 0) {
                     calculo.setPeriodoAquisitivoCancelado(true);
                 } else {
                     Integer diasParaDescontar = faixa.getValor().intValue();
@@ -564,7 +606,35 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
         return calculo;
     }
 
+    private Integer checarFaltasNoPeriodoAquisitivoFerias(CalculoPeriodoAquisitivo calculo, ContratoFP contratoFP, Integer diasDireito) {
+        double totalFaltas = faltasFacade.recuperaDiasDeFaltasPorPeriodo(contratoFP.getIdCalculo(), calculo.inicioVigencia, calculo.finalVigencia);
+        if (totalFaltas == 0 || contratoFP.getTipoRegime() == null) {
+            return diasDireito;
+        }
+        ParametroFerias parametro = parametroFeriasFacade.recuperarVigentePorTipoRegime(calculo.inicioVigencia, contratoFP.getTipoRegime());
+        if (parametro != null && parametro.getReferenciaFP() != null) {
+            FolhaDePagamento fp = new FolhaDePagamento();
+            fp.setTipoFolhaDePagamento(TipoFolhaDePagamento.NORMAL);
+            contratoFP.setFolha(fp);
+            contratoFP.setMes(DataUtil.getMes(calculo.inicioVigencia));
+            contratoFP.setAno(DataUtil.getAno(calculo.finalVigencia));
+
+            ReferenciaFPFuncao faixa = funcoesFolhaFacade.obterReferenciaFaixaFP(contratoFP, parametro.getReferenciaFP().getCodigo(), totalFaltas, 0, 0);
+            if (faixa != null) {
+                if (faixa.getReferenciaAte().compareTo(new BigDecimal("33")) >= 0) {
+                    calculo.setPeriodoAquisitivoCancelado(true);
+                } else {
+                    BigDecimal porcentagemADescontar = BigDecimal.valueOf(faixa.getPercentual());
+                    BigDecimal valorADescontar = BigDecimal.valueOf(diasDireito).multiply(porcentagemADescontar).divide(new BigDecimal(100), RoundingMode.CEILING);
+                    diasDireito = diasDireito - valorADescontar.intValue();
+                }
+            }
+        }
+        return diasDireito;
+    }
+
     private CalculoPeriodoAquisitivo checarAfastamentosNoPeriodoAquisitivo(CalculoPeriodoAquisitivo calculo, Date dataOperacao) {
+        int quantidadeFaltas = 0;
         if (TipoPeriodoAquisitivo.LICENCA.equals(calculo.tipo)) {
             List<PenalidadeFP> penalidades = penalidadeFPFacade.buscarPenalidadePorContrato(calculo.getContratoFP());
             for (PenalidadeFP penalidade : penalidades) {
@@ -576,12 +646,15 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
                     }
                 }
             }
+            List<VwFalta> faltas = faltasFacade.buscarFaltasInjustificadasNoPeriodoPorContrato(calculo.contratoFP, calculo.inicioVigencia, calculo.finalVigencia);
+            for (VwFalta falta : faltas) {
+                quantidadeFaltas += falta.getTotalFaltasEfetivas();
+            }
         }
 
         Integer diasAfastado = 0;
-        Integer diasCarencia = 0;
-        Integer percaPeriodoAquisitivo = 0;
-        Integer total = 0;
+        int percaPeriodoAquisitivoFerias = 0;
+        int percaPeriodoAquisitivoLicenca = 0;
 
         List<Afastamento> afastamentos = afastamentoFacade.buscarAfastamentosWithAlongamentoPeriodoAquisitivoByContratoFP(calculo.getContratoFP(),
             calculo.getInicioVigencia(),
@@ -590,44 +663,67 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
 
         if (!afastamentos.isEmpty()) {
             for (Afastamento afastamento : afastamentos) {
-
                 if (containsNoPeriodo(calculo, afastamento)) {
+                    LocalDate inicioAfastamento = DataUtil.dateToLocalDate(afastamento.getInicio());
+                    LocalDate finalAfastamento = DataUtil.dateToLocalDate(afastamento.getTermino());
+                    if (afastamento.getCarencia() != null && afastamento.getCarencia() > 0) {
+                        inicioAfastamento = inicioAfastamento.plusDays(afastamento.getCarencia());
+                    }
 
-                    diasAfastado = tratarAtributoNuloWithZero(DataUtil.diasEntreDate(afastamento.getInicio(), afastamento.getTermino()));
-
-                    diasCarencia = tratarAtributoNuloWithZero(afastamento.getTipoAfastamento().getCarenciaAlongamento());
-
-                    percaPeriodoAquisitivo = tratarAtributoNuloWithZero(afastamento.getTipoAfastamento().getMaximoPerdaPeriodoAquisitivo());
-
-                    total = diasAfastado - diasCarencia;
-
-                    if (TipoPeriodoAquisitivo.LICENCA.equals(calculo.tipo)) {
-                        if (afastamento.getTipoAfastamento().getReiniciarContagem()) {
-                            calculo.setPerdePeriodoReiniciandoContagem(true);
-                            calculo.setFinalVigencia(afastamento.getTermino());
-                            break;
-                        }
-
-                        if (afastamento.getTipoAfastamento().getAlongarPeriodoAquisitivo() && diasAfastado.compareTo(diasCarencia) > 0) {
-                            calculo.setFinalVigencia(DataUtil.adicionaDias(calculo.getFinalVigencia(), total));
-                            calculo.setAlterarDataFimDoPeriodoAquisitivo(true);
-                        }
+                    if (DataUtil.dateToLocalDate(calculo.getInicioVigencia()).isAfter(inicioAfastamento)) {
                         continue;
                     }
 
-                    if (afastamento.getTipoAfastamento().getNaoGerarPeriodoAquisitivo()) {
-                        calculo.setPerdePeriodoReiniciandoContagem(true);
-                        calculo.setFinalVigencia(afastamento.getTermino());
-                        break;
+                    if (!afastamento.isRetornoInformado()) {
+                        finalAfastamento = DataUtil.criarDataPrimeiroDiaMes(12, 2999).withDayOfMonth(31);
                     }
 
-                    if (afastamento.getTipoAfastamento().getPerderPAFerias() && total.compareTo(percaPeriodoAquisitivo) > 0) {
+                    diasAfastado = DataUtil.diasEntre(inicioAfastamento, finalAfastamento);
+                    percaPeriodoAquisitivoFerias = tratarAtributoNuloWithZero(afastamento.getTipoAfastamento().getMaximoPerdaPeriodoAquisitivo());
+
+
+                    if (TipoPeriodoAquisitivo.LICENCA.equals(calculo.tipo)) {
+                        percaPeriodoAquisitivoLicenca = tratarAtributoNuloWithZero(afastamento.getTipoAfastamento().getMaximoPerdaPerAquisitLicenca());
+
+                        if (percaPeriodoAquisitivoLicenca > 0) {
+                            Integer total = diasAfastado;
+                            if (afastamento.getTipoAfastamento().getSomarFaltasPerdaPALicenca()) {
+                                total += quantidadeFaltas;
+                            }
+
+                            if (total.compareTo(percaPeriodoAquisitivoLicenca) >= 0) {
+                                calculo.setPeriodoAquisitivoCancelado(true);
+                                break;
+                            }
+                        }
+
+                        if (afastamento.getTipoAfastamento().getReiniciarPerAquisitLicenca()) {
+                            calculo.setFinalVigencia(afastamento.getTermino());
+                            calculo.setAlterarDataFimDoPeriodoAquisitivo(true);
+                            calculo.setPeriodoAquisitivoCancelado(true);
+                        }
+
+                        if (afastamento.getTipoAfastamento().getAlongarPerAquisitivoLicenca()) {
+                            calculo.setFinalVigencia(DataUtil.adicionaDias(calculo.getFinalVigencia(), diasAfastado));
+                            calculo.setAlterarDataFimDoPeriodoAquisitivo(true);
+                        }
+
+                        continue;
+                    }
+
+                    if (percaPeriodoAquisitivoFerias > 0 && diasAfastado.compareTo(percaPeriodoAquisitivoFerias) > 0) {
                         calculo.setPeriodoAquisitivoCancelado(true);
                         break;
-
                     }
-                    if (afastamento.getTipoAfastamento().getAlongarPeriodoAquisitivo() && diasAfastado.compareTo(diasCarencia) > 0) {
-                        calculo.setFinalVigencia(DataUtil.adicionaDias(calculo.getFinalVigencia(), total));
+
+                    if (afastamento.getTipoAfastamento().getReiniciarContagem()) {
+                        calculo.setFinalVigencia(afastamento.getTermino());
+                        calculo.setAlterarDataFimDoPeriodoAquisitivo(true);
+                        calculo.setPeriodoAquisitivoCancelado(true);
+                    }
+
+                    if (afastamento.getTipoAfastamento().getAlongarPeriodoAquisitivo()) {
+                        calculo.setFinalVigencia(DataUtil.adicionaDias(calculo.getFinalVigencia(), diasAfastado));
                         calculo.setAlterarDataFimDoPeriodoAquisitivo(true);
                     }
                 }
@@ -1062,6 +1158,53 @@ public class PeriodoAquisitivoFLFacade extends AbstractFacade<PeriodoAquisitivoF
             return (PeriodoAquisitivoFL) resultList.get(0);
         }
         return null;
+    }
+
+    public void excluirPeriodosAquisitivosParaRegerar(ContratoFP contratofp) {
+        PeriodoAquisitivoFL ultimoPeriodoConcedidoLicenca = recuperaUltimoPeriodoConcedidoPorContratoETipoPA(contratofp, TipoPeriodoAquisitivo.LICENCA);
+
+        PeriodoAquisitivoFL ultimoPeriodoConcedidoFerias = recuperaUltimoPeriodoConcedidoPorContratoETipoPA(contratofp, TipoPeriodoAquisitivo.FERIAS);
+
+        PeriodoAquisitivoFL ultimoPeriodoComTercoAutomatico = recuperaUltimoPANaoCondedidoComTercoAutomaticoPorContrato(contratofp);
+
+        Date dataReferenciaLicenca = null;
+
+        if (ultimoPeriodoConcedidoLicenca != null) {
+            dataReferenciaLicenca = ultimoPeriodoConcedidoLicenca.getInicioVigencia();
+        }
+
+        Date dataReferenciaFerias = null;
+
+        if (ultimoPeriodoComTercoAutomatico != null && (ultimoPeriodoConcedidoFerias == null || ultimoPeriodoComTercoAutomatico.getInicioVigencia().after(ultimoPeriodoConcedidoFerias.getInicioVigencia()))) {
+            dataReferenciaFerias = ultimoPeriodoComTercoAutomatico.getInicioVigencia();
+        } else if (ultimoPeriodoConcedidoFerias != null) {
+            dataReferenciaFerias = ultimoPeriodoConcedidoFerias.getInicioVigencia();
+        }
+
+        List<PeriodoAquisitivoFL> periodosNaoConcedidosParaExcluirLicenca = recuperaPeriodosNaoConcedidosPorContratoETipoPA(contratofp, dataReferenciaLicenca, TipoPeriodoAquisitivo.LICENCA);
+
+        List<PeriodoAquisitivoFL> periodosNaoConcedidosParaExcluirFerias = recuperaPeriodosNaoConcedidosPorContratoETipoPA(contratofp, dataReferenciaFerias, TipoPeriodoAquisitivo.FERIAS);
+
+
+        if (periodosNaoConcedidosParaExcluirLicenca != null) {
+            for (PeriodoAquisitivoFL paNaoConcedidosLicenca : periodosNaoConcedidosParaExcluirLicenca) {
+                List<ProgramacaoLicencaPremio> programacoes = programacaoLicencaPremioFacade.buscarProgramacaoLicencaPremioPorPeriodoAquisitivoNaoConcedido(paNaoConcedidosLicenca);
+                if (!programacoes.isEmpty()) {
+                    for (ProgramacaoLicencaPremio programacao : programacoes) {
+                        programacaoLicencaPremioFacade.remover(programacao);
+                    }
+                }
+                contratofp.getPeriodosAquisitivosFLs().remove(paNaoConcedidosLicenca);
+                remover(paNaoConcedidosLicenca);
+            }
+        }
+
+        if (periodosNaoConcedidosParaExcluirFerias != null) {
+            contratofp.getPeriodosAquisitivosFLs().removeAll(periodosNaoConcedidosParaExcluirFerias);
+            for (PeriodoAquisitivoFL paNaoConcedidosFerias : periodosNaoConcedidosParaExcluirFerias) {
+                remover(paNaoConcedidosFerias);
+            }
+        }
     }
 
     public class CalculoPeriodoAquisitivo {

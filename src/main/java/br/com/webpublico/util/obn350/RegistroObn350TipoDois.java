@@ -54,18 +54,20 @@ public class RegistroObn350TipoDois implements Serializable {
     private List<RegistroObn350TipoTres> registrosObn350TipoTres;
     private List<RegistroObn350TipoQuatro> registroObn350TipoQuatros;
     private List<RegistroObn350TipoCinco> registroObn350TipoCincos;
+    private HeaderObn350 headerObn350;
     private HashMap<String, Boolean> mapObtiveramSucesso;
 
     public RegistroObn350TipoDois() {
         throw new ExcecaoNegocioGenerica("Construtor não suportado, utilize o construtor informando uma linha \"Texto\" como paramentro!");
     }
 
-    public RegistroObn350TipoDois(String linhas) {
+    public RegistroObn350TipoDois(String linhas, HeaderObn350 headerObn350) {
         registrosObn350TipoTres = Lists.newArrayList();
         registroObn350TipoQuatros = Lists.newArrayList();
         registroObn350TipoCincos = Lists.newArrayList();
         mapObtiveramSucesso = new HashMap<>();
         this.linhas = linhas;
+        this.headerObn350 = headerObn350;
         validaLinha(this.linhas);
     }
 
@@ -186,17 +188,29 @@ public class RegistroObn350TipoDois implements Serializable {
     }
 
     public String getCodigoContaCorrentaFavorecidoSemDigito() {
-        codigoContaCorrentaFavorecidoSemDigito = linhas.substring(88, 98);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            codigoContaCorrentaFavorecidoSemDigito = linhas.substring(88, 100);
+        } else {
+            codigoContaCorrentaFavorecidoSemDigito = linhas.substring(88, 98);
+        }
         return codigoContaCorrentaFavorecidoSemDigito;
     }
 
     public String getNomeFavorecido() {
-        nomeFavorecido = linhas.substring(98, 143);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            nomeFavorecido = linhas.substring(101, 146);
+        } else {
+            nomeFavorecido = linhas.substring(98, 143);
+        }
         return nomeFavorecido;
     }
 
     public String getEnderecoFavorecido() {
-        enderecoFavorecido = linhas.substring(143, 208);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            enderecoFavorecido = linhas.substring(146, 200);
+        } else {
+            enderecoFavorecido = linhas.substring(143, 208);
+        }
         return enderecoFavorecido;
     }
 
@@ -246,17 +260,29 @@ public class RegistroObn350TipoDois implements Serializable {
     }
 
     public String getNumeroContaConvenioDV() {
-        numeroContaConvenioDV = linhas.substring(324, 334);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            numeroContaConvenioDV = linhas.substring(324, 337);
+        } else {
+            numeroContaConvenioDV = linhas.substring(324, 334);
+        }
         return numeroContaConvenioDV;
     }
 
     public String getFinalidadePagamentoFUNDEB() {
-        finalidadePagamentoFUNDEB = linhas.substring(334, 337);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            finalidadePagamentoFUNDEB = linhas.substring(337, 340);
+        } else {
+            finalidadePagamentoFUNDEB = linhas.substring(334, 337);
+        }
         return finalidadePagamentoFUNDEB;
     }
 
     public String getBrancos() {
-        brancos = linhas.substring(337, 341);
+        if (headerObn350.isArquivoCaixaEconomica()) {
+            brancos = linhas.substring(340, 341);
+        } else {
+            brancos = linhas.substring(337, 341);
+        }
         return brancos;
     }
 

@@ -1,7 +1,10 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
-import br.com.webpublico.enums.*;
+import br.com.webpublico.enums.SubTipoSaldoItemContrato;
+import br.com.webpublico.enums.TipoAquisicaoContrato;
+import br.com.webpublico.enums.TipoControleLicitacao;
+import br.com.webpublico.enums.TipoSaldoItemContrato;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -293,7 +296,7 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
             "    inner join itempropfornec ipf on ipf.id = icirp.itempropostafornecedor_id " +
             "  where ipf.itemprocessodecompra_id = :idIpc " +
             "    and icirp.itemparticipanteirp_id = :itemIrp " +
-            "    and c.tipoaquisicao = :tipoAquisicao " ;
+            "    and c.tipoaquisicao = :tipoAquisicao ";
         if (contrato != null && contrato.getId() != null) {
             sql += " and ic.contrato_id <> :contrato";
         }
@@ -339,9 +342,10 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
     public BigDecimal recuperarQuantidadeEmRequisicaoLicitacao(ItemContrato ic) {
         String sql = " " +
             "   select coalesce(sum(qtde_requisicao), 0) " +
-            "       from (select coalesce(sum(irc.quantidade), 0) as qtde_requisicao " +
-            "             from itemrequisicaodecompra irc " +
-            "               inner join itemcontrato ic on ic.id = irc.itemcontrato_id " +
+            "       from (select coalesce(sum(irce.quantidade), 0) as qtde_requisicao " +
+            "             from itemrequisicaocompraexec irce " +
+            "               inner join execucaocontratoitem exitem on exitem.id = irce.execucaocontratoitem_id " +
+            "               inner join itemcontrato ic on ic.id = exitem.itemcontrato_id " +
             "               left join itemcontratoitempropfornec icpf on icpf.itemcontrato_id = ic.id " +
             "               left join itemcontratoitemirp iirp on iirp.itemcontrato_id = ic.id " +
             "               left join itemcontratoadesaoataint iata on iata.itemcontrato_id = ic.id " +
@@ -350,8 +354,9 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
             "      union all " +
             "      select coalesce(sum(item.quantidade), 0) *-1 as qtde_requisicao " +
             "      from itemrequisicaocompraest item " +
-            "               inner join itemrequisicaodecompra irc on irc.id = item.itemrequisicaocompra_id " +
-            "               inner join itemcontrato ic on ic.id = irc.itemcontrato_id " +
+            "               inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = item.id " +
+            "               inner join execucaocontratoitem exitem on exitem.id = irce.execucaocontratoitem_id " +
+            "               inner join itemcontrato ic on ic.id = exitem.itemcontrato_id " +
             "               left join itemcontratoitempropfornec icpf on icpf.itemcontrato_id = ic.id " +
             "               left join itemcontratoitemirp iirp on iirp.itemcontrato_id = ic.id " +
             "               left join itemcontratoadesaoataint iata on iata.itemcontrato_id = ic.id " +
@@ -368,10 +373,11 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
 
     public BigDecimal recuperarQuantidadeEmRequisicaoDispensa(ItemContrato ic) {
         String sql = " " +
-            "   select coalesce(sum(irc.quantidade),0) from itemrequisicaodecompra irc " +
-            "   inner join itemcontrato ic on ic.id = irc.itemcontrato_id  " +
-            "   inner join itemcontratoitempropdisp itemDisp on itemDisp.itemcontrato_id = ic.id " +
-            " where itemDisp.itempropfornecdispensa_id = :idItemProposta ";
+                "   select coalesce(sum(irce.quantidade),0) from itemrequisicaocompraexec irce " +
+                "    inner join execucaocontratoitem exitem on exitem.id = irce.execucaocontratoitem_id " +
+                "    inner join itemcontrato ic on ic.id = exitem.itemcontrato_id " +
+                "    inner join itemcontratoitempropdisp itemDisp on itemDisp.itemcontrato_id = ic.id " +
+                "  where itemDisp.itempropfornecdispensa_id = :idItemProposta ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemProposta", ic.getItemPropostaFornecedorDispensa().getId());
         try {
@@ -383,8 +389,9 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
 
     public BigDecimal recuperarQuantidadeEmRequisicaoRegistroPrecoExterno(ItemContrato ic) {
         String sql = " " +
-            "   select coalesce(sum(irc.quantidade),0) from itemrequisicaodecompra irc " +
-            "   inner join itemcontrato ic on ic.id = irc.itemcontrato_id  " +
+            "   select coalesce(sum(irce.quantidade),0) from itemrequisicaocompraexec irce " +
+            "   inner join execucaocontratoitem exitem on exitem.id = irce.execucaocontratoitem_id " +
+            "   inner join itemcontrato ic on ic.id = exitem.itemcontrato_id " +
             "   inner join itemcontratoitemsolext ise on ise.itemcontrato_id = ic.id " +
             " where ise.itemsolicitacaoexterno_id = :idItemSolExt";
         Query q = em.createNativeQuery(sql);
@@ -398,15 +405,19 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
 
     public BigDecimal recuperarQuantidadeEntregueLicitacao(ItemContrato ic) {
         String sql = "" +
-            " select coalesce(sum(iem.quantidade), 0) from ItemEntradaMaterial iem " +
+            " select coalesce(sum(quantidade), 0) as qtde_entregue from ( " +
+            "   select distinct iem.quantidade as quantidade" +
+            "   from ItemEntradaMaterial iem " +
             "   inner join itemcompramaterial icm on icm.itementradamaterial_id = iem.id " +
             "   inner join itemrequisicaodecompra irc on irc.id = icm.itemrequisicaodecompra_id " +
-            "   inner join itemcontrato ic on ic.id = irc.itemcontrato_id " +
+            "   inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
+            "   inner join execucaocontratoitem exitem on exitem.id = irce.execucaocontratoitem_id " +
+            "   inner join itemcontrato ic on ic.id = exitem.itemcontrato_id " +
             "   left join itemcontratoitempropfornec icpf on icpf.itemcontrato_id = ic.id " +
             "   left join itemcontratoitemirp iirp on iirp.itemcontrato_id = ic.id " +
             "   left join itemcontratoadesaoataint iata on iata.itemcontrato_id = ic.id " +
             "   left join itempropfornec ipf on coalesce(icpf.itempropostafornecedor_id, iirp.itempropostafornecedor_id, iata.itempropostafornecedor_id) = ipf.id " +
-            " where ipf.id = :idItemProposta ";
+            " where ipf.id = :idItemProposta ) ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemProposta", ic.getItemPropostaFornecedor().getId());
         try {
@@ -417,13 +428,17 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
     }
 
     public BigDecimal recuperarQuantidadeEntregueDispensa(ItemContrato ic) {
-        String sql = "" +
-            " select coalesce(sum(iem.quantidade), 0) from ItemEntradaMaterial iem " +
+            String sql = "" +
+            " select coalesce(sum(quantidade), 0) as qtde_entregue from ( " +
+            "   select distinct iem.quantidade as quantidade" +
+            "   from ItemEntradaMaterial iem " +
             "   inner join itemcompramaterial icm on icm.itementradamaterial_id = iem.id " +
             "   inner join itemrequisicaodecompra irc on irc.id = icm.itemrequisicaodecompra_id " +
-            "   inner join itemcontrato ic on ic.id = irc.itemcontrato_id " +
+            "   inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
+            "   inner join execucaocontratoitem exitem on exitem.id = irce.execucaocontratoitem_id " +
+            "   inner join itemcontrato ic on ic.id = exitem.itemcontrato_id " +
             "   inner join itemcontratoitempropdisp itemDisp on itemDisp.itemcontrato_id = ic.id " +
-            " where itemDisp.itempropfornecdispensa_id = :idItemProposta ";
+            " where itemDisp.itempropfornecdispensa_id = :idItemProposta) ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemProposta", ic.getItemPropostaFornecedorDispensa().getId());
         try {
@@ -435,12 +450,15 @@ public class ItemContratoFacade extends AbstractFacade<ItemContrato> {
 
     public BigDecimal recuperarQuantidadeEntregueRegistroPrecoExterno(ItemContrato ic) {
         String sql = "" +
-            " select coalesce(sum(iem.quantidade), 0) from ItemEntradaMaterial iem " +
+            " select coalesce(sum(quantidade), 0) as qtde_entregue from ( " +
+            "   select distinct iem.quantidade as quantidade" +
             "   inner join itemcompramaterial icm on icm.itementradamaterial_id = iem.id " +
             "   inner join itemrequisicaodecompra irc on irc.id = icm.itemrequisicaodecompra_id " +
-            "   inner join itemcontrato ic on ic.id = irc.itemcontrato_id " +
+            "   inner join itemrequisicaocompraexec irce on irce.itemrequisicaocompra_id = irc.id " +
+            "   inner join execucaocontratoitem exitem on exitem.id = irce.execucaocontratoitem_id " +
+            "   inner join itemcontrato ic on ic.id = exitem.itemcontrato_id " +
             "   inner join itemcontratoitemsolext ise on ise.itemcontrato_id = ic.id " +
-            " where ise.itemsolicitacaoexterno_id = :idItemSolExt";
+            " where ise.itemsolicitacaoexterno_id = :idItemSolExt) ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idItemSolExt", ic.getItemSolicitacaoExterno().getId());
         try {

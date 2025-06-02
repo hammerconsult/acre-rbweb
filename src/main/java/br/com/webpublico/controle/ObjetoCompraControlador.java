@@ -125,8 +125,7 @@ public class ObjetoCompraControlador extends PrettyControlador<ObjetoCompra> imp
 
     private void validarRegrasAoSalvar() {
         Util.validarCampos(selecionado);
-        if (selecionado.getGrupoContaDespesa() != null
-            && selecionado.getTipoObjetoCompra().isPermanenteOrConsumo()) {
+        if (selecionado.getGrupoContaDespesa() != null) {
             selecionado.getGrupoContaDespesa().lancarMensagens();
         }
     }

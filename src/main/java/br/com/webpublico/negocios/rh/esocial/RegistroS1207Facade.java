@@ -1,6 +1,7 @@
 package br.com.webpublico.negocios.rh.esocial;
 
 
+import br.com.webpublico.entidades.VinculoFP;
 import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.entidades.rh.esocial.RegistroEventoEsocial;
 import br.com.webpublico.entidades.rh.esocial.VinculoFPEventoEsocial;
@@ -58,8 +59,7 @@ public class RegistroS1207Facade extends AbstractFacade<RegistroEventoEsocial> {
         return folhaDePagamentoFacade;
     }
 
-    public List<VinculoFPEventoEsocial> getVinculoFPEventoEsocial(RegistroEventoEsocial registroEventoEsocial,
-                                                                  boolean apenasNaoEnviados) {
+    public List<VinculoFPEventoEsocial> getVinculoFPEventoEsocial(RegistroEventoEsocial registroEventoEsocial, VinculoFP vinculoFP, boolean apenasNaoEnviados) {
         try {
             ConfiguracaoEmpregadorESocial configuracaoEmpregadorESocial = getConfiguracaoEmpregadorESocialFacade().recuperarPorEntidade(registroEventoEsocial.getEntidade());
             validarConfigEmpregadorESocial(configuracaoEmpregadorESocial, registroEventoEsocial);
@@ -67,13 +67,11 @@ public class RegistroS1207Facade extends AbstractFacade<RegistroEventoEsocial> {
 
             List<Long> idsUnidade = getContratoFPFacade().montarIdOrgaoEmpregador(configuracaoEmpregadorESocial);
 
-            List<VinculoFPEventoEsocial> vinculoFPS =
-                folhaDePagamentoFacade.buscarAposentadosPorTipoFolhaMesEAnoAndFolhaEfetivadaAndUnidades(
-                    registroEventoEsocial, idsUnidade, apenasNaoEnviados);
+            List<VinculoFPEventoEsocial> vinculoFPS = folhaDePagamentoFacade.buscarAposentadosPorTipoFolhaMesEAnoAndFolhaEfetivadaAndUnidades(registroEventoEsocial, idsUnidade, apenasNaoEnviados);
             if (vinculoFPS != null && !vinculoFPS.isEmpty()) {
                 return vinculoFPS;
             }
-            FacesUtil.addOperacaoRealizada("Nenhum Servidor encontrado para os filtros informados.");
+            FacesUtil.addOperacaoNaoRealizada("Nenhum Servidor encontrado para os filtros informados.");
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }

@@ -256,6 +256,10 @@ public class PensaoAlimenticiaFacade extends AbstractFacade<PensaoAlimenticia> {
         }
     }
 
+    public ContaCorrenteBancPessoaFacade getContaCorrenteBancPessoaFacade() {
+        return contaCorrenteBancPessoaFacade;
+    }
+
     public BigDecimal buscarValorEventoFPsPorMes(Pessoa p, VinculoFP vinculoFP, Mes mes, Integer ano, List<TipoFolhaDePagamento> tiposFolha, EventoFP verba) {
 
 
@@ -441,7 +445,4 @@ public class PensaoAlimenticiaFacade extends AbstractFacade<PensaoAlimenticia> {
         return referenciaFPFacade;
     }
 
-    public ContaCorrenteBancPessoaFacade getContaCorrenteBancPessoaFacade() {
-        return contaCorrenteBancPessoaFacade;
-    }
 }

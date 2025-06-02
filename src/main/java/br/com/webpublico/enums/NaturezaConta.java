@@ -10,7 +10,6 @@ import br.com.webpublico.interfaces.EnumComDescricao;
  * @author Renato Romanini
  */
 public enum NaturezaConta implements EnumComDescricao {
-
     ATIVO("Ativo", "11"),
     PASSIVO("Passivo", "22"),
     PATRIMONIO_PUBLICO("Patrimônio Líquido", "23"),

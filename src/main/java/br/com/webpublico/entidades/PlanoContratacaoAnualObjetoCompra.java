@@ -10,6 +10,7 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Date;
+import java.util.Objects;
 
 @Entity
 @Audited
@@ -191,6 +192,31 @@ public class PlanoContratacaoAnualObjetoCompra extends SuperEntidade implements 
 
     @Override
     public String toString() {
-        return numero + "/" + getPlanoContratacaoAnualGrupo().getPlanoContratacaoAnual().getExercicio().getAno() + " - " + objetoCompra.getDescricao();
+        String ano = planoContratacaoAnualGrupo != null ? "/" + planoContratacaoAnualGrupo.getPlanoContratacaoAnual().getExercicio().getAno() : "";
+        return numero + ano + " - " + objetoCompra.getDescricao();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PlanoContratacaoAnualObjetoCompra that = (PlanoContratacaoAnualObjetoCompra) o;
+        return Objects.equals(objetoCompra, that.objetoCompra) &&
+            Objects.equals(unidadeMedida, that.unidadeMedida) &&
+            Objects.equals(dataDesejada, that.dataDesejada) &&
+            Objects.equals(quantidade, that.quantidade) &&
+            Objects.equals(valorUnitario, that.valorUnitario) &&
+            Objects.equals(valorTotal, that.valorTotal) &&
+            Objects.equals(numero, that.numero) &&
+            Objects.equals(especificacao, that.especificacao) &&
+            Objects.equals(valorOrcamentoExercicio, that.valorOrcamentoExercicio) &&
+            Objects.equals(sequencialIdPncp, that.sequencialIdPncp);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(objetoCompra, unidadeMedida, dataDesejada, quantidade, valorUnitario, valorTotal,
+            numero, especificacao, valorOrcamentoExercicio, sequencialIdPncp);
+    }
+
 }

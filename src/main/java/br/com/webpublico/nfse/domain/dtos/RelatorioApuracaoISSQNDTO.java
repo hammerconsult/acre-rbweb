@@ -3,10 +3,13 @@ package br.com.webpublico.nfse.domain.dtos;
 import java.math.BigDecimal;
 
 public class RelatorioApuracaoISSQNDTO {
-    private String operacao;
     private String cadastroEconomico;
-    private String mes;
+    private Long exercicio;
+    private Integer mes;
+    private String tipoDocumento;
+    private String numero;
     private Integer quantidade;
+    private String servico;
     private BigDecimal iss;
     private BigDecimal baseCalculo;
     private BigDecimal deducoes;
@@ -14,19 +17,8 @@ public class RelatorioApuracaoISSQNDTO {
     private BigDecimal descontosCondicionados;
     private BigDecimal valorServico;
     private BigDecimal aliquotaServico;
-    private String numero;
-    private String servico;
-    private BigDecimal valorPago;
 
     public RelatorioApuracaoISSQNDTO() {
-    }
-
-    public String getOperacao() {
-        return operacao;
-    }
-
-    public void setOperacao(String operacao) {
-        this.operacao = operacao;
     }
 
     public String getCadastroEconomico() {
@@ -37,12 +29,36 @@ public class RelatorioApuracaoISSQNDTO {
         this.cadastroEconomico = cadastroEconomico;
     }
 
-    public String getMes() {
+    public Long getExercicio() {
+        return exercicio;
+    }
+
+    public void setExercicio(Long exercicio) {
+        this.exercicio = exercicio;
+    }
+
+    public Integer getMes() {
         return mes;
     }
 
-    public void setMes(String mes) {
+    public void setMes(Integer mes) {
         this.mes = mes;
+    }
+
+    public String getTipoDocumento() {
+        return tipoDocumento;
+    }
+
+    public void setTipoDocumento(String tipoDocumento) {
+        this.tipoDocumento = tipoDocumento;
+    }
+
+    public String getNumero() {
+        return numero;
+    }
+
+    public void setNumero(String numero) {
+        this.numero = numero;
     }
 
     public Integer getQuantidade() {
@@ -51,6 +67,14 @@ public class RelatorioApuracaoISSQNDTO {
 
     public void setQuantidade(Integer quantidade) {
         this.quantidade = quantidade;
+    }
+
+    public String getServico() {
+        return servico;
+    }
+
+    public void setServico(String servico) {
+        this.servico = servico;
     }
 
     public BigDecimal getIss() {
@@ -107,29 +131,5 @@ public class RelatorioApuracaoISSQNDTO {
 
     public void setAliquotaServico(BigDecimal aliquotaServico) {
         this.aliquotaServico = aliquotaServico;
-    }
-
-    public String getNumero() {
-        return numero;
-    }
-
-    public void setNumero(String numero) {
-        this.numero = numero;
-    }
-
-    public String getServico() {
-        return servico;
-    }
-
-    public void setServico(String servico) {
-        this.servico = servico;
-    }
-
-    public BigDecimal getValorPago() {
-        return valorPago;
-    }
-
-    public void setValorPago(BigDecimal valorPago) {
-        this.valorPago = valorPago;
     }
 }

@@ -4,7 +4,9 @@
  */
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
 import br.com.webpublico.entidades.contabil.execucao.DesdobramentoPagamento;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.entidadesauxiliares.manad.ManadRegistro;
 import br.com.webpublico.enums.CategoriaOrcamentaria;
 import br.com.webpublico.enums.StatusPagamento;
@@ -37,7 +39,7 @@ import java.util.TreeMap;
 @Audited
 @Entity
 
-public class Pagamento extends SuperEntidade implements Serializable, EntidadeContabilComValor, IManadRegistro, IGeraContaAuxiliar {
+public class Pagamento extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabilComValor, IManadRegistro {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -714,22 +716,6 @@ public class Pagamento extends SuperEntidade implements Serializable, EntidadeCo
         return this.status != null && StatusPagamento.INDEFERIDO.equals(this.status);
     }
 
-    public BigDecimal getTotalDesdobramentos() {
-        BigDecimal total = BigDecimal.ZERO;
-        for (DesdobramentoPagamento d : this.getDesdobramentos()) {
-            total = total.add(d.getValor());
-        }
-        return total;
-    }
-
-    public BigDecimal getSaldoTotalDesdobramentos() {
-        BigDecimal total = BigDecimal.ZERO;
-        for (DesdobramentoPagamento desd : this.getDesdobramentos()) {
-            total = total.add(desd.getSaldo());
-        }
-        return total;
-    }
-
     public Long getIdObn600() {
         return idObn600;
     }
@@ -747,129 +733,51 @@ public class Pagamento extends SuperEntidade implements Serializable, EntidadeCo
     }
 
     @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
         AcaoPPA acaoPPA = liquidacao.getEmpenho().getDespesaORC().getProvisaoPPADespesa().getSubAcaoPPA().getAcaoPPA();
         if (liquidacao != null && liquidacao.getEmpenho() != null &&
             liquidacao.getEmpenho().getCodigoCO() != null && liquidacao.getEmpenho().getContaDeDestinacao() != null) {
             liquidacao.getEmpenho().getContaDeDestinacao().setCodigoCOEmenda(liquidacao.getEmpenho().getCodigoCO().getCodigo());
         }
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeOrganizacional());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    liquidacao.getEmpenho().getContaDeDestinacao(),
-                    liquidacao.getEmpenho().getExercicio());
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(getUnidadeOrganizacional(),
-                    liquidacao.getEmpenho().getContaDeDestinacao(),
-                    liquidacao.getEmpenho().getExercicio());
-            case "97":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada7(getUnidadeOrganizacional(),
-                    acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
-                    liquidacao.getEmpenho().getContaDeDestinacao(),
-                    liquidacao.getEmpenho().getContaDespesa(),
-                    (liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
-                        liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
-                            liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
-                            liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0));
-            case "98":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada8(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    0,
-                    liquidacao.getEmpenho().getContaDeDestinacao());
-            case "99":
-                if (CategoriaOrcamentaria.RESTO.equals(categoriaOrcamentaria)) {
-                    return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada9(getUnidadeOrganizacional(),
-                        acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
-                        liquidacao.getEmpenho().getContaDeDestinacao(),
-                        liquidacao.getEmpenho().getContaDespesa(),
-                        (liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
-                            liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
-                                liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
-                                liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0),
-                        liquidacao.getEmpenho().getEmpenho().getExercicio().getAno(),
-                        liquidacao.getEmpenho().getExercicio(),
-                        liquidacao.getEmpenho().getEmpenho().getExercicio());
-                }
+        if (CategoriaOrcamentaria.RESTO.equals(categoriaOrcamentaria)) {
+            return new GeradorContaAuxiliarDTO(unidadeOrganizacional,
+                acaoPPA.getCodigoFuncaoSubFuncao(),
+                liquidacao.getEmpenho().getContaDeDestinacao(),
+                liquidacao.getEmpenho().getContaDespesa(),
+                liquidacao.getEmpenho().getCodigoEs(),
+                liquidacao.getEmpenho().getEmpenho().getExercicio().getAno(),
+                liquidacao.getEmpenho().getContaDespesa(),
+                liquidacao.getEmpenho().getExercicio(),
+                liquidacao.getEmpenho().getEmpenho().getExercicio(),
+                null, 0, null, liquidacao.getEmpenho().getContaDespesa().getCodigoContaSiconf());
+        }else{
+            return new GeradorContaAuxiliarDTO(liquidacao.getEmpenho().getUnidadeOrganizacional(),
+                acaoPPA.getCodigoFuncaoSubFuncao(),
+                liquidacao.getEmpenho().getContaDeDestinacao(),
+                liquidacao.getEmpenho().getContaDespesa(),
+                liquidacao.getEmpenho().getCodigoEs(),
+                null,
+                liquidacao.getEmpenho().getContaDespesa(),
+                liquidacao.getEmpenho().getExercicio(), null, null, 0,
+                null,
+                (liquidacao.getEmpenho().getContaDespesa().getCodigoContaSiconf()));
         }
-        return null;
     }
 
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        AcaoPPA acaoPPA = liquidacao.getEmpenho().getDespesaORC().getProvisaoPPADespesa().getSubAcaoPPA().getAcaoPPA();
-        if (liquidacao != null && liquidacao.getEmpenho() != null &&
-            liquidacao.getEmpenho().getCodigoCO() != null && liquidacao.getEmpenho().getContaDeDestinacao() != null) {
-            liquidacao.getEmpenho().getContaDeDestinacao().setCodigoCOEmenda(liquidacao.getEmpenho().getCodigoCO().getCodigo());
+    public BigDecimal getTotalDesdobramentos() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (DesdobramentoPagamento d : this.getDesdobramentos()) {
+            total = total.add(d.getValor());
         }
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeOrganizacional());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    liquidacao.getEmpenho().getContaDeDestinacao());
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(getUnidadeOrganizacional(),
-                    liquidacao.getEmpenho().getContaDeDestinacao());
-            case "97":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar7(getUnidadeOrganizacional(),
-                    acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
-                    liquidacao.getEmpenho().getContaDeDestinacao(),
-                    (liquidacao.getEmpenho().getContaDespesa().getCodigoSICONFI() != null ?
-                        liquidacao.getEmpenho().getContaDespesa().getCodigoSICONFI() :
-                        liquidacao.getEmpenho().getContaDespesa().getCodigo().replace(".", "")),
-                    (liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
-                        liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
-                            liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
-                            liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0));
-            case "98":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar8(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    0,
-                    liquidacao.getEmpenho().getContaDeDestinacao());
-            case "99":
-                if (CategoriaOrcamentaria.RESTO.equals(categoriaOrcamentaria)) {
-                    return UtilGeradorContaAuxiliar.gerarContaAuxiliar9(unidadeOrganizacional,
-                        acaoPPA.getFuncao().getCodigo() + acaoPPA.getSubFuncao().getCodigo(),
-                        liquidacao.getEmpenho().getContaDeDestinacao(),
-                        liquidacao.getEmpenho().getContaDespesa(),
-                        (liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("4") ? 2 :
-                            liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("1") ||
-                                liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("2") ||
-                                liquidacao.getEmpenho().getCodigoExtensaoFonteRecursoAsString().startsWith("3") ? 1 : 0),
-                        liquidacao.getEmpenho().getEmpenho().getExercicio().getAno(),
-                        liquidacao.getEmpenho().getExercicio());
-                }
+        return total;
+    }
+
+    public BigDecimal getSaldoTotalDesdobramentos() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (DesdobramentoPagamento desd : this.getDesdobramentos()) {
+            total = total.add(desd.getSaldo());
         }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
+        return total;
     }
 
     public void definirValorFinalPagto() {

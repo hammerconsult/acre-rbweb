@@ -552,19 +552,20 @@ public class ConfiguracaoTributarioControlador extends PrettyControlador<Configu
     }
 
     public void addEvento() {
-        if (validaEvento()) {
+        try {
+            eventoBCI.validarCamposObrigatorios();
             eventoBCI.setConfiguracaoTributario(selecionado);
-            selecionado.getEventosBCI().add(eventoBCI);
+            Util.adicionarObjetoEmLista(selecionado.getEventosBCI(), eventoBCI);
             eventoBCI = new EventoConfiguradoBCI();
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve);
+        } catch (Exception e) {
+            FacesUtil.addErrorPadrao(e);
         }
     }
 
-    private boolean validaEvento() {
-        if (eventoBCI.getEventoCalculo() != null) {
-            return true;
-        }
-        FacesUtil.addError(SummaryMessages.OPERACAO_NAO_PERMITIDA.getDescricao(), "Informe um Evendo para adicionar as configurações do BCI");
-        return false;
+    public void editEvento(EventoConfiguradoBCI evento) {
+        eventoBCI = evento;
     }
 
     public void removeEvento(EventoConfiguradoBCI evento) {

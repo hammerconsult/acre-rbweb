@@ -4,20 +4,18 @@
  */
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
-import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
-import com.google.common.base.Strings;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.TreeMap;
 
 /**
  * @author major
@@ -26,7 +24,7 @@ import java.util.TreeMap;
 @Audited
 @Entity
 @Etiqueta("Receita Realizada Fonte")
-public class LancReceitaFonte extends SuperEntidade implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
+public class LancReceitaFonte extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -188,86 +186,15 @@ public class LancReceitaFonte extends SuperEntidade implements Serializable, Ent
         return toString();
     }
 
-
     @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
         if (codigoCO != null && receitaLoaFonte.getDestinacaoDeRecursos() != null) {
             receitaLoaFonte.getDestinacaoDeRecursos().setCodigoCOEmenda(codigoCO.getCodigo());
         }
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(lancReceitaOrc.getUnidadeOrganizacional());
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(lancReceitaOrc.getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(lancReceitaOrc.getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    receitaLoaFonte.getDestinacaoDeRecursos(),
-                    getLancReceitaOrc().getExercicio());
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(lancReceitaOrc.getUnidadeOrganizacional(),
-                    receitaLoaFonte.getDestinacaoDeRecursos(),
-                    getLancReceitaOrc().getExercicio());
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada6(lancReceitaOrc.getUnidadeOrganizacional(),
-                    receitaLoaFonte.getDestinacaoDeRecursos(),
-                    lancReceitaOrc.getReceitaLOA().getContaDeReceita(),
-                    getLancReceitaOrc().getExercicio());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        if (codigoCO != null && receitaLoaFonte.getDestinacaoDeRecursos() != null) {
-            receitaLoaFonte.getDestinacaoDeRecursos().setCodigoCOEmenda(codigoCO.getCodigo());
-        }
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(lancReceitaOrc.getUnidadeOrganizacional());
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(lancReceitaOrc.getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(lancReceitaOrc.getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    receitaLoaFonte.getDestinacaoDeRecursos());
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(lancReceitaOrc.getUnidadeOrganizacional(),
-                    receitaLoaFonte.getDestinacaoDeRecursos());
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar6(lancReceitaOrc.getUnidadeOrganizacional(),
-                    receitaLoaFonte.getDestinacaoDeRecursos(),
-                    (!Strings.isNullOrEmpty(lancReceitaOrc.getReceitaLOA().getContaDeReceita().getCodigoSICONFI()) ?
-                        lancReceitaOrc.getReceitaLOA().getContaDeReceita().getCodigoSICONFI() :
-                        lancReceitaOrc.getReceitaLOA().getContaDeReceita().getCodigo()).replace(".", ""));
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
+        return new GeradorContaAuxiliarDTO(lancReceitaOrc.getUnidadeOrganizacional(),
+            receitaLoaFonte.getDestinacaoDeRecursos(),
+            lancReceitaOrc.getReceitaLOA().getContaDeReceita(),
+            lancReceitaOrc.getReceitaLOA().getContaDeReceita().getCodigoContaSiconf(),
+            getLancReceitaOrc().getExercicio());
     }
 }

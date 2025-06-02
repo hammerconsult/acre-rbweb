@@ -256,11 +256,12 @@ public class Contrato extends SuperEntidade implements EntidadeDetendorDocumento
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UnidadeContrato> unidades;
 
-    private String localEntrega;
     @Invisivel
     @Etiqueta("Publicações")
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PublicacaoContrato> publicacoes;
+
+    private String localEntrega;
 
     @Invisivel
     @Etiqueta("Gestores")
@@ -753,20 +754,20 @@ public class Contrato extends SuperEntidade implements EntidadeDetendorDocumento
         this.contatos = contatos;
     }
 
-    public String getLocalEntrega() {
-        return localEntrega;
-    }
-
-    public void setLocalEntrega(String localEntrega) {
-        this.localEntrega = localEntrega;
-    }
-
     public List<PublicacaoContrato> getPublicacoes() {
         return publicacoes;
     }
 
     public void setPublicacoes(List<PublicacaoContrato> publicacoes) {
         this.publicacoes = publicacoes;
+    }
+
+    public String getLocalEntrega() {
+        return localEntrega;
+    }
+
+    public void setLocalEntrega(String localEntrega) {
+        this.localEntrega = localEntrega;
     }
 
     public List<GestorContrato> getGestores() {

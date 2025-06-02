@@ -46,6 +46,10 @@ public enum SituacaoRequisicaoCompra implements EnumComDescricao {
         return EFETIVADA.equals(this);
     }
 
+    public boolean isEmElaboracao(){
+        return EM_ELABORACAO.equals(this);
+    }
+
     public String getDescricao() {
         return descricao;
     }

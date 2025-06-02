@@ -6,6 +6,7 @@ import br.com.webpublico.enums.OperadorLogico;
 import br.com.webpublico.util.StringUtil;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.util.Strings;
 
 import java.util.Date;
 
@@ -94,11 +95,7 @@ public class FiltroConsultaEntidade {
             return valor.equals("true") ? 1 : 0;
         }
         if (TipoCampo.INTEGER.equals(field.getTipo())) {
-            try {
-                return Integer.valueOf(valor.toString());
-            } catch (Exception e) {
-                return 0;
-            }
+            return Integer.valueOf(valor.toString());
         }
         if (TipoCampo.DATE.equals(field.getTipo())) {
             return DateUtils.dataSemHorario((Date) valor);

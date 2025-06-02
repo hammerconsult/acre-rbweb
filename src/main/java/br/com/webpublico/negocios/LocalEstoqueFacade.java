@@ -757,12 +757,15 @@ public class LocalEstoqueFacade extends AbstractFacade<LocalEstoque> {
         if (localEstoque.getSuperior() == null) {
             return localEstoque;
         }
+
         while (localEstoque.getSuperior() != null) {
             localEstoque = localEstoque.getSuperior();
         }
-        if (localEstoque.getId() != null) {
+
+        if (localEstoque != null && localEstoque.getId() != null) {
             localEstoque = recuperar(localEstoque.getId());
         }
+
         return localEstoque;
     }
 

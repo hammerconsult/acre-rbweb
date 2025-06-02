@@ -332,6 +332,14 @@ public class DeclaracaoPrestacaoServico extends SuperEntidade implements Seriali
         this.origemEmissao = origemEmissaoNfse;
     }
 
+    public BigDecimal getTotalNota() {
+        return totalNota;
+    }
+
+    public void setTotalNota(BigDecimal totalNota) {
+        this.totalNota = totalNota;
+    }
+
     @Transient
     public String getIssRetidoSimNao() {
         if (this.getIssRetido()) {
@@ -347,13 +355,5 @@ public class DeclaracaoPrestacaoServico extends SuperEntidade implements Seriali
 
     public BigDecimal getDescontos() {
         return getDescontosCondicionais().add(getDescontosIncondicionais());
-    }
-
-    public BigDecimal getTotalNota() {
-        return totalNota;
-    }
-
-    public void setTotalNota(BigDecimal totalNota) {
-        this.totalNota = totalNota;
     }
 }

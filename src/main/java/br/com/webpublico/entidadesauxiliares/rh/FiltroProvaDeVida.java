@@ -9,8 +9,6 @@ import java.io.Serializable;
 public class FiltroProvaDeVida implements Serializable {
 
     public static final String APOSENTADOS_PENSIONISTAS = "Aposentados e Pensionistas";
-    public static final String APOSENTADOS = "Aposentados";
-    public static final String PENSIONISTAS = "Pensionistas";
 
     private String mes;
     private Integer ano;
@@ -63,16 +61,17 @@ public class FiltroProvaDeVida implements Serializable {
         ValidacaoException ve = new ValidacaoException();
         if (StringUtils.isBlank(mes)) {
             ve.adicionarMensagemDeCampoObrigatorio("Informe o mês de referência.");
+        } else {
+            int mesInteiro = Integer.parseInt(mes);
+            if (mesInteiro < 1 || mesInteiro > 12) {
+                ve.adicionarMensagemDeCampoObrigatorio("O mês informado é inválido!");
+            }
         }
         if (ano == null) {
             ve.adicionarMensagemDeCampoObrigatorio("Informe o ano de referência.");
         }
-        int mesInteiro = Integer.parseInt(mes);
-        if (mesInteiro < 1 || mesInteiro > 12) {
-            ve.adicionarMensagemDeCampoObrigatorio("O mês informado é inválido !");
-        }
-
         if (ve.temMensagens()) throw ve;
+
     }
 
 }

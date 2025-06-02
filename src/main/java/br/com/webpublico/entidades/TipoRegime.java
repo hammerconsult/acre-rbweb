@@ -41,6 +41,9 @@ public class TipoRegime extends SuperEntidade implements Serializable {
     @Etiqueta("Descrição")
     private String descricao;
 
+    @Etiqueta("Permitir Exonerar em Gozo de Férias")
+    private Boolean permitirExonorarEmGozoFerias;
+
     @Override
     public String toString() {
         return descricao;
@@ -77,4 +80,11 @@ public class TipoRegime extends SuperEntidade implements Serializable {
         this.codigo = codigo;
     }
 
+    public Boolean getPermitirExonorarEmGozoFerias() {
+        return permitirExonorarEmGozoFerias == null? Boolean.FALSE : permitirExonorarEmGozoFerias;
+    }
+
+    public void setPermitirExonorarEmGozoFerias(Boolean permitirExonorarEmGozoFerias) {
+        this.permitirExonorarEmGozoFerias = permitirExonorarEmGozoFerias;
+    }
 }

@@ -173,7 +173,6 @@ public class AprovacaoMaterialFacade extends AbstractFacade<AprovacaoMaterial> {
         for (ItemAprovacaoMaterial iam : aprovacao.getItensAprovados()) {
             em.remove(recuperarReservaEstoque(iam));
         }
-
         super.remover(aprovacao);
     }
 

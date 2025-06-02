@@ -24,6 +24,7 @@ public class SolicitacaoEmpenhoVo {
     private UsuarioSistema usuarioSistema;
     private Boolean gerarReserva;
     private Contrato contrato;
+    private OrigemSolicitacaoEmpenho origemSolicitacaoEmpenho;
     private ReconhecimentoDivida reconhecimentoDivida;
     private OrigemSolicitacaoEmpenho origemSocilicitacao;
 
@@ -146,12 +147,6 @@ public class SolicitacaoEmpenhoVo {
     public void setOrigemSocilicitacao(OrigemSolicitacaoEmpenho origemSocilicitacao) {
         this.origemSocilicitacao = origemSocilicitacao;
     }
-
-    public ReconhecimentoDivida getReconhecimentoDivida() {
-        return reconhecimentoDivida;
-    }
-
-    public void setReconhecimentoDivida(ReconhecimentoDivida reconhecimentoDivida) {
-        this.reconhecimentoDivida = reconhecimentoDivida;
-    }
 }
+
+

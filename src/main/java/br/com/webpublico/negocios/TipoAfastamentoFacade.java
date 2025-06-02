@@ -4,9 +4,7 @@
  */
 package br.com.webpublico.negocios;
 
-import br.com.webpublico.entidades.TipoAfastamento;
-import br.com.webpublico.entidades.TipoAfastamentoTipoPrevidenciaFP;
-import br.com.webpublico.entidades.TipoPrevidenciaFP;
+import br.com.webpublico.entidades.*;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;

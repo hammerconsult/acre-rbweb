@@ -4,7 +4,6 @@
  */
 package br.com.webpublico.enums;
 
-import br.com.webpublico.webreportdto.dto.comum.OperacaoFormulaDTO;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.webreportdto.dto.comum.OperacaoFormulaDTO;
 

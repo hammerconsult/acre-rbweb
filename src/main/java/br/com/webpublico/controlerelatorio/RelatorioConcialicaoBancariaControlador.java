@@ -43,6 +43,7 @@ public class RelatorioConcialicaoBancariaControlador extends AbstractRelatorioCo
     public String getNomeRelatorio() {
         return "CBC1-" + toStringConciliacaoBancaria() + "-" + DataUtil.getAno(dataReferencia) + "-" + StringUtil.preencheString(String.valueOf(DataUtil.getMes(dataReferencia)), 2, '0') + "-" + StringUtil.preencheString(String.valueOf(DataUtil.getDia(dataReferencia)), 2, '0');
     }
+
     @Override
     protected void montarFiltroSql(List<ParametrosRelatorios> parametros) {
         super.montarFiltroSql(parametros);

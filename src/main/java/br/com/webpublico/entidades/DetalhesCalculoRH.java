@@ -39,6 +39,8 @@ public class DetalhesCalculoRH implements Serializable {
     @Transient
     private String descricao;
     private Integer mesesRetroacao;
+    @ManyToOne
+    private FiltroFolhaDePagamento filtroFolhaDePagamento;
 
 //    private Integer totalPensionistas;
 //    private Integer totalAposentados;
@@ -137,6 +139,14 @@ public class DetalhesCalculoRH implements Serializable {
 
     public void setUsuarioSistema(UsuarioSistema usuarioSistema) {
         this.usuarioSistema = usuarioSistema;
+    }
+
+    public FiltroFolhaDePagamento getFiltroFolhaDePagamento() {
+        return filtroFolhaDePagamento;
+    }
+
+    public void setFiltroFolhaDePagamento(FiltroFolhaDePagamento filtroFolhaDePagamento) {
+        this.filtroFolhaDePagamento = filtroFolhaDePagamento;
     }
 
     public void incrementaNaoCalculado() {

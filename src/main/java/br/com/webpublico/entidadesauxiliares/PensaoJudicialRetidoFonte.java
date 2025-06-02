@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -16,6 +17,7 @@ public class PensaoJudicialRetidoFonte implements Serializable {
     private String tipo;
     private String cpf;
     private String descricao;
+    private Date nascimento;
     private PessoaFisica pessoaFisica;
     private VinculoFP instituidor;
     private BigDecimal valor = BigDecimal.ZERO;
@@ -80,6 +82,14 @@ public class PensaoJudicialRetidoFonte implements Serializable {
 
     public void setEventosFps(List<EventoFP> eventosFps) {
         this.eventosFps = eventosFps;
+    }
+
+    public Date getNascimento() {
+        return nascimento;
+    }
+
+    public void setNascimento(Date nascimento) {
+        this.nascimento = nascimento;
     }
 
     public void adicionarEvento(EventoFP evento) {

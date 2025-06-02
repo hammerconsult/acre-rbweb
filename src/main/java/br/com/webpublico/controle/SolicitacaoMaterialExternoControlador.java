@@ -2,6 +2,7 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AgrupadorItemAdesaoAta;
+import br.com.webpublico.entidadesauxiliares.FiltroHistoricoProcessoLicitatorio;
 import br.com.webpublico.entidadesauxiliares.ValidacaoObjetoCompraEspecificacao;
 import br.com.webpublico.enums.*;
 import br.com.webpublico.exception.StatusLicitacaoException;
@@ -17,6 +18,7 @@ import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
+import org.primefaces.event.TabChangeEvent;
 
 import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
@@ -58,6 +60,8 @@ public class SolicitacaoMaterialExternoControlador extends PrettyControlador<Sol
     private List<ItemSolicitacaoExterno> itensControleValor;
     private List<ItemSolicitacaoExterno> itensControleQuantidade;
     private Boolean solicitacaoContratada;
+
+    private FiltroHistoricoProcessoLicitatorio filtroHistoricoProcesso;
 
     public SolicitacaoMaterialExternoControlador() {
         super(SolicitacaoMaterialExterno.class);
@@ -778,6 +782,10 @@ public class SolicitacaoMaterialExternoControlador extends PrettyControlador<Sol
 
     private void novoItemSolicitacaoPorItemPregao(Map<AgrupadorItemAdesaoAta, BigDecimal> mapaAdesoesRealizadas, ObjetoCompra objetoCompra, BigDecimal valor, ItemProcessoDeCompra itemProcessoDeCompra, BigDecimal quantidade) {
 
+        if (itemProcessoDeCompra.getItemSolicitacaoMaterial().getItemCotacao().getTipoControle().isTipoControlePorQuantidade()) {
+            quantidade = atualizarQuantidadeItemParaProcessoIrp(objetoCompra, itemProcessoDeCompra, quantidade);
+        }
+
         ItemSolicitacaoExterno novoItem = new ItemSolicitacaoExterno();
         novoItem.setSolicitacaoMaterialExterno(selecionado);
         novoItem.setObjetoCompra(objetoCompra);
@@ -1179,4 +1187,28 @@ public class SolicitacaoMaterialExternoControlador extends PrettyControlador<Sol
     public void setItensControleQuantidade(List<ItemSolicitacaoExterno> itensControleQuantidade) {
         this.itensControleQuantidade = itensControleQuantidade;
     }
+
+    private void novoFiltroHistoricoProcesso() {
+        if (selecionado.getTipoSolicitacaoRegistroPreco().equals(TipoSolicitacaoRegistroPreco.INTERNA)) {
+            filtroHistoricoProcesso = new FiltroHistoricoProcessoLicitatorio(selecionado.getId(), TipoMovimentoProcessoLicitatorio.ADESAO_INTERNA);
+        } else if (selecionado.getTipoSolicitacaoRegistroPreco().equals(TipoSolicitacaoRegistroPreco.EXTERNA)) {
+            filtroHistoricoProcesso = new FiltroHistoricoProcessoLicitatorio(selecionado.getId(), TipoMovimentoProcessoLicitatorio.SOLICITACAO_ADESAO_EXTERNA);
+        }
+    }
+
+    public void onTabChange(TabChangeEvent event) {
+        String tab = event.getTab().getId();
+        if ("tab-historico".equals(tab)) {
+            novoFiltroHistoricoProcesso();
+        }
+    }
+
+    public FiltroHistoricoProcessoLicitatorio getFiltroHistoricoProcesso() {
+        return filtroHistoricoProcesso;
+    }
+
+    public void setFiltroHistoricoProcesso(FiltroHistoricoProcessoLicitatorio filtroHistoricoProcesso) {
+        this.filtroHistoricoProcesso = filtroHistoricoProcesso;
+    }
+
 }

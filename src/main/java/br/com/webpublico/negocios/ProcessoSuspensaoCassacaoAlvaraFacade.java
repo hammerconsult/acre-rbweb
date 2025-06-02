@@ -70,12 +70,12 @@ public class ProcessoSuspensaoCassacaoAlvaraFacade extends AbstractFacade<Proces
             "   AND PROC.SITUACAO = '" + SituacaoProcessoSuspensaoCassacaoAlvara.EFETIVADO.name() + "'";
     }
 
-    public String sqlAlvaraCassado(String idAlvara) {
+    public String sqlAlvaraCassadoOuSuspenso(TipoProcessoSuspensaoCassacaoAlvara tipoProcesso, SituacaoProcessoSuspensaoCassacaoAlvara situacao, String idAlvara) {
         return " FROM ALVARAPROCESSOSUSPENSAOCASSACAO ALVARAPROC " +
             "                      INNER JOIN PROCESSOSUSPENSAOCASSACAOALVARA PROC ON ALVARAPROC.PROCESSO_ID = PROC.ID " +
             "                      INNER JOIN ALVARA A ON ALVARAPROC.ALVARA_ID = A.ID " +
-            "                      WHERE PROC.SITUACAO =  '" + SituacaoProcessoSuspensaoCassacaoAlvara.ENCERRADO.name() + "'" +
-            "                      AND PROC.TIPOPROCESSO = '" + TipoProcessoSuspensaoCassacaoAlvara.CASSACAO.name() + "'" +
+            "                      WHERE PROC.SITUACAO =  '" + situacao.name() + "'" +
+            "                      AND PROC.TIPOPROCESSO = '" + tipoProcesso.name() + "'" +
             "                      AND A.ID = " + idAlvara;
     }
 
@@ -123,7 +123,18 @@ public class ProcessoSuspensaoCassacaoAlvaraFacade extends AbstractFacade<Proces
     }
 
     public boolean alvaraCassado(Long idAlvara) {
-        String sql = " SELECT COUNT(PROC.ID) " + sqlAlvaraCassado(idAlvara.toString());
+        if(idAlvara == null) return false;
+        String sql = " SELECT COUNT(PROC.ID) " +
+            sqlAlvaraCassadoOuSuspenso(TipoProcessoSuspensaoCassacaoAlvara.CASSACAO, SituacaoProcessoSuspensaoCassacaoAlvara.ENCERRADO, idAlvara.toString());
+        Query q = em.createNativeQuery(sql);
+        BigDecimal result = (BigDecimal) q.getSingleResult();
+        return result.longValue() != 0;
+    }
+
+    public boolean alvaraSuspenso(Long idAlvara) {
+        if(idAlvara == null) return false;
+        String sql = " SELECT COUNT(PROC.ID) " +
+            sqlAlvaraCassadoOuSuspenso(TipoProcessoSuspensaoCassacaoAlvara.SUSPENSAO, SituacaoProcessoSuspensaoCassacaoAlvara.EFETIVADO, idAlvara.toString());
         Query q = em.createNativeQuery(sql);
         BigDecimal result = (BigDecimal) q.getSingleResult();
         return result.longValue() != 0;

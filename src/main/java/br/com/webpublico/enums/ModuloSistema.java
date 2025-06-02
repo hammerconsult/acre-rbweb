@@ -31,8 +31,9 @@ public enum ModuloSistema {
     RBTRANS("Trânsito e Transporte (Rbtrans)", ModuloSistemaDTO.RBTRANS),
     RH("Recursos Humanos", ModuloSistemaDTO.RH),
     TRIBUTARIO("Tributário", ModuloSistemaDTO.TRIBUTARIO),
-    FEIRAS  ("Feiras", ModuloSistemaDTO.FEIRAS),
-    NFSE("Nota Fiscal de Serviço Eletrônica", ModuloSistemaDTO.NFSE);
+    NFSE("Nota Fiscal de Serviço Eletrônica", ModuloSistemaDTO.NFSE),
+    FEIRAS("Feiras", ModuloSistemaDTO.FEIRAS);
+
     private String descricao;
     private ModuloSistemaDTO toDto;
 

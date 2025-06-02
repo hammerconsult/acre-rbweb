@@ -10,6 +10,7 @@ import br.com.webpublico.enums.ClasseDoAtributo;
 import br.com.webpublico.enums.SummaryMessages;
 import br.com.webpublico.enums.TipoAtributo;
 import br.com.webpublico.enums.TipoComponenteVisual;
+import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.AtributoFacade;
@@ -25,7 +26,6 @@ import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import javax.faces.component.UIComponent;
 import javax.faces.context.FacesContext;
-import javax.faces.event.ActionEvent;
 import javax.faces.model.SelectItem;
 import javax.faces.validator.ValidatorException;
 import java.io.Serializable;
@@ -35,10 +35,10 @@ import java.util.List;
 @ManagedBean(name = "atributoControlador")
 @ViewScoped
 @URLMappings(mappings = {
-        @URLMapping(id = "novoAtributo", pattern = "/atributo/novo/", viewId = "/faces/tributario/cadastromunicipal/atributo/edita.xhtml"),
-        @URLMapping(id = "editarAtributo", pattern = "/atributo/editar/#{atributoControlador.id}/", viewId = "/faces/tributario/cadastromunicipal/atributo/edita.xhtml"),
-        @URLMapping(id = "listarAtributo", pattern = "/atributo/listar/", viewId = "/faces/tributario/cadastromunicipal/atributo/lista.xhtml"),
-        @URLMapping(id = "verAtributo", pattern = "/atributo/ver/#{atributoControlador.id}/", viewId = "/faces/tributario/cadastromunicipal/atributo/visualizar.xhtml")
+    @URLMapping(id = "novoAtributo", pattern = "/atributo/novo/", viewId = "/faces/tributario/cadastromunicipal/atributo/edita.xhtml"),
+    @URLMapping(id = "editarAtributo", pattern = "/atributo/editar/#{atributoControlador.id}/", viewId = "/faces/tributario/cadastromunicipal/atributo/edita.xhtml"),
+    @URLMapping(id = "listarAtributo", pattern = "/atributo/listar/", viewId = "/faces/tributario/cadastromunicipal/atributo/lista.xhtml"),
+    @URLMapping(id = "verAtributo", pattern = "/atributo/ver/#{atributoControlador.id}/", viewId = "/faces/tributario/cadastromunicipal/atributo/visualizar.xhtml")
 })
 public class AtributoControlador extends PrettyControlador<Atributo> implements Serializable, CRUD {
 
@@ -105,10 +105,10 @@ public class AtributoControlador extends PrettyControlador<Atributo> implements 
         return toReturn;
     }
 
-    public void validarUnicoValorPadrao(ValorPossivel valorPossivel){
+    public void validarUnicoValorPadrao(ValorPossivel valorPossivel) {
         int index = 0;
         for (ValorPossivel vl : selecionado.getValoresPossiveis()) {
-            if(!vl.equals(valorPossivel)) {
+            if (!vl.equals(valorPossivel)) {
                 if (vl.isValorPadrao()) {
                     selecionado.getValoresPossiveis().get(index).setValorPadrao(false);
                 }
@@ -131,43 +131,33 @@ public class AtributoControlador extends PrettyControlador<Atributo> implements 
         return selecionado.getValoresPossiveis();
     }
 
-    public void novoAtributo() {
-        if (validaValorPossivel()) {
+    public void adicionarValorPossivel() {
+        try {
+            validarValorPossivel();
             valorPossivel.setAtributo(selecionado);
-            selecionado.getValoresPossiveis().add(valorPossivel);
+            Util.adicionarObjetoEmLista(selecionado.getValoresPossiveis(), valorPossivel);
             valorPossivel = new ValorPossivel();
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve);
+        } catch (Exception e) {
+            FacesUtil.addErrorPadrao(e);
         }
     }
 
-    public boolean validaValorPossivel() {
-        boolean valida = true;
-        if (valorPossivel.getCodigo() == null) {
-            valida = false;
-            FacesUtil.addCampoObrigatorio("Informe o código do atributo");
-        }
-        if (valorPossivel.getValor() == null || valorPossivel.getValor().isEmpty()) {
-            valida = false;
-            FacesUtil.addCampoObrigatorio("Informe o valor do atributo");
-        }
-        return valida;
-    }
-
-    public void alteraValor() {
-        if (!("".equals(valorPossivel.getValor())) || !(valorPossivel.getValor().length() < 0)) {
-            valorPossivel.setAtributo(selecionado);
-            selecionado.getValoresPossiveis().set(selecionado.getValoresPossiveis().indexOf(valorPossivel), valorPossivel);
-            valorPossivel = new ValorPossivel();
-        } else {
-            FacesUtil.addError(SummaryMessages.CAMPO_OBRIGATORIO.getDescricao(), "Insira um valor!");
+    private void validarValorPossivel() {
+        valorPossivel.realizarValidacoes();
+        if (selecionado.getValoresPossiveis().stream().anyMatch(vp -> !valorPossivel.equals(vp) &&
+            vp.getCodigo().equals(valorPossivel.getCodigo()))) {
+            throw new ValidacaoException("O código informado já está registrado.");
         }
     }
 
-    public void removeAtributo(ActionEvent evento) {
-        selecionado.getValoresPossiveis().remove((ValorPossivel) evento.getComponent().getAttributes().get("vAtributo"));
+    public void alterarValorPossivel(ValorPossivel vp) {
+        valorPossivel = vp;
     }
 
-    public void selecionaAtributo(ActionEvent evento) {
-        valorPossivel = (ValorPossivel) evento.getComponent().getAttributes().get("vAtributo");
+    public void removerValorPossivel(ValorPossivel valorPossivel) {
+        selecionado.getValoresPossiveis().remove(valorPossivel);
     }
 
     @URLAction(mappingId = "editarAtributo", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -237,5 +227,17 @@ public class AtributoControlador extends PrettyControlador<Atributo> implements 
 
     public List<Atributo> completarAtributoConstrucao(String parte) {
         return atributoFacade.buscarAtributoPorClasse(ClasseDoAtributo.CONSTRUCAO, parte);
+    }
+
+    public List<Atributo> completarAtributos(String parte) {
+        return atributoFacade.buscarAtributosAtivos(parte);
+    }
+
+    public void alterouTipoAtributo() {
+        selecionado.setComponenteVisual(null);
+        selecionado.setValoresPossiveis(new ArrayList<>());
+        if (TipoAtributo.DISCRETO.equals(selecionado.getTipoAtributo())) {
+            selecionado.setComponenteVisual(TipoComponenteVisual.COMBO);
+        }
     }
 }

@@ -4,7 +4,9 @@
  */
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
 import br.com.webpublico.util.IdentidadeDaEntidade;
+import br.com.webpublico.util.Persistencia;
 
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -28,32 +30,44 @@ public class ObjetoParametro implements Serializable {
     private String classeObjeto;
     @Transient
     private TipoObjetoParametro tipoObjetoParametro;
-//    @ManyToOne
+    //    @ManyToOne
     private ItemParametroEvento itemParametroEvento;
     @Transient
     private Long criadoEm;
+    @Transient
+    private Boolean gerarContaAuxiliar;
+    @Transient
+    private Object entidade;
 
     public ObjetoParametro() {
         criadoEm = System.nanoTime();
         this.tipoObjetoParametro = TipoObjetoParametro.AMBOS;
     }
 
-    public ObjetoParametro(String idObjeto, String classeObjeto, ItemParametroEvento itemParametroEvento) {
-        this.idObjeto = idObjeto;
-        this.classeObjeto = classeObjeto;
-        this.itemParametroEvento = itemParametroEvento;
-        this.criadoEm = System.nanoTime();
-        this.tipoObjetoParametro = TipoObjetoParametro.AMBOS;
+    public ObjetoParametro(Object entidade, ItemParametroEvento itemParametroEvento) {
+        criarObjeto(entidade, itemParametroEvento, TipoObjetoParametro.AMBOS);
     }
 
-    public ObjetoParametro(String idObjeto, String classeObjeto, ItemParametroEvento itemParametroEvento, TipoObjetoParametro tipoObjetoParametro) {
-        this.idObjeto = idObjeto;
-        this.classeObjeto = classeObjeto;
+    public ObjetoParametro(Object entidade, ItemParametroEvento itemParametroEvento, TipoObjetoParametro tipoObjetoParametro) {
+        criarObjeto(entidade, itemParametroEvento, tipoObjetoParametro);
+    }
+    private void criarObjeto(Object entidade, ItemParametroEvento itemParametroEvento, TipoObjetoParametro tipoObjetoParametro) {
+        this.entidade = entidade;
+        this.classeObjeto = entidade.getClass().getSimpleName();
+        if (!entidade.getClass().isEnum()) {
+            Object id = Persistencia.getId(entidade);
+            if (id != null) {
+                this.idObjeto = id.toString();
+            }
+        } else {
+            Enum<?> e = (Enum<?>) entidade;
+            this.idObjeto = e.name();
+        }
+        this.gerarContaAuxiliar = entidade instanceof SuperEntidadeContabilGerarContaAuxiliar;
         this.itemParametroEvento = itemParametroEvento;
         this.criadoEm = System.nanoTime();
         this.tipoObjetoParametro = tipoObjetoParametro;
     }
-
 
     public ItemParametroEvento getItemParametroEvento() {
         return itemParametroEvento;
@@ -103,6 +117,22 @@ public class ObjetoParametro implements Serializable {
         this.tipoObjetoParametro = tipoObjetoParametro;
     }
 
+    public Boolean getGerarContaAuxiliar() {
+        return gerarContaAuxiliar;
+    }
+
+    public void setGerarContaAuxiliar(Boolean gerarContaAuxiliar) {
+        this.gerarContaAuxiliar = gerarContaAuxiliar;
+    }
+
+    public Object getEntidade() {
+        return entidade;
+    }
+
+    public void setEntidade(Object entidade) {
+        this.entidade = entidade;
+    }
+
     @Override
     public int hashCode() {
         return IdentidadeDaEntidade.calcularHashCode(this);
@@ -115,7 +145,14 @@ public class ObjetoParametro implements Serializable {
 
     @Override
     public String toString() {
-        return "br.com.webpublico.entidades.ObjetoParametro[ id=" + id + " ]";
+        return "ObjetoParametro{" +
+            "id=" + id +
+            ", idObjeto='" + idObjeto + '\'' +
+            ", classeObjeto='" + classeObjeto + '\'' +
+            ", tipoObjetoParametro=" + tipoObjetoParametro +
+            ", itemParametroEvento=" + itemParametroEvento +
+            ", criadoEm=" + criadoEm +
+            '}';
     }
 
     public enum TipoObjetoParametro {

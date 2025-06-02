@@ -3,6 +3,7 @@ package br.com.webpublico.entidades.rh.esocial;
 import br.com.webpublico.entidades.Entidade;
 import br.com.webpublico.entidades.EventoFP;
 import br.com.webpublico.entidades.SuperEntidade;
+import br.com.webpublico.enums.rh.esocial.TipoEventoFPEmpregador;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Obrigatorio;
 import com.google.common.collect.ComparisonChain;
@@ -55,11 +56,13 @@ public class EventoFPEmpregador extends SuperEntidade implements Comparable<Even
     @Obrigatorio
     private IncidenciaTributariaRPPS incidenciaTributariaRPPS;
 
-
     @Etiqueta("Verba de Férias")
     private Boolean verbaDeFerias;
 
     private Boolean tetoRemuneratorio;
+
+    @Enumerated(EnumType.STRING)
+    private TipoEventoFPEmpregador tipoEventoFPEmpregador;
 
     public EventoFPEmpregador() {
         tetoRemuneratorio = Boolean.FALSE;
@@ -161,6 +164,14 @@ public class EventoFPEmpregador extends SuperEntidade implements Comparable<Even
 
     public void setTetoRemuneratorio(Boolean tetoRemuneratorio) {
         this.tetoRemuneratorio = tetoRemuneratorio;
+    }
+
+    public TipoEventoFPEmpregador getTipoEventoFPEmpregador() {
+        return tipoEventoFPEmpregador;
+    }
+
+    public void setTipoEventoFPEmpregador(TipoEventoFPEmpregador tipoEventoFPEmpregador) {
+        this.tipoEventoFPEmpregador = tipoEventoFPEmpregador;
     }
 
     @Override

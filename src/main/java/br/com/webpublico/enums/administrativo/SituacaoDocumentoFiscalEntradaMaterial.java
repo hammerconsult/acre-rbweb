@@ -10,6 +10,7 @@ public enum SituacaoDocumentoFiscalEntradaMaterial {
     LIQUIDADO("Liquidado", SituacaoDocumentoFiscalEntradaMaterialDTO.LIQUIDADO),
     ESTORNADO("Estornado", SituacaoDocumentoFiscalEntradaMaterialDTO.ESTORNADO),
     LIQUIDADO_PARCIALMENTE("Liquidado Parcialmente", SituacaoDocumentoFiscalEntradaMaterialDTO.LIQUIDADO_PARCIALMENTE);
+
     private String descricao;
     private SituacaoDocumentoFiscalEntradaMaterialDTO toDto;
 

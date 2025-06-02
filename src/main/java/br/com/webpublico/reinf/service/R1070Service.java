@@ -138,6 +138,7 @@ public class R1070Service {
         if (reinfService.isPerfilDev()) {
             evento.setTpAmb(2);
         }
+
         evento.setTpInsc(1);
         evento.setNrInsc(empregadorESocial.getNrInscID());
 

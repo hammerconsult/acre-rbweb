@@ -1,10 +1,9 @@
 package br.com.webpublico.entidadesauxiliares.contabil;
 
-import br.com.webpublico.enums.TipoMatrizSaldoContabil;
-
 import java.math.BigDecimal;
 
 public class ValidadorMatrizSaldoContabilBlc {
+
     private String codigo;
     private BigDecimal saldoAnterior;
     private BigDecimal credito;

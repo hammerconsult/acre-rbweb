@@ -8,8 +8,10 @@ package br.com.webpublico.entidades;
 import br.com.webpublico.enums.ClassificacaoFonteRecursos;
 import br.com.webpublico.enums.SituacaoFonteRecurso;
 import br.com.webpublico.enums.TipoFonteRecurso;
+import br.com.webpublico.exception.ValidacaoException;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.IdentidadeDaEntidade;
+import br.com.webpublico.util.Util;
 import br.com.webpublico.util.anotacoes.*;
 import br.com.webpublico.webreportdto.dto.contabil.FonteDeRecursosDTO;
 import com.google.common.collect.Lists;
@@ -26,7 +28,7 @@ import java.util.List;
 @Entity
 
 @Etiqueta("Fonte de Recursos")
-public class FonteDeRecursos implements Serializable {
+public class FonteDeRecursos extends SuperEntidade implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -36,7 +38,6 @@ public class FonteDeRecursos implements Serializable {
     @Pesquisavel
     @NotNull
     @Obrigatorio
-    @Size(min = 1, max = 4)
     private String codigo;
     @Tabelavel
     @Obrigatorio
@@ -224,6 +225,23 @@ public class FonteDeRecursos implements Serializable {
 
     public void setCriadoEm(Long criadoEm) {
         this.criadoEm = criadoEm;
+    }
+
+    @Override
+    public void realizarValidacoes() {
+        Util.validarCampos(this);
+
+        validarCodigo();
+    }
+
+    private void validarCodigo() {
+        ValidacaoException ve = new ValidacaoException();
+        if (codigo.trim().length() < 3 || codigo.trim().length() > 4) {
+           ve.adicionarMensagemDeOperacaoNaoPermitida("O Código deve conter 3 ou 4 caracteres.");
+        } else if (!codigo.trim().startsWith("1") && !codigo.trim().startsWith("2")) {
+            ve.adicionarMensagemDeOperacaoNaoPermitida("O Código deve começar com 1 ou 2.");
+        }
+        ve.lancarException();
     }
 
     public Boolean getPermitirSuprimentoDeFundo() {

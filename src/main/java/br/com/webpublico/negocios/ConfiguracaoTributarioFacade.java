@@ -178,16 +178,6 @@ public class ConfiguracaoTributarioFacade extends AbstractFacade<ConfiguracaoTri
         return retorno;
     }
 
-    public String recuperarUrlPortal() {
-        ConfiguracaoTributario configuracaoTributario = retornaUltimo();
-        String urlPortal = "";
-        if (configuracaoTributario != null && !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) &&
-            configuracaoTributario.getUrlPortalContribuinte().endsWith("/")) {
-            urlPortal = StringUtils.chop(configuracaoTributario.getUrlPortalContribuinte());
-        }
-        return urlPortal;
-    }
-
     public boolean permiteEmitirCarneIPTUPortal() {
         String sql = " select ct.canemitircarneiptuportal from configuracaotributario ct " +
             " order by ct.vigencia desc fetch first 1 rows only ";
@@ -199,6 +189,16 @@ public class ConfiguracaoTributarioFacade extends AbstractFacade<ConfiguracaoTri
             return permissoes.get(0).intValue() == 1;
         }
         return false;
+    }
+
+    public String recuperarUrlPortal() {
+        ConfiguracaoTributario configuracaoTributario = retornaUltimo();
+        String urlPortal = "";
+        if (configuracaoTributario != null && !Strings.isNullOrEmpty(configuracaoTributario.getUrlPortalContribuinte()) &&
+            configuracaoTributario.getUrlPortalContribuinte().endsWith("/")) {
+            urlPortal = StringUtils.chop(configuracaoTributario.getUrlPortalContribuinte());
+        }
+        return urlPortal;
     }
 
     @Override

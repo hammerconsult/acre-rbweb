@@ -118,7 +118,7 @@ public class FichaRPAControlador extends PrettyControlador<FichaRPA> implements 
     }
 
     public List<PrestadorServicos> completaPrestadorServicos(String parte) {
-        return prestadorServicosFacade.listaPrestadoresPorID(parte.trim());
+        return prestadorServicosFacade.listaPrestadoresPorUsuarioFiltrando(parte.trim(), sistemaFacade.getUsuarioCorrente(), sistemaFacade.getDataOperacao());
     }
 
     @URLAction(mappingId = "novoFichaRPA", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)

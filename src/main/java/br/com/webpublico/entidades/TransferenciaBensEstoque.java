@@ -5,16 +5,15 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.entidades.contabil.financeiro.SuperEntidadeContabilFinanceira;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.TipoEstoque;
 import br.com.webpublico.enums.TipoLancamento;
 import br.com.webpublico.enums.TipoOperacaoBensEstoque;
 import br.com.webpublico.enums.TipoTransferenciaBensEstoque;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
-import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
@@ -22,7 +21,6 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.TreeMap;
 
 /**
  * @author juggernaut
@@ -33,7 +31,7 @@ import java.util.TreeMap;
 
 @Etiqueta("Transferência de Bens de Estoque")
 @Table(name = "TRANSFBENSESTOQUE")
-public class TransferenciaBensEstoque extends SuperEntidadeContabilFinanceira implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
+public class TransferenciaBensEstoque extends SuperEntidadeContabilFinanceira implements Serializable, EntidadeContabil {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -382,62 +380,11 @@ public class TransferenciaBensEstoque extends SuperEntidadeContabilFinanceira im
     }
 
     @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(unidadeOrgDestino);
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(unidadeOrgDestino, contaContabil.getSubSistema());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(unidadeOrgOrigem);
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(unidadeOrgOrigem, contaContabil.getSubSistema());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(unidadeOrgDestino);
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(unidadeOrgDestino,
-                    contaContabil.getSubSistema());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(unidadeOrgOrigem);
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(unidadeOrgOrigem,
-                    contaContabil.getSubSistema());
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+        if (ParametroEvento.ComplementoId.CONCEDIDO.equals(complementoId)) {
+            return new GeradorContaAuxiliarDTO(unidadeOrgOrigem);
+        } else if (ParametroEvento.ComplementoId.RECEBIDO.equals(complementoId)) {
+            return new GeradorContaAuxiliarDTO(unidadeOrgDestino);
         }
         return null;
     }

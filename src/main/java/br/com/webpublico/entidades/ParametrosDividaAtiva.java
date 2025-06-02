@@ -5,7 +5,6 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.*;
 import com.google.common.collect.Lists;
 import org.hibernate.envers.Audited;

@@ -53,7 +53,6 @@ import java.util.Map;
 })
 public class NotaFiscalControlador extends PrettyControlador<NotaFiscal> implements CRUD {
 
-
     @EJB
     private NotaFiscalFacade facade;
     private List<ResultadoParcela> parcelasDaNota;

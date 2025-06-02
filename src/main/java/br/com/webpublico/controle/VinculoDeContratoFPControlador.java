@@ -12,14 +12,15 @@ import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.context.FacesContext;
 import java.io.Serializable;
-import java.math.BigDecimal;
 import javax.faces.bean.ViewScoped;
 
 @ManagedBean(name = "vinculoDeContratoFPControlador")
 @ViewScoped
 @URLMappings(mappings = {
     @URLMapping(id = "listarVinculoDeContratoFP", pattern = "/vinculodecontrato/listar/", viewId = "/faces/rh/administracaodepagamento/vinculodecontratofp/lista.xhtml"),
-    @URLMapping(id = "verVinculoDeContratoFP", pattern = "/vinculodecontrato/ver/#{vinculoDeContratoFPControlador.id}/", viewId = "/faces/rh/administracaodepagamento/vinculodecontratofp/visualizar.xhtml")
+    @URLMapping(id = "verVinculoDeContratoFP", pattern = "/vinculodecontrato/ver/#{vinculoDeContratoFPControlador.id}/", viewId = "/faces/rh/administracaodepagamento/vinculodecontratofp/visualizar.xhtml"),
+    @URLMapping(id = "editarVinculoDeContratoFP", pattern = "/vinculodecontrato/editar/#{vinculoDeContratoFPControlador.id}/", viewId = "/faces/rh/administracaodepagamento/vinculodecontratofp/edita.xhtml"),
+    @URLMapping(id = "novoVinculoDeContratoFP", pattern = "/vinculodecontrato/novo/", viewId = "/faces/rh/administracaodepagamento/vinculodecontratofp/edita.xhtml")
 })
 public class VinculoDeContratoFPControlador extends PrettyControlador<VinculoDeContratoFP> implements Serializable, CRUD {
 
@@ -38,9 +39,6 @@ public class VinculoDeContratoFPControlador extends PrettyControlador<VinculoDeC
     @Override
     public void salvar() {
         if (validaCampos()) {
-            if(selecionado.getPercentualAposentadoria() == null) {
-                selecionado.setPercentualAposentadoria(BigDecimal.ZERO);
-            }
             super.salvar();
         }
     }
@@ -53,6 +51,17 @@ public class VinculoDeContratoFPControlador extends PrettyControlador<VinculoDeC
             return false;
         }
         return true;
+    }
+    @URLAction(mappingId = "novoVinculoDeContratoFP", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
+    @Override
+    public void novo() {
+        super.novo();
+    }
+
+    @URLAction(mappingId = "editarVinculoDeContratoFP", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
+    @Override
+    public void editar() {
+        super.editar();
     }
 
     @URLAction(mappingId = "verVinculoDeContratoFP", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)

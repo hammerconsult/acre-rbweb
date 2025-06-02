@@ -1033,8 +1033,7 @@ public class CalculaISSFacade extends AbstractFacade<CalculoISS> {
         if (!parcelas.isEmpty()) {
             toReturn.addAll(parcelas);
         }
-
-        return toReturn;
+        return parcelas;
     }
 
     public Boolean existeParcelaEmAberto(CalculoISS calculo) {
@@ -1125,10 +1124,6 @@ public class CalculaISSFacade extends AbstractFacade<CalculoISS> {
         q.setParameter("tipoCalculoISS", tipoCalculoISS);
         q.setParameter("situacaoParcela", SituacaoParcela.EM_ABERTO);
         return q.getResultList();
-    }
-
-    public CalculoISS salvarCalculo(CalculoISS calculo) {
-        return em.merge(calculo);
     }
 
     public ProcessoCalculoISS criarCalculoParaDaf607(Exercicio exercicio, CadastroEconomico cadastroEconomico, Mes mes, BigDecimal valorCalculado, Date dataOperacao, UsuarioSistema usuarioSistema) {

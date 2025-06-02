@@ -672,6 +672,7 @@ public class ProcessoDebitoAtualizacaoMonetariaControlador extends PrettyControl
     public void limparFiltroCadastro() {
     }
 
+
     public String retornarSituacaoDaDivida(ParcelaValorDivida parcela) {
         if (parcela == null) {
             return " - ";

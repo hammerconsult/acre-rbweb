@@ -332,10 +332,6 @@ public abstract class Calculo extends SuperEntidade implements Serializable {
             return descricao;
         }
 
-        public DescontoItemParcela.Origem getOrigem() {
-            return origem;
-        }
-
         public boolean isInscricaoDividaAtiva() {
             return this.equals(INSCRICAO_DA);
         }
@@ -359,5 +355,9 @@ public abstract class Calculo extends SuperEntidade implements Serializable {
             return this.equals(TipoCalculo.fromDto(dto));
         }
 
+
+        public DescontoItemParcela.Origem getOrigem() {
+            return origem;
+        }
     }
 }

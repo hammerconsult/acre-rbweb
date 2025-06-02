@@ -1,6 +1,7 @@
 package br.com.webpublico.controle;
 
 
+import br.com.webpublico.controle.administrativo.PncpTransactionalHelper;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.PlanoContratacaoAnualGrupoObjetoCompraVO;
 import br.com.webpublico.entidadesauxiliares.PlanoContratacaoAnualObjetoCompraContratoVO;
@@ -12,26 +13,32 @@ import br.com.webpublico.interfaces.CRUD;
 import br.com.webpublico.negocios.AbstractFacade;
 import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
 import br.com.webpublico.negocios.PlanoContratacaoAnualFacade;
+import br.com.webpublico.pncp.dto.PlanoContratacaoAnualConsultaDTO;
+import br.com.webpublico.pncp.dto.PlanoContratacaoAnualItemConsultaDTO;
 import br.com.webpublico.pncp.entidadeauxiliar.EventoPncpVO;
+import br.com.webpublico.pncp.enums.OperacaoPncp;
 import br.com.webpublico.pncp.enums.TipoEventoPncp;
 import br.com.webpublico.pncp.service.PncpService;
 import br.com.webpublico.util.ConverterAutoComplete;
+import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
+import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import javax.faces.model.SelectItem;
+import javax.servlet.ServletContext;
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -60,6 +67,10 @@ public class PlanoContratacaoAnualControlador extends PrettyControlador<PlanoCon
     private List<PlanoContratacaoAnualObjetoCompraContratoVO> contratosVO;
     private Boolean isGrupoPreDeterminado = Boolean.FALSE;
     private ConverterAutoComplete converterPlanoContratacaoAnualObjetoCompra;
+
+    private List<PlanoContratacaoAnualObjetoCompra> itensOriginais;
+    private List<PlanoContratacaoAnualObjetoCompra> itensEditando;
+
 
     public PlanoContratacaoAnualControlador() {
         super(PlanoContratacaoAnual.class);
@@ -103,6 +114,22 @@ public class PlanoContratacaoAnualControlador extends PrettyControlador<PlanoCon
             Collections.sort(grupo.getObjetosCompra());
         }
         tipoRenumerarObjetoCompra = TipoRenumerarObjetoCompra.CODIGO_OBJETO_COMPRA;
+
+        List<PlanoContratacaoAnualObjetoCompra> copiaItens = new ArrayList<>();
+        itensOriginais = new ArrayList<>();
+        itensEditando = new ArrayList<>();
+
+        if (selecionado.getIdPncp() != null) {
+            PlanoContratacaoAnualConsultaDTO pcaDto = new PlanoContratacaoAnualConsultaDTO();
+            pcaDto.setId(selecionado.getId());
+
+            List<PlanoContratacaoAnualItemConsultaDTO> itensDTO = PncpService.getService().recuperarItensPlanoContratacaoAnual(new ValidacaoException(), pcaDto);
+
+            for (PlanoContratacaoAnualItemConsultaDTO itemDTO : itensDTO) {
+                copiaItens.add(clonarItemPncp(itemDTO));
+            }
+            itensOriginais = copiaItens;
+        }
     }
 
     @Override
@@ -120,6 +147,7 @@ public class PlanoContratacaoAnualControlador extends PrettyControlador<PlanoCon
         try {
             validarRegrasSalvar();
             selecionado = facade.salvarRetornando(selecionado);
+            retificarItemPncp();
             redirecionarParaVerOrEditar(selecionado.getId(), "ver");
             FacesUtil.addOperacaoRealizada(getMensagemSucessoAoSalvar());
         } catch (ValidacaoException ex) {
@@ -278,6 +306,10 @@ public class PlanoContratacaoAnualControlador extends PrettyControlador<PlanoCon
     public void editarObjetoCompra(PlanoContratacaoAnualObjetoCompra obj) {
         pcaObjetoCompra = obj;
         pcaGrupoObjetoCompra = obj.getPlanoContratacaoAnualGrupo();
+
+        if (isOperacaoEditar()) {
+            itensEditando.add(pcaObjetoCompra);
+        }
     }
 
     public void validarObjetoCompra() {
@@ -600,5 +632,97 @@ public class PlanoContratacaoAnualControlador extends PrettyControlador<PlanoCon
         PncpService.getService().criarEventoAtualizacaoIdSequencialPncp(selecionado.getId(), selecionado.getExercicio().getAno().toString());
         selecionado = facade.salvarRetornando(selecionado);
         FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + selecionado.getId() + "/");
+    }
+
+    public void retificarItemPncp() {
+        try {
+            if (selecionado.getIdPncp() != null && hasItensAlterados()) {
+                getPncpTransactionalHelper().enviarEmLote(
+                    TipoEventoPncp.ITEM_PLANO_CONTRATACAO_ANUAL,
+                    OperacaoPncp.ALTERAR,
+                    itensEditando
+                );
+            }
+        } catch (Exception e) {
+            FacesUtil.addError("As alterações realizadas nos itens não foram enviadas ao PNCP.", e.getMessage());
+        }
+    }
+
+    private PncpTransactionalHelper getPncpTransactionalHelper() {
+        FacesContext facesContext = FacesContext.getCurrentInstance();
+        ServletContext servletContext = (ServletContext) facesContext.getExternalContext().getContext();
+        WebApplicationContext ctx = WebApplicationContextUtils.getWebApplicationContext(servletContext);
+        return ctx.getBean(PncpTransactionalHelper.class);
+    }
+
+    private PlanoContratacaoAnualObjetoCompra clonarItemPncp(PlanoContratacaoAnualItemConsultaDTO original) {
+        PlanoContratacaoAnualObjetoCompra clone = new PlanoContratacaoAnualObjetoCompra();
+        clone.setId(original.getId());
+        clone.setObjetoCompra(new ObjetoCompra());
+        clone.getObjetoCompra().setDescricao(original.getObjetoCompra());
+        clone.setUnidadeMedida(new UnidadeMedida());
+        clone.getUnidadeMedida().setDescricao(original.getUnidadeMedida());
+        clone.setDataDesejada(original.getDataDesejada());
+        clone.setQuantidade(original.getQuantidade());
+        clone.setValorUnitario(original.getValorUnitario());
+        clone.setValorTotal(original.getValorTotal());
+        clone.setNumero(original.getNumero().intValue());
+        clone.setEspecificacao(original.getEspecificacao());
+        clone.setValorOrcamentoExercicio(original.getValorOrcamentoExercicio());
+        clone.setSequencialIdPncp(original.getSequencialIdPncp());
+        return clone;
+    }
+
+    public boolean hasItensAlterados() {
+        for (PlanoContratacaoAnualObjetoCompra atual : itensEditando) {
+            PlanoContratacaoAnualObjetoCompra original = itensOriginais.stream()
+                .filter(o -> Objects.equals(o.getId(), atual.getId()))
+                .findFirst()
+                .orElse(null);
+
+            if (original == null || !itensIguais(atual, original)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean itensIguais(PlanoContratacaoAnualObjetoCompra a, PlanoContratacaoAnualObjetoCompra o) {
+        return Objects.equals(getDescricaoEntidade(a.getObjetoCompra()), o.getObjetoCompra().getDescricao()) &&
+                Objects.equals(getDescricaoEntidade(a.getUnidadeMedida()), o.getUnidadeMedida().getDescricao()) &&
+                Objects.equals(a.getQuantidade(), o.getQuantidade()) &&
+                Objects.equals(a.getValorUnitario(), o.getValorUnitario()) &&
+                Objects.equals(a.getValorTotal(), o.getValorTotal()) &&
+                Objects.equals(a.getEspecificacao(), o.getEspecificacao()) &&
+                Objects.equals(a.getValorOrcamentoExercicio(), o.getValorOrcamentoExercicio()) &&
+                Objects.equals(a.getSequencialIdPncp(), o.getSequencialIdPncp()) &&
+                Objects.equals(a.getNumero(), o.getNumero()) &&
+                DataUtil.compararDatas(a.getDataDesejada(), o.getDataDesejada());
+    }
+
+    private String getDescricaoEntidade(Object entidade) {
+        if (entidade instanceof ObjetoCompra) {
+            return ((ObjetoCompra) entidade).getCodigo() + " - " + ((ObjetoCompra) entidade).getDescricao();
+        } else if (entidade instanceof UnidadeMedida) {
+            return ((UnidadeMedida) entidade).getDescricao();
+        }
+        return null;
+    }
+
+
+    public List<PlanoContratacaoAnualObjetoCompra> getItensOriginais() {
+        return itensOriginais;
+    }
+
+    public void setItensOriginais(List<PlanoContratacaoAnualObjetoCompra> itensOriginais) {
+        this.itensOriginais = itensOriginais;
+    }
+
+    public List<PlanoContratacaoAnualObjetoCompra> getItensEditando() {
+        return itensEditando;
+    }
+
+    public void setItensEditando(List<PlanoContratacaoAnualObjetoCompra> itensEditando) {
+        this.itensEditando = itensEditando;
     }
 }

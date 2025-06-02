@@ -21,7 +21,6 @@ public class PesquisaPastaGavetaContratoFP extends ComponentePesquisaGenerico im
         super.prepararAtributos();
         montarItensPesquisa();
         montarItensOrdenacao();
-        montarCamposOrdenacao();
     }
 
     private void montarItensPesquisa() {
@@ -48,15 +47,6 @@ public class PesquisaPastaGavetaContratoFP extends ComponentePesquisaGenerico im
         super.getItensOrdenacao().add(criarItemPasta());
         super.getItensOrdenacao().add(criarItemInicioVigencia());
         super.getItensOrdenacao().add(criarItemFinalVigencia());
-    }
-
-    private void montarCamposOrdenacao() {
-        super.getCamposOrdenacao().add(criarItemInicioVigencia());
-        super.getCamposOrdenacao().add(criarItemFinalVigencia());
-        super.getCamposOrdenacao().add(criarItemMatricula());
-        super.getCamposOrdenacao().add(criarItemFicharioCodigo());
-        super.getCamposOrdenacao().add(criarItemGavetaCodigo());
-        super.getCamposOrdenacao().add(criarItemPasta());
     }
 
     private ItemPesquisaGenerica criarItemMatricula() {

@@ -67,7 +67,6 @@ public class NotificacaoCobrancaAdministrativaFacade extends AbstractFacade<Noti
         return em.merge(obj);
     }
 
-
     @Override
     public NotificacaoCobrancaAdmin recuperar(Object id) {
         return inicializar(super.recuperar(id));
@@ -143,10 +142,7 @@ public class NotificacaoCobrancaAdministrativaFacade extends AbstractFacade<Noti
 
     @Override
     public Object recuperar(Class entidade, Object id) {
-        if (entidade.equals(getClasse())) {
-            return inicializar((NotificacaoCobrancaAdmin) super.recuperar(entidade, id));
-        }
-        return super.recuperar(entidade, id);
+        return inicializar((NotificacaoCobrancaAdmin) super.recuperar(entidade, id));
     }
 
     public NotificacaoCobrancaAdmin recuperarSimples(NotificacaoCobrancaAdmin obj) {

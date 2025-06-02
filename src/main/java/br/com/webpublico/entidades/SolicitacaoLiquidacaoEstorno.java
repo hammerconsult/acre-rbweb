@@ -1,6 +1,5 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.anotacoes.Etiqueta;
@@ -12,7 +11,6 @@ import java.util.Date;
 
 @Entity
 @Audited
-@GrupoDiagrama(nome = "ReservaDeDotacao")
 @Etiqueta("Solicitação de Estorno de Liquidação")
 @Table(name = "SOLICITACAOLIQUIDACAOEST")
 public class SolicitacaoLiquidacaoEstorno extends SuperEntidade {
@@ -45,6 +43,7 @@ public class SolicitacaoLiquidacaoEstorno extends SuperEntidade {
     private BigDecimal valor;
 
     public SolicitacaoLiquidacaoEstorno() {
+        this.dataSolicitacao = new Date();
     }
 
     public LiquidacaoEstorno getLiquidacaoEstorno() {

@@ -15,24 +15,28 @@ public enum TipoRequisicaoCompra {
         return descricao;
     }
 
-    public boolean isContrato(){
+    public boolean isContrato() {
         return CONTRATO.equals(this);
     }
 
-    public boolean isAtaRegistroPreco(){
+    public boolean isAtaRegistroPreco() {
         return ATA_REGISTRO_PRECO.equals(this);
     }
 
-    public boolean isDispensaInexigibilidade(){
+    public boolean isDispensaInexigibilidade() {
         return DISPENSA_LICITACAO_INEXIGIBILIDADE.equals(this);
     }
 
-    public boolean isReconhecimentoDivida(){
+    public boolean isReconhecimentoDivida() {
         return RECONHECIMENTO_DIVIDA.equals(this);
     }
 
-    public boolean isExecucaoProcesso(){
+    public boolean isExecucaoProcesso() {
         return isAtaRegistroPreco() || isDispensaInexigibilidade();
+    }
+
+    public boolean isExecucao() {
+        return isContrato() || isAtaRegistroPreco() || isDispensaInexigibilidade();
     }
 
     @Override

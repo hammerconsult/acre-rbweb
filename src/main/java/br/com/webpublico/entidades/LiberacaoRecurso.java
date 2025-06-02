@@ -42,6 +42,14 @@ public class LiberacaoRecurso extends SuperEntidade implements Serializable {
     @Etiqueta("Valor a Liberar (R$)")
     @Tabelavel
     private BigDecimal valorLiberar;
+
+    @Etiqueta("Valor de Juros a Liberar (R$)")
+    @Tabelavel
+    private BigDecimal valorJurosLiberar;
+
+    @Etiqueta("Valor de Outros Encargos a Liberar (R$)")
+    @Tabelavel
+    private BigDecimal valorOutrosEncargosLiberar;
     @Etiqueta("Dívida Pública")
     @ManyToOne
     private DividaPublica dividaPublica;
@@ -102,5 +110,21 @@ public class LiberacaoRecurso extends SuperEntidade implements Serializable {
     @Override
     public String toString() {
         return "br.com.webpublico.entidades.ParcelaDividaPublica[ id=" + id + " ]";
+    }
+
+    public BigDecimal getValorJurosLiberar() {
+        return valorJurosLiberar;
+    }
+
+    public void setValorJurosLiberar(BigDecimal valorJurosLiberar) {
+        this.valorJurosLiberar = valorJurosLiberar;
+    }
+
+    public BigDecimal getValorOutrosEncargosLiberar() {
+        return valorOutrosEncargosLiberar;
+    }
+
+    public void setValorOutrosEncargosLiberar(BigDecimal valorOutrosEncargosLiberar) {
+        this.valorOutrosEncargosLiberar = valorOutrosEncargosLiberar;
     }
 }

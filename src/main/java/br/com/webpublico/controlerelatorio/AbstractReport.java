@@ -77,7 +77,6 @@ public class AbstractReport implements Serializable {
     public Connection recuperaConexaoJDBC() {
         Connection conexao = null;
         try {
-            logger.debug("Conexão JDBC recuperada ... garanta seu 'encerramento' ");
             InitialContext ctx = new InitialContext();
             DataSource ds = (DataSource) ctx.lookup(LeitorPersistenceXML.getInstance().getNomeDataSource());
             conexao = ds.getConnection();
@@ -559,7 +558,6 @@ public class AbstractReport implements Serializable {
     }
 
     public ByteArrayOutputStream gerarBytesEmPdfDeRelatorioComDadosEmCollectionView(String caminho, String arquivoJasper, HashMap parametros, JRBeanCollectionDataSource jrbc) throws JRException, IOException {
-        ByteArrayOutputStream retorno;
         definirLocaleAndPerfilApp(parametros);
         atribuirConfiguracaoCabecalho(parametros);
         JRGzipVirtualizer virtualizer = new JRGzipVirtualizer(100);
@@ -568,7 +566,6 @@ public class AbstractReport implements Serializable {
     }
 
     public ByteArrayOutputStream gerarBytesEmPdfDeRelatorioComDadosEmCollectionViewSemCabecalhoPadrao(String caminho, String arquivoJasper, HashMap parametros, JRBeanCollectionDataSource jrbc) throws JRException, IOException {
-        ByteArrayOutputStream retorno;
         definirLocaleAndPerfilApp(parametros);
         JRGzipVirtualizer virtualizer = new JRGzipVirtualizer(100);
         parametros.put(JRParameter.REPORT_VIRTUALIZER, virtualizer);
@@ -576,7 +573,6 @@ public class AbstractReport implements Serializable {
     }
 
     public ByteArrayOutputStream gerarBytesEmPdfDeRelatorioComDadosEmCollectionViewAsync(String caminho, String arquivoJasper, HashMap parametros, JRBeanCollectionDataSource jrbc, UnidadeOrganizacional unidadeOrcamentariaCorrente) throws JRException, IOException {
-        ByteArrayOutputStream retorno;
         definirLocaleAndPerfilApp(parametros);
         atribuirConfiguracaoCabecalho(parametros, unidadeOrcamentariaCorrente);
         JRGzipVirtualizer virtualizer = new JRGzipVirtualizer(100);

@@ -4,15 +4,15 @@
  */
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.StatusPagamento;
 import br.com.webpublico.enums.TipoDocPagto;
 import br.com.webpublico.enums.TipoOperacaoPagto;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
-import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
@@ -21,7 +21,10 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * @author venon
@@ -31,7 +34,7 @@ import java.util.*;
 @GrupoDiagrama(nome = "Contabil")
 @Audited
 @Etiqueta("Despesa Extraorçamentária")
-public class PagamentoExtra extends SuperEntidade implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
+public class PagamentoExtra extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -455,20 +458,20 @@ public class PagamentoExtra extends SuperEntidade implements Serializable, Entid
         this.identificador = identificador;
     }
 
-    public String getIdentificadorDeposito() {
-        return identificadorDeposito;
-    }
-
-    public void setIdentificadorDeposito(String identificadorDeposito) {
-        this.identificadorDeposito = identificadorDeposito;
-    }
-
     public Long getVersao() {
         return versao;
     }
 
     public void setVersao(Long versao) {
         this.versao = versao;
+    }
+
+    public String getIdentificadorDeposito() {
+        return identificadorDeposito;
+    }
+
+    public void setIdentificadorDeposito(String identificadorDeposito) {
+        this.identificadorDeposito = identificadorDeposito;
     }
 
     public ContaDeDestinacao getContaDeDestinacao() {
@@ -625,67 +628,7 @@ public class PagamentoExtra extends SuperEntidade implements Serializable, Entid
     }
 
     @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeOrganizacional());
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada2(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    contaDeDestinacao,
-                    getExercicio());
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada5(getUnidadeOrganizacional(),
-                    contaDeDestinacao,
-                    getExercicio());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeOrganizacional());
-            case "92":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar2(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(),
-                    contaDeDestinacao);
-            case "95":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar5(getUnidadeOrganizacional(),
-                    contaDeDestinacao);
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+        return new GeradorContaAuxiliarDTO(getUnidadeOrganizacional(), getContaDeDestinacao(), getExercicio());
     }
 }

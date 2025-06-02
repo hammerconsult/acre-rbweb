@@ -7,6 +7,10 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.comum.SolicitacaoCadastroPessoa;
 import br.com.webpublico.entidades.comum.TipoTemplateEmail;
+import br.com.webpublico.entidades.contabil.reinf.FiltroReinf;
+import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
+import br.com.webpublico.entidades.comum.SolicitacaoCadastroPessoa;
+import br.com.webpublico.entidades.comum.TipoTemplateEmail;
 import br.com.webpublico.entidades.rh.portal.atualizacaocadastral.DependentePortal;
 import br.com.webpublico.entidades.rh.portal.atualizacaocadastral.DependenteVinculoPortal;
 import br.com.webpublico.entidades.rh.portal.atualizacaocadastral.PessoaFisicaPortal;
@@ -20,6 +24,7 @@ import br.com.webpublico.negocios.comum.UsuarioWebFacade;
 import br.com.webpublico.negocios.jdbc.AuditoriaJDBC;
 import br.com.webpublico.negocios.rh.portal.PessoaFisicaPortalFacade;
 import br.com.webpublico.negocios.tributario.AuditoriaFacade;
+import br.com.webpublico.negocios.tributario.LeitorWsConfig;
 import br.com.webpublico.nfse.domain.dtos.DadosPessoaisNfseDTO;
 import br.com.webpublico.nfse.domain.dtos.ImagemUsuarioNfseDTO;
 import br.com.webpublico.nfse.domain.dtos.PessoaNfseDTO;
@@ -97,6 +102,8 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
     private PortalContribunteFacade portalContribunteFacade;
     @EJB
     private SistemaFacade sistemaFacade;
+    @EJB
+    private LeitorWsConfig leitorWsConfig;
     @EJB
     private BancoFacade bancoFacade;
     @EJB
@@ -509,9 +516,9 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
         Hibernate.initialize(pf.getFormacoes());
         Hibernate.initialize(pf.getUsuariosWeb());
         Hibernate.initialize(pf.getHistoricoSituacoesPessoa());
-        Hibernate.initialize(pf.getItemTempoContratoFPPessoa());
         Hibernate.initialize(pf.getPessoaCNAE());
         Hibernate.initialize(pf.getHorariosFuncionamento());
+        Hibernate.initialize(pf.getItemTempoContratoFPPessoa());
         for (PessoaHorarioFuncionamento pessoaHorarioFuncionamento : pf.getHorariosFuncionamento()) {
             Hibernate.initialize(pessoaHorarioFuncionamento.getHorarioFuncionamento().getItens());
         }
@@ -928,7 +935,7 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
     }
 
     public Long recuperarIdPessoaFisicaPorCPF(String cpf) {
-        String hql = "select p.id from PessoaFisica p where replace(replace(p.cpf,'.',''),'-','') = :cpf";
+        String hql = "select p.id from PessoaFisica p where replace(replace(p.cpf,'.',''),'-','') = :cpf order by p.id desc";
         Query q = getEntityManager().createNativeQuery(hql);
         q.setParameter("cpf", limpaCpf(cpf));
         q.setMaxResults(1);
@@ -1503,28 +1510,6 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
     public PessoaJuridica recuperarPessoaJuridicaPorRevisao(Long id, Long revisao) {
         AuditReader reader = AuditReaderFactory.get(Util.criarEntityManagerOpenViewReadOnly());
         PessoaJuridica pessoa = reader.find(PessoaJuridica.class, id, revisao);
-
-        inicializarListaNoHibernate(pessoa.getTelefones());
-        inicializarListaNoHibernate(pessoa.getEnderecos());
-        inicializarListaNoHibernate(pessoa.getPessoaCNAE());
-
-        Hibernate.initialize(pessoa.getTelefones().size());
-        Hibernate.initialize(pessoa.getEnderecos().size());
-        Hibernate.initialize(pessoa.getPessoaCNAE().size());
-
-        for (PessoaCNAE pc : pessoa.getPessoaCNAE()) {
-            inicializarObjetoNoHibernate(pc.getCnae());
-            inicializarObjetoNoHibernate(pc.getHorarioFuncionamento());
-            if (pc.getHorarioFuncionamento() != null) {
-                Hibernate.initialize(pc.getHorarioFuncionamento().getItens().size());
-            }
-        }
-        inicializarListaNoHibernate(pessoa.getSociedadePessoaJuridica());
-        Hibernate.initialize(pessoa.getSociedadePessoaJuridica().size());
-        for (SociedadePessoaJuridica socio : pessoa.getSociedadePessoaJuridica()) {
-            inicializarObjetoNoHibernate(socio.getSocio());
-        }
-        inicializarListaNoHibernate(pessoa.getUsuariosWeb());
         return pessoa;
     }
 
@@ -1696,20 +1681,6 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
         return !q.getResultList().isEmpty();
     }
 
-    public Long recuperarIdRevisaoPessoaJuridicaHistoricoRedeSim(HistoricoAlteracaoRedeSim historico) {
-        StringBuilder sql = new StringBuilder();
-        sql.append(" select rev.id from pessoajuridica_aud aud ")
-            .append(" inner join revisaoauditoria rev on rev.id = aud.rev ")
-            .append(" where rev.id = (select rev from historicoredesim_aud paud where id = :idHistorico and paud.revtype = 0) ");
-        Query q = em.createNativeQuery(sql.toString());
-        q.setParameter("idHistorico", historico.getId());
-        try {
-            return ((BigDecimal) q.getSingleResult()).longValue();
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
     public Pessoa aplicarDadosPessoais(DadosPessoaisNfseDTO dadosPessoais, Pessoa pessoa) throws ValidacaoException {
         return aplicarDadosPessoais(dadosPessoais, pessoa, SituacaoCadastralPessoa.ATIVO);
     }
@@ -1878,17 +1849,18 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
         return pessoa.toNfseDto();
     }
 
-    public Long buscarPessoaFisicaPorVinculoFP(Long idVinculo) {
-        String sql = "select mat.pessoa_id from vinculofp vinculo " +
-            "       inner join matriculafp mat on vinculo.matriculafp_id = mat.id" +
-            "       where vinculo.id = :vinculo";
-        Query q = em.createNativeQuery(sql);
-        q.setParameter("vinculo", idVinculo);
-        List resultList = q.getResultList();
-        if (!resultList.isEmpty()) {
-            return Long.parseLong(resultList.get(0).toString());
+    public Long recuperarIdRevisaoPessoaJuridicaHistoricoRedeSim(HistoricoAlteracaoRedeSim historico) {
+        StringBuilder sql = new StringBuilder();
+        sql.append(" select rev.id from pessoajuridica_aud aud ")
+            .append(" inner join revisaoauditoria rev on rev.id = aud.rev ")
+            .append(" where rev.id = (select rev from historicoredesim_aud paud where id = :idHistorico and paud.revtype = 0) ");
+        Query q = em.createNativeQuery(sql.toString());
+        q.setParameter("idHistorico", historico.getId());
+        try {
+            return ((BigDecimal) q.getSingleResult()).longValue();
+        } catch (Exception ex) {
+            return null;
         }
-        return null;
     }
 
     public Pessoa criarOrAtualizarPessoa(PessoaNfseDTO pessoaDTO) {
@@ -1907,6 +1879,19 @@ public class PessoaFacade extends AbstractFacade<Pessoa> {
             }
             return aplicarDadosPessoais(pessoaDTO.getDadosPessoais(), pessoa);
         }
+    }
+
+    public Long buscarPessoaFisicaPorVinculoFP(Long idVinculo) {
+        String sql = "select mat.pessoa_id from vinculofp vinculo " +
+            "       inner join matriculafp mat on vinculo.matriculafp_id = mat.id" +
+            "       where vinculo.id = :vinculo";
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("vinculo", idVinculo);
+        List resultList = q.getResultList();
+        if (!resultList.isEmpty()) {
+            return Long.parseLong(resultList.get(0).toString());
+        }
+        return null;
     }
 
     public Pessoa recuperarHorariosDeFuncionamento(Long id) {

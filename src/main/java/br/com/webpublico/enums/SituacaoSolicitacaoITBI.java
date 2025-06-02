@@ -9,7 +9,9 @@ public enum SituacaoSolicitacaoITBI implements EnumComDescricao {
     DESIGNADA("Designada"),
     HOMOLOGADA("Homologada"),
     AVALIADA("Avaliada"),
-    REAVALIAR("Reavaliar");
+    REAVALIAR("Reavaliar"),
+    DEFERIDA("Deferida"),
+    INDEFERIDA("Indeferida");
 
     private final String descricao;
 

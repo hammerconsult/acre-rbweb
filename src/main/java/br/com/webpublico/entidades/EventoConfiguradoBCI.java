@@ -1,50 +1,52 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.util.IdentidadeDaEntidade;
+import br.com.webpublico.util.anotacoes.Etiqueta;
+import br.com.webpublico.util.anotacoes.Obrigatorio;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.io.Serializable;
 import java.text.DecimalFormat;
 
 @Entity
 @Cacheable
 @Audited
-public class EventoConfiguradoBCI implements Serializable {
+public class EventoConfiguradoBCI extends SuperEntidade {
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     @ManyToOne
-    private EventoCalculo eventoCalculo;
-    @ManyToOne
     private ConfiguracaoTributario configuracaoTributario;
-    @Transient
-    private Long criadoEm;
+    @Etiqueta("Grupo de Atributo")
+    @Obrigatorio
+    @ManyToOne
+    private GrupoAtributo grupoAtributo;
+    @Etiqueta("Evento de Cálculo")
+    @Obrigatorio
+    @ManyToOne
+    private EventoCalculo eventoCalculo;
+    @Etiqueta("Incidência")
+    @Obrigatorio
     @Enumerated(EnumType.STRING)
     private Incidencia incidencia;
+    @Etiqueta("Identificação")
+    @Obrigatorio
     @Enumerated(EnumType.STRING)
     private Identificacao identificacao;
     private String pattern;
 
     public EventoConfiguradoBCI() {
-        criadoEm = System.nanoTime();
+        super();
         pattern = "#,##0.00";
     }
 
+    @Override
     public Long getId() {
         return id;
     }
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public EventoCalculo getEventoCalculo() {
-        return eventoCalculo;
-    }
-
-    public void setEventoCalculo(EventoCalculo eventoCalculo) {
-        this.eventoCalculo = eventoCalculo;
     }
 
     public ConfiguracaoTributario getConfiguracaoTributario() {
@@ -55,20 +57,20 @@ public class EventoConfiguradoBCI implements Serializable {
         this.configuracaoTributario = configuracaoTributario;
     }
 
-    public Long getCriadoEm() {
-        return criadoEm;
+    public GrupoAtributo getGrupoAtributo() {
+        return grupoAtributo;
     }
 
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
+    public void setGrupoAtributo(GrupoAtributo grupoAtributo) {
+        this.grupoAtributo = grupoAtributo;
     }
 
-    public Identificacao getIdentificacao() {
-        return identificacao;
+    public EventoCalculo getEventoCalculo() {
+        return eventoCalculo;
     }
 
-    public void setIdentificacao(Identificacao identificacao) {
-        this.identificacao = identificacao;
+    public void setEventoCalculo(EventoCalculo eventoCalculo) {
+        this.eventoCalculo = eventoCalculo;
     }
 
     public Incidencia getIncidencia() {
@@ -79,22 +81,20 @@ public class EventoConfiguradoBCI implements Serializable {
         this.incidencia = incidencia;
     }
 
+    public Identificacao getIdentificacao() {
+        return identificacao;
+    }
+
+    public void setIdentificacao(Identificacao identificacao) {
+        this.identificacao = identificacao;
+    }
+
     public String getPattern() {
         return pattern;
     }
 
     public void setPattern(String pattern) {
         this.pattern = pattern;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return IdentidadeDaEntidade.calcularEquals(o, this);
-    }
-
-    @Override
-    public int hashCode() {
-        return IdentidadeDaEntidade.calcularHashCode(this);
     }
 
     public enum Incidencia {
@@ -123,14 +123,14 @@ public class EventoConfiguradoBCI implements Serializable {
         }
     }
 
-    public  String formataNumero(Object valor) {
-        if(pattern == null){
+    public String formataNumero(Object valor) {
+        if (pattern == null) {
             return String.format("%.2f", valor);
         }
         return new DecimalFormat(pattern).format(valor);
     }
 
     public int extrairDecimal(int casa, double valor) {
-        return ((int)(valor * Math.pow(10, casa))) % 10;
+        return ((int) (valor * Math.pow(10, casa))) % 10;
     }
 }

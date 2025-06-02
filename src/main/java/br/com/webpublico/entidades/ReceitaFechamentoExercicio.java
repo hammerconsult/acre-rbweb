@@ -1,5 +1,7 @@
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.Util;
@@ -24,7 +26,7 @@ import java.util.TreeMap;
 @Entity
 @Audited
 @Etiqueta("Receita de Fechamento do Exercício")
-public class ReceitaFechamentoExercicio extends SuperEntidade implements Serializable, IGeraContaAuxiliar {
+public class ReceitaFechamentoExercicio extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -182,54 +184,11 @@ public class ReceitaFechamentoExercicio extends SuperEntidade implements Seriali
     }
 
     @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada6(unidadeOrganizacional,
-                    contaDeDestinacao,
-                    conta,
-                    aberturaFechamentoExercicio.getExercicio());
-
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar6(unidadeOrganizacional,
-                    contaDeDestinacao,
-                    (!Strings.isNullOrEmpty(conta.getCodigoSICONFI()) ?
-                        conta.getCodigoSICONFI() :
-                        conta.getCodigo()).replace(".", ""));
-
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+        return new GeradorContaAuxiliarDTO(unidadeOrganizacional,
+            contaDeDestinacao,
+            conta,
+            conta.getCodigoContaSiconf(),
+            aberturaFechamentoExercicio.getExercicio());
     }
 }

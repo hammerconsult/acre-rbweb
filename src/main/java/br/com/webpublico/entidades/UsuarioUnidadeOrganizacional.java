@@ -1,12 +1,10 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.io.Serializable;
 
 /**
  * @author Fabio
@@ -17,7 +15,7 @@ import java.io.Serializable;
 @Entity
 @Table(name = "USUARIOUNIDADEORGANIZACIO")
 
-public class UsuarioUnidadeOrganizacional implements Serializable {
+public class UsuarioUnidadeOrganizacional extends SuperEntidade {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -34,11 +32,8 @@ public class UsuarioUnidadeOrganizacional implements Serializable {
     private Boolean gestorOrcamento;
     private Boolean gestorFinanceiro;
     private Boolean gestorControleInterno;
-    @Transient
-    private Long criadoEm;
 
     public UsuarioUnidadeOrganizacional() {
-        criadoEm = System.nanoTime();
         gestorProtocolo = Boolean.FALSE;
         gestorMateriais = Boolean.FALSE;
         gestorLicitacao = Boolean.FALSE;
@@ -59,14 +54,6 @@ public class UsuarioUnidadeOrganizacional implements Serializable {
         this.gestorOrcamento = uuo.getGestorOrcamento();
         this.gestorFinanceiro = uuo.getGestorFinanceiro();
         this.gestorControleInterno = uuo.getGestorControleInterno();
-    }
-
-    public Long getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
     }
 
     public Boolean getGestorLicitacao() {
@@ -147,15 +134,5 @@ public class UsuarioUnidadeOrganizacional implements Serializable {
 
     public void setGestorControleInterno(Boolean gestorControleInterno) {
         this.gestorControleInterno = gestorControleInterno;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return IdentidadeDaEntidade.calcularEquals(this, obj);
-    }
-
-    @Override
-    public int hashCode() {
-        return IdentidadeDaEntidade.calcularHashCode(this);
     }
 }

@@ -22,6 +22,7 @@ public class ReprocessamentoSaldoGrupoBens {
     private TipoOperacaoBensIntangiveis tipoOperacaoBensIntangiveis;
     private TipoOperacaoBensEstoque tipoOperacaoBensEstoque;
     private TipoLancamento tipoLancamento;
+    private EventoContabil eventoContabil;
     private boolean receitaRealizada;
     private Long idOrigem;
 
@@ -123,6 +124,14 @@ public class ReprocessamentoSaldoGrupoBens {
 
     public void setTipoEstoque(TipoEstoque tipoEstoque) {
         this.tipoEstoque = tipoEstoque;
+    }
+
+    public EventoContabil getEventoContabil() {
+        return eventoContabil;
+    }
+
+    public void setEventoContabil(EventoContabil eventoContabil) {
+        this.eventoContabil = eventoContabil;
     }
 
     public boolean isReceitaRealizada() {

@@ -10,11 +10,14 @@ import com.google.common.collect.Lists;
 
 import java.util.List;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * @author venon
  */
 public enum StatusPagamento implements EnumComDescricao {
-    ABERTO("Aberto", StatusPagamentoDTO.ABERTO),
+    ABERTO("Aguardando processamento", StatusPagamentoDTO.ABERTO),
     DEFERIDO("Deferido", StatusPagamentoDTO.DEFERIDO),
     INDEFERIDO("Indeferido", StatusPagamentoDTO.INDEFERIDO),
     EFETUADO("Efetuado", StatusPagamentoDTO.EFETUADO),
@@ -53,6 +56,11 @@ public enum StatusPagamento implements EnumComDescricao {
     @Override
     public String getDescricao() {
         return descricao;
+    }
+
+
+    public List<StatusPagamento> getStatusMovimentosNaoFinanceiros() {
+        return Arrays.asList(ABERTO, DEFERIDO, INDEFERIDO);
     }
 
     public StatusPagamentoDTO getToDto() {

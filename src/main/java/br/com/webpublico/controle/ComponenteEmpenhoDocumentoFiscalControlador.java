@@ -1,10 +1,13 @@
 package br.com.webpublico.controle;
 
+import br.com.webpublico.entidades.DoctoFiscalEntradaCompra;
 import br.com.webpublico.entidadesauxiliares.EmpenhoDocumentoFiscal;
 import br.com.webpublico.entidadesauxiliares.EmpenhoDocumentoFiscalItem;
 import br.com.webpublico.entidadesauxiliares.FiltroEmpenhoDocumentoFiscal;
+import br.com.webpublico.negocios.RequisicaoDeCompraFacade;
 import br.com.webpublico.util.FacesUtil;
 
+import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import java.io.Serializable;
@@ -16,15 +19,20 @@ import java.util.List;
 @ViewScoped
 public class ComponenteEmpenhoDocumentoFiscalControlador implements Serializable {
 
-    private FiltroEmpenhoDocumentoFiscal filtro;
+    @EJB
+    private RequisicaoDeCompraFacade requisicaoDeCompraFacade;
     private List<EmpenhoDocumentoFiscal> empenhosDocumentoFiscal;
     private EmpenhoDocumentoFiscal empenhoSelecionado;
 
-    public ComponenteEmpenhoDocumentoFiscalControlador() {}
+    public void buscarEmpenhosDocumentoFiscal(FiltroEmpenhoDocumentoFiscal filtro) {
+        if (filtro !=null) {
+            empenhosDocumentoFiscal = requisicaoDeCompraFacade.buscarEmpenhosDocumentoFiscal(filtro);
+        }
+    }
 
     public void selecionarEmpenho(EmpenhoDocumentoFiscal emp) {
         this.empenhoSelecionado = emp;
-        FacesUtil.atualizarComponente("form-visualiza-itens-empenho");
+        FacesUtil.executaJavaScript("atualizaComponente(); dialogVisualizarItensEmpenho.show()");
     }
 
     public List<EmpenhoDocumentoFiscalItem> getItens() {
@@ -39,14 +47,6 @@ public class ComponenteEmpenhoDocumentoFiscalControlador implements Serializable
             }
         }
         return total;
-    }
-
-    public FiltroEmpenhoDocumentoFiscal getFiltro() {
-        return filtro;
-    }
-
-    public void setFiltro(FiltroEmpenhoDocumentoFiscal filtro) {
-        this.filtro = filtro;
     }
 
     public List<EmpenhoDocumentoFiscal> getEmpenhosDocumentoFiscal() {

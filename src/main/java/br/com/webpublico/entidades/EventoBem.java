@@ -136,7 +136,6 @@ public abstract class EventoBem extends SuperEntidade implements EventoBemIncorp
         this.estadoResultante = estadoResultante;
     }
 
-    @Override
     public Bem getBem() {
         return bem;
     }

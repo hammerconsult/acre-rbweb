@@ -8,6 +8,7 @@ import br.com.webpublico.entidadesauxiliares.ListenerAlteraSituacaoParcela;
 import br.com.webpublico.enums.SituacaoParcela;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import org.hibernate.envers.Audited;
+import org.slf4j.LoggerFactory;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -40,6 +41,7 @@ public class SituacaoParcelaValorDivida extends SuperEntidade implements Seriali
     @OneToMany(cascade = CascadeType.PERSIST, mappedBy = "situacao")
     private List<SituacaoParcelaIntegracao> integracoes;
     private String referencia;
+    private Boolean processada;
     @Transient
     private boolean geraReferencia = true;
 
@@ -157,12 +159,20 @@ public class SituacaoParcelaValorDivida extends SuperEntidade implements Seriali
             try {
                 parcela.getValorDivida().getCalculo().getTipoCalculo().geraReferencia(this);
             } catch (Exception e) {
-                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                LoggerFactory.getLogger(SituacaoParcelaValorDivida.class).info("Erro ao gerar referencia em situação parcela valor dívida: " + this.getParcela() + " - " + this.getSituacaoParcela().getDescricao());
             }
         }
     }
 
     public boolean isSituacaoPago() {
         return SituacaoParcela.PAGO.equals(situacaoParcela);
+    }
+
+    public boolean isProcessada() {
+        return processada != null ? processada : false;
+    }
+
+    public void setProcessada(boolean processada) {
+        this.processada = processada;
     }
 }

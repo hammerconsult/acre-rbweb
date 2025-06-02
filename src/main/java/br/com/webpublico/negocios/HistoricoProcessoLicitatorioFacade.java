@@ -100,10 +100,8 @@ public class HistoricoProcessoLicitatorioFacade implements Serializable {
                 "         inner join REGISTROSOLMATEXT reg on crpe.REGSOLMATEXT_ID = reg.id" +
                 "         inner join solicitacaomaterialext solad on reg.SOLICITACAOMATERIALEXTERNO_ID = solad.ID" +
                 "         left join pessoajuridica resp on reg.PESSOAJURIDICA_ID = resp.ID" +
-                " where to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(ho.iniciovigencia) and coalesce(trunc(ho.fimvigencia)," +
-                "                                                                                        to_date(:dataOperacao, 'dd/MM/yyyy'))" +
-                "  and to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(uc.iniciovigencia) and coalesce(trunc(uc.fimvigencia)," +
-                "                                                                                        to_date(:dataOperacao, 'dd/MM/yyyy'))" +
+                " where to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(ho.iniciovigencia) and coalesce(trunc(ho.fimvigencia),to_date(:dataOperacao, 'dd/MM/yyyy'))" +
+                "  and to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(uc.iniciovigencia) and coalesce(trunc(uc.fimvigencia), to_date(:dataOperacao, 'dd/MM/yyyy'))" +
                 "  and ho.tipohierarquiaorganizacional = :tipoHierarquia " + filtro.getCondicaoSql();
 
         } else if (filtro.getTipoMovimento().isContratoVigente()) {
@@ -424,7 +422,7 @@ public class HistoricoProcessoLicitatorioFacade implements Serializable {
                 "      where to_date(:dataOperacao, 'dd/MM/yyyy') between trunc(ho.iniciovigencia) and coalesce(trunc(ho.fimvigencia), to_date(:dataOperacao, 'dd/MM/yyyy')) " +
                 "        and ho.tipohierarquiaorganizacional = :tipoHierarquia " + filtro.getCondicaoSql() +
                 "      union all " +
-                "      select 'DISPENSA_LICITACAO_INEXIGIBILIDADE' as tipo_processo, " +
+                "      select 'DISPENSA_LICITACAO_INEXIGIBILIDADE'   as tipo_processo, " +
                 "       disp.id                                as id_movimento, " +
                 "       cast(disp.datadadispensa as date)      as data_mov, " +
                 "       disp.numerodadispensa || '/' || ex.ano as numero, " +
@@ -453,7 +451,10 @@ public class HistoricoProcessoLicitatorioFacade implements Serializable {
                 "         left join parecerlicitacao pl on lic.ID = pl.LICITACAO_ID " +
                 "         left join ataregistropreco ata on lic.ID = ata.LICITACAO_ID " +
                 "         left join pregao pg on lic.ID = pg.LICITACAO_ID " +
-                "         left join certame cert on lic.id = cert.licitacao_id " +
+                "               left join certame cert on lic.id = cert.licitacao_id " +
+                "               left join MAPACOMTECPREC matec on lic.ID = matec.LICITACAO_ID " +
+                "               left join REPACTUACAOPRECO repac on ata.ID = repac.ATAREGISTROPRECO_ID " +
+                "               left join PROXIMOVENCEDORLICITACAO pvl on lic.ID = pvl.LICITACAO_ID " +
                 "         left join SOLICITACAOMATERIALEXT solad on ata.ID = solad.ATAREGISTROPRECO_ID " +
                 "         left join RECURSOLICITACAO rec on lic.ID = rec.LICITACAO_ID " +
                 "          left join PROXIMOVENCEDORLICITACAO pvl on lic.ID = pvl.LICITACAO_ID " +
@@ -491,7 +492,10 @@ public class HistoricoProcessoLicitatorioFacade implements Serializable {
                 "         left join parecerlicitacao pl on lic.ID = pl.LICITACAO_ID " +
                 "         left join ataregistropreco ata on lic.ID = ata.LICITACAO_ID " +
                 "         left join pregao pg on lic.ID = pg.LICITACAO_ID " +
-                "         left join certame cert on lic.id = cert.licitacao_id " +
+                "               left join certame cert on lic.id = cert.licitacao_id " +
+                "               left join MAPACOMTECPREC matec on lic.ID = matec.LICITACAO_ID " +
+                "               left join REPACTUACAOPRECO repac on ata.ID = repac.ATAREGISTROPRECO_ID " +
+                "               left join PROXIMOVENCEDORLICITACAO pvl on lic.ID = pvl.LICITACAO_ID " +
                 "         left join SOLICITACAOMATERIALEXT solad on ata.ID = solad.ATAREGISTROPRECO_ID " +
                 "         left join RECURSOLICITACAO rec on lic.ID = rec.LICITACAO_ID " +
                 "          left join PROXIMOVENCEDORLICITACAO pvl on lic.ID = pvl.LICITACAO_ID " +
@@ -527,7 +531,10 @@ public class HistoricoProcessoLicitatorioFacade implements Serializable {
                 "         left join parecerlicitacao pl on lic.ID = pl.LICITACAO_ID " +
                 "         left join ataregistropreco ata on lic.ID = ata.LICITACAO_ID " +
                 "         left join pregao pg on lic.ID = pg.LICITACAO_ID " +
-                "         left join certame cert on lic.id = cert.licitacao_id " +
+                "               left join certame cert on lic.id = cert.licitacao_id " +
+                "               left join MAPACOMTECPREC matec on lic.ID = matec.LICITACAO_ID " +
+                "               left join REPACTUACAOPRECO repac on ata.ID = repac.ATAREGISTROPRECO_ID " +
+                "               left join PROXIMOVENCEDORLICITACAO pvl on lic.ID = pvl.LICITACAO_ID " +
                 "         left join SOLICITACAOMATERIALEXT solad on ata.ID = solad.ATAREGISTROPRECO_ID " +
                 "         left join RECURSOLICITACAO rec on lic.ID = rec.LICITACAO_ID " +
                 "          left join PROXIMOVENCEDORLICITACAO pvl on lic.ID = pvl.LICITACAO_ID " +
@@ -1435,13 +1442,13 @@ public class HistoricoProcessoLicitatorioFacade implements Serializable {
         q.setParameter("idObjeto", historico.getId());
         List<Object> objetos = q.getResultList();
         historico.getViewDetalhes().add(criarViewTitulo(historico.getTipoMovimento().isLicitacao() ? "Participantes" : "Credenciados"));
-        historico.getViewDetalhes().add(criarViewColunas(objetos, getColunasParticipantesLicitacao()));
+        historico.getViewDetalhes().add(criarViewColunas(objetos, getColunasParticipantesLicitacao(historico.getTipoMovimento())));
     }
 
-    private static List<ColunaConsulta> getColunasParticipantesLicitacao() {
+    private static List<ColunaConsulta> getColunasParticipantesLicitacao(TipoMovimentoProcessoLicitatorio tipoMov) {
         List<ColunaConsulta> colunas = Lists.newArrayList();
         colunas.add(new ColunaConsulta("Código", Integer.class));
-        colunas.add(new ColunaConsulta("Participante", String.class));
+        colunas.add(new ColunaConsulta(tipoMov.isLicitacao() ? "Participante" : "Credenciado", String.class));
         colunas.add(new ColunaConsulta("Classificação", TipoClassificacaoFornecedor.class));
         return colunas;
     }
@@ -1460,13 +1467,13 @@ public class HistoricoProcessoLicitatorioFacade implements Serializable {
         q.setParameter("idObjeto", historico.getId());
         List<Object> objetos = q.getResultList();
         historico.getViewDetalhes().add(criarViewTitulo(historico.getTipoMovimento().isLicitacao() ? "Propostas dos Fornecedores" : "Propostas dos Credenciados"));
-        historico.getViewDetalhes().add(criarViewColunas(objetos, getColunasParticipantesPropostasLicitacao()));
+        historico.getViewDetalhes().add(criarViewColunas(objetos, getColunasParticipantesPropostasLicitacao(historico.getTipoMovimento())));
     }
 
-    private static List<ColunaConsulta> getColunasParticipantesPropostasLicitacao() {
+    private static List<ColunaConsulta> getColunasParticipantesPropostasLicitacao(TipoMovimentoProcessoLicitatorio tipoMov) {
         List<ColunaConsulta> colunas = Lists.newArrayList();
         colunas.add(new ColunaConsulta("Data da Proposta", Date.class));
-        colunas.add(new ColunaConsulta("Fornecedor", String.class));
+        colunas.add(new ColunaConsulta(tipoMov.isLicitacao() ? "Fornecedor" : "Credenciado", String.class));
         colunas.add(new ColunaConsulta("Validade", String.class));
         return colunas;
     }

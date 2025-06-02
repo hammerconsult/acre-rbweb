@@ -6,12 +6,10 @@ package br.com.webpublico.entidades;
 
 import br.com.webpublico.enums.AutorizacaoTributario;
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.io.Serializable;
 
 /**
  *
@@ -22,7 +20,7 @@ import java.io.Serializable;
 @Audited
 @Entity
 @Table(name = "AUTORIZACAOTRIBUSUARIO")
-public class AutorizacaoTributarioUsuario implements Serializable {
+public class AutorizacaoTributarioUsuario extends SuperEntidade {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -32,11 +30,8 @@ public class AutorizacaoTributarioUsuario implements Serializable {
     private VigenciaTribUsuario vigenciaTribUsuario;
     @Enumerated(EnumType.STRING)
     private AutorizacaoTributario autorizacao;
-    @Transient
-    private Long criadoEm;
 
     public AutorizacaoTributarioUsuario() {
-        this.criadoEm = System.nanoTime();
     }
 
     public Long getId() {
@@ -63,27 +58,8 @@ public class AutorizacaoTributarioUsuario implements Serializable {
         this.vigenciaTribUsuario = vigenciaTribUsuario;
     }
 
-    public Long getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
-    }
-
-    @Override
-    public int hashCode() {
-        return IdentidadeDaEntidade.calcularHashCode(this);
-    }
-
-    @Override
-    public boolean equals(Object object) {
-       return IdentidadeDaEntidade.calcularEquals(this, object);
-    }
-
     @Override
     public String toString() {
         return "br.com.webpublico.entidades.AutorizacaoTributarioUsuario[ id=" + id + " ]";
     }
-
 }

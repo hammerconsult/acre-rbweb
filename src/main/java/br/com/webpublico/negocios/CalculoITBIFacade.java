@@ -24,7 +24,10 @@ import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.hibernate.Hibernate;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 
-import javax.ejb.*;
+import javax.ejb.EJB;
+import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 import javax.faces.application.FacesMessage;
 import javax.faces.context.FacesContext;
 import javax.persistence.EntityManager;
@@ -34,10 +37,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.*;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @Stateless
@@ -176,6 +176,10 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
             logger.error("Erro ao processar lançamento de ITBI. ", e);
         }
         return assistente;
+    }
+
+    public DAM gerarDAMAgrupado(List<ResultadoParcela> parcelas, Exercicio exercicio, UsuarioSistema usuarioSistema) {
+        return geraValorDividaITBI.getDamFacade().gerarDamAgrupado(parcelas, definirVencimentoDAM(parcelas), exercicio, usuarioSistema);
     }
 
     public Date definirVencimentoDAM(List<ResultadoParcela> parcelas) {
@@ -1090,7 +1094,11 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
             q.setParameter("idProcesso", processoCalculoITBI.getId());
 
             List<LaudoAvaliacaoITBI> laudos = q.getResultList();
-            return (laudos != null && !laudos.isEmpty()) ? laudos.get(0) : null;
+            if (laudos != null && !laudos.isEmpty()) {
+                LaudoAvaliacaoITBI laudo = laudos.get(0);
+                recuperarDependenciasLaudo(laudo);
+                return laudo;
+            }
         }
         return null;
     }
@@ -1103,7 +1111,12 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
         q.setParameter("idLaudoItbi", idLaudoItbi);
 
         List<LaudoAvaliacaoITBI> laudos = q.getResultList();
-        return (laudos != null && !laudos.isEmpty()) ? laudos.get(0) : null;
+        if (laudos != null && !laudos.isEmpty()) {
+            LaudoAvaliacaoITBI laudo = laudos.get(0);
+            recuperarDependenciasLaudo(laudo);
+            return laudo;
+        }
+        return null;
     }
 
     public ProcessoCalculoITBI recuperarProcessoPeloIdCalculo(Long idCalculo) {
@@ -1262,7 +1275,7 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
         }
     }
 
-    public DAM buscarOuGerarDam(ResultadoParcela parcela) throws Exception {
+    public DAM buscarOuGerarDam(ResultadoParcela parcela, Exercicio exercicio) throws Exception {
         return damFacade.buscarOuGerarDam(parcela);
     }
 
@@ -1300,8 +1313,7 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
         return false;
     }
 
-    public LaudoAvaliacaoITBI salvarLaudoAvaliacao(LaudoAvaliacaoITBI laudoAvaliacaoITBI) {
-        LaudoAvaliacaoITBI laudo = em.merge(laudoAvaliacaoITBI);
+    private void recuperarDependenciasLaudo(LaudoAvaliacaoITBI laudo) {
         if (laudo.getDiretorChefeDeparTributo() != null &&
             laudo.getDiretorChefeDeparTributo().getDetentorArquivoComposicao() != null) {
             Hibernate.initialize(laudo.getDiretorChefeDeparTributo().getDetentorArquivoComposicao().getArquivosComposicao());
@@ -1316,6 +1328,11 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
                 Hibernate.initialize(arquivoComposicao.getArquivo().getPartes());
             }
         }
+    }
+
+    public LaudoAvaliacaoITBI salvarLaudoAvaliacao(LaudoAvaliacaoITBI laudoAvaliacaoITBI) {
+        LaudoAvaliacaoITBI laudo = em.merge(laudoAvaliacaoITBI);
+        recuperarDependenciasLaudo(laudo);
         return laudo;
     }
 
@@ -1345,7 +1362,6 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
             parametros.put("ASSINATURA_COMISSAO_AVALIACAO", inputStreamAssinaturaAvaliacaoComissao);
             parametros.put("ASSINATURA_DIRETOR_CHEFE_TRIBUTOS", inputStreamAssinaturaDiretorChefeTributo);
             parametros.put("URL_PORTAL", configuracaoTributarioFacade.recuperarUrlPortal());
-
 
             ImpressaoLaudoITBI impressaoLaudoITBI = buscarDadosLaudoITBI(processoCalculoITBI, damsParcela);
             abstractReport.setGeraNoDialog(true);
@@ -1584,7 +1600,6 @@ public class CalculoITBIFacade extends CalculoExecutorDepoisDePagar<ProcessoCalc
             impressao.setSequencia(laudo[3] != null ? ((BigDecimal) laudo[3]).longValue() : null);
             impressao.setExercicio(laudo[4] != null ? ((BigDecimal) laudo[4]).intValue() : null);
             impressao.setLinha(laudo[5] != null ? ((BigDecimal) laudo[5]).intValue() : null);
-            //impressao.setValorTotal(laudo[6] != null ? (BigDecimal) laudo[6] : BigDecimal.ZERO);
             impressao.setBaseCalculo(laudo[7] != null ? (BigDecimal) laudo[7] : BigDecimal.ZERO);
             impressao.setValorVenal(laudo[8] != null ? (BigDecimal) laudo[8] : BigDecimal.ZERO);
             if (laudo[9] != null) {

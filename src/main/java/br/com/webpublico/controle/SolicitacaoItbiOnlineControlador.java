@@ -20,6 +20,7 @@ import com.ocpsoft.pretty.faces.annotation.URLMapping;
 import com.ocpsoft.pretty.faces.annotation.URLMappings;
 import org.apache.commons.lang.StringUtils;
 import org.primefaces.event.FileUploadEvent;
+import org.primefaces.model.StreamedContent;
 
 import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
@@ -69,6 +70,8 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
     private Map<Integer, String> mapaIconeBtnParcela;
     private boolean canMostrarParcelasDoCalculo;
     private Integer indexParcelas;
+    private SolicitacaoItbiOnlineDocumento documentoOriginalSelecionado;
+    private ConverterAutoComplete converterDocumentoSolicitacao;
 
     public SolicitacaoItbiOnlineControlador() {
         super(SolicitacaoItbiOnline.class);
@@ -135,6 +138,25 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
 
     public void setValorAvaliado(BigDecimal valorAvaliado) {
         this.valorAvaliado = valorAvaliado;
+    }
+
+    public SolicitacaoItbiOnlineDocumento getDocumentoOriginalSelecionado() {
+        return documentoOriginalSelecionado;
+    }
+
+    public void setDocumentoOriginalSelecionado(SolicitacaoItbiOnlineDocumento documentoOriginalSelecionado) {
+        this.documentoOriginalSelecionado = documentoOriginalSelecionado;
+    }
+
+    public ConverterAutoComplete getConverterDocumentoSolicitacao() {
+        if (converterDocumentoSolicitacao == null) {
+            converterDocumentoSolicitacao = new ConverterAutoComplete(SolicitacaoItbiOnlineDocumento.class, solicitacaoItbiOnlineFacade);
+        }
+        return converterDocumentoSolicitacao;
+    }
+
+    public void setConverterDocumentoSolicitacao(ConverterAutoComplete converterDocumentoSolicitacao) {
+        this.converterDocumentoSolicitacao = converterDocumentoSolicitacao;
     }
 
     @URLAction(mappingId = "novoItbiOnline", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -1251,6 +1273,38 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
         }
     }
 
+    public List<SelectItem> tiposDocumento() {
+        List<SelectItem> selectItems = Lists.newArrayList();
+        selectItems.add(new SelectItem(null, ""));
+        List<String> descricaoDocsJaAdicionados = Lists.newArrayList();
+        selecionado.getDocumentos().sort((o1, o2) -> o1.getDataRegistro().compareTo(o2.getDataRegistro()));
+        for (SolicitacaoItbiOnlineDocumento doc : selecionado.getDocumentos()) {
+            if (!descricaoDocsJaAdicionados.contains(doc.getDescricao()) && doc.getId() != null) {
+                descricaoDocsJaAdicionados.add(doc.getDescricao());
+                selectItems.add(new SelectItem(doc, doc.getDescricao()));
+            }
+        }
+        return selectItems;
+    }
+
+    public void uploadDocumentoAdicional(FileUploadEvent event) {
+        try {
+            if (documentoOriginalSelecionado == null) return;
+            Arquivo arquivo = solicitacaoItbiOnlineFacade.getArquivoFacade().criarArquivo(event.getFile());
+            SolicitacaoItbiOnlineDocumento docAdicional = new SolicitacaoItbiOnlineDocumento();
+            docAdicional.setSolicitacaoItbiOnline(selecionado);
+            docAdicional.setParametrosITBIDocumento(documentoOriginalSelecionado.getParametrosITBIDocumento());
+            docAdicional.setDescricao(documentoOriginalSelecionado.getDescricao());
+            docAdicional.setDocumento(arquivo);
+            selecionado.getDocumentos().add(docAdicional);
+            FacesUtil.executaJavaScript("dlgUploadDocumentoAdicional.hide()");
+            FacesUtil.atualizarComponente("Formulario:tabDadosItbi:opDocumentos");
+            documentoOriginalSelecionado = null;
+        } catch (Exception e) {
+            FacesUtil.addOperacaoNaoRealizada(e.getMessage());
+        }
+    }
+
     public void selecionarDocumento(SolicitacaoItbiOnlineDocumento solicitacaoDocumento) {
         this.solicitacaoDocumento = solicitacaoDocumento;
     }
@@ -1259,6 +1313,12 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
         selecionarDocumento(solicitacaoDocumento);
         this.solicitacaoDocumento.setDocumento(null);
         FacesUtil.executaJavaScript("dlgUploadDocumento.show()");
+        FacesUtil.atualizarComponente("formUploadDocumento");
+    }
+
+    public void removerDocumento(SolicitacaoItbiOnlineDocumento solicitacaoDocumento) {
+        if (solicitacaoDocumento.getId() != null) return;
+        selecionado.getDocumentos().remove(solicitacaoDocumento);
         FacesUtil.atualizarComponente("formUploadDocumento");
     }
 
@@ -1313,6 +1373,14 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
         }
     }
 
+    public boolean podeAvaliar() {
+        return selecionado.isDesignada() && (usuarioLogadoDesignado() || usuarioLogadoChefeDepartamentoItbi());
+    }
+
+    public boolean podeHomologar() {
+        return selecionado.isDeferida() && usuarioLogadoChefeDepartamentoItbi();
+    }
+
     public boolean usuarioLogadoDesignado() {
         UsuarioSistema usuarioSistema = solicitacaoItbiOnlineFacade.getSistemaFacade().getUsuarioCorrente();
         TipoUsuarioTribUsuario tipoUsuario = solicitacaoItbiOnlineFacade.getUsuarioSistemaFacade().listaTipoUsuarioVigenteDoUsuarioPorTipo(usuarioSistema, TipoUsuarioTributario.FISCAL_TRIBUTARIO);
@@ -1321,10 +1389,23 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
         return solicitacaoItbiOnlineFacade.getSistemaFacade().getUsuarioCorrente().getId().equals(auditorFiscal.getId());
     }
 
+    public boolean usuarioLogadoChefeDepartamentoItbi() {
+        UsuarioSistema usuarioSistema = solicitacaoItbiOnlineFacade.getSistemaFacade().getUsuarioCorrente();
+        parametro = solicitacaoItbiOnlineFacade.recuperarParametroITBIVigente(selecionado.getExercicio(), selecionado.getTipoITBI());
+        for (ParametrosFuncionarios funcionario : parametro.getListaFuncionarios()) {
+            if ((TipoFuncaoParametrosITBI.DIRETOR_CHEFE_DEPARTAMENTO_TRIBUTO.equals(funcionario.getFuncaoParametrosITBI().getFuncao())
+                || TipoFuncaoParametrosITBI.RESPONSAVEL_COMISSAO_AVALIADORA.equals(funcionario.getFuncaoParametrosITBI().getFuncao()))
+                && usuarioSistema.getPessoaFisica().getId().equals(funcionario.getPessoa().getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void iniciarAvaliacaoSolicitacao() {
         dadosCorretos = Boolean.TRUE;
         planilhaAvaliacao = null;
-        valorAvaliado = selecionado.getValorAvaliado();
+        valorAvaliado = selecionado.getCalculos().get(0).getBaseCalculo();
     }
 
     public void handlePlanilhaAvaliacao(FileUploadEvent event) {
@@ -1344,34 +1425,45 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
             UsuarioSistema usuarioCorrente = solicitacaoItbiOnlineFacade.getSistemaFacade().getUsuarioCorrente();
             if (!dadosCorretos) {
                 solicitacaoItbiOnlineFacade.salvarAvaliacaoSolicitacao(selecionado, usuarioCorrente.getNome(),
-                    planilhaAvaliacao, valorAvaliado, observacao, SituacaoSolicitacaoITBI.AVALIADA);
+                    planilhaAvaliacao, valorAvaliado, observacao, SituacaoSolicitacaoITBI.INDEFERIDA);
                 AsyncExecutor.getInstance().execute(new AssistenteBarraProgresso(solicitacaoItbiOnlineFacade.getSistemaFacade()
                         .getUsuarioCorrente(), "Envio de e-mail de avaliação do fiscal sobre a solicitação de itbi online", 0),
                     () -> {
                         solicitacaoItbiOnlineFacade.enviarEmailAvaliacaoSolicitacao(selecionado);
                         return null;
                     });
-                FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + selecionado.getId() + "/");
-                FacesUtil.addOperacaoRealizada("Solicitação de ITBI avaliada com sucesso!");
             } else {
-                assistente = new AssistenteBarraProgresso();
-                assistente.setUsuarioSistema(solicitacaoItbiOnlineFacade.getSistemaFacade().getUsuarioCorrente());
-                assistente.setSelecionado(selecionado);
-                assistente.setDescricaoProcesso("Homologando solicitação de ITBI [" + selecionado.toString() + "]");
-                futureHomologacao = AsyncExecutor.getInstance().execute(assistente,
-                    () -> {
-                        try {
-                            return solicitacaoItbiOnlineFacade.homologarSolicitacao(assistente,
-                                usuarioCorrente.getNome(), planilhaAvaliacao, valorAvaliado, observacao);
-                        } catch (Exception e) {
-                            logger.error("Erro ao homologar a solicitação de ITBI.", e);
-                        }
-                        return null;
-                    });
+                solicitacaoItbiOnlineFacade.salvarAvaliacaoSolicitacao(selecionado, usuarioCorrente.getNome(),
+                    planilhaAvaliacao, valorAvaliado, observacao, SituacaoSolicitacaoITBI.DEFERIDA);
                 FacesUtil.executaJavaScript("dlgAvaliacao.hide()");
-                FacesUtil.executaJavaScript("iniciarHomologacao()");
             }
+            FacesUtil.redirecionamentoInterno(getCaminhoPadrao() + "ver/" + selecionado.getId() + "/");
+            FacesUtil.addOperacaoRealizada("Solicitação de ITBI avaliada com sucesso!");
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve.getMensagens());
+        } catch (Exception e) {
+            FacesUtil.addErrorPadrao(e);
+        }
+    }
 
+    public void homologarSolicitacao() {
+        try {
+            UsuarioSistema usuarioCorrente = solicitacaoItbiOnlineFacade.getSistemaFacade().getUsuarioCorrente();
+            assistente = new AssistenteBarraProgresso();
+            assistente.setUsuarioSistema(solicitacaoItbiOnlineFacade.getSistemaFacade().getUsuarioCorrente());
+            assistente.setSelecionado(selecionado);
+            assistente.setDescricaoProcesso("Homologando solicitação de ITBI [" + selecionado.toString() + "]");
+            futureHomologacao = AsyncExecutor.getInstance().execute(assistente,
+                () -> {
+                    try {
+                        return solicitacaoItbiOnlineFacade.homologarSolicitacao(assistente,
+                            usuarioCorrente.getNome());
+                    } catch (Exception e) {
+                        logger.error("Erro ao homologar a solicitação de ITBI.", e);
+                    }
+                    return null;
+                });
+            FacesUtil.executaJavaScript("iniciarHomologacao()");
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception e) {
@@ -1453,5 +1545,18 @@ public class SolicitacaoItbiOnlineControlador extends PrettyControlador<Solicita
         }
         map.put("Valor Venal:", Util.formatarValor(dadosCadastroITBI.getValorVenal()));
         return map;
+    }
+
+    public boolean mostrarTabelaAnexosTramites(TramiteSolicitacaoItbiOnline tramite) {
+        return SituacaoSolicitacaoITBI.DESIGNADA.equals(selecionado.getSituacao()) && !tramite.getDocumentos().isEmpty();
+    }
+
+    public StreamedContent downloadArquivo(Arquivo arquivo) {
+        return solicitacaoItbiOnlineFacade.getArquivoFacade().montarArquivoParaDownloadPorArquivo(arquivo);
+    }
+
+    public String extencoesPermitidasDocOriginal() {
+        if (documentoOriginalSelecionado == null) return "";
+        return documentoOriginalSelecionado.getParametrosITBIDocumento().getExtensoesPermitidas();
     }
 }

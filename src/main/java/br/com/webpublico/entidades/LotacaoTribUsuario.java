@@ -5,12 +5,10 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
+import org.hibernate.envers.Audited;
 
-import java.io.Serializable;
 import javax.persistence.*;
-import org.hibernate.envers.Audited; import javax.persistence.Cacheable;
 
 /**
  *
@@ -20,7 +18,7 @@ import org.hibernate.envers.Audited; import javax.persistence.Cacheable;
 @GrupoDiagrama(nome = "Segurança")
 @Audited
 @Entity
-public class LotacaoTribUsuario implements Serializable {
+public class LotacaoTribUsuario extends SuperEntidade {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -30,11 +28,8 @@ public class LotacaoTribUsuario implements Serializable {
     private VigenciaTribUsuario vigenciaTribUsuario;
     @ManyToOne
     private LotacaoVistoriadora lotacao;
-    @Transient
-    private Long criadoEm;
 
     public LotacaoTribUsuario() {
-        this.criadoEm = System.nanoTime();
     }
 
     public Long getId() {
@@ -59,24 +54,6 @@ public class LotacaoTribUsuario implements Serializable {
 
     public void setVigenciaTribUsuario(VigenciaTribUsuario vigenciaTribUsuario) {
         this.vigenciaTribUsuario = vigenciaTribUsuario;
-    }
-
-    public Long getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
-    }
-
-    @Override
-    public int hashCode() {
-        return IdentidadeDaEntidade.calcularHashCode(this);
-    }
-
-    @Override
-    public boolean equals(Object object) {
-       return IdentidadeDaEntidade.calcularEquals(this, object);
     }
 
     @Override

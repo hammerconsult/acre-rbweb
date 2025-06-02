@@ -362,12 +362,12 @@ public class PesquisaAuditoriaControlador {
 
 
     private List<ArvoreDependencias> getFilhosDaClasse(Class classe, List<Long> ids) {
-        List<ArvoreDependencias> filhos = Lists.newArrayList();
+        Map<Class, List<Long>> filhosNaoOrdenados = Maps.newHashMap();
         for (Field field : Persistencia.getAtributos(classe)) {
             if (field.isAnnotationPresent(OneToMany.class) && !Strings.isNullOrEmpty(field.getAnnotation(OneToMany.class).mappedBy()) && !field.isAnnotationPresent(NotAudited.class)) {
                 String mappedBy = field.getAnnotation(OneToMany.class).mappedBy();
                 Class genericTypeFromCollection = auditoriaJDBC.getGenericTypeFromCollection(field, classe);
-                List<Long> longs = Lists.newArrayList();
+                List<Long> idsFilhos = Lists.newArrayList();
 
                 for (List<Long> lista : Lists.partition(ids, 1000)) {
                     String idsString = "(";
@@ -379,15 +379,59 @@ public class PesquisaAuditoriaControlador {
                         }
                     }
                     idsString += ")";
-                    longs.addAll(auditoriaJDBC.buscarIdsDosFilhos(genericTypeFromCollection, mappedBy + "_id in " + idsString));
+                    idsFilhos.addAll(auditoriaJDBC.buscarIdsDosFilhos(genericTypeFromCollection, mappedBy + "_id in " + idsString));
                 }
-                if (!longs.isEmpty()) {
-                    filhos.add(new ArvoreDependencias(genericTypeFromCollection, longs));
+                if (!idsFilhos.isEmpty()) {
+                    filhosNaoOrdenados.put(genericTypeFromCollection, idsFilhos);
                 }
             }
         }
 
-        return filhos;
+        return ordenarFilhosEGrupoDeFilhosPorDataEId(filhosNaoOrdenados);
+    }
+
+    private List<ArvoreDependencias> ordenarFilhosEGrupoDeFilhosPorDataEId(Map<Class, List<Long>> filhosNaoOrdenados){
+        List<ArvoreDependencias> filhosOrdenados = Lists.newArrayList();
+
+        for (Map.Entry<Class, List<Long>> entry : filhosNaoOrdenados.entrySet()) {
+            Class tipoFilho = entry.getKey();
+            List<Long> idsFilhos = entry.getValue();
+
+            Map<Long, Date> datasPorId = auditoriaJDBC.buscarDatasMaisRecentesDosFilhos(tipoFilho, idsFilhos);
+
+            idsFilhos.sort((idAtual, idProximo) -> {
+                Date dataAtual = datasPorId.get(idAtual);
+                Date dataProxima = datasPorId.get(idProximo);
+
+                if (dataAtual == null && dataProxima == null) return idProximo.compareTo(idAtual);
+                if (dataAtual == null) return 1;
+                if (dataProxima == null) return -1;
+
+                int comparacaoPorData = dataProxima.compareTo(dataAtual);
+                if (comparacaoPorData != 0) return comparacaoPorData;
+
+                return idProximo.compareTo(idAtual);
+            });
+
+            filhosOrdenados.add(new ArvoreDependencias(tipoFilho, idsFilhos));
+        }
+
+        filhosOrdenados.sort((grupoAtual, grupoProximo) -> {
+            Date dataMaisRecenteAtual = auditoriaJDBC.buscarDataMaisRecente(grupoAtual.getClasse(),grupoAtual.getIds().get(0));
+            Date dataMaisRecenteProxima = auditoriaJDBC.buscarDataMaisRecente(grupoProximo.getClasse(),grupoProximo.getIds().get(0));
+
+            if (dataMaisRecenteAtual == null && dataMaisRecenteProxima == null) {
+                return Long.compare(grupoProximo.getIds().get(0), grupoAtual.getIds().get(0));
+            }
+            if (dataMaisRecenteAtual == null) return 1;
+            if (dataMaisRecenteProxima == null) return -1;
+
+            int comparacaoPorData = dataMaisRecenteProxima.compareTo(dataMaisRecenteAtual);
+            if (comparacaoPorData != 0) return comparacaoPorData;
+
+            return Long.compare(grupoProximo.getIds().get(0), grupoAtual.getIds().get(0));
+        });
+        return filhosOrdenados;
     }
 
     private void montarTabelaPorClasse(List<AuditoriaJDBC.ClasseAuditada> auditorias, AuditoriaJDBC.FiltroClasseAuditada filtro) {

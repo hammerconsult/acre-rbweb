@@ -568,8 +568,6 @@ public class ProgramacaoFiscalControlador extends PrettyControlador<ProgramacaoF
                 }
                 anoMesInicio = Integer.parseInt(anoInicio + "" + StringUtil.preencheString("" + mesInicio, 2, '0'));
             }
-            acaoFiscal.setDataArbitramento(new Date());
-            acaoFiscal.setUfmArbitramento(moedaFacade.recuperaValorVigenteUFM());
         }
     }
 

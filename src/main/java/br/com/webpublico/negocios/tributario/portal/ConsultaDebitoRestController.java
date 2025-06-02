@@ -273,6 +273,8 @@ public class ConsultaDebitoRestController extends PortalRestController {
                 ConfiguracaoTributarioDTO config = new ConfiguracaoTributarioDTO();
                 config.setExercicioIptu(configuracaoTributario.getExercicioPortal() != null ? configuracaoTributario.getExercicioPortal().getAno() : null);
                 config.setAtivaAlteracaoCadastral(configuracaoTributario.getAtivaAlteracaoCadastral());
+                config.setRodapePortalContribuinte(configuracaoTributario.getRodapePortalContribuinte() != null ?
+                    configuracaoTributario.getRodapePortalContribuinte() : "");
                 return new ResponseEntity<>(config, HttpStatus.OK);
             }
         } catch (Exception e) {

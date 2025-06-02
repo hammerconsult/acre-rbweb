@@ -60,6 +60,8 @@ public abstract class AbstractFiltroNotaFiscal {
     private List<SituacaoCadastralCadastroEconomico> situacoesCadastral;
     private TipoPorte tipoPorte;
     private List<TipoPorte> tiposPorte;
+    private String codigoVerificacao;
+    private String nomeTomador;
 
     public AbstractFiltroNotaFiscal() {
         classificacoesAtividade = Lists.newArrayList();
@@ -69,6 +71,7 @@ public abstract class AbstractFiltroNotaFiscal {
         tiposIssqn = Lists.newArrayList();
         situacoesCadastral = Lists.newArrayList();
         tiposPorte = Lists.newArrayList();
+        somenteTotalizador = Boolean.FALSE;
     }
 
     public void validarCamposPorEmissao() throws ValidacaoException {
@@ -133,6 +136,7 @@ public abstract class AbstractFiltroNotaFiscal {
         }
         if (contribuinte != null) {
             retorno.append(" Tomador: ").append(contribuinte).append("; ");
+            retorno.append(" Tomador: ").append(contribuinte).append("; ");
         }
         if (cadastroEconomico != null) {
             retorno.append(" Cadastro Econômico: ").append(cadastroEconomico).append("; ");
@@ -181,6 +185,12 @@ public abstract class AbstractFiltroNotaFiscal {
         }
         if (situacoesCadastral != null && !situacoesCadastral.isEmpty()) {
             retorno.append(" Situação(ões) da(s) Empresa(s): ").append(StringUtils.join(situacoesCadastral, ", ")).append("; ");
+        }
+        if (Strings.isNotEmpty(codigoVerificacao)) {
+            retorno.append(" Código de Verificação: ").append(codigoVerificacao).append("; ");
+        }
+        if (Strings.isNotEmpty(nomeTomador)) {
+            retorno.append(" Nome do Tomador: ").append(nomeTomador).append("; ");
         }
         if (tipoRelatorioApresentacao != null) {
             retorno.append(" Tipo de Apresentação: ").append(tipoRelatorioApresentacao.getDescricao()).append("; ");
@@ -720,5 +730,21 @@ public abstract class AbstractFiltroNotaFiscal {
 
     public void removeTipoPorte(TipoPorte tipoPorte) {
         tiposPorte.remove(tipoPorte);
+    }
+
+    public String getCodigoVerificacao() {
+        return codigoVerificacao;
+    }
+
+    public void setCodigoVerificacao(String codigoVerificacao) {
+        this.codigoVerificacao = codigoVerificacao;
+    }
+
+    public String getNomeTomador() {
+        return nomeTomador;
+    }
+
+    public void setNomeTomador(String nomeTomador) {
+        this.nomeTomador = nomeTomador;
     }
 }

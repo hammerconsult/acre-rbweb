@@ -20,7 +20,6 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.persistence.*;
-import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -31,7 +30,7 @@ import java.util.*;
 @Audited
 @Etiqueta("Usuário do Sistema")
 
-public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>, UserDetails {
+public class UsuarioSistema extends SuperEntidade implements Comparable<UsuarioSistema>, UserDetails {
 
     private static final long serialVersionUID = 1L;
     private static final List<GrantedAuthority> DEFAULT_AUTHORITIES = AuthorityUtils.createAuthorityList("ROLE_USER");
@@ -41,58 +40,77 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
     @Tabelavel
     @Pesquisavel
     @Etiqueta("Login")
     private String login;
+
     @Type(type = "uuid-char")
     private UUID salt = UUID.randomUUID();
+
     @Column
     private String senha;
+
     @Transient
     @Etiqueta("Nome da Pessoa")
     private String nomePessoa;
+
     @OneToOne
     @Tabelavel
     @Etiqueta("Pessoa")
     private PessoaFisica pessoaFisica;
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UsuarioUnidadeOrganizacional> usuarioUnidadeOrganizacional;
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UsuarioUnidadeOrganizacionalOrcamentaria> usuarioUnidadeOrganizacionalOrc;
+
     @Temporal(javax.persistence.TemporalType.DATE)
     @Etiqueta("Data de Expiração")
     private Date dataExpiracao;
+
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date dataRegistro;
+
     @Etiqueta("Bloqueado")
     @Tabelavel
     private Boolean expira;
+
     @ManyToMany
-    @JoinTable(name = "GRUPOUSUARIOSISTEMA", joinColumns =
-    @JoinColumn(name = "USUARIOSISTEMA_ID", referencedColumnName = "ID"), inverseJoinColumns =
-    @JoinColumn(name = "GRUPOUSUARIO_ID", referencedColumnName = "ID"))
+    @JoinTable(name = "GRUPOUSUARIOSISTEMA",
+        joinColumns = @JoinColumn(name = "USUARIOSISTEMA_ID",
+            referencedColumnName = "ID"),
+        inverseJoinColumns = @JoinColumn(name = "GRUPOUSUARIO_ID",
+            referencedColumnName = "ID"))
     private List<GrupoUsuario> grupos = Lists.newLinkedList();
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GrupoRecursosUsuario> grupoRecursosUsuario;
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RecursosUsuario> recursosUsuario;
+
     private String observacao;
     private Boolean validaStatusRh;
-    @Transient
-    private Long criadoEm;
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArquivoUsuarioSistema> arquivoUsuarioSistemas;
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<VigenciaTribUsuario> vigenciaTribUsuarios;
+
     private String nomeLegado;
     @Temporal(javax.persistence.TemporalType.DATE)
     @Tabelavel
     @Etiqueta("Data de Cadastro")
     private Date dataCadastro;
+
     @Etiqueta("Pode Alterar Data?")
     @Tabelavel(campoSelecionado = false)
     private Boolean podeAlterarData;
+
     @Etiqueta("Pode visualizar históricos?")
     @Tabelavel(campoSelecionado = false)
     private Boolean visualizarHistorico;
@@ -109,10 +127,13 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
     private UnidadeOrganizacional orcamentariaCorrente;
     @ManyToOne
     private UnidadeOrganizacional administrativaCorrente;
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<PerfilUsuario> perfis;
+
     @OneToMany(mappedBy = "usuarioSistema", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AutorizacaoUsuarioRH> autorizacaoUsuarioRH;
+
     @Etiqueta("Não Bloquear Automaticamente?")
     private Boolean naoBloquearAutomaticamente;
     private String ultimaVersao;
@@ -132,7 +153,6 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
     public UsuarioSistema() {
         this.login = "";
         this.dataRegistro = new Date();
-        this.criadoEm = System.nanoTime();
         this.validaStatusRh = false;
         this.expira = false;
         this.dataCadastro = new Date();
@@ -152,7 +172,6 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
 
     public UsuarioSistema(String login, String senha, PessoaFisica pessoaFisica, Date dataExpiracao, Boolean expira) {
         dataRegistro = new Date();
-        criadoEm = System.nanoTime();
         this.login = login;
         this.senha = senha;
         this.pessoaFisica = pessoaFisica;
@@ -163,7 +182,6 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
 
     public UsuarioSistema(Long id, String login, String nome, Boolean expira) {
         dataRegistro = new Date();
-        criadoEm = System.nanoTime();
         this.id = id;
         this.login = login;
         this.nomePessoa = nome;
@@ -173,7 +191,6 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
 
     public UsuarioSistema(Long id, String login, String nome, Boolean expira, Date dataCadastro) {
         dataRegistro = new Date();
-        criadoEm = System.nanoTime();
         this.id = id;
         this.login = login;
         this.nomePessoa = nome;
@@ -192,14 +209,6 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
         if (salt == null) {
             salt = UUID.randomUUID();
         }
-    }
-
-    public Long getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
     }
 
     @Override
@@ -616,6 +625,19 @@ public class UsuarioSistema implements Serializable, Comparable<UsuarioSistema>,
             return false;
         for (TipoUsuarioTribUsuario tipoUsuarioTribUsuario : vigenciaTribUsuarioVigente.getTipoUsuarioTribUsuarios()) {
             if (TipoUsuarioTributario.FISCAL_TRIBUTARIO.equals(tipoUsuarioTribUsuario.getTipoUsuarioTributario())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isFiscalTributarioSupervisor() {
+        VigenciaTribUsuario vigenciaTribUsuarioVigente = getVigenciaTribUsuarioVigente();
+        if (vigenciaTribUsuarioVigente == null || vigenciaTribUsuarioVigente.getTipoUsuarioTribUsuarios() == null || vigenciaTribUsuarioVigente.getTipoUsuarioTribUsuarios().isEmpty())
+            return false;
+        for (TipoUsuarioTribUsuario tipoUsuarioTribUsuario : vigenciaTribUsuarioVigente.getTipoUsuarioTribUsuarios()) {
+            if (TipoUsuarioTributario.FISCAL_TRIBUTARIO.equals(tipoUsuarioTribUsuario.getTipoUsuarioTributario()) &&
+                tipoUsuarioTribUsuario.getSupervisor()) {
                 return true;
             }
         }

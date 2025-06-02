@@ -41,6 +41,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 @ManagedBean(name = "consultaCertidaoDividaAtivaControlador")
@@ -1111,7 +1112,23 @@ public class ConsultaCertidaoDividaAtivaControlador implements Serializable {
     }
 
     public void imprimirCDAComFalha() {
-        FacesUtil.redirecionamentoInterno("/consulta-de-certidao-de-divida-ativa-nao-comunicadas");
+//        AbstractReport ar = new AbstractReport();
+//        ar.setGeraNoDialog(true);
+//        String arquivoJasper = "CertidoesComFalhaComunicacao.jasper";
+//
+//        HashMap parameters = new HashMap();
+//
+//        parameters.put("SUBREPORT_DIR", ar.getCaminhoSubReport());
+//        parameters.put("BRASAO", ar.getCaminhoImagem());
+//        parameters.put("SEMDADOS", "SEM DADOS. NÃO FOI ENCONTRADO NENHUM REGISTRO PARA O FILTRO SOLICITADO!");
+//        parameters.put("USUARIO", SistemaFacade.obtemLogin());
+//
+//        try {
+//            ar.gerarRelatorio(arquivoJasper, parameters);
+//        } catch (Exception ex) {
+//            logger.error(ex.getMessage());
+//        }
+        FacesUtil.redirecionamentoInterno("/consulta-de-certidao-de-divida-ativa-nao-comunicadas/");
     }
 
     public Boolean getExiteCDAComProblemaDeComunicacao() {

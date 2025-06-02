@@ -71,6 +71,9 @@ public class ComprovanteRendimentosFacade extends AbstractReport implements Seri
     private DirfVinculoFPFacade dirfVinculoFPFacade;
 
     private List<ComprovanteRendimentosPagosConferencia> rendimentosPagos = Lists.newLinkedList();
+    private EventoFPFacade eventoFPFacade;
+    @EJB
+    private ExercicioFacade exercicioFacade;
 
     protected EntityManager getEntityManager() {
         return em;
@@ -109,14 +112,12 @@ public class ComprovanteRendimentosFacade extends AbstractReport implements Seri
     private void definirPensaoJudicial(ComprovanteRendimentosIRRFFonte comprovanteRendimentosIRRFFonte, VinculoFP vinculoFP, Exercicio anoCalendario) {
         List<PensaoJudicialRetidoFonte> pensoesJudiciais = new LinkedList<>();
         List<BeneficioPensaoAlimenticia> beneficioPensoes = pensaoAlimenticiaFacade.buscarBeneficiarioPensaoAlimenticiaPorAnoAndVinculo(vinculoFP.getContratoFP(), anoCalendario);
-        Integer contador = 1;
 
         for (BeneficioPensaoAlimenticia beneficioPensao : beneficioPensoes) {
-            PensaoJudicialRetidoFonte pensaoRetidoFonte = exportarObjetoRelatorio(contador, vinculoFP, beneficioPensao, anoCalendario);
+            PensaoJudicialRetidoFonte pensaoRetidoFonte = exportarObjetoRelatorio(vinculoFP, beneficioPensao, anoCalendario);
 
             if (!isExistsBeneficiarioAdicionado(pensoesJudiciais, pensaoRetidoFonte)) {
                 pensoesJudiciais.add(pensaoRetidoFonte);
-                contador++;
             } else {
                 buscarAndAtualizarValorPensao(pensoesJudiciais, pensaoRetidoFonte);
             }
@@ -165,16 +166,18 @@ public class ComprovanteRendimentosFacade extends AbstractReport implements Seri
     }
 
 
-    private PensaoJudicialRetidoFonte exportarObjetoRelatorio(Integer contador, VinculoFP vinculo, BeneficioPensaoAlimenticia beneficiario, Exercicio e) {
+    private PensaoJudicialRetidoFonte exportarObjetoRelatorio(VinculoFP vinculo, BeneficioPensaoAlimenticia beneficiario, Exercicio e) {
         PensaoJudicialRetidoFonte pensao = new PensaoJudicialRetidoFonte();
-        pensao.setDescricao(contador + ". " + beneficiario.getPessoaFisicaBeneficiario().getNome());
+        pensao.setDescricao(beneficiario.getPessoaFisicaBeneficiario().getNome());
         pensao.setTipo(beneficiario.getEventoFP().getDescricao());
         pensao.setPessoaFisica(beneficiario.getPessoaFisicaBeneficiario());
-        pensao.setCpf("");
+        pensao.setCpf(beneficiario.getPessoaFisicaBeneficiario().getCpf());
+        pensao.setNascimento(beneficiario.getPessoaFisicaBeneficiario().getDataNascimento());
         pensao.setInstituidor(vinculo);
         pensao.adicionarEvento(beneficiario.getEventoFP());
         EventoTotalItemFicha evento = fichaFinanceiraFPFacade.recuperarTotalItemFichaPorVinculoFPAnoEvento(vinculo, e.getAno(), beneficiario.getEventoFP());
         if (evento != null) {
+            logger.info("valor da pensão  " + evento.getTotal());
             pensao.setValor(evento.getTotal());
         }
         return pensao;
@@ -295,7 +298,6 @@ public class ComprovanteRendimentosFacade extends AbstractReport implements Seri
             carregarJaspers(parameters, rendimentosIRRFFontes, beneficiarios, jaspers);
 
             definirLocaleAndPerfilApp(parameters);
-            System.out.println("jaspers " + jaspers.size());
             return exportarJaspersParaPDF(jaspers);
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -360,7 +362,6 @@ public class ComprovanteRendimentosFacade extends AbstractReport implements Seri
 
         comprovanteRendimentosIRRFFonte.setBrasao(buscarCaminhoBrasao());
 
-        System.out.println("anoCalendario metodo getComprovanteRendimentosIRRFFonte " + anoCalendario);
 
         comprovanteRendimentosIRRFFonte.setAnoExercicio(anoCalendario.getAno() + 1);
         comprovanteRendimentosIRRFFonte.setAnoCalendario(anoCalendario.getAno());

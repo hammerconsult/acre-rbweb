@@ -237,6 +237,7 @@ public class CreditoSalarioBancosFacade extends AbstractFacade<CreditoSalario> {
     public void gerarCreditoSalarioIndividual(CreditoSalario creditoSalario, DependenciasCreditoSalario dependenciasCreditoSalario, GrupoRecursoFP gruposRecursoFP, Set<VinculoCreditoSalario> vinculosFPS, Integer sequencialRemessa, List<ItemRelatorioConferenciaCreditoSalario> itensRelatorio, ParametrosRelatorioConferenciaCreditoSalario parametrosRelatorioGeral) throws Exception {
         try {
             logger.debug("GERAR INDIVIDUAL");
+
             identificador = null;
             //Cabecalho
             List<CNAB240> cnabs = Lists.newLinkedList();
@@ -1134,12 +1135,12 @@ public class CreditoSalarioBancosFacade extends AbstractFacade<CreditoSalario> {
         item.setLogDetalhado(assistente.getLogDetalhado().toString());
         item.setErros(assistente.getTodosErros());
         item.setGrupoRecursoFP(gruposRecursoFP);
-        assistente.getLogIncosistenciaGeral().addAll(assistente.getLogIncosistencia());
-        assistente.reiniciarLogs();
         if(identificador!= null) {
             item.setIdentificador(identificador);
             identificador = null;
         }
+        assistente.getLogIncosistenciaGeral().addAll(assistente.getLogIncosistencia());
+        assistente.reiniciarLogs();
 
         File exportar = exportar(cnabs, creditoSalario, gruposRecursoFP);
         ArquivoComposicao arquivoComposicao = criarArquivoComposicao(exportar, new DetentorArquivoComposicao());

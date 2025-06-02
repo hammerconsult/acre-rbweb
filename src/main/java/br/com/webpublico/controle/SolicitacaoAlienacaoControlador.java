@@ -234,7 +234,6 @@ public class SolicitacaoAlienacaoControlador extends PrettyControlador<Solicitac
     @Override
     public void salvar() {
         try {
-            validarHierarquiaAdministrativa();
             selecionado.realizarValidacoes();
             validarItensSelecionados();
             novoAssistenteMovimentacao();

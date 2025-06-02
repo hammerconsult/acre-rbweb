@@ -1,12 +1,11 @@
 
 package br.com.webpublico.controle;
 
-import br.com.webpublico.entidades.GrupoObjetoCompra;
+import br.com.webpublico.entidades.*;
 import br.com.webpublico.enums.SummaryMessages;
 import br.com.webpublico.enums.TipoObjetoCompra;
 import br.com.webpublico.exception.ValidacaoException;
-import br.com.webpublico.negocios.ExcecaoNegocioGenerica;
-import br.com.webpublico.negocios.GrupoObjetoCompraFacade;
+import br.com.webpublico.negocios.*;
 import br.com.webpublico.util.FacesUtil;
 import br.com.webpublico.util.Util;
 import org.primefaces.context.RequestContext;
@@ -19,9 +18,8 @@ import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @ManagedBean
 @ViewScoped

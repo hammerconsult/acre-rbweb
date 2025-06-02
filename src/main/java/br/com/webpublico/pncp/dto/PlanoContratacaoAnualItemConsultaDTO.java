@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 public class PlanoContratacaoAnualItemConsultaDTO {
+    private Long id;
+    private String sequencialIdPncp;
     private Long numero;
     private String objetoCompra;
     private String especificacao;
@@ -16,6 +18,24 @@ public class PlanoContratacaoAnualItemConsultaDTO {
     private BigDecimal quantidade;
     private BigDecimal valorUnitario;
     private BigDecimal valorTotal;
+    private BigDecimal valorOrcamentoExercicio;
+
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getSequencialIdPncp() {
+        return sequencialIdPncp;
+    }
+
+    public void setSequencialIdPncp(String sequencialIdPncp) {
+        this.sequencialIdPncp = sequencialIdPncp;
+    }
 
     public Long getNumero() {
         return numero;
@@ -95,5 +115,13 @@ public class PlanoContratacaoAnualItemConsultaDTO {
 
     public void setValorTotal(BigDecimal valorTotal) {
         this.valorTotal = valorTotal;
+    }
+
+    public BigDecimal getValorOrcamentoExercicio() {
+        return valorOrcamentoExercicio;
+    }
+
+    public void setValorOrcamentoExercicio(BigDecimal valorOrcamentoExercicio) {
+        this.valorOrcamentoExercicio = valorOrcamentoExercicio;
     }
 }

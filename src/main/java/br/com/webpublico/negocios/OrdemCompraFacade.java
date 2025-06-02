@@ -11,6 +11,7 @@ import br.com.webpublico.entidadesauxiliares.contabil.LiquidacaoVO;
 import br.com.webpublico.enums.*;
 import com.google.common.collect.Lists;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -25,6 +26,8 @@ public class OrdemCompraFacade implements Serializable {
 
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
+    @EJB
+    private RequisicaoDeCompraFacade requisicaoDeCompraFacade;
 
     public List<OrdemDeServicoContrato> buscarOrdemServicoContrato(Contrato contrato) {
         String sql = " select os.* from ordemdeservicocontrato os Where os.contrato_id = :idContrato ";
@@ -35,7 +38,8 @@ public class OrdemCompraFacade implements Serializable {
 
     public List<OrdemCompraServicoVo> buscarOrdemCompraAndServicoPorContrato(Contrato contrato) {
         String sql = " " +
-            " select rc.id," +
+            " select distinct " +
+            "        rc.id," +
             "        rc.numero," +
             "        rc.dataRequisicao," +
             "        rc.localEntrega, " +
@@ -44,13 +48,16 @@ public class OrdemCompraFacade implements Serializable {
             "        rc.tipoobjetocompra," +
             "        rc.prazoentrega," +
             "        rc.tipoprazoentrega, " +
-            "        coalesce(rc.descricaoprazoentrega,'')," +
+            "        coalesce(rc.descricaoprazoentrega,''), " +
             "        coalesce(pf.nome, '') as criadopor " +
             "   from requisicaodecompra rc " +
-            "   left join pessoafisica pf on pf.id = rc.criadopor_id" +
-            "   where rc.contrato_id = :idContrato " +
-            "   and rc.tipoobjetocompra in (:tiposObjetoCompra)" +
-            "   order by numero ";
+            "   inner join requisicaocompraexecucao rce on rce.requisicaocompra_id = rc.id " +
+            "   inner join execucaocontratoempenho exemp on exemp.id = rce.execucaocontratoempenho_id " +
+            "   inner join execucaocontrato ex on ex.id = exemp.execucaocontrato_id " +
+            "   left join pessoafisica pf on pf.id = rc.criadopor_id " +
+            "   where ex.contrato_id = :idContrato " +
+            "   and rc.tipoobjetocompra in (:tiposObjetoCompra) " +
+            "   order by rc.numero ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idContrato", contrato.getId());
         q.setParameter("tiposObjetoCompra", TipoObjetoCompra.recuperarListaName(TipoObjetoCompra.getTiposObjetoCompraOrdemCompraAndServico()));
@@ -71,6 +78,7 @@ public class OrdemCompraFacade implements Serializable {
             oc.setDescricaoPrazoEntrega((String) obj[9]);
             oc.setCriadoPor((String) obj[10]);
             oc.setItens(buscarItensOrdemCompra(oc.getIdRequisicao()));
+            oc.setExecucoes(requisicaoDeCompraFacade.buscarRequisicaoExecucaoComponente(oc.getIdRequisicao()));
             oc.setEstornosOrdemCompraServico(buscarEstornoOrdemCompra(oc));
             oc.setDocumentosFiscais(oc.getTipoObjetoCompra().isServico() ? buscarDocumentosServico(oc) : buscarDocumentosEntradaOrAquisicao(oc));
             oc.setAtestos(buscarAtesto(oc));
@@ -125,22 +133,22 @@ public class OrdemCompraFacade implements Serializable {
                 "       data_est, " +
                 "       motivo, " +
                 "       sum(qtde * vl_unit) as vl_total " +
-                " from (select  est.id                                               as id_est, " +
-                "               est.numero                                           as numero_est, " +
-                "               est.datalancamento                                   as data_est, " +
-                "               est.motivo                                           as motivo, " +
-                "               itemest.quantidade                                   as qtde, " +
-                "               coalesce(ircex.valorunitario, itemcom.valorunitario) as vl_unit " +
+                " from (select  est.id               as id_est, " +
+                "               est.numero           as numero_est, " +
+                "               est.datalancamento   as data_est, " +
+                "               est.motivo           as motivo, " +
+                "               itemest.quantidade   as qtde, " +
+                "               irce.valorunitario   as vl_unit " +
                 "      from requisicaocompraestorno est " +
                 "               inner join itemrequisicaocompraest itemest on est.id = itemest.requisicaocompraestorno_id " +
-                "               inner join itemrequisicaodecompra itemcom on itemest.itemrequisicaocompra_id = itemcom.id " +
-                "               left join itemrequisicaocompraexec ircex on ircex.id = itemest.itemRequisicaoCompraExec_id " +
+                "               inner join itemrequisicaocompraexec irce on irce.id = itemest.itemRequisicaoCompraExec_id " +
                 "      where est.requisicaodecompra_id = :idRequisicao) " +
                 " group by id_est, numero_est, data_est, motivo  ";
         Query q = em.createNativeQuery(sql);
         q.setParameter("idRequisicao", ordemVo.getIdRequisicao());
         List<Object[]> resultList = q.getResultList();
         List<OrdemCompraResultadoVo> toReturn = Lists.newArrayList();
+
         for (Object[] obj : resultList) {
             OrdemCompraResultadoVo item = new OrdemCompraResultadoVo();
             item.setId(((BigDecimal) obj[0]).longValue());
@@ -430,5 +438,9 @@ public class OrdemCompraFacade implements Serializable {
             });
         }
         return retorno;
+    }
+
+    public RequisicaoDeCompraFacade getRequisicaoDeCompraFacade() {
+        return requisicaoDeCompraFacade;
     }
 }

@@ -7,10 +7,13 @@ package br.com.webpublico.negocios;
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidadesauxiliares.AssistenteReprocessamento;
 import br.com.webpublico.entidadesauxiliares.contabil.ReprocessamentoSaldoExtraOrcamentario;
+import br.com.webpublico.entidadesauxiliares.contabil.apiservicecontabil.SaldoExtraorcamentarioDTO;
 import br.com.webpublico.enums.TipoOperacao;
+import br.com.webpublico.negocios.contabil.ApiServiceContabil;
 import br.com.webpublico.util.DataUtil;
 import br.com.webpublico.util.Util;
 import com.google.common.collect.Lists;
+import org.joda.time.LocalDate;
 
 import javax.ejb.*;
 import javax.persistence.EntityManager;
@@ -31,6 +34,8 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
 
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
+    @EJB
+    private ConfiguracaoContabilFacade configuracaoContabilFacade;
 
     public void excluirSaldosPeriodo(Date dataInicial, Date dataFinal) {
         String sql = " delete FROM saldoextraorcamentario se "
@@ -42,37 +47,49 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
     }
 
     @Lock(LockType.WRITE)
-    public void gerarSaldoExtraorcamentario(Date data, TipoOperacao op, BigDecimal valor, Conta contaExtra, ContaDeDestinacao contaDeDestinacao, UnidadeOrganizacional uniOrg) throws ExcecaoNegocioGenerica {
-        gerarSaldoExtraorcamentario(data, op, valor, contaExtra, contaDeDestinacao, uniOrg, true);
+    public void gerarSaldoExtraorcamentario(Date data, TipoOperacao op, BigDecimal valor, Conta contaExtra, ContaDeDestinacao contaDeDestinacao, UnidadeOrganizacional uniOrg,  String idOrigem, String classeOrigem) throws ExcecaoNegocioGenerica {
+        gerarSaldoExtraorcamentario(data, op, valor, contaExtra, contaDeDestinacao, uniOrg, true, idOrigem, classeOrigem);
     }
 
     @Lock(LockType.WRITE)
-    public void gerarSaldoExtraorcamentario(Date data, TipoOperacao op, BigDecimal valor, Conta contaExtra, ContaDeDestinacao contaDeDestinacao, UnidadeOrganizacional uniOrg, Boolean validarSaldo) throws ExcecaoNegocioGenerica {
-        SaldoExtraorcamentario ultimoSaldo = recuperaUltimoSaldoPorData(data, contaExtra, contaDeDestinacao, uniOrg);
-        List<SaldoExtraorcamentario> saldosPosteriores = buscarSaldosPosterioresAData(data, contaExtra, contaDeDestinacao, uniOrg);
-
-
-        if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
-            ultimoSaldo = atribuirValorSaldoContaExtra(data, contaDeDestinacao, uniOrg, contaExtra);
-            ultimoSaldo = alterarValorSaldo(ultimoSaldo, op, valor, uniOrg, contaExtra, contaDeDestinacao, data, validarSaldo);
-            em.persist(ultimoSaldo);
+    public void gerarSaldoExtraorcamentario(Date data, TipoOperacao op, BigDecimal valor, Conta contaExtra, ContaDeDestinacao contaDeDestinacao, UnidadeOrganizacional uniOrg, Boolean validarSaldo, String idOrigem, String classeOrigem) throws ExcecaoNegocioGenerica {
+        if (configuracaoContabilFacade.isGerarSaldoUtilizandoMicroService("SALDOEXTRAORCMICROSERVICE")) {
+            SaldoExtraorcamentarioDTO dto = new SaldoExtraorcamentarioDTO();
+            dto.setIdContaExtraorcamentaria(contaExtra.getId());
+            dto.setIdUnidadeOrganizacional(uniOrg.getId());
+            dto.setIdContaDeDestinacao(contaDeDestinacao.getId());
+            dto.setIdFonteDeRecursos(contaDeDestinacao.getFonteDeRecursos().getId());
+            dto.setValor(valor);
+            dto.setTipoOperacao(op);
+            dto.setDataSaldo(DataUtil.dateToLocalDate(data));
+            dto.setClasseOrigem(classeOrigem);
+            dto.setIdOrigem(idOrigem);
+            dto.setRealizarValidacoes(validarSaldo);
+            ApiServiceContabil.getService().gerarSaldoExtraorcamentario(dto);
         } else {
-
-            if (DataUtil.getDataFormatada(ultimoSaldo.getDataSaldo()).equals(DataUtil.getDataFormatada(data))) {
+            SaldoExtraorcamentario ultimoSaldo = recuperaUltimoSaldoPorData(data, contaExtra, contaDeDestinacao, uniOrg);
+            List<SaldoExtraorcamentario> saldosPosteriores = buscarSaldosPosterioresAData(data, contaExtra, contaDeDestinacao, uniOrg);
+            if (ultimoSaldo == null || ultimoSaldo.getId() == null) {
+                ultimoSaldo = atribuirValorSaldoContaExtra(data, contaDeDestinacao, uniOrg, contaExtra);
                 ultimoSaldo = alterarValorSaldo(ultimoSaldo, op, valor, uniOrg, contaExtra, contaDeDestinacao, data, validarSaldo);
-                em.merge(ultimoSaldo);
+                em.persist(ultimoSaldo);
             } else {
-                SaldoExtraorcamentario novoSaldo;
-                novoSaldo = atribuirValorSaldoExtra(data, contaDeDestinacao, uniOrg, contaExtra);
-                novoSaldo = copiaValoresDoSaldoRecuperado(ultimoSaldo, novoSaldo);
-                novoSaldo = alterarValorSaldo(novoSaldo, op, valor, uniOrg, contaExtra, contaDeDestinacao, data, validarSaldo);
-                em.persist(novoSaldo);
+                if (DataUtil.getDataFormatada(ultimoSaldo.getDataSaldo()).equals(DataUtil.getDataFormatada(data))) {
+                    ultimoSaldo = alterarValorSaldo(ultimoSaldo, op, valor, uniOrg, contaExtra, contaDeDestinacao, data, validarSaldo);
+                    em.merge(ultimoSaldo);
+                } else {
+                    SaldoExtraorcamentario novoSaldo;
+                    novoSaldo = atribuirValorSaldoExtra(data, contaDeDestinacao, uniOrg, contaExtra);
+                    novoSaldo = copiaValoresDoSaldoRecuperado(ultimoSaldo, novoSaldo);
+                    novoSaldo = alterarValorSaldo(novoSaldo, op, valor, uniOrg, contaExtra, contaDeDestinacao, data, validarSaldo);
+                    em.persist(novoSaldo);
+                }
             }
-        }
-        if (!saldosPosteriores.isEmpty()) {
-            for (SaldoExtraorcamentario saldoParaAtualizar : saldosPosteriores) {
-                saldoParaAtualizar = alterarValorSaldo(saldoParaAtualizar, op, valor, uniOrg, contaExtra, contaDeDestinacao, saldoParaAtualizar.getDataSaldo(), validarSaldo);
-                em.merge(saldoParaAtualizar);
+            if (!saldosPosteriores.isEmpty()) {
+                for (SaldoExtraorcamentario saldoParaAtualizar : saldosPosteriores) {
+                    saldoParaAtualizar = alterarValorSaldo(saldoParaAtualizar, op, valor, uniOrg, contaExtra, contaDeDestinacao, saldoParaAtualizar.getDataSaldo(), validarSaldo);
+                    em.merge(saldoParaAtualizar);
+                }
             }
         }
     }
@@ -168,6 +185,7 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
         }
     }
 
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public List<ReceitaExtra> getReceitaExtra(AssistenteReprocessamento assistente) {
         try {
             assistente.getAssistenteBarraProgresso().setMensagem("BUSCANDO RECEITAS EXTRAS");
@@ -185,6 +203,7 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
         }
     }
 
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public List<AjusteDeposito> getAjusteDepositoNormal(AssistenteReprocessamento assistente) {
         try {
             assistente.getAssistenteBarraProgresso().setMensagem("BUSCANDO AJUSTES EM DEPÓSITOS");
@@ -202,6 +221,7 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
         }
     }
 
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public List<AjusteDepositoEstorno> getAjusteDepositoEstorno(AssistenteReprocessamento assistente) {
         try {
             assistente.getAssistenteBarraProgresso().setMensagem("BUSCANDO ESTORNOS DOS AJUSTES EM DEPÓSITOS");
@@ -219,6 +239,7 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
         }
     }
 
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public List<ReceitaExtraEstorno> getReceitaExtraEstorno(AssistenteReprocessamento assistente) {
         try {
             assistente.getAssistenteBarraProgresso().setMensagem("BUSCANDO ESTORNOS DE RECEITAS EXTRAS");
@@ -235,6 +256,7 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
         }
     }
 
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public List<PagamentoExtra> getPagamentoExtra(AssistenteReprocessamento assistente) {
         try {
             assistente.getAssistenteBarraProgresso().setMensagem("BUSCANDO DESPESAS EXTRAS");
@@ -251,6 +273,7 @@ public class SaldoExtraorcamentarioFacade implements Serializable {
         }
     }
 
+    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public List<PagamentoExtraEstorno> getPagamentoExtraEstorno(AssistenteReprocessamento assistente) {
         try {
             assistente.getAssistenteBarraProgresso().setMensagem("BUSCANDO ESTORNOS DE DESPESAS EXTRAS");

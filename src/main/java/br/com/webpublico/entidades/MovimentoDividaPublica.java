@@ -4,14 +4,14 @@
  */
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.enums.OperacaoMovimentoDividaPublica;
 import br.com.webpublico.enums.TipoLancamento;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.util.Util;
 import br.com.webpublico.util.UtilBeanContabil;
-import br.com.webpublico.util.UtilGeradorContaAuxiliar;
 import br.com.webpublico.util.anotacoes.*;
 import org.hibernate.envers.Audited;
 
@@ -20,7 +20,6 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TreeMap;
 
 /**
  * @author Renato
@@ -30,7 +29,7 @@ import java.util.TreeMap;
 @Audited
 @GrupoDiagrama(nome = "Divida Publica")
 @Etiqueta("Movimento da Dívida Pública ")
-public class MovimentoDividaPublica extends SuperEntidade implements Serializable, EntidadeContabil, IGeraContaAuxiliar {
+public class MovimentoDividaPublica extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -110,17 +109,20 @@ public class MovimentoDividaPublica extends SuperEntidade implements Serializabl
     private UnidadeOrganizacional unidadeOrganizacionalAdm;
     @ManyToOne
     private ConfigMovDividaPublica configMovDividaPublica;
-    @ManyToOne
-    private Exercicio exercicio;
     @Etiqueta("Evento Contábil")
-    @Obrigatorio
     @Pesquisavel
     @ManyToOne
     @ErroReprocessamentoContabil
     @ReprocessamentoContabil
     private EventoContabil eventoContabil;
+    @ManyToOne
+    @Tabelavel(campoSelecionado = false)
+    @Pesquisavel
+    private Exercicio exercicio;
     private String historicoNota;
     private String historicoRazao;
+    @ManyToOne
+    private UsuarioSistema usuarioSistema;
 
     public MovimentoDividaPublica() {
         super();
@@ -248,10 +250,6 @@ public class MovimentoDividaPublica extends SuperEntidade implements Serializabl
         this.fonteDeRecursos = fonteDeRecursos;
     }
 
-    public Exercicio getExercicio() {
-        return exercicio;
-    }
-
     public void setExercicio(Exercicio exercicio) {
         this.exercicio = exercicio;
     }
@@ -268,8 +266,24 @@ public class MovimentoDividaPublica extends SuperEntidade implements Serializabl
         return historicoRazao;
     }
 
+    public String getCaminho() {
+        return "/movimento-divida-publica/";
+    }
+
     public void setHistoricoRazao(String historicoRazao) {
         this.historicoRazao = historicoRazao;
+    }
+
+    public Exercicio getExercicio() {
+        return exercicio;
+    }
+
+    public UsuarioSistema getUsuarioSistema() {
+        return usuarioSistema;
+    }
+
+    public void setUsuarioSistema(UsuarioSistema usuarioSistema) {
+        this.usuarioSistema = usuarioSistema;
     }
 
     public ContaDeDestinacao getContaDeDestinacao() {
@@ -328,61 +342,17 @@ public class MovimentoDividaPublica extends SuperEntidade implements Serializabl
         return numero + " - " + dividaPublica.toString();
     }
 
+    public UnidadeOrganizacional getUnidadeOrganizacionalOrc() {
+        return unidadeOrganizacional;
+    }
+
     @Override
     public String getComplementoHistoricoPrestacaoDeContas() {
         return toString();
     }
 
     @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada1(getUnidadeOrganizacional());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada4(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(), contaDeDestinacao, getExercicio());
-            case "98":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada8(getUnidadeOrganizacional(),
-                    contaContabil.getSubSistema(), 0, contaDeDestinacao);
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "91":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar1(getUnidadeOrganizacional());
-            case "94":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar4(getUnidadeOrganizacional(), contaContabil.getSubSistema(), contaDeDestinacao);
-            case "98":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar8(getUnidadeOrganizacional(), contaContabil.getSubSistema(), 0, contaDeDestinacao);
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+        return new GeradorContaAuxiliarDTO(getUnidadeOrganizacional(), contaDeDestinacao, getExercicio());
     }
 }

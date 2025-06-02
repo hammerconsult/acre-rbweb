@@ -1,6 +1,6 @@
 package br.com.webpublico.entidades;
 
-import br.com.webpublico.enums.ListaDeInconsistencias;
+import br.com.webpublico.enums.InconsistenciaImportacaoDebitoIPTU;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import br.com.webpublico.util.anotacoes.Pesquisavel;
 import br.com.webpublico.util.anotacoes.Tabelavel;
@@ -36,7 +36,7 @@ public class ItemImportacaoDebitosIPTU extends SuperEntidade {
     @Tabelavel
     @Pesquisavel
     @Etiqueta("Descrição de Inconsistência")
-    private ListaDeInconsistencias listaDeInconsistencias;
+    private InconsistenciaImportacaoDebitoIPTU inconsistencia;
     @ManyToOne
     private ImportacaoDebitosIPTU importacaoDebitosIPTU;
     private String linhaDoArquivo;
@@ -69,12 +69,12 @@ public class ItemImportacaoDebitosIPTU extends SuperEntidade {
         this.cpf = cpf;
     }
 
-    public ListaDeInconsistencias getListaDeInconsistencias() {
-        return listaDeInconsistencias;
+    public InconsistenciaImportacaoDebitoIPTU getInconsistencia() {
+        return inconsistencia;
     }
 
-    public void setListaDeInconsistencias(ListaDeInconsistencias listaDeInconsistencias) {
-        this.listaDeInconsistencias = listaDeInconsistencias;
+    public void setInconsistencia(InconsistenciaImportacaoDebitoIPTU inconsistenciaImportacaoDebitoIPTU) {
+        this.inconsistencia = inconsistenciaImportacaoDebitoIPTU;
     }
 
     public ImportacaoDebitosIPTU getImportacaoDebitosIPTU() {

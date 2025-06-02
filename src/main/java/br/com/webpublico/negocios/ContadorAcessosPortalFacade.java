@@ -5,7 +5,6 @@
 package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.ContadorAcessosPortal;
-import br.com.webpublico.entidades.Cor;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -14,7 +13,6 @@ import javax.persistence.Query;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Stateless
 public class ContadorAcessosPortalFacade extends AbstractFacade<ContadorAcessosPortal> {

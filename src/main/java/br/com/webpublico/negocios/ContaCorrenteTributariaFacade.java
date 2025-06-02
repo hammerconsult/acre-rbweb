@@ -440,10 +440,6 @@ public class ContaCorrenteTributariaFacade extends AbstractFacade<ContaCorrenteT
         return null;
     }
 
-    public CalculoContaCorrente salvarCalculo(CalculoContaCorrente calculoContaCorrente) {
-        return em.merge(calculoContaCorrente);
-    }
-
     public ProcessoCalculoContaCorrente salvarProcessoCalculoContaCorrente(ProcessoCalculoContaCorrente processoCalculoContaCorrente) {
         return em.merge(processoCalculoContaCorrente);
     }

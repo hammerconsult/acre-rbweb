@@ -746,11 +746,11 @@ public class TipoDoctoOficialControlador extends PrettyControlador<TipoDoctoOfic
             case NOTA_OBRIGACAO_A_PAGAR_ESTORNO:
                 return getTagsNotaOrcamentaria();
 
-            case NOTA_OBRIGACAO_A_PAGAR:
-                return getTagsNotaOrcamentaria();
-
             case SOLICITACAO_MATERIAL:
                 return getTagsSolicitacaoMaterial();
+
+            case NOTA_OBRIGACAO_A_PAGAR:
+                return getTagsNotaOrcamentaria();
 
             case TR:
                 return getTagsSolicitacaoMaterial();
@@ -1011,7 +1011,7 @@ public class TipoDoctoOficialControlador extends PrettyControlador<TipoDoctoOfic
 
     }
 
-    public void adicionaCabecalho() {
+    public void adicionarCabecalho() {
         String caminhoDaImagem = geraUrlImagemDir() + "img/Brasao_de_Rio_Branco.gif";
         String conteudo =
             "<table style=\"width: 100%;\">"
@@ -1242,38 +1242,6 @@ public class TipoDoctoOficialControlador extends PrettyControlador<TipoDoctoOfic
         }
     }
 
-    public List<TipoDoctoOficial> completarTermoImovel(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.CADASTROIMOBILIARIO);
-    }
-
-    public List<TipoDoctoOficial> completarTermoEconomico(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.CADASTROECONOMICO);
-    }
-
-    public List<TipoDoctoOficial> completarTermoRural(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.CADASTRORURAL);
-    }
-
-    public List<TipoDoctoOficial> completarTermoPf(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.PESSOAFISICA);
-    }
-
-    public List<TipoDoctoOficial> completarTermoPj(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.PESSOAJURIDICA);
-    }
-
-    public List<TipoDoctoOficial> completarAutoImovel(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.AUTOINFRACAO, TipoCadastroDoctoOficial.CADASTROIMOBILIARIO);
-    }
-
-    public List<TipoDoctoOficial> completarAutoEconomico(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.AUTOINFRACAO, TipoCadastroDoctoOficial.CADASTROECONOMICO);
-    }
-
-    public List<TipoDoctoOficial> completarAutoRural(String parte) {
-        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.AUTOINFRACAO, TipoCadastroDoctoOficial.CADASTRORURAL);
-    }
-
     public List<TipoDoctoOficial> completarDocumentoLicenciamentoAmbiental(String parte) {
         return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.DOCUMENTO_LICENCIAMENTO_AMBIENTAL, TipoCadastroDoctoOficial.PESSOAFISICA, TipoCadastroDoctoOficial.PESSOAJURIDICA);
     }
@@ -1321,6 +1289,37 @@ public class TipoDoctoOficialControlador extends PrettyControlador<TipoDoctoOfic
         if (assinatura != null) {
             selecionado.getAssinaturas().remove(assinatura);
         }
+    }
+    public List<TipoDoctoOficial> completarTermoImovel(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.CADASTROIMOBILIARIO);
+    }
+
+    public List<TipoDoctoOficial> completarTermoEconomico(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.CADASTROECONOMICO);
+    }
+
+    public List<TipoDoctoOficial> completarTermoRural(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.CADASTRORURAL);
+    }
+
+    public List<TipoDoctoOficial> completarTermoPf(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.PESSOAFISICA);
+    }
+
+    public List<TipoDoctoOficial> completarTermoPj(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.TERMOADVERTENCIA, TipoCadastroDoctoOficial.PESSOAJURIDICA);
+    }
+
+    public List<TipoDoctoOficial> completarAutoImovel(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.AUTOINFRACAO, TipoCadastroDoctoOficial.CADASTROIMOBILIARIO);
+    }
+
+    public List<TipoDoctoOficial> completarAutoEconomico(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.AUTOINFRACAO, TipoCadastroDoctoOficial.CADASTROECONOMICO);
+    }
+
+    public List<TipoDoctoOficial> completarAutoRural(String parte) {
+        return tipoDoctoOficialFacade.tipoDoctoPorModuloTipoCadastro(parte.trim(), ModuloTipoDoctoOficial.AUTOINFRACAO, TipoCadastroDoctoOficial.CADASTRORURAL);
     }
 
     public List<TipoDoctoOficial> CompletaTiposDoctoOficialPorModuloLicencaETR(String parte) {

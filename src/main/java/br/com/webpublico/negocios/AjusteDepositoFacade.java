@@ -173,7 +173,8 @@ public class AjusteDepositoFacade extends SuperFacadeContabil<AjusteDeposito> {
             selecionado.getValor(),
             selecionado.getContaExtraorcamentaria(),
             selecionado.getContaDeDestinacao(),
-            selecionado.getUnidadeOrganizacional());
+            selecionado.getUnidadeOrganizacional(),
+            selecionado.getId().toString(),selecionado.getClass().getSimpleName());
     }
 
     private Boolean validarSaldoContaExtra(AjusteDeposito selecionado) {
@@ -325,10 +326,10 @@ public class AjusteDepositoFacade extends SuperFacadeContabil<AjusteDeposito> {
 
     private List<ObjetoParametro> criarObjetosParametros(AjusteDeposito entity, ItemParametroEvento item) {
         List<ObjetoParametro> objetos = Lists.newArrayList();
-        objetos.add(new ObjetoParametro(entity.getId().toString(), AjusteDeposito.class.getSimpleName(), item));
-        objetos.add(new ObjetoParametro(entity.getContaExtraorcamentaria().getId().toString(), ContaExtraorcamentaria.class.getSimpleName(), item));
-        objetos.add(new ObjetoParametro(entity.getClasseCredor().getId().toString(), ClasseCredor.class.getSimpleName(), item));
-        objetos.add(new ObjetoParametro(entity.getFonteDeRecurso().getId().toString(), FonteDeRecursos.class.getSimpleName(), item));
+        objetos.add(new ObjetoParametro(entity, item));
+        objetos.add(new ObjetoParametro(entity.getContaExtraorcamentaria(), item));
+        objetos.add(new ObjetoParametro(entity.getClasseCredor(), item));
+        objetos.add(new ObjetoParametro(entity.getFonteDeRecurso(), item));
         return objetos;
     }
 

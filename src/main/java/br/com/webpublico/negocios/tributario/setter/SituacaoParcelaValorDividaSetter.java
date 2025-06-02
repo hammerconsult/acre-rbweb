@@ -6,6 +6,7 @@ import br.com.webpublico.entidades.ParcelaValorDivida;
 import br.com.webpublico.entidades.SituacaoParcelaValorDivida;
 import br.com.webpublico.enums.SituacaoParcela;
 import br.com.webpublico.interfaces.GeradorReferenciaParcela;
+import br.com.webpublico.negocios.tributario.singletons.SingletonGeradorId;
 import br.com.webpublico.negocios.tributario.dao.JdbcDividaAtivaDAO;
 import com.google.common.collect.Maps;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;

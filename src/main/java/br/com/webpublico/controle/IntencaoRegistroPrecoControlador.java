@@ -488,6 +488,14 @@ public class IntencaoRegistroPrecoControlador extends PrettyControlador<Intencao
         this.resumoItensParticipantes = resumoItensParticipantes;
     }
 
+    public FormularioCotacao getFormularioCotacao() {
+        return formularioCotacao;
+    }
+
+    public void setFormularioCotacao(FormularioCotacao formularioCotacao) {
+        this.formularioCotacao = formularioCotacao;
+    }
+
     private void novoFiltroHistoricoProcesso() {
         filtroHistoricoProcesso = new FiltroHistoricoProcessoLicitatorio(selecionado.getId(), TipoMovimentoProcessoLicitatorio.IRP);
     }
@@ -505,14 +513,6 @@ public class IntencaoRegistroPrecoControlador extends PrettyControlador<Intencao
 
     public void setFiltroHistoricoProcesso(FiltroHistoricoProcessoLicitatorio filtroHistoricoProcesso) {
         this.filtroHistoricoProcesso = filtroHistoricoProcesso;
-    }
-
-    public FormularioCotacao getFormularioCotacao() {
-        return formularioCotacao;
-    }
-
-    public void setFormularioCotacao(FormularioCotacao formularioCotacao) {
-        this.formularioCotacao = formularioCotacao;
     }
 
     public List<LoteFormularioCompraVO> getLotesVO() {

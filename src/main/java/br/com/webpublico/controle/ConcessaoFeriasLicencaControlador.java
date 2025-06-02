@@ -6,6 +6,7 @@ package br.com.webpublico.controle;
 
 import br.com.webpublico.entidades.*;
 import br.com.webpublico.entidades.rh.ItemEnvioDadosRBPonto;
+import br.com.webpublico.entidades.rh.ParametroFerias;
 import br.com.webpublico.entidades.rh.configuracao.ConfiguracaoRH;
 import br.com.webpublico.enums.StatusPeriodoAquisitivo;
 import br.com.webpublico.enums.TipoFerias;
@@ -89,6 +90,8 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
     private LancamentoTercoFeriasAutFacade lancamentoTercoFeriasAutFacade;
     @EJB
     private ConfiguracaoRHFacade configuracaoRHFacade;
+    @EJB
+    private ParametroFeriasFacade parametroFeriasFacade;
     private ConverterGenerico converterPeriodoAquisitivoFL;
     private ConverterAutoComplete converterContratoFP;
     private Date inicioAbonoPecuniario;
@@ -445,6 +448,25 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
                 }
             }
         }
+
+        if (selecionado.getPeriodoAquisitivoFL() != null && selecionado.getDataInicial() != null) {
+            ParametroFerias parametroFerias = parametroFeriasFacade.recuperarVigentePorTipoRegime(selecionado.getDataInicial(), selecionado.getContratoFP().getTipoRegime());
+            if (parametroFerias != null) {
+                if (selecionado.getDataInicial() != null && selecionado.getDataFinal() != null) {
+                    int totalDiasConcessao = DataUtil.diasEntre(DataUtil.dateToLocalDate(selecionado.getDataInicial()), DataUtil.dateToLocalDate(selecionado.getDataFinal()));
+                    if (parametroFerias.getQuantidMinimaDiasPorParcela() != null && parametroFerias.getQuantidMinimaDiasPorParcela() > 0 && totalDiasConcessao < parametroFerias.getQuantidMinimaDiasPorParcela()) {
+                        ve.adicionarMensagemDeOperacaoNaoPermitida("A quantidade de dias da concessão por parcela deve ser maior que " + parametroFerias.getQuantidMinimaDiasPorParcela() + ".");
+                    }
+                }
+
+                if (parametroFerias.getQuantidadeParcelaMaxima() != null && parametroFerias.getQuantidadeParcelaMaxima() > 0) {
+                    List<ConcessaoFeriasLicenca> concessoesPA = concessaoFeriasLicencaFacade.listaConcessaoFeriasLicencaPorPeriodoAquisitivo(selecionado.getPeriodoAquisitivoFL());
+                    if (concessoesPA != null && !concessoesPA.isEmpty() && concessoesPA.size() >= parametroFerias.getQuantidadeParcelaMaxima()) {
+                        ve.adicionarMensagemDeOperacaoNaoPermitida("O número de concessões para o período aquisitivo selecionado ultrapassou a quantidade de parcelas permitidas.");
+                    }
+                }
+            }
+        }
         verificarExisteMensagemValidacaoException(ve);
         validarDataComunicacao();
     }
@@ -569,7 +591,7 @@ public class ConcessaoFeriasLicencaControlador extends PrettyControlador<Concess
     @Override
     public void excluir() {
         try {
-            concessaoFeriasLicencaFacade.realizarTratativasParaExclusaoDeConcessao(selecionado);
+            concessaoFeriasLicencaFacade.realizarTratativasParaExclusaoDeConcessao(selecionado, null);
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getAllMensagens());
             return;

@@ -126,7 +126,7 @@ public class CardapioRequisicaoCompraControlador extends PrettyControlador<Carda
         if (selecionadoVO.getCardapio() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("O campo cardápio deve ser informado.");
         }
-        if (selecionadoVO.getLocalEstoquePai() == null){
+        if (selecionadoVO.getLocalEstoquePai() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("Local de estoque pai não encontrado para a geração das guias de distribuição.");
         }
         ve.lancarException();
@@ -267,8 +267,11 @@ public class CardapioRequisicaoCompraControlador extends PrettyControlador<Carda
 
         Map<Contrato, List<RequisicaoCompraGuiaItemVO>> mapContrato = preencherMapContratoMateriais();
         for (Map.Entry<Contrato, List<RequisicaoCompraGuiaItemVO>> entry : mapContrato.entrySet()) {
-            RequisicaoDeCompra novaReqCompra = isOperacaoNovo() ? novaRequicaoCompra(entry.getKey()) : selecionado.getRequisicaoCompra();
+            Contrato contrato = entry.getKey();
+            RequisicaoDeCompra novaReqCompra = isOperacaoNovo() ? novaRequicaoCompra() : selecionado.getRequisicaoCompra();
+
             RequisicaoCompraGuiaVO novaReqCompraVo = new RequisicaoCompraGuiaVO(novaReqCompra);
+            novaReqCompraVo.setContrato(contrato);
 
             if (selecionadoVO.getMaterialComSaldo()) {
                 for (RequisicaoCompraGuiaItemVO itemReqVo : entry.getValue()) {
@@ -410,13 +413,12 @@ public class CardapioRequisicaoCompraControlador extends PrettyControlador<Carda
         return mapContrato;
     }
 
-    private RequisicaoDeCompra novaRequicaoCompra(Contrato contrato) {
+    private RequisicaoDeCompra novaRequicaoCompra() {
         RequisicaoDeCompra novaReq = new RequisicaoDeCompra();
         novaReq.setSituacaoRequisicaoCompra(SituacaoRequisicaoCompra.EM_ELABORACAO);
         novaReq.setTipoRequisicao(TipoRequisicaoCompra.CONTRATO);
         novaReq.setTipoObjetoCompra(TipoObjetoCompra.CONSUMO);
         novaReq.setDataRequisicao(facade.getSistemaFacade().getDataOperacao());
-        novaReq.setContrato(contrato);
         novaReq.setDescricao("Requisição referente ao cardápio "
             + selecionadoVO.getCardapio().getNumero()
             + " - " + selecionadoVO.getCardapio().getProgramaAlimentacao().getNome() + " - " + selecionadoVO.getCardapio().getProgramaAlimentacao().getDescricao());

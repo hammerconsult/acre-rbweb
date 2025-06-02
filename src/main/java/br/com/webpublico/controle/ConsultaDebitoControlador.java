@@ -574,11 +574,11 @@ public class ConsultaDebitoControlador extends AbstractReport implements Seriali
 
 
     public void executarDependenciasDaConsulta() {
+
         if (futureConsultaParcela != null && !futureConsultaParcela.isEmpty()) {
             for (Future<List<ResultadoParcela>> future : futureConsultaParcela) {
                 if (!future.isDone()) {
                     return;
-
                 }
             }
             try {
@@ -689,6 +689,7 @@ public class ConsultaDebitoControlador extends AbstractReport implements Seriali
         } else {
             ajustarComponentesView();
         }
+
     }
 
     public UUID getIdentificadorConsulta() {

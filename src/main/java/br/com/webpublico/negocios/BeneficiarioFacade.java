@@ -6,6 +6,7 @@ package br.com.webpublico.negocios;
 
 import br.com.webpublico.entidades.*;
 import com.google.common.collect.Lists;
+import org.hibernate.Hibernate;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -39,9 +40,9 @@ public class BeneficiarioFacade extends AbstractFacade<Beneficiario> {
             ValorReferenciaFP valorReferenciaFP = valorReferenciaFPFacade.recuperaValorReferenciaFPVigente(parametro.getReferenciaFP());
             item.setValor(valorReferenciaFP.getValor());
         }
-
-        b.getSindicatosVinculosFPs().size();
-        b.getAssociacaosVinculosFPs().size();
+        Hibernate.initialize(b.getLotacaoFuncionals());
+        Hibernate.initialize(b.getSindicatosVinculosFPs());
+        Hibernate.initialize(b.getAssociacaosVinculosFPs());
         return b;
     }
 

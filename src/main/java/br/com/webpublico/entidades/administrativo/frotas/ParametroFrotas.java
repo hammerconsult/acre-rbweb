@@ -80,7 +80,6 @@ public class ParametroFrotas extends SuperEntidade {
         this.grupoMaterial = parametroFrotas.getGrupoMaterial();
         this.segundosRevisaoAVencer = parametroFrotas.getSegundosRevisaoAVencer();
         this.diasRetiradaVeiculoEquipamento = parametroFrotas.getDiasRetiradaVeiculoEquipamento();
-
     }
 
     public List<TipoObjetoFrotaGrupoBem> getGruposPatrimoniais() {

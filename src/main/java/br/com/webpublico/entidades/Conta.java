@@ -414,4 +414,10 @@ public class Conta extends SuperEntidade implements Comparable<Conta> {
     public void limpaContasEquivalentesEntidade() {
         this.contasEquivalentes = new ArrayList<>();
     }
+
+    public String getCodigoContaSiconf(){
+        return getCodigoSICONFI() != null ?
+            getCodigoSICONFI() :
+            getCodigo().replace(".", "");
+    }
 }

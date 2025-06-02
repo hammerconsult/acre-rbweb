@@ -5,6 +5,7 @@ import br.com.webpublico.entidades.rh.arquivos.EstudoAtuarial;
 import br.com.webpublico.entidades.rh.cadastrofuncional.TempoContratoFPPessoa;
 import br.com.webpublico.entidadesauxiliares.AuxiliarAndamentoArquivoAtuarial;
 import br.com.webpublico.enums.*;
+import br.com.webpublico.enums.rh.esocial.TipoAfastamentoESocial;
 import br.com.webpublico.enums.rh.estudoatuarial.TipoDependenciaEstudoAtuarial;
 import br.com.webpublico.enums.rh.estudoatuarial.TipoEspecificacaoCargo;
 import br.com.webpublico.enums.rh.estudoatuarial.TipoRegimePrevidenciarioEstudoAtuarial;
@@ -38,10 +39,10 @@ public class EstudoAtuarialFacade extends AbstractFacade<EstudoAtuarial> {
 
     public static final String CODIGO_ABONO_PERMANENCIA = "441";
     public static final String CODIGO_RPPS = "898";
-    private static final String GRUPO_FINANCEIRO = "F";
     public static final String CONTRIBUICAO_SINDICAL = "676";
     public static final String BASE_RPPS = "1001";
     public static final String BASE_INSS = "1002";
+    private static final String GRUPO_FINANCEIRO = "F";
     @PersistenceContext(unitName = "webpublicoPU")
     private EntityManager em;
     @EJB
@@ -71,9 +72,11 @@ public class EstudoAtuarialFacade extends AbstractFacade<EstudoAtuarial> {
     @EJB
     private LancamentoFPFacade lancamentoFPFacade;
     @EJB
-    private PessoaFisicaFacade pessoaFisicaFacade;
+    private AfastamentoFacade afastamentoFacade;
     @EJB
-    private PrevidenciaVinculoFPFacade previdenciaVinculoFPFacade;
+    private ConcessaoFeriasLicencaFacade concessaoFeriasLicencaFacade;
+    @EJB
+    private PessoaFisicaFacade pessoaFisicaFacade;
     @EJB
     private RegistroDeObitoFacade registroDeObitoFacade;
     @EJB
@@ -83,11 +86,11 @@ public class EstudoAtuarialFacade extends AbstractFacade<EstudoAtuarial> {
     @EJB
     private CedenciaContratoFPFacade cedenciaContratoFPFacade;
     @EJB
-    private AfastamentoFacade afastamentoFacade;
-    @EJB
     private CargoConfiancaFacade cargoConfiancaFacade;
     @EJB
     private CidadeFacade cidadeFacade;
+    @EJB
+    private PrevidenciaVinculoFPFacade previdenciaVinculoFPFacade;
     @EJB
     private ReferenciaFPFacade referenciaFPFacade;
     @EJB
@@ -687,6 +690,22 @@ public class EstudoAtuarialFacade extends AbstractFacade<EstudoAtuarial> {
             return String.valueOf(AuxiliarAndamentoArquivoAtuarial.TipoAposentadoria.APOSENTADORIA_COMPULSORIA.getCodigo());
         }
         return "";
+    }
+
+
+    private Integer definirSituacaoFuncional(ContratoFP contratoFP, Date dataOperacao) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(dataOperacao);
+        Afastamento afastamento = afastamentoFacade.recuperaAfastamentoVigente(contratoFP, dataOperacao);
+        if (afastamento != null && (TipoAfastamentoESocial.ACIDENTE_DOENCA_TRABALHO.equals(afastamento.getTipoAfastamento().getTipoAfastamentoESocial()) ||
+            TipoAfastamentoESocial.ACIDENTE_DOENCA_NAO_RELACIONADA_TRABALHO.equals(afastamento.getTipoAfastamento().getTipoAfastamentoESocial()) ||
+            TipoAfastamentoESocial.LICENCA_MATERNIDADE_120.equals(afastamento.getTipoAfastamento().getTipoAfastamentoESocial()))) {
+            return 1;
+        }
+        if (concessaoFeriasLicencaFacade.isEstaEmFeriasByMesEAno(contratoFP, calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR))) {
+            return 1;
+        }
+        return contratoFP.getSituacaoFuncional().getCodigo().intValue();
     }
 
 

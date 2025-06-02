@@ -114,8 +114,8 @@ public class SincronizacaoRedeSimControlador {
         dataFinal = null;
         pessoasJuridicas = Lists.newArrayList();
         futuresSincronizacoes = null;
-        atualizarEnquadramentoFiscal = false;
         mapSituacaoCmcDaPessoa = Maps.newHashMap();
+        atualizarEnquadramentoFiscal = false;
         UsuarioSistema usuarioSistema = facade.getUsuarioSistemaFacade().recuperar(facade.getSistemaFacade().getUsuarioCorrente().getId());
         if (usuarioSistema.isFiscalTributario()) {
             isPermiteAlterarEnquadramentoFiscal = facade.getUsuarioSistemaFacade().validaAutorizacaoUsuario(usuarioSistema, AutorizacaoTributario.PERMITIR_ALTERAR_ENQUADRAMENTO_FISCAL);

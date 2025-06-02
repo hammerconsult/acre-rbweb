@@ -361,7 +361,7 @@ public class RevisaoIPTUControlador extends PrettyControlador<RevisaoCalculoIPTU
                 FacesUtil.executaJavaScript("terminarTimer()");
                 FacesUtil.atualizarComponente("formularioEfetivacao");
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error(e.getMessage());
             }
         }
     }
@@ -391,8 +391,8 @@ public class RevisaoIPTUControlador extends PrettyControlador<RevisaoCalculoIPTU
         processoCalculo.setDescricao("Revisão de Cálculo de I.P.T.U. " + (selecionado.getProcesso() != null ? selecionado.getProcesso() : ""));
         processoCalculo.setNumeroProtocolo(selecionado.getNumeroProtocolo());
         processoCalculo.setAnoProtocolo(selecionado.getAnoProtocolo());
+        calculoDAO.gerarProcessoCalculo(processoCalculo);
         selecionado.setProcesso(selecionado.getNumeroProtocolo() + "/" + selecionado.getAnoProtocolo());
-        calculoDAO.geraProcessoCalculo(processoCalculo);
         calculoDAO.persisteTudo(processoCalculo.getCalculosIPTU());
         selecionado.setProcessoCalculo(processoCalculo);
         selecionado = calculoIPTUFacade.efetivarRevisao(selecionado);
@@ -473,7 +473,7 @@ public class RevisaoIPTUControlador extends PrettyControlador<RevisaoCalculoIPTU
         try {
             efetivarRevisaoPorLote(processoCalculo);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
     }
 
@@ -488,7 +488,7 @@ public class RevisaoIPTUControlador extends PrettyControlador<RevisaoCalculoIPTU
         for (CalculoIPTU cal : processo.getCalculosIPTU()) {
             cal.setReferencia(processo.getDescricao());
         }
-        calculoDAO.geraProcessoCalculo(processo);
+        calculoDAO.gerarProcessoCalculo(processo);
         calculoDAO.persisteTudo(processo.getCalculosIPTU());
 
 
@@ -591,3 +591,4 @@ public class RevisaoIPTUControlador extends PrettyControlador<RevisaoCalculoIPTU
 
 
 }
+

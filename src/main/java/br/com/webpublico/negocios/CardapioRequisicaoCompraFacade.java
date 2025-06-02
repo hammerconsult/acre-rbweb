@@ -122,8 +122,6 @@ public class CardapioRequisicaoCompraFacade extends AbstractFacade<CardapioRequi
     private ItemRequisicaoDeCompra novoItemRequisicaoCompra(RequisicaoDeCompra novaReq, RequisicaoCompraGuiaItemVO itemReqVo) {
         ItemRequisicaoDeCompra novoItemReq = new ItemRequisicaoDeCompra();
         novoItemReq.setRequisicaoDeCompra(novaReq);
-        novoItemReq.setMaterial(itemReqVo.getMaterial());
-        novoItemReq.setItemContrato(itemReqVo.getItemContrato());
         novoItemReq.setNumero(itemReqVo.getItemContrato().getNumero());
         novoItemReq.setDescricaoComplementar(itemReqVo.getItemContrato().getItemAdequado().getDescricaoComplementar());
         novoItemReq.setObjetoCompra(itemReqVo.getMaterial().getObjetoCompra());
@@ -157,9 +155,9 @@ public class CardapioRequisicaoCompraFacade extends AbstractFacade<CardapioRequi
             }
         }
         for (ExecucaoContrato exec : execucoes) {
+            novaReq.setExecucoes(null);
             RequisicaoCompraExecucao novaExecReq = new RequisicaoCompraExecucao();
             novaExecReq.setRequisicaoCompra(novaReq);
-            novaExecReq.setExecucaoContrato(exec);
             novaReq.getExecucoes().add(novaExecReq);
         }
     }

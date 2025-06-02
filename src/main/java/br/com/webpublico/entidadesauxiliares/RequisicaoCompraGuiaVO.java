@@ -1,5 +1,6 @@
 package br.com.webpublico.entidadesauxiliares;
 
+import br.com.webpublico.entidades.Contrato;
 import br.com.webpublico.entidades.RequisicaoDeCompra;
 import com.beust.jcommander.internal.Lists;
 
@@ -9,6 +10,7 @@ import java.util.List;
 public class RequisicaoCompraGuiaVO {
 
     private RequisicaoDeCompra requisicaoCompra;
+    private Contrato contrato;
     private List<RequisicaoCompraGuiaItemVO> itensRequisicao;
     private List<GuiaDistribuicaoVO> guiasDistribuicao;
 
@@ -40,6 +42,14 @@ public class RequisicaoCompraGuiaVO {
 
     public void setItensRequisicao(List<RequisicaoCompraGuiaItemVO> itensRequisicao) {
         this.itensRequisicao = itensRequisicao;
+    }
+
+    public Contrato getContrato() {
+        return contrato;
+    }
+
+    public void setContrato(Contrato contrato) {
+        this.contrato = contrato;
     }
 
     public BigDecimal getValorTotal() {

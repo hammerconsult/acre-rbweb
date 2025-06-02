@@ -9,6 +9,7 @@ import br.com.webpublico.entidades.rh.esocial.ConfiguracaoEmpregadorESocial;
 import br.com.webpublico.enums.Operacoes;
 import br.com.webpublico.enums.PerfilEnum;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
+import br.com.webpublico.enums.rh.TipoServicoPrestador;
 import br.com.webpublico.enums.rh.esocial.TipoUnidadePagamento;
 import br.com.webpublico.esocial.dto.EventoESocialDTO;
 import br.com.webpublico.esocial.dto.OcorrenciaESocialDTO;
@@ -87,6 +88,8 @@ public class PrestadorServicosControlador extends PrettyControlador<PrestadorSer
     private ContratoFPFacade contratoFPFacade;
     @EJB
     private FichaRPAFacade fichaRPAFacade;
+    @EJB
+    private SistemaFacade sistemaFacade;
     private String xml;
     private List<OcorrenciaESocialDTO> ocorrencias;
 
@@ -329,7 +332,7 @@ public class PrestadorServicosControlador extends PrettyControlador<PrestadorSer
     }
 
     public List<HierarquiaOrganizacional> completaHierarquiaOrganizacional(String parte) {
-        return hierarquiaOrganizacionalFacade.filtrandoHierarquiaHorganizacionalTipo(parte.trim(), TipoHierarquiaOrganizacional.ADMINISTRATIVA.name(), UtilRH.getDataOperacao());
+        return hierarquiaOrganizacionalFacade.buscarHierarquiasOrganizacionaisAdmnistrativasComFilhasDoUsuarioFiltrando(parte.trim(), UtilRH.getDataOperacao(), sistemaFacade.getUsuarioCorrente());
     }
 
     public List<SelectItem> getCategoriaTrabalhador() {
@@ -373,6 +376,10 @@ public class PrestadorServicosControlador extends PrettyControlador<PrestadorSer
 
     public List<SelectItem> getTipoUnidade() {
         return Util.getListSelectItem(TipoUnidadePagamento.values(), false);
+    }
+
+    public List<SelectItem> getTiposServicosPrestador() {
+        return Util.getListSelectItem(TipoServicoPrestador.values(), false);
     }
 
     public List<Cargo> completarCargos(String parte) {

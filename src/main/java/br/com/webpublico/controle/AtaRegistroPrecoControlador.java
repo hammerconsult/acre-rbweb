@@ -60,6 +60,7 @@ public class AtaRegistroPrecoControlador extends PrettyControlador<AtaRegistroPr
     private List<ExecucaoProcesso> execucoes;
     private FiltroResumoExecucaoVO filtroResumoExecucaoVO;
     private FiltroHistoricoProcessoLicitatorio filtroHistoricoProcesso;
+
     private List<AlteracaoContratual> aditivos;
     private List<AlteracaoContratual> apostilamentos;
 
@@ -228,7 +229,7 @@ public class AtaRegistroPrecoControlador extends PrettyControlador<AtaRegistroPr
 
     private void preencherUnidadesAta() {
         participantesIRP = facade.getParticipanteIRPFacade().buscarParticipantesIRPAprovado("", selecionado.getLicitacao());
-        if (!isOperacaoNovo()) {
+        if (isOperacaoEditar()) {
             for (ParticipanteIRP part : participantesIRP) {
                 if (part.getHierarquiaOrganizacional().getSubordinada().equals(selecionado.getUnidadeOrganizacional())) {
                     setParticipanteIRP(part);

@@ -1,6 +1,7 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.exception.ValidacaoException;
+import br.com.webpublico.interfaces.ValidadorVigencia;
 import br.com.webpublico.util.anotacoes.*;
 import com.google.common.collect.Lists;
 import org.hibernate.envers.Audited;
@@ -17,7 +18,7 @@ import java.util.List;
 @Entity
 @Audited
 @Etiqueta("Medição da Obra")
-public class ObraMedicao extends SuperEntidade {
+public class ObraMedicao extends SuperEntidade implements ValidadorVigencia {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -155,18 +156,30 @@ public class ObraMedicao extends SuperEntidade {
         return numero + "";
     }
 
+    public List<ObraMedicaoSolicitacaoEmpenho> getObraMedicaoSolicitacaoEmpenhos() {
+        return obraMedicaoSolicitacaoEmpenhos;
+    }
+
+    public void setObraMedicaoSolicitacaoEmpenhos(List<ObraMedicaoSolicitacaoEmpenho> obraMedicaoSolicitacaoEmpenhos) {
+        this.obraMedicaoSolicitacaoEmpenhos = obraMedicaoSolicitacaoEmpenhos;
+    }
+
+    @Override
     public Date getInicioVigencia() {
         return dataInicial;
     }
 
+    @Override
     public void setInicioVigencia(Date data) {
         this.dataInicial = data;
     }
 
+    @Override
     public Date getFimVigencia() {
         return dataFinal;
     }
 
+    @Override
     public void setFimVigencia(Date data) {
         this.dataFinal = data;
     }

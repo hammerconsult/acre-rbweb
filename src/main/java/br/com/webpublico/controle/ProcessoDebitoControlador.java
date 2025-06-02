@@ -16,6 +16,7 @@ import br.com.webpublico.report.ReportService;
 import br.com.webpublico.tributario.consultadebitos.ResultadoParcela;
 import br.com.webpublico.util.*;
 import br.com.webpublico.webreportdto.dto.comum.RelatorioDTO;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.ocpsoft.pretty.faces.annotation.URLAction;
 import com.ocpsoft.pretty.faces.annotation.URLMapping;
@@ -641,69 +642,66 @@ public class ProcessoDebitoControlador extends PrettyControlador<ProcessoDebito>
     @Override
     public void salvar() {
         try {
-            ResultadoValidacao resultadoValidacao = validarProcesso(selecionado);
-            if (resultadoValidacao.isValidado()) {
-                selecionado = processoDebitoFacade.salvaRetornando(selecionado);
-                for (ItemProcessoDebito novo : novosItens) {
-                    novo.setProcessoDebito(selecionado);
-                }
-                processoDebitoFacade.salvarItens(novosItens);
-                processoDebitoFacade.deletarItens(itensRemovidos);
-                navegaParaVisualizar();
-            } else {
-                FacesUtil.printAllMessages(resultadoValidacao.getMensagens());
+            validarProcesso(selecionado);
+            selecionado = processoDebitoFacade.salvaRetornando(selecionado);
+            for (ItemProcessoDebito novo : novosItens) {
+                novo.setProcessoDebito(selecionado);
             }
+            processoDebitoFacade.salvarItens(novosItens);
+            processoDebitoFacade.deletarItens(itensRemovidos);
+            navegaParaVisualizar();
+
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve.getMensagens());
         } catch (Exception e) {
             logger.error(e.getMessage());
             FacesUtil.addError("Não foi possível continuar!", "Ocorreu um erro ao salvar: " + e.getMessage());
         }
     }
 
-    public ResultadoValidacao validarProcesso(ProcessoDebito processo) {
-        ResultadoValidacao retorno = new ResultadoValidacao();
-        final String summary = "Não foi possível continuar!";
+    public void validarProcesso(ProcessoDebito processo) {
+        ValidacaoException ve = new ValidacaoException();
         if (processo.getCodigo() == null) {
-            retorno.addErro(null, summary, "O Código deve ser preenchido!");
-        } else if (processo.getCodigo().longValue() <= 0) {
-            retorno.addErro(null, summary, "O Código deve ser maio que zero!");
-        } else if (processoDebitoFacade.codigoEmUso(processo)) {
-            retorno.addErro(null, summary, "Código informado em uso! Foi gerado um novo código.");
+            ve.adicionarMensagemDeCampoObrigatorio("O Código deve ser preenchido!");
+        }
+        if (processoDebitoFacade.codigoEmUso(processo)) {
+            ve.adicionarMensagemDeCampoObrigatorio("Código informado em uso! Foi gerado um novo código.");
         }
         if (processo.getTipo() == null) {
-            retorno.addErro(null, summary, "O Tipo de Processo de Débitos deve ser informado!");
+            ve.adicionarMensagemDeCampoObrigatorio("O Tipo de Processo de Débitos deve ser informado!");
         }
         if (processo.getLancamento() == null) {
-            retorno.addErro(null, summary, "A Data de Lançamento deve ser preenchida!");
+            ve.adicionarMensagemDeCampoObrigatorio("A Data de Lançamento deve ser preenchida!");
         }
-        if (processo.getMotivo() == null || processo.getMotivo().trim().length() <= 0) {
-            retorno.addErro(null, summary, "O Motivo ou Fundamentação Legal deve ser preenchido!");
+        if (Strings.isNullOrEmpty(processo.getMotivo())) {
+            ve.adicionarMensagemDeCampoObrigatorio("O Motivo ou Fundamentação Legal deve ser preenchido!");
         }
-        if (((novosItens == null || novosItens.isEmpty()) && itensDoProcesso.getRowCount() == 0)) {
-            retorno.addErro(null, summary, "O processo deve conter ao menos uma parcela!");
+        if (((novosItens == null || novosItens.isEmpty()) && itensDoProcesso.getRowCount() == 0)){
+            ve.adicionarMensagemDeCampoObrigatorio("O processo deve conter ao menos uma parcela selecionada!");
         }
         if (processo.getUsuarioIncluiu() == null || processo.getUsuarioIncluiu().getId() == null) {
-            retorno.addErro(null, summary, "O usuário que incluiu o processo deve ser informado!");
+            ve.adicionarMensagemDeCampoObrigatorio("O usuário que incluiu o processo deve ser informado!");
         }
         if (processo.getSituacao() == null) {
-            retorno.addErro(null, summary, "A Situação do Processo deve ser preenchida!");
-        } else if (processo.getId() != null && processo.getSituacao() != SituacaoProcessoDebito.EM_ABERTO) {
-            retorno.addErro(null, summary, "O processo selecionado encontra-se " + processo.getSituacao().getDescricao() + ". Somente processos EM ABERTO podem ser alterados.");
+            ve.adicionarMensagemDeCampoObrigatorio("A Situação do Processo deve ser preenchida!");
+        }
+        if (processo.getId() != null && !(SituacaoProcessoDebito.EM_ABERTO.equals(processo.getSituacao()))) {
+            ve.adicionarMensagemDeCampoObrigatorio("O processo selecionado encontra-se " + processo.getSituacao().getDescricao() + ". Somente processos EM ABERTO podem ser alterados.");
         }
         if (TipoProcessoDebito.BAIXA.equals(processo.getTipo())) {
             if (processo.getDataPagamento() == null) {
-                retorno.addErro(null, summary, "A Data do Pagamento deve ser preenchida!");
+                ve.adicionarMensagemDeCampoObrigatorio("A Data do Pagamento deve ser preenchida!");
             }
             if (processo.getValorPago() == null || processo.getValorPago().compareTo(BigDecimal.ZERO) <= 0) {
-                retorno.addErro(null, summary, "O Valor Pago deve ser preenchido!");
+                ve.adicionarMensagemDeCampoObrigatorio("O Valor Pago deve ser preenchido!");
             }
         }
         if (TipoProcessoDebito.SUSPENSAO.equals(processo.getTipo())) {
-            if (processo.getValidade() == null || Util.getDataHoraMinutoSegundoZerado(processo.getValidade())
-                .compareTo(Util.getDataHoraMinutoSegundoZerado(new Date())) < 0) {
-                retorno.addErro(null, summary, "A Data de Validade deve ser preenchida e deve ser igual ou posterior a data atual!");
+            if (processo.getValidade() == null || Util.getDataHoraMinutoSegundoZerado(processo.getValidade()).compareTo(Util.getDataHoraMinutoSegundoZerado(new Date())) < 0) {
+                ve.adicionarMensagemDeCampoObrigatorio("A Data de Validade deve ser preenchida e deve ser igual ou posterior a data atual!");
             }
         }
-        return retorno;
+        ve.lancarException();
     }
 
     private void navegaParaVisualizar() {

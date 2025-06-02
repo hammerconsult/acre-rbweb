@@ -4,18 +4,21 @@
  */
 package br.com.webpublico.entidades;
 
+import br.com.webpublico.entidades.contabil.SuperEntidadeContabilGerarContaAuxiliar;
+import br.com.webpublico.entidadesauxiliares.contabil.GeradorContaAuxiliarDTO;
 import br.com.webpublico.entidadesauxiliares.manad.ManadRegistro;
 import br.com.webpublico.enums.CategoriaConta;
 import br.com.webpublico.enums.EsferaOrcamentaria;
 import br.com.webpublico.enums.TipoHierarquiaOrganizacional;
 import br.com.webpublico.geradores.GrupoDiagrama;
 import br.com.webpublico.interfaces.EntidadeContabil;
-import br.com.webpublico.interfaces.IGeraContaAuxiliar;
 import br.com.webpublico.interfaces.IManadRegistro;
 import br.com.webpublico.negocios.manad.ManadContabilFacade;
-import br.com.webpublico.util.*;
+import br.com.webpublico.util.IdentidadeDaEntidade;
+import br.com.webpublico.util.ManadUtil;
+import br.com.webpublico.util.Util;
+import br.com.webpublico.util.UtilBeanContabil;
 import br.com.webpublico.util.anotacoes.*;
-import com.google.common.base.Strings;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
@@ -23,7 +26,6 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
-import java.util.TreeMap;
 
 /**
  * @author peixe
@@ -32,7 +34,7 @@ import java.util.TreeMap;
 @Entity
 
 @Audited
-public class ReceitaLOAFonte implements Serializable, EntidadeContabil, IManadRegistro, IGeraContaAuxiliar {
+public class ReceitaLOAFonte extends SuperEntidadeContabilGerarContaAuxiliar implements Serializable, EntidadeContabil, IManadRegistro {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -279,53 +281,13 @@ public class ReceitaLOAFonte implements Serializable, EntidadeContabil, IManadRe
         return toString();
     }
 
-    @Override
-    public TreeMap getMapContaAuxiliarSistema(TipoContaAuxiliar tipoContaAuxiliar) {
-        return null;
-    }
 
     @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliarDetalhada6(receitaLOA.getEntidade(),
-                    destinacaoDeRecursos,
-                    receitaLOA.getContaDeReceita(),
-                    receitaLOA.getLoa().getLdo().getExercicio());
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarDetalhadaSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfi(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        switch (tipoContaAuxiliar.getCodigo()) {
-            case "96":
-                return UtilGeradorContaAuxiliar.gerarContaAuxiliar6(receitaLOA.getEntidade(),
-                    destinacaoDeRecursos,
-                    (!Strings.isNullOrEmpty(receitaLOA.getContaDeReceita().getCodigoSICONFI()) ?
-                        receitaLOA.getContaDeReceita().getCodigoSICONFI() :
-                        receitaLOA.getContaDeReceita().getCodigo()).replace(".", ""));
-        }
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiRecebido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
-    }
-
-    @Override
-    public TreeMap getMapContaAuxiliarSiconfiConcedido(TipoContaAuxiliar tipoContaAuxiliar, ContaContabil contaContabil) {
-        return null;
+    public GeradorContaAuxiliarDTO gerarContaAuxiliarDTO(ParametroEvento.ComplementoId complementoId) {
+        return new GeradorContaAuxiliarDTO(receitaLOA.getEntidade(),
+            destinacaoDeRecursos,
+            receitaLOA.getContaDeReceita(),
+            receitaLOA.getContaDeReceita().getCodigoContaSiconf(),
+            receitaLOA.getLoa().getLdo().getExercicio());
     }
 }

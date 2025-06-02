@@ -127,16 +127,22 @@ public class ProcessoAdministrativoJudicialControlador extends PrettyControlador
     }
 
     public void atualizarDepositoMontanteIntegral() {
-        switch (selecionado.getIndicativoSuspensaoExigib()) {
-            case LIMINAR_EM_MANDADO_DE_SEGURANCA:
-                break;
-            case DEPOSITO_JUDICIAL_DO_MONTANTE_INTEGRAL:
-            case DEPOSITO_ADMINISTRATIVO_DO_MONTANTE_INTEGRAL:
-                selecionado.setDepositoMontanteIntegral(true);
-                break;
-            default:
-                selecionado.setDepositoMontanteIntegral(false);
-                break;
+        if (selecionado.getIndicativoSuspensaoExigib() != null) {
+            switch (selecionado.getIndicativoSuspensaoExigib()) {
+                case LIMINAR_EM_MANDADO_DE_SEGURANCA:
+                    break;
+                case DEPOSITO_JUDICIAL_DO_MONTANTE_INTEGRAL:
+                case DEPOSITO_ADMINISTRATIVO_DO_MONTANTE_INTEGRAL:
+                    if (IndicativoAutoria.PROPRIO_CONTRIBUINTE.equals(selecionado.getIndicativoAutoria())) {
+                        selecionado.setDepositoMontanteIntegral(true);
+                    } else {
+                        selecionado.setDepositoMontanteIntegral(false);
+                    }
+                    break;
+                default:
+                    selecionado.setDepositoMontanteIntegral(false);
+                    break;
+            }
         }
     }
 

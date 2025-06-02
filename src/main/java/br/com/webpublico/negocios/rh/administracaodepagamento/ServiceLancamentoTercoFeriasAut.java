@@ -219,7 +219,6 @@ public class ServiceLancamentoTercoFeriasAut {
         return q.getResultList();
     }
 
-
     public BasePeriodoAquisitivo buscarBasePeriodoAquisitivoPorContrato(ContratoFP contratoFP, Date data) {
         Query q = em.createQuery(" select basePA from ContratoFPCargo cargoContrato " +
             " inner join cargoContrato.contratoFP cont " +

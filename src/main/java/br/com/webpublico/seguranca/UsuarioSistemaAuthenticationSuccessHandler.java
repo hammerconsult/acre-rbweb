@@ -24,7 +24,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 @Transactional(readOnly = true)
 public class UsuarioSistemaAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
@@ -80,7 +82,9 @@ public class UsuarioSistemaAuthenticationSuccessHandler implements Authenticatio
         String urlAnteriorLogin = recursoSistema != null ? recursoSistema : (String) request.getSession().getAttribute("urlAnteriorLogin");
         HttpSession session = request.getSession(false);
         definirTempoMaximoInativo(session, usuarioSistema);
-        if (!Strings.isNullOrEmpty(urlAnteriorLogin) && !urlAnteriorLogin.contains("erro500")) {
+        List<String> urlsPermitidas = Arrays.asList("novo", "editar", "listar", "ver");
+        if (!Strings.isNullOrEmpty(urlAnteriorLogin) && !urlAnteriorLogin.contains("erro500")
+            && urlsPermitidas.stream().anyMatch(urlAnteriorLogin::contains)) {
             response.sendRedirect(urlAnteriorLogin);
             request.getSession().setAttribute("urlAnteriorLogin", null);
         } else {

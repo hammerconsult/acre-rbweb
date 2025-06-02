@@ -420,24 +420,22 @@ public class PortalTransparenciaNovoFacade extends AbstractFacade<PrefeituraPort
         recuperarDadosRH();
         enviarListDeObjetos(" de Obras");
         recuperarObras();
-        enviarListDeObjetos(" de Calamidade Pública");
-        recuperarCalamidadesPublicas();
         enviarListDeObjetos(" de Dicionário de Dados");
         recuperarDicionarioDeDados();
         enviarListDeObjetos(" de Bens");
         recuperarBens();
+        enviarListDeObjetos(" de Calamidade Pública");
+        recuperarCalamidadesPublicas();
         enviarListDeObjetos(" de PPA");
         recuperarPPA();
         enviarListDeObjetos(" de LDO");
         recuperarLDO();
         enviarListDeObjetos(" de LOA");
         recuperarLOA();
-        enviarListDeObjetos(" de PPA");
-        recuperarPPA();
-        enviarListDeObjetos(" Institucional");
-        recuperarInstitucional();
         enviarListDeObjetos(" de Emenda");
         recuperarEmendaParlamentar();
+        enviarListDeObjetos(" Institucional");
+        recuperarInstitucional();
     }
 
     private void recuperarEmendaParlamentar() {
@@ -2674,7 +2672,6 @@ public class PortalTransparenciaNovoFacade extends AbstractFacade<PrefeituraPort
             JSONObject jsonObject = new JSONObject();
             HierarquiaOrganizacional hierarquiaDaUnidade = getHierarquiaDaUnidade(unidadePrefeituraPortal.getUnidade(), singleton.getSelecionado().getDataOperacao());
             if (hierarquiaDaUnidade != null) {
-
                 jsonObject.put("unidade", montarConteudoUnidade(hierarquiaDaUnidade));
                 jsonObject.put("prefeitura", jsonPrefeitura);
                 getObjetos().add(new ObjetoPortalTransparencia(prefeituraPortal.getNome(), jsonObject, PortalTransparenciaNovo.WS_PREFEITURA_UNIDADE, UtilPortalTransparencia.METHOD_POST));

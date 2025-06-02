@@ -14,6 +14,7 @@ import br.com.webpublico.enums.*;
 import br.com.webpublico.enums.rh.TipoClassificacaoConsignacao;
 import br.com.webpublico.enums.rh.TipoFuncionalidadeRH;
 import br.com.webpublico.enums.rh.TipoNaturezaRefenciaCalculo;
+import br.com.webpublico.enums.rh.esocial.TipoEventoFPEmpregador;
 import br.com.webpublico.enums.rh.previdencia.TipoContribuicaoBBPrev;
 import br.com.webpublico.esocial.dto.OcorrenciaESocialDTO;
 import br.com.webpublico.exception.ValidacaoException;
@@ -116,17 +117,22 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
     private Converter converterEventoFP;
     private EventoFPTipoFolha eventoFPTipoFolha;
     private BloqueioFuncionalidade bloqueioFuncionalidade;
-    @EJB
-    private ConfiguracaoEmpregadorESocialFacade configuracaoEmpregadorESocialFacade;
-
     private ConverterAutoComplete converterHierarquia;
     @EJB
     private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
     private EventoFPUnidade eventoFPUnidade;
     private HierarquiaOrganizacional hierarquiaOrganizacional;
+    @EJB
+    private ConfiguracaoEmpregadorESocialFacade configuracaoEmpregadorESocialFacade;
+
     private ConfiguracaoEmpregadorESocial configuracaoEmpregadorESocial;
     private List<OcorrenciaESocialDTO> ocorrencias;
-    private EventoFPEmpregador eventoFPEmpregador;
+    private EventoFPEmpregador eventoFPEmpregadorPadrao;
+    private EventoFPEmpregador eventoFPEmpregadorAlternativo;
+    private EventoFPEmpregador eventoFPEmpregadorDecimoTerceiro;
+    private List<EventoFPEmpregador> itemEventoFPEmpregadorAlternativo;
+    private List<EventoFPEmpregador> itemEventoFPEmpregadorDecimoTerceiro;
+    private List<EventoFPEmpregador> itemEventoFPEmpregadorPadrao;
     private List<ConfiguracaoEmpregadorESocial> empregadorSemConfiguracao;
     private List<ConfiguracaoEmpregadorESocial> novosEmpregadoresConfigurados;
 
@@ -140,14 +146,57 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
     public EventoFPControlador() {
         super(EventoFP.class);
         ocorrencias = Lists.newArrayList();
-        eventoFPEmpregador = new EventoFPEmpregador();
         empregadorSemConfiguracao = Lists.newArrayList();
         novosEmpregadoresConfigurados = Lists.newArrayList();
         eventoFPEmpregadorSelecionado = new EventoFPEmpregador();
     }
 
+    private void criarEventoFPEmpregador() {
+        eventoFPEmpregadorPadrao = new EventoFPEmpregador();
+        eventoFPEmpregadorAlternativo = new EventoFPEmpregador();
+        eventoFPEmpregadorDecimoTerceiro = new EventoFPEmpregador();
+
+        itemEventoFPEmpregadorAlternativo = Lists.newArrayList();
+        itemEventoFPEmpregadorPadrao = Lists.newArrayList();
+        itemEventoFPEmpregadorDecimoTerceiro = Lists.newArrayList();
+
+        eventoFPEmpregadorPadrao.setTipoEventoFPEmpregador(TipoEventoFPEmpregador.PADRAO);
+        eventoFPEmpregadorAlternativo.setTipoEventoFPEmpregador(TipoEventoFPEmpregador.ALTERNATIVO);
+        eventoFPEmpregadorDecimoTerceiro.setTipoEventoFPEmpregador(TipoEventoFPEmpregador.DECIMO_TERCEIRO);
+
+        if (selecionado.getItensEventoFPEmpregador() != null && !selecionado.getItensEventoFPEmpregador().isEmpty()) {
+            for (EventoFPEmpregador item : selecionado.getItensEventoFPEmpregador()) {
+                if (item.getTipoEventoFPEmpregador().equals(TipoEventoFPEmpregador.PADRAO)) {
+                    itemEventoFPEmpregadorPadrao.add(item);
+                }
+                if (item.getTipoEventoFPEmpregador().equals(TipoEventoFPEmpregador.ALTERNATIVO)) {
+                    itemEventoFPEmpregadorAlternativo.add(item);
+                }
+                if (item.getTipoEventoFPEmpregador().equals(TipoEventoFPEmpregador.DECIMO_TERCEIRO)) {
+                    itemEventoFPEmpregadorDecimoTerceiro.add(item);
+                }
+            }
+        }
+    }
+
     private void getEventoPorIdentificador() {
         selecionado.setEventosEsocial(eventoFPFacade.getEventoPorIdentificador(selecionado.getId()));
+    }
+
+    public List<EventoFPEmpregador> getItemEventoFPEmpregadorAlternativo() {
+        return itemEventoFPEmpregadorAlternativo;
+    }
+
+    public void setItemEventoFPEmpregadorAlternativo(List<EventoFPEmpregador> itemEventoFPEmpregadorAlternativo) {
+        this.itemEventoFPEmpregadorAlternativo = itemEventoFPEmpregadorAlternativo;
+    }
+
+    public List<EventoFPEmpregador> getItemEventoFPEmpregadorPadrao() {
+        return itemEventoFPEmpregadorPadrao;
+    }
+
+    public void setItemEventoFPEmpregadorPadrao(List<EventoFPEmpregador> itemEventoFPEmpregadorPadrao) {
+        this.itemEventoFPEmpregadorPadrao = itemEventoFPEmpregadorPadrao;
     }
 
     public List<OcorrenciaESocialDTO> getOcorrencias() {
@@ -182,12 +231,29 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         this.novosEmpregadoresConfigurados = novosEmpregadoresConfigurados;
     }
 
-    public EventoFPEmpregador getEventoFPEmpregador() {
-        return eventoFPEmpregador;
+
+    public EventoFPEmpregador getEventoFPEmpregadorPadrao() {
+        return eventoFPEmpregadorPadrao;
     }
 
-    public void setEventoFPEmpregador(EventoFPEmpregador eventoFPEmpregador) {
-        this.eventoFPEmpregador = eventoFPEmpregador;
+    public void setEventoFPEmpregadorPadrao(EventoFPEmpregador eventoFPEmpregadorPadrao) {
+        this.eventoFPEmpregadorPadrao = eventoFPEmpregadorPadrao;
+    }
+
+    public EventoFPEmpregador getEventoFPEmpregadorDecimoTerceiro() {
+        return eventoFPEmpregadorDecimoTerceiro;
+    }
+
+    public void setEventoFPEmpregadorDecimoTerceiro(EventoFPEmpregador eventoFPEmpregadorDecimoTerceiro) {
+        this.eventoFPEmpregadorDecimoTerceiro = eventoFPEmpregadorDecimoTerceiro;
+    }
+
+    public List<EventoFPEmpregador> getItemEventoFPEmpregadorDecimoTerceiro() {
+        return itemEventoFPEmpregadorDecimoTerceiro;
+    }
+
+    public void setItemEventoFPEmpregadorDecimoTerceiro(List<EventoFPEmpregador> itemEventoFPEmpregadorDecimoTerceiro) {
+        this.itemEventoFPEmpregadorDecimoTerceiro = itemEventoFPEmpregadorDecimoTerceiro;
     }
 
     public ResultadoSimulacao getResultadoSimulacao() {
@@ -220,6 +286,7 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
     @Override
     public void salvar() {
         try {
+            adicionarItemEventoFPEmpregador();
             validarCampos();
             if (tipoExecucaoEP != null) {
                 selecionado.setTipoExecucaoEP(tipoExecucaoEP);
@@ -233,6 +300,13 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
+    }
+
+    private void adicionarItemEventoFPEmpregador() {
+        selecionado.getItensEventoFPEmpregador().clear();
+        selecionado.getItensEventoFPEmpregador().addAll(itemEventoFPEmpregadorPadrao);
+        selecionado.getItensEventoFPEmpregador().addAll(itemEventoFPEmpregadorAlternativo);
+        selecionado.getItensEventoFPEmpregador().addAll(itemEventoFPEmpregadorDecimoTerceiro);
     }
 
     @Override
@@ -278,6 +352,14 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
 
     public void setMetodoFormulaSelecionado(String metodoFormulaSelecionado) {
         this.metodoFormulaSelecionado = metodoFormulaSelecionado;
+    }
+
+    public EventoFPEmpregador getEventoFPEmpregadorAlternativo() {
+        return eventoFPEmpregadorAlternativo;
+    }
+
+    public void setEventoFPEmpregadorAlternativo(EventoFPEmpregador eventoFPEmpregadorAlternativo) {
+        this.eventoFPEmpregadorAlternativo = eventoFPEmpregadorAlternativo;
     }
 
     public String getMetodoRegraSelecionado() {
@@ -331,6 +413,7 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
     public List<String> getListaMetodosReferencia() {
         return listaMetodosReferencia;
     }
+
     public void atualizarListaFiltradaMetodosReferencia() {
         filtrosFuncoesFolha.setListaFiltradaMetodosReferencia(filtrarListaString(listaMetodosReferencia, filtrosFuncoesFolha.getParteFuncaoReferencia()));
     }
@@ -579,6 +662,7 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         bloqueioFuncionalidade = new BloqueioFuncionalidade();
         filtrosFuncoesFolha = new FiltrosFuncoesFolha(listaMetodosRegra, listaMetodosFormula, listaMetodosFormulaValorIntegral, listaMetodosReferencia, listaMetodosValorBaseDeCalculo);
         selecionado.setExibirNaFichaRPA(Boolean.TRUE);
+        criarEventoFPEmpregador();
     }
 
     @URLAction(mappingId = "editarEventoFP", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -587,6 +671,7 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         super.editar();    //To change body of overridden methods use File | Settings | File Templates.
         inicializarEdicao();
         getEventoPorIdentificador();
+        criarEventoFPEmpregador();
     }
 
     @URLAction(mappingId = "editarCodigoEventoFP", phaseId = URLAction.PhaseId.RENDER_RESPONSE, onPostback = false)
@@ -1238,20 +1323,50 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         return Util.getListSelectItem(TipoClassificacaoConsignacao.values());
     }
 
-    public void adicionarEmpregadorEsocial() {
+    public void adicionarEmpregadorEsocialConfiguracaoPadrao() {
         try {
-            validarEventoEsocial();
-            eventoFPEmpregador.setEventoFP(selecionado);
-            Util.adicionarObjetoEmLista(selecionado.getItensEventoFPEmpregador(), eventoFPEmpregador);
-            Collections.sort(selecionado.getItensEventoFPEmpregador());
-            eventoFPEmpregador = new EventoFPEmpregador();
+            validarEventoEsocial(eventoFPEmpregadorPadrao);
+            eventoFPEmpregadorPadrao.setEventoFP(selecionado);
+            Util.adicionarObjetoEmLista(itemEventoFPEmpregadorPadrao, eventoFPEmpregadorPadrao);
+            Collections.sort(itemEventoFPEmpregadorPadrao);
+            eventoFPEmpregadorPadrao = new EventoFPEmpregador();
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
     }
 
-    private void validarEventoEsocial() {
+    public void adicionarEmpregadorEsocialConfiguracaoAlternativa() {
+        try {
+            validarEventoEsocial(eventoFPEmpregadorAlternativo);
+            eventoFPEmpregadorAlternativo.setEventoFP(selecionado);
+            Util.adicionarObjetoEmLista(itemEventoFPEmpregadorAlternativo, eventoFPEmpregadorAlternativo);
+            Collections.sort(itemEventoFPEmpregadorAlternativo);
+            eventoFPEmpregadorAlternativo = new EventoFPEmpregador();
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve.getMensagens());
+        }
+    }
+
+    public void adicionarEmpregadorEsocialConfiguracaoDecimoTerceiro() {
+        try {
+            validarEventoEsocial(eventoFPEmpregadorDecimoTerceiro);
+            eventoFPEmpregadorDecimoTerceiro.setEventoFP(selecionado);
+            Util.adicionarObjetoEmLista(itemEventoFPEmpregadorDecimoTerceiro, eventoFPEmpregadorDecimoTerceiro);
+            Collections.sort(itemEventoFPEmpregadorDecimoTerceiro);
+            eventoFPEmpregadorDecimoTerceiro = new EventoFPEmpregador();
+        } catch (ValidacaoException ve) {
+            FacesUtil.printAllFacesMessages(ve.getMensagens());
+        }
+    }
+
+    private void validarEventoEsocial(EventoFPEmpregador eventoFPEmpregador) {
         ValidacaoException ve = new ValidacaoException();
+        List<EventoFPEmpregador> itensEventoFpEmpregador = Lists.newArrayList();
+        if (TipoEventoFPEmpregador.PADRAO.equals(eventoFPEmpregador.getTipoEventoFPEmpregador())) {
+            itensEventoFpEmpregador = itemEventoFPEmpregadorPadrao;
+        } else if (TipoEventoFPEmpregador.ALTERNATIVO.equals(eventoFPEmpregador.getTipoEventoFPEmpregador())) {
+            itensEventoFpEmpregador = itemEventoFPEmpregadorAlternativo;
+        }
         if (eventoFPEmpregador.getEntidade() == null) {
             ve.adicionarMensagemDeCampoObrigatorio("Informe a Entidade");
         }
@@ -1290,7 +1405,7 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
                 ve.adicionarMensagemDeOperacaoNaoPermitida("O Inicio de vigência deve ser menor que o Final de vigência");
             }
         }
-        for (EventoFPEmpregador fpEmpregador : selecionado.getItensEventoFPEmpregador()) {
+        for (EventoFPEmpregador fpEmpregador : itensEventoFpEmpregador) {
             if (!eventoFPEmpregador.equals(fpEmpregador)) {
                 if (eventoFPEmpregador.getEntidade().equals(fpEmpregador.getEntidade()) && fpEmpregador.getFimVigencia() == null) {
                     ve.adicionarMensagemDeOperacaoNaoPermitida("A Entidade " + eventoFPEmpregador.getEntidade() + " está vigente");
@@ -1304,16 +1419,28 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         ve.lancarException();
     }
 
-    public void editarEventoEmpregador(EventoFPEmpregador empregador) {
-        eventoFPEmpregador = (EventoFPEmpregador) Util.clonarObjeto(empregador);
+    public void editarEventoEmpregadorPadrao(EventoFPEmpregador empregador) {
+        eventoFPEmpregadorPadrao = (EventoFPEmpregador) Util.clonarObjeto(empregador);
     }
 
-    public void removerEventoEmpregador(EventoFPEmpregador empregador) {
-        selecionado.getItensEventoFPEmpregador().remove(empregador);
+    public void removerEventoEmpregadorPadrao(EventoFPEmpregador empregador) {
+        itemEventoFPEmpregadorPadrao.remove(empregador);
     }
 
-    public void atribuirFalseTetoEmpregador() {
-        eventoFPEmpregador.setTetoRemuneratorio(Boolean.FALSE);
+    public void editarEventoEmpregadorAlternativo(EventoFPEmpregador empregador) {
+        eventoFPEmpregadorAlternativo = (EventoFPEmpregador) Util.clonarObjeto(empregador);
+    }
+
+    public void editarEventoEmpregadorDecimoTerceiro(EventoFPEmpregador empregador) {
+        eventoFPEmpregadorDecimoTerceiro = (EventoFPEmpregador) Util.clonarObjeto(empregador);
+    }
+
+    public void removerEventoEmpregadorAlternativo(EventoFPEmpregador empregador) {
+        itemEventoFPEmpregadorAlternativo.remove(empregador);
+    }
+
+    public void removerEventoEmpregadorDecimoTerceiro(EventoFPEmpregador empregador) {
+        itemEventoFPEmpregadorDecimoTerceiro.remove(empregador);
     }
 
     public boolean eventoFPEmpregadorIsEmpty() {
@@ -1353,18 +1480,23 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
     }
 
 
-    public void confirmarEmpregadoresParaConfigurar() {
+    public void duplicarConfiguracaoEmpregadorEventoFPPadrao() {
         try {
             validarNovosEmpregadores();
             for (ConfiguracaoEmpregadorESocial novosEmpregadoresConfigurado : novosEmpregadoresConfigurados) {
                 EventoFPEmpregador item = duplicarConfiguracaoEmpregadorEsocial(novosEmpregadoresConfigurado);
-                selecionado.getItensEventoFPEmpregador().add(item);
+                if (TipoEventoFPEmpregador.PADRAO.equals(item.getTipoEventoFPEmpregador())) {
+                    itemEventoFPEmpregadorPadrao.add(item);
+                } else if (TipoEventoFPEmpregador.ALTERNATIVO.equals(item.getTipoEventoFPEmpregador())) {
+                    itemEventoFPEmpregadorAlternativo.add(item);
+                } else if (TipoEventoFPEmpregador.DECIMO_TERCEIRO.equals(item.getTipoEventoFPEmpregador())) {
+                    itemEventoFPEmpregadorDecimoTerceiro.add(item);
+                }
             }
             FacesUtil.executaJavaScript(" dialogCopiarConfig.hide()");
         } catch (ValidacaoException ve) {
             FacesUtil.printAllFacesMessages(ve.getMensagens());
         }
-
     }
 
     private void validarNovosEmpregadores() {
@@ -1382,25 +1514,36 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         ve.lancarException();
     }
 
-    private EventoFPEmpregador duplicarConfiguracaoEmpregadorEsocial(ConfiguracaoEmpregadorESocial novoEmpregadorCOnfigurado) {
+    private EventoFPEmpregador duplicarConfiguracaoEmpregadorEsocial(ConfiguracaoEmpregadorESocial novoEmpregadorConfigurado) {
         EventoFPEmpregador item = new EventoFPEmpregador();
         item.setInicioVigencia(eventoFPEmpregadorSelecionado.getInicioVigencia());
         item.setFimVigencia(eventoFPEmpregadorSelecionado.getFimVigencia());
         item.setEventoFP(eventoFPEmpregadorSelecionado.getEventoFP());
         item.setTetoRemuneratorio(eventoFPEmpregadorSelecionado.getTetoRemuneratorio());
-        item.setEntidade(novoEmpregadorCOnfigurado.getEntidade());
-        item.setIdentificacaoTabela(novoEmpregadorCOnfigurado.getIdentificacaoTabela());
+        item.setEntidade(novoEmpregadorConfigurado.getEntidade());
+        item.setIdentificacaoTabela(novoEmpregadorConfigurado.getIdentificacaoTabela());
         item.setIncidenciaPrevidencia(eventoFPEmpregadorSelecionado.getIncidenciaPrevidencia());
         item.setIncidenciaTributariaRPPS(eventoFPEmpregadorSelecionado.getIncidenciaTributariaRPPS());
         item.setIncidenciaTributariaFGTS(eventoFPEmpregadorSelecionado.getIncidenciaTributariaFGTS());
         item.setIncidenciaTributariaIRRF(eventoFPEmpregadorSelecionado.getIncidenciaTributariaIRRF());
         item.setNaturezaRubrica(eventoFPEmpregadorSelecionado.getNaturezaRubrica());
+        item.setTipoEventoFPEmpregador(eventoFPEmpregadorSelecionado.getTipoEventoFPEmpregador());
         return item;
     }
 
-    public void carregarEmpregadoresQueNaoEstaoNaConfiguracao(EventoFPEmpregador itemEvento) {
+    public void carregarEmpregadoresQueNaoEstaoNaConfiguracaoPadrao(EventoFPEmpregador itemEvento) {
         eventoFPEmpregadorSelecionado = itemEvento;
-        empregadorSemConfiguracao = configuracaoEmpregadorESocialFacade.getEntidadesSemConfiguracao(selecionado.getItensEventoFPEmpregador());
+        empregadorSemConfiguracao = configuracaoEmpregadorESocialFacade.getEntidadesSemConfiguracao(itemEventoFPEmpregadorPadrao);
+    }
+
+    public void carregarEmpregadoresQueNaoEstaoNaConfiguracaoAlternativa(EventoFPEmpregador itemEvento) {
+        eventoFPEmpregadorSelecionado = itemEvento;
+        empregadorSemConfiguracao = configuracaoEmpregadorESocialFacade.getEntidadesSemConfiguracao(itemEventoFPEmpregadorAlternativo);
+    }
+
+    public void carregarEmpregadoresQueNaoEstaoNaConfiguracaoDecimoTerceiro(EventoFPEmpregador itemEvento) {
+        eventoFPEmpregadorSelecionado = itemEvento;
+        empregadorSemConfiguracao = configuracaoEmpregadorESocialFacade.getEntidadesSemConfiguracao(itemEventoFPEmpregadorDecimoTerceiro);
     }
 
     public boolean mostrarBotaoSelecionarEmpregadores(ConfiguracaoEmpregadorESocial config) {
@@ -1426,7 +1569,7 @@ public class EventoFPControlador extends PrettyControlador<EventoFP> implements 
         }
     }
 
-    public boolean habilitarExibirFichaRPA(){
+    public boolean habilitarExibirFichaRPA() {
         return selecionado != null && TipoEventoFP.INFORMATIVO.equals(selecionado.getTipoEventoFP()) && TipoExecucaoEP.RPA.equals(tipoExecucaoEP);
     }
 

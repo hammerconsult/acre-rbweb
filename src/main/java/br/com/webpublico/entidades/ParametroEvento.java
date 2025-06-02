@@ -6,6 +6,8 @@ package br.com.webpublico.entidades;
 
 import br.com.webpublico.enums.TipoBalancete;
 import br.com.webpublico.util.IdentidadeDaEntidade;
+import br.com.webpublico.util.anotacoes.Etiqueta;
+import br.com.webpublico.util.anotacoes.Obrigatorio;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
@@ -20,30 +22,44 @@ import java.util.List;
 @Entity
 
 @Audited
-public class ParametroEvento implements Serializable {
+public class ParametroEvento extends SuperEntidade implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     @Temporal(javax.persistence.TemporalType.DATE)
+    @Obrigatorio
+    @Etiqueta("Data")
     private Date dataEvento;
+    @Obrigatorio
+    @Etiqueta("Histórico")
     private String complementoHistorico;
     @OneToMany(mappedBy = "parametroEvento", cascade = CascadeType.ALL)
     private List<ItemParametroEvento> itensParametrosEvento;
     @ManyToOne
+    @Obrigatorio
+    @Etiqueta("Evento contábil")
     private EventoContabil eventoContabil;
     @ManyToOne
+    @Obrigatorio
+    @Etiqueta("Unidade Organizacional")
     private UnidadeOrganizacional unidadeOrganizacional;
     @Transient
     private Long criadoEm;
+    @Obrigatorio
+    @Etiqueta("Classe Origem fato gerador")
     private String classeOrigem;
+    @Obrigatorio
+    @Etiqueta("Id Origem fato gerador")
     private String idOrigem;
     @Enumerated(EnumType.STRING)
     private ComplementoId complementoId;
     @Transient
     private Exercicio exercicio;
     @Enumerated(EnumType.STRING)
+    @Obrigatorio
+    @Etiqueta("Tipo Balancete")
     private TipoBalancete tipoBalancete;
 
     public ParametroEvento() {
@@ -170,7 +186,19 @@ public class ParametroEvento implements Serializable {
 
     @Override
     public String toString() {
-        return "br.com.webpublico.entidades.ParametroEvento[ id=" + id + " ]";
+        return "ParametroEvento{" +
+            "id=" + id +
+            ", dataEvento=" + dataEvento +
+            ", complementoHistorico='" + complementoHistorico + '\'' +
+            ", eventoContabil=" + eventoContabil +
+            ", unidadeOrganizacional=" + unidadeOrganizacional +
+            ", criadoEm=" + criadoEm +
+            ", classeOrigem='" + classeOrigem + '\'' +
+            ", idOrigem='" + idOrigem + '\'' +
+            ", complementoId=" + complementoId +
+            ", exercicio=" + exercicio +
+            ", tipoBalancete=" + tipoBalancete +
+            '}';
     }
 
     public enum ComplementoId {

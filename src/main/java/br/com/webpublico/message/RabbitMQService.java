@@ -19,7 +19,7 @@ public class RabbitMQService implements Serializable {
 
     @PostConstruct
     public void init() {
-        factory.setHost(getEnvOrElse("RABBITMQ_HOST", "192.168.1.24"));
+        factory.setHost(getEnvOrElse("RABBITMQ_HOST", "172.16.0.183"));
         factory.setPort(Integer.parseInt(getEnvOrElse("RABBITMQ_PORT", "5672")));
         factory.setUsername(getEnvOrElse("RABBITMQ_USER", "user"));
         factory.setPassword(getEnvOrElse("RABBITMQ_PASSWORD", "senha10"));

@@ -1,12 +1,10 @@
 package br.com.webpublico.entidades;
 
 import br.com.webpublico.geradores.GrupoDiagrama;
-import br.com.webpublico.util.IdentidadeDaEntidade;
 import br.com.webpublico.util.anotacoes.Etiqueta;
 import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
-import java.io.Serializable;
 
 /**
  * Created with IntelliJ IDEA.
@@ -21,7 +19,7 @@ import java.io.Serializable;
 @Audited
 @Entity
 @Table(name = "USUARIOUNIDADEORGANIZACORC")
-public class UsuarioUnidadeOrganizacionalOrcamentaria implements Serializable {
+public class UsuarioUnidadeOrganizacionalOrcamentaria extends SuperEntidade {
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -31,17 +29,13 @@ public class UsuarioUnidadeOrganizacionalOrcamentaria implements Serializable {
     private UsuarioSistema usuarioSistema;
     @ManyToOne
     private UnidadeOrganizacional unidadeOrganizacional;
-    @Transient
-    private Long criadoEm;
 
     public UsuarioUnidadeOrganizacionalOrcamentaria() {
-        criadoEm = System.nanoTime();
     }
 
     public UsuarioUnidadeOrganizacionalOrcamentaria(UsuarioSistema usuarioSistema, UnidadeOrganizacional unidadeOrganizacional) {
         this.usuarioSistema = usuarioSistema;
         this.unidadeOrganizacional = unidadeOrganizacional;
-        criadoEm = System.nanoTime();
     }
 
     public Long getId() {
@@ -66,23 +60,5 @@ public class UsuarioUnidadeOrganizacionalOrcamentaria implements Serializable {
 
     public void setUnidadeOrganizacional(UnidadeOrganizacional unidadeOrganizacional) {
         this.unidadeOrganizacional = unidadeOrganizacional;
-    }
-
-    public Long getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(Long criadoEm) {
-        this.criadoEm = criadoEm;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return IdentidadeDaEntidade.calcularEquals(this, obj);
-    }
-
-    @Override
-    public int hashCode() {
-        return IdentidadeDaEntidade.calcularHashCode(this);
     }
 }

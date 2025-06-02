@@ -1,7 +1,10 @@
 package br.com.webpublico.controle;
 
+import br.com.webpublico.entidades.HierarquiaOrganizacional;
 import br.com.webpublico.exception.ValidacaoException;
+import br.com.webpublico.enums.TipoGestor;
 import br.com.webpublico.negocios.*;
+import br.com.webpublico.singletons.SingletonUsuarioGestor;
 import br.com.webpublico.util.EntidadeMetaData;
 import com.google.common.collect.Lists;
 
@@ -17,6 +20,7 @@ public abstract class AbstractPesquisaMateriais extends ComponentePesquisaGeneri
 
     protected List<BigDecimal> idsUnidades = Lists.newArrayList();
     protected String condicaoUnidade = "";
+
     @EJB
     private HierarquiaOrganizacionalFacade hierarquiaOrganizacionalFacade;
     @EJB
@@ -35,25 +39,17 @@ public abstract class AbstractPesquisaMateriais extends ComponentePesquisaGeneri
     private LevantamentoEstoqueFacade levantamentoEstoqueFacade;
     @EJB
     private EfetivacaoLevantamentoEstoqueFacade efetivacaoLevantamentoEstoqueFacade;
-
+    @EJB
+    private SingletonUsuarioGestor singletonUsuarioGestor;
 
     public abstract TipoMovimento getTipoMovimento();
 
     public abstract String getNivelHierarquia();
 
-    protected List<BigDecimal> buscarHerarquiaOrganizacionalPaiEFilhoOndeUsuarioEhGestorMaterial() {
-        return hierarquiaOrganizacionalFacade.getHierarquiaOrganizacionalPaiEFilhoOndeUsuarioEhGestorMaterial(
-            "",
-            getNivelHierarquia(),
-            getSistemaFacade().getUsuarioCorrente(),
-            getSistemaFacade().getDataOperacao());
-
-    }
-
     public String montarCondicaoUnidade(String alias) {
+        List<Long> ids = singletonUsuarioGestor.getIdsUnidades(TipoGestor.MATERIAIS, getSistemaFacade().getUsuarioCorrente(), getNivelHierarquia());
         String retorno = "";
-        List<List<BigDecimal>> idsUnidades = Lists.partition(buscarHerarquiaOrganizacionalPaiEFilhoOndeUsuarioEhGestorMaterial(), 1000);
-        for (List<BigDecimal> idHierarquia : idsUnidades) {
+        for (List<Long> idHierarquia : Lists.partition(ids, 1000)) {
             if (!retorno.isEmpty()) {
                 retorno += " or ";
             }
@@ -65,45 +61,19 @@ public abstract class AbstractPesquisaMateriais extends ComponentePesquisaGeneri
         return retorno;
     }
 
-    public String montarCondicaoUnidade(String alias, List<BigDecimal> idsUnidades) {
-        String retorno = "";
-        for (List<BigDecimal> idHierarquia : Lists.partition(idsUnidades, 1000)) {
-            if (!retorno.isEmpty()) {
-                retorno += " or ";
-            }
-            retorno += buscarIdsUnidadeOndeUsuarioEGestorMaterial(alias, idHierarquia);
-        }
-        if (!retorno.isEmpty()) {
-            return "(" + retorno + ")";
-        }
-        return retorno;
-    }
-
-    private String buscarIdsUnidadeOndeUsuarioEGestorMaterial(String alias, List<BigDecimal> unidadesAdministrativas) {
+    private String buscarIdsUnidadeOndeUsuarioEGestorMaterial(String alias, List<Long> unidadesAdministrativas) {
         String toReturn = "";
-        for (BigDecimal obj : unidadesAdministrativas) {
-            toReturn += obj.longValue() + ",";
+        for (Long obj : unidadesAdministrativas) {
+            toReturn += obj + ",";
         }
         toReturn = !toReturn.isEmpty() ? toReturn.substring(0, toReturn.length() - 1) : "0";
         return alias + " in (" + toReturn + ") ";
     }
 
-    protected void validarUsuarioGestorMateriais() {
-        ValidacaoException ve = new ValidacaoException();
-        if (!isGestorMateriais()) {
-            ve.adicionarMensagemDeOperacaoNaoPermitida("O usuário: " + getSistemaControlador().getUsuarioCorrente().getPessoaFisica() + " não possui permissão como gestor de materiais.");
-        }
-        ve.lancarException();
-    }
-
-    private boolean isGestorMateriais() {
-        return getSistemaControlador().unidadesOrganizacionaisGestorMateriais() != null && !getSistemaControlador().unidadesOrganizacionaisGestorMateriais().isEmpty();
-    }
-
     @Override
     public Integer getTotalDeRegistrosExistentes() {
         totalDeRegistrosExistentes = 0;
-        if (isGestorMateriais()) {
+        if (singletonUsuarioGestor.isGestor(TipoGestor.MATERIAIS, getSistemaFacade().getUsuarioCorrente(), getNivelHierarquia())) {
             String hql = getHqlParaTotalDeRegistros();
             atribuirHqlConsultaRelatorioTodosRegistros();
             if (getTipoMovimento() != null) {
@@ -200,5 +170,9 @@ public abstract class AbstractPesquisaMateriais extends ComponentePesquisaGeneri
 
     public EfetivacaoLevantamentoEstoqueFacade getEfetivacaoLevantamentoEstoqueFacade() {
         return efetivacaoLevantamentoEstoqueFacade;
+    }
+
+    public SingletonUsuarioGestor getSingletonUsuarioGestor() {
+        return singletonUsuarioGestor;
     }
 }
